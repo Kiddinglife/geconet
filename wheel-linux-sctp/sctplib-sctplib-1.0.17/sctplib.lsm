@@ -1,0 +1,29 @@
+Begin4
+Title:          sctplib
+Version:        1.0.17
+Entered-date:   2016-04-06
+Description:    The sctplib library is a prototype implementation of the Stream
+                Control Transmission Protocol (SCTP), a message-oriented
+                reliable transport protocol that supports multi-homing, and
+                multiple message streams multiplexed within an SCTP connection
+                (also named association). SCTP is described in RFC 4960,
+                RFC 3309 and RFC 3286. See http://www.sctp.de/ for details.
+                The API of the library was modeled after section 10 of RFC 4960,
+                and most parameters and functions should be self-explanatory to
+                the user familiar with this document. In addition to these
+                interface functions between an Upper Layer Protocol (ULP) and an
+                SCTP instance, the library also provides a number of helper
+                functions that can be used to manage callbacks and timers, as
+                well as UDP sockets for simple IPC.
+Keywords:       Stream Control Transmission Protocol, SCTP, Networking, Userland
+                Transport Protocol Implementation, Multi-Homing, Multi-Streaming
+Author:         andreas.jungmaier@web.de (Andreas Jungmaier)
+Maintained-by:  dreibh@iem.uni-due.de (Thomas Dreibholz)
+Primary-site:   http://www.iem.uni-due.de/~dreibh/rserpool/
+                1273 KiB download/sctplib-1.0.17.tar.gz
+Alternate-site: http://www.sctp.de
+                1273 KiB sctplib-1.0.17.tar.gz
+Original-site:  http://www.sctp.de
+Platforms:      Linux, FreeBSD, MacOS, Solaris, Windows
+Copying-policy: GPL
+End

@@ -1,0 +1,66 @@
+#!/bin/bash
+# $Id$
+#
+# Debian Packaging Scripts
+# Copyright (C) 2002-2016 by Thomas Dreibholz
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Contact: dreibh@iem.uni-due.de
+
+
+# ###########################################################################
+# This list contains the C++ symbols for which the mangled
+# symbol has to be replaced by a c++/regex pattern.
+# Use case: symbols which are different on 32/64 bit systems,
+#           e.g. functions using size_t parameters.
+CPP_SYMBOLS_TO_BE_REPLACED='
+'
+# ###########################################################################
+
+
+replaceCount=0
+replaceFile=`tempfile`
+
+IFS=$'\n'
+while read line ; do
+   found=0
+   if [[ ! "$line" =~ ^( ) ]] ; then   # No space at begin -> begin of new library
+      cat $replaceFile | sort -u
+      truncate --size 0 $replaceFile
+      echo "$line"
+   else   # Space at begin -> library symbol
+      symbol=`echo $line | sed -e "s/^ //g" -e "s/@Base .*$//g"`
+      version=`echo $line | sed -e "s/^ .* //g"`
+      for replaceSymbol in $CPP_SYMBOLS_TO_BE_REPLACED ; do
+         demangledSymbol=`c++filt $symbol | sed -e "s/(\(.\)*)$//g"`
+         # echo >&2 "<$demangledSymbol> <--> <$replaceSymbol>"
+         if [ "$demangledSymbol" == "$replaceSymbol" ] ; then
+            echo " (c++|regex)\"^$replaceSymbol\(.*\)@Base\" $version" >>$replaceFile
+            found=1
+            let replaceCount=$replaceCount+1
+            break
+         fi
+      done
+      if [ $found -eq 0 ] ; then
+         echo "$line"
+      fi
+   fi
+done
+
+cat $replaceFile | sort -u
+rm -f $replaceFile
+
+
+echo >&2 "Replaced $replaceCount symbol(s)."

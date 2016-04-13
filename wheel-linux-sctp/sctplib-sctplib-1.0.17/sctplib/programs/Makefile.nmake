@@ -1,0 +1,62 @@
+## Makefile for building sctp.lib and some servers with Microsoft C and nmake
+## Use: nmake -f makefile.nmake
+##      nmake all -f makefile.nmake
+#
+
+include ..\..\config.nmake
+
+CFLAGS=/Od /I..\sctp /w /W0
+
+CVARSDLL=-DWIN32 -DMBCS
+
+LINKFLAGS=sctp_wrapper.obj /NOLOGO /NODEFAULTLIB:"LIBCMTD.lib" /DEBUG /FIXED:No \
+ /LIBPATH:..\sctp /LIBPATH:$(WIN32_LIBS)\glib\lib /LIBPATH:$(ICONV_DIR) ws2_32.lib sctp.lib glib-2.0.lib gmodule-2.0.lib gthread-2.0.lib  kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
+
+.c.obj::
+   $(CC) $(CVARSDLL) $(CFLAGS) -Fd.\ -c $<
+
+
+all : \
+	sctp_wrapper  \
+	combined_server \
+	echo_tool  \
+        daytime_server  \
+        discard_server   \
+        echo_server   \
+        chargen_server  \
+        terminal
+
+sctp_wrapper:
+		$(CC) $(CFLAGS) -DWIN32 -c -Zi sctp_wrapper.c
+
+combined_server: 
+		$(CC) $(CFLAGS) -DWIN32 -c -Zi combined_server.c
+		link -out:combined_server.exe combined_server.obj $(LINKFLAGS)
+           
+echo_tool: 
+		$(CC) $(CFLAGS) -Od -DWIN32 -c -Zi echo_tool.c
+		link -out:echo_tool.exe echo_tool.obj $(LINKFLAGS)
+           
+daytime_server: 
+		$(CC) $(CFLAGS) -Od -DWIN32 -c -Zi daytime_server.c
+		link -out:daytime_server.exe daytime_server.obj $(LINKFLAGS)
+           
+discard_server: 
+		$(CC) $(CFLAGS) -Od -DWIN32 -c -Zi discard_server.c
+		link -out:discard_server.exe discard_server.obj $(LINKFLAGS)
+           
+echo_server: 
+		$(CC) $(CFLAGS) -Od -DWIN32 -c -Zi echo_server.c
+		link -out:echo_server.exe echo_server.obj $(LINKFLAGS)
+           
+chargen_server: 
+		$(CC) $(CFLAGS) -Od -DWIN32 -c -Zi chargen_server.c
+		link -out:chargen_server.exe chargen_server.obj $(LINKFLAGS)
+
+terminal: 
+		$(CC) $(CFLAGS) -Od -DWIN32 -c -Zi terminal.c
+		link -out:terminal.exe terminal.obj $(LINKFLAGS)
+           
+clean:
+	rm -f sctp.lib
+

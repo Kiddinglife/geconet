@@ -1,0 +1,56 @@
+No, this implementation is NOT CARRIER GRADE :-)
+
+- Implement ICMP handling.
+
+======================================================================
+ Things to do:
+======================================================================
+(these are minor things that should be cleaned up):
+
+-> check whether we delete an existing assoc, when we get a new
+   INIT with invalid parameters (shouldn't happen)
+
+-> number of streams, and their defaults are now stored in distribution
+   (for the defaults), streamengine (for the actual work), SCTP-control
+   (for the negotiation). This is ugly. Any suggestions ?
+
+-> Error-Chunk-Handling must be further implemented, tested
+
+-> Calls to sctp_send() may only be done after CommmUP notification.
+   This should be mentioned in the documentation...
+
+======================================================================
+
+
+SHOWSTOPPERS :
+1.  update documentation to reflect latest changes. this is an 
+    eternal issue of software development...however, you may use
+    doxygen to generate a fairly up to date documentation of all
+    functions. Just type "make doxygen" in the sctplib/docs/
+    directory (make sure doxygen is installed as /usr/bin/doxygen.
+
+2.  Send Sutdown-Ack back to the source address of the SHUTDOWN message !
+
+3.  Reinitialization of Associaton (Restart) may change association parameters
+    (Number of streams, address-list etc.) -> needs testing !
+    Restart may change IP addresses -> now we check only whether we have
+    the same number of paths !
+
+4.  When we receive data froma previously deactivated path, that path
+    should be activated ! Check this !
+
+======================================================================
+NICE TO HAVE (we are working on this - slowly :-) :
+======================================================================
+-   use of the "Don't bundle" feature. (isn't this obsolete, really ? )
+    This needs an API discussion first...as of now there does not seem
+    to be a need for this feature.
+
+-   SeizePort-Functions should use Bit-mapped array or something similar to
+    store used ports. Then we could randomly use and free these.
+
+-   Implemente SHA-1 as well as MD-5.
+
+-   Replace timer lists by a more sophisticated data structure.
+
+-   Add ECN support.

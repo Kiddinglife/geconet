@@ -1,0 +1,6 @@
+initialize: ip=192.168.0.2, port=20001, instreams=1, outstreams=1;
+
+set_ack_delay: delay=10;
+
+associate: ip=192.168.0.1, port=10001, outstreams=1;
+

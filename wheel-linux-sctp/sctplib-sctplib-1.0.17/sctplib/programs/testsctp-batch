@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ $# -lt 2 ] ; then
+   echo "Usage: testsctp-batch [Target] [Duration (Seconds)] {Options} ..."
+   exit
+fi
+
+TARGET=$1
+DURATION=$2
+shift ; shift
+
+
+echo "Starting testsctp batch:"
+echo "Target   = $TARGET"
+echo "Duration = $DURATION [s]"
+echo ""
+
+SIZES="1 10 100 1000 10000"
+for SIZE in $SIZES ; do
+   ./testsctp -i -T $DURATION -l $SIZE $@ $TARGET
+   echo ""
+done

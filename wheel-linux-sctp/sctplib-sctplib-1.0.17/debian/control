@@ -1,0 +1,75 @@
+Source: sctplib
+Section: net
+Priority: optional
+Maintainer: Thomas Dreibholz <dreibh@iem.uni-due.de>
+Homepage: http://www.iem.uni-due.de/~dreibh/rserpool/index.html
+Build-Depends: autotools-dev,
+               debhelper (>= 5),
+               libglib2.0-dev
+Standards-Version: 3.9.7
+
+Package: libsctplib1
+Section: libs
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Conflicts: sctplib1
+Replaces: sctplib1
+Description: Userland implementation of the SCTP protocol RFC 4960
+ This package contains the shared library for sctplib.
+ .
+ The sctplib library is a fairly complete prototype implementation of the
+ Stream Control Transmission Protocol (SCTP), a message-oriented reliable
+ transport protocol that supports multi-homing, and multiple message streams
+ multiplexed within an SCTP connection (also named association). SCTP is
+ described in RFC 4960. This implementation is the product of a cooperation
+ between Siemens AG (ICN), Munich, Germany and the Computer Networking
+ Technology Group at the IEM of the University of Essen, Germany.
+ .
+ The API of the library was modeled after section 10 of RFC 4960, and most
+ parameters and functions should be self-explanatory to the user familiar with
+ this document. In addition to these interface functions between an Upper
+ Layer Protocol (ULP) and an SCTP instance, the library also provides a number
+ of helper functions that can be used to manage callback function routines to
+ make them execute at a certain point of time (i.e. timer-based) or open and
+ bind  UDP sockets on a configurable port, which may then be used for an
+ asynchronous interprocess communication.
+
+Package: sctplib-docs
+Section: doc
+Architecture: all
+Depends: libsctplib1,
+         ${misc:Depends},
+         ${shlibs:Depends}
+Conflicts: sctplib-stable-doc
+Replaces: sctplib-stable-doc
+Description: Documentation of the userland SCTP implementation sctplib
+ This package contains documentation files for sctplib.
+ .
+ The sctplib library is a fairly complete prototype implementation of the
+ Stream Control Transmission Protocol (SCTP), a message-oriented reliable
+ transport protocol that supports multi-homing, and multiple message streams
+ multiplexed within an SCTP connection (also named association). SCTP is
+ described in RFC 4960. This implementation is the product of a cooperation
+ between Siemens AG (ICN), Munich, Germany and the Computer Networking
+ Technology Group at the IEM of the University of Essen, Germany.
+
+Package: libsctplib-dev
+Section: libdevel
+Architecture: any
+Depends: libsctplib1 (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Conflicts: sctplib-stable-dev
+Replaces: sctplib-stable-dev
+Recommends: sctplib-docs
+Description: Headers and libraries of the userland SCTP implementation sctplib
+ This package contains development files for sctplib.
+ .
+ The sctplib library is a fairly complete prototype implementation of the
+ Stream Control Transmission Protocol (SCTP), a message-oriented reliable
+ transport protocol that supports multi-homing, and multiple message streams
+ multiplexed within an SCTP connection (also named association). SCTP is
+ described in RFC 4960. This implementation is the product of a cooperation
+ between Siemens AG (ICN), Munich, Germany and the Computer Networking
+ Technology Group at the IEM of the University of Essen, Germany.

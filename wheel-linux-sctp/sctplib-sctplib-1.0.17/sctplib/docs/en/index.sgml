@@ -1,0 +1,74 @@
+
+<!doctype linuxdoc system>
+<article>
+<title>The Sctplib Handbook
+<author>Andreas Jungmaier <tt>ajung@exp-math.uni-essen.de</tt>
+<date>Version 1.3.0 Die Jul  3 14:11:09 EDT 2001
+<abstract>
+This Handbook describes Sctplib Version 1.3.0
+</abstract>
+
+<toc>
+
+<sect>Introduction
+<p>
+<sect1>Changes
+<p>
+
+<sect>Installation
+<p>
+<sect1>How to obtain Sctplib 
+<p>
+
+<sect1>Requirements
+<p>
+
+<sect1>Compilation and installation
+<p>
+
+In order to compile and install Sctplib on your system, type the following in
+the base directory of the Sctplib distribution:
+
+<tscreen><verb>
+% ./configure
+% make
+% make install
+</verb></tscreen>
+
+<p>
+Since Sctplib uses <verb>autoconf</verb> you should have not trouble
+compiling it.
+Should you run into problems please report them to the the author at 
+<htmlurl url="mailto:ajung@exp-math.uni-essen.de" name = "Andreas Jungmaier">
+
+
+<p>
+<sect> Usage <p>
+<sect1> General Usage
+<p>
+<sect> Another Section
+<p>
+
+<sect>Questions and Answers<p>
+
+<sect>Copyright<p>
+
+Sctplib Copyright 2001 Andreas Jungmaier , ajung@exp-math.uni-essen.de
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+<p>
+</article>

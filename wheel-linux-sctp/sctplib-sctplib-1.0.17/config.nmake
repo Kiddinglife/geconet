@@ -1,0 +1,14 @@
+WIN32_LIBS=C:\win32-libs
+
+GLIB_VERSION=2.12
+GLIB_DIR=$(WIN32_LIBS)\glib\include\glib-2.0
+GLIB_DIR2=$(WIN32_LIBS)\glib\lib\glib-2.0\include
+ICONV_DIR=$(WIN32_LIBS)\libiconv-1.9.1.bin.woe32
+GETTEXT_DIR=$(WIN32_LIBS)\gettext-0.14.5
+
+
+
+SH=bash
+
+PATH=$(PATH);c:\cygwin\bin
+

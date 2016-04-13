@@ -1,0 +1,42 @@
+## Makefile for building sctp.lib and some servers with Microsoft C and nmake
+## Use: nmake all -f makefile.nmake
+#
+
+include config.nmake
+
+all: 
+   cd sctplib\sctp
+   nmake -f Makefile.nmake
+	cd ..
+	cd programs
+	nmake all -f Makefile.nmake
+	cd .. 
+	
+clean:
+	cd sctplib\sctp
+	nmake clean -f Makefile.nmake
+	cd ..
+	cd programs
+	nmake clean -f Makefile.nmake
+	cd ..	
+
+REQUIRED_APPS=\
+	$(SH)  \
+      unzip   \
+      wget	
+
+verify_apps:
+	@$(SH) win32-setup.sh --appverify $(REQUIRED_APPS)
+
+setup: verify_apps
+	@$(SH) win32-setup.sh --download "$(WIN32_LIBS)" \
+		glib gtk2.12/glib-2.14.3.zip
+	@$(SH) win32-setup.sh --download "$(WIN32_LIBS)" \
+		glib gtk2.12/glib-dev-2.14.3.zip
+	@$(SH) win32-setup.sh --download "$(WIN32_LIBS)" \
+		libiconv-1.9.1.bin.woe32 libiconv-1.9.1.bin.woe32.zip
+    @$(SH) win32-setup.sh --download "$(WIN32_LIBS)" \
+		gettext-0.14.5 gettext-0.14.5.zip
+	copy $(WIN32_LIBS)\glib\bin\libglib-2.0-0.dll C:\WINDOWS\system32
+	copy $(ICONV_DIR)\bin\iconv.dll C:\WINDOWS\system32
+    copy $(GETTEXT_DIR)\bin\intl.dll C:\WINDOWS\system32

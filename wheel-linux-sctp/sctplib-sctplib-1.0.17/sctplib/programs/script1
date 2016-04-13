@@ -1,0 +1,16 @@
+
+initialize: ip=192.168.0.1, port=10001, instreams=1, outstreams=1;
+
+set_payload_header: type=1234, mbu=56, mch=78, jc1=9A, jc2=BC;
+set_payload_body: length=20, contents="abc\64\65\66";
+
+wait_for_assoc;
+
+LOOP: times = 3;
+    send_chunks: num=2000, stream=0, delay=0;
+    pause: time=5000;
+ENDLOOP;
+
+shutdown;
+
+

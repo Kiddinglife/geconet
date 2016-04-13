@@ -1,0 +1,26 @@
+The main authors:
+
+Andreas Jungmaier   <andreas.jungmaier@web.de>
+Thomas Dreibholz    <dreibh@iem.uni-due.de>
+Michael Tüxen       <tuexen@fh-muenster.de>
+Herbert Hölzlwimmer <herbert.hoelzlwimmer@icn.siemens.de>
+
+
+Many thanks to all other contributors, such as:
+
+Gerd Bohnenstengel  added new socket functions (RFC2292BIS)
+                    for Solaris8 and FreeBSD 4.2 KAME, 4.7.2001
+Marc Boucher        <marc@mbsi.ca>
+Armando Caro        <acaro@cis.udel.edu>
+Janardhan Iyengar   <iyengar@mail.eecis.udel.edu>
+Stefan Jansen       <jansen@szs.uni-karlsruhe.de>
+Andreas Lang        <anla@gmx.net>
+Alfred Lupper       added defines for solaris, 27.6.2001
+Stephan Schulte     <schulte@iem.uni-due.de>
+Achim Weber         <achim.weber@icn.siemens.de>
+Amedeo Bonfiglio    <amedeo.bonfiglio@rcm.inet.it>
+
+
+and many others ...
+
+(if you belong here, just drop a note to dreibh@iem.uni-due.de)

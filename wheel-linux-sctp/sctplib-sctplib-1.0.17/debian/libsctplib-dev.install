@@ -1,0 +1,4 @@
+usr/include/sctp.h
+usr/lib/libsctplib*.a
+usr/lib/libsctplib*.la
+usr/lib/libsctplib*.so

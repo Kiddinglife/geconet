@@ -1,0 +1,278 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1252">
+<META NAME="Generator" CONTENT="Microsoft Word 97">
+<TITLE>Commands und Paramters im SctpTest-Scriptfile</TITLE>
+</HEAD>
+<BODY>
+
+<B><FONT FACE="Arial" SIZE=5><P>Documentation of the test_tool Program</P>
+</B></FONT><FONT FACE="Arial" SIZE=2>
+<P>&nbsp;</P>
+</FONT><B><FONT FACE="Arial" SIZE=4><P>1. Running the program from the command line</P>
+</B></FONT><FONT FACE="Arial" SIZE=2>
+<P>The SCTP-Test program is controlled by a script file (see chapter 2)</P>
+
+<P>The name of the script file must be specified as a command line parameter:</P>
+
+</FONT><FONT FACE="Courier New" SIZE=2><P>&#9;test_tool &lt;scriptfile&gt;</P>
+</FONT><FONT FACE="Arial" SIZE=2>
+</FONT><FONT FACE="Arial" SIZE=2 COLOR="#000000"><P>The program directory contains two examples of script files ("script1" and "script2"). They can be run on different machines and do some (useless) communication. Of course, IP-addresses in the INITIALIZE and ASSOCIATE commands have to be adapted first.</P>
+
+<P>&nbsp;</P>
+</FONT><FONT FACE="Arial" SIZE=2><P>&nbsp;</P>
+</FONT><B><FONT FACE="Arial" SIZE=4><P>2. The Script File</P>
+</B></FONT><FONT FACE="Arial" SIZE=3>
+</FONT><B><FONT FACE="Arial"><P>2.1 Syntax description</P>
+</B></FONT><FONT FACE="Arial" SIZE=2>
+<P>The syntax of commands depends on whether they have parameters or not. If parameters are specified, they always consist of a key and a value. The value may either be a positive integer or a character string. Character strings may optionally be enclosed in quotation marks (see remarks below).</P>
+<DIR>
+
+<I><P>COMMAND</I>;</P>
+<I><P>COMMAND</I>: <I>PARAMKEY</I>=<I>VALUE</I>, <I>PARAMKEY</I>=<I>VALUE</I>, <I>.....</I> ;</P>
+</DIR>
+
+
+<UL>
+<LI>Spaces can be omitted.</LI>
+<LI>If parameter values are enclosed in quotation marks, they may contain any printable characters (including punctuation marks). Without quotation marks, only alphanumeric characters, dots and underscores are allowed.</LI>
+</FONT><FONT FACE="Arial" SIZE=2 COLOR="#000000"><LI>The case of letters does not matter, as the parser automatically converts everything to upper case, unless it is enclosed in quotation marks.</LI></UL>
+
+</FONT><FONT FACE="Arial" SIZE=2>
+<P>&nbsp;</P>
+<P>Comments are preceded by at least one '#' character and may occur anywhere in the script file:</P>
+
+<P># <I>COMMENT</I> &#9;(to be printed on ‘stdout’ when reached in script file)</P>
+<P>## <I>COMMENT</I> &#9;(NOT to be printed)</P>
+
+<P>&nbsp;</P>
+<B><P>Examples:</P>
+</B></FONT><FONT FACE="Courier New" SIZE=2><DIR>
+
+<P>INITIALIZE: IP=192.168.0.1, PORT=10000, INSTREAMS=15, OUTSTREAMS=15;</P>
+<P>SET_PAYLOAD_BODY: CONTENTS="Hello, world!", LENGTH=200;</P>
+<P>DISABLE_RECEIVE;</P>
+
+<P>&nbsp;</P>
+</FONT><FONT FACE="Arial" SIZE=2 COLOR="#ff0000"><P>&nbsp;</P></DIR>
+
+</FONT><B><FONT FACE="Arial"><P>2.2 Commands and Parameters</P>
+</B></FONT><FONT FACE="Arial" SIZE=2 COLOR="#ff0000">
+</FONT><B><FONT FACE="Arial" SIZE=2><P>&nbsp;</P>
+<P>2.2.1 Loops</P>
+</B><P>Syntax:&#9;LOOP: TIMES=<I>&lt;number of executions of the loop body&gt;</I>;</P>
+<P>&#9;      <I>&lt;loop body&gt;</P>
+</I><P>&#9;ENDLOOP;</P>
+<B>
+
+<UL>
+</B><LI>Loops can also be contained within other loops.</LI></UL>
+
+<B>
+<P>&nbsp;</P>
+<P>2.2.2 Initialization</P>
+</B><P>Command:&#9;INITIALIZE</P>
+<P>Parameters:&#9;IP=<I>&lt;local IP address&gt;</P><DIR>
+<DIR>
+
+</I><P>PORT=<I>&lt;local port&gt;</P></DIR>
+</DIR>
+
+</I><P>&#9;&#9;INSTREAMS=<I>&lt;maximum number of in-streams&gt;</P>
+</I><P>&#9;&#9;OUTSTREAMS=<I>&lt;maximum number of out-streams&gt;</P>
+</I>
+
+<UL>
+<LI>This must be the first command in the script file.</LI></UL>
+
+<B>
+<P>&nbsp;</P>
+<P>2.2.3 Pause in script</P>
+</B><P>Command:&#9;PAUSE</P>
+<P>Parameter:&#9;TIME=<I>&lt;delay time in milliseconds&gt; </P>
+</I>
+
+<UL>
+<LI>This command interrupts the script process for the specified time, but does not block callback events.</LI></UL>
+
+<B>
+<P>&nbsp;</P>
+<P>2.2.4 Wait for an association</P>
+</B><P>Command:&#9;WAIT_FOR_ASSOC</P>
+<P>Parameters:&#9;none</P>
+
+
+<UL>
+<LI>Interrupts the script process until an association is established. </LI></UL>
+
+
+<B><P>&nbsp;</P>
+<P>2.2.5 Associate </P>
+</B><P>Command: &#9;ASSOCIATE</P>
+<P>Parameters: &#9;IP=<I>&lt;destination IP&gt;</P>
+</I><P>&#9;&#9;PORT=<I>&lt;destination port&gt;</P>
+</I><P>&#9;&#9;OUTSTREAMS=<I>&lt;number of out-streams&gt;</P>
+</I><P>&#9;&#9;</P>
+
+<B><P>2.2.6 Shutdown an association</P>
+</B><P>Command:&#9;SHUTDOWN</P>
+<P>Parameters:&#9;none</P>
+
+
+<UL>
+<LI>Sends a "shutdown" chunk to the peer, if an association exists.</LI></UL>
+
+<B>
+</B></FONT><FONT SIZE=2><P>&nbsp;</P>
+</FONT><B><FONT FACE="Arial" SIZE=2><P>2.2.7 Abort an association</P>
+</B><P>Command:&#9;ABORT</P>
+<P>Parameters:&#9;none</P>
+
+
+<UL>
+<LI>Sends an "abort" chunk to the peer, if an association exists.</LI></UL>
+
+
+<B><P>&nbsp;</P>
+<P>2.2.8 Send chunks</P>
+</B><P>Command:&#9;SEND_CHUNKS</P>
+<P>Parameters:&#9;NUM=<I>&lt;number of chunks to be sent&gt; </P><DIR>
+<DIR>
+
+</I><P>DELAY=<I>&lt;delay (in msec) between two successive chunks&gt;  </I>(<I>optional;</I> default: 0)</P>
+<P>STREAM=<I>&lt;stream ID&gt;  </I>(<I>optional;</I> default: 0)</P>
+</DIR>
+</DIR>
+
+
+<UL>
+<LI>Sends the specified number of chunks; the payload contents can be set with SET_PAYLOAD_HEADER and SET_PAYLOAD_BODY.</LI></UL>
+
+
+<P>&nbsp;</P>
+<B><P>2.2.9 Disable chunk receive on stream 0</P>
+</B><P>Command:&#9;DISABLE_RECEIVE</P>
+<P>Parameters:&#9;none</P>
+
+
+<UL>
+<LI>When receiving is disabled, all incoming chunks stay in the reception queue until ENABLE_RECEIVE is called or the association is closed.</LI></UL>
+
+
+
+<UL>
+<LI>Disabling chunk reception on other streams than 0 is not implemented in this version.</LI></UL>
+
+<B>
+<P>&nbsp;</P>
+<P>2.2.10 Enable chunk receive (on stream 0)</P>
+</B><P>Command:&#9;ENABLE_RECEIVE</P>
+<P>Parameters:&#9;none</P>
+
+
+<UL>
+<LI>This is the default setting after initialization.</LI></UL>
+
+
+
+<UL>
+<LI>When this command is called, all chunks that are still in the reception queue will be retrieved.</LI></UL>
+
+
+<B><P>&nbsp;</P>
+</B><P>&nbsp;</P>
+<B><P>2.2.11 Set payload header</P>
+</B><P>Command:&#9;SET_PAYLOAD_HEADER</P>
+<P>Parameters:&#9;TYPE=<I>&lt;TYPE in hexadecimal format (2 bytes)&gt;</P><DIR>
+<DIR>
+
+</I><P>MBU=<I>&lt;MBU in hexadecimal format (1 byte)&gt;</P></DIR>
+</DIR>
+
+</I><P>&#9;&#9;MCH=<I>&lt;MCH in hexadecimal format (1 byte)&gt;</P>
+</I><P>&#9;&#9;JC1=<I>&lt;JC1 in hexadecimal format (1 byte)&gt;</P>
+</I><P>&#9;&#9;JC2=<I>&lt;JC2 in hexadecimal format (1 byte)&gt;</P>
+</I>
+
+<UL>
+<LI>The default values are 0</LI></UL>
+
+
+<P>&nbsp;</P>
+<B><P>2.2.12 Set payload body</P>
+</B><P>Command: &#9;SET_PAYLOAD_BODY</P>
+<P>Parameters:&#9;CONTENTS=<I>&lt;payload body&gt;</P>
+</I><P>&#9;&#9;LENGTH=<I>&lt;body length&gt;</P>
+
+<UL>
+</I><LI>Default values: </LI></UL>
+
+<P>&#9;CONTENTS=ABCDEFGHIJKLMNOPQRSTUVWXYZ</P>
+<P>&#9;LENGTH=26</P>
+
+
+<UL>
+<LI>If the CONTENTS string is enclosed in quotation marks ("), it may contain any printable characters. In addition, non-printable characters can be represented by a backslash (\), followed by the character's hexadecimal ASCII-code (2 digits). Backslashes and quotation marks that shall not be used as control characters must also be substituted by their ASCII-codes. </FONT><FONT FACE="Arial" SIZE=2 COLOR="#000000">(See also section 2.1)</FONT><FONT FACE="Arial" SIZE=2><BR>
+<B>Example:</B> If you specify </FONT><FONT FACE="Courier New" SIZE=2>CONTENTS="abc\64\65\66"</FONT><FONT FACE="Arial" SIZE=2>, the payload body will contain the string </FONT><FONT FACE="Courier New" SIZE=2>abcdef</FONT><FONT FACE="Arial" SIZE=2>, as 64, 65 and 66 are the hexadecimal ASCII-codes of 'd', 'e' and 'f'.</LI></UL>
+
+
+
+<UL>
+<LI>If the LENGTH value is greater than the actual length of the CONTENTS string, the payload body is filled up to the specified length, using the CONTENTS string repeatedly.</LI></UL>
+<DIR>
+
+<B><P>Example:</B> if the CONTENTS string is set to "abc" and the LENGTH is set to "10", the payload body will actually be set to "abcabcabca".</P>
+</DIR>
+
+
+<UL>
+<LI>The LENGTH value is ignored if it is less than the actual length of the CONTENTS string.</LI></UL>
+
+
+<P>&nbsp;</P>
+<B><P>2.2.13 Set receive mode</P>
+</B><P>Command: SET_RECEIVE_MODE</P>
+<P>Parameter: MODE=MIRROR | DISCARD</P>
+
+
+<UL>
+<LI>Default: DISCARD</LI></UL>
+
+
+
+<UL>
+<LI>When data arrives in mirror mode, a chunk is sent back to the sender; the payload of this chunk can be set by SET_PAYLOAD_HEADER and SET_PAYLOAD_BODY.</LI></UL>
+
+
+<P>&nbsp;</P>
+<B><P>2.2.14 Set Heartbeat Time Interval</P>
+</B><P>Command:&#9;SET_HEARTBEAT</P>
+<P>Parameter:&#9;TIMEINTERVAL=<I>&lt;heartbeat time interval in msec&gt;</I>&#9; </P>
+
+
+<UL>
+<LI>Heartbeats are turned off if TIMEINTERVAL is 0.</LI></UL>
+
+
+<P>&nbsp;</P>
+<B><P>2.2.15 Set local receiver window size</P>
+</B><P>Command:&#9;SET_RWND</P>
+<P>Parameter:&#9;SIZE=<I>&lt;size of local receiver window in bytes&gt;</P>
+</I>
+<P>&nbsp;</P>
+<B><P>2.2.16 Set local receive queue size</P>
+</B><P>Command:&#9;SET_RECV_QUEUE</P>
+<P>Parameter: &#9;SIZE<I>=&lt;maximum number of chunks queued in the receive queue&gt;</P>
+</I>
+
+<UL>
+<LI>This is currently not implemented in the SCTP prototype, so changing this value will have no effect.</LI></UL>
+
+
+<P>&nbsp;</P>
+<B><P>2.2.17 Set acknowledge delay</P>
+</B><P>Command:&#9;SET_ACK_DELAY</P>
+<P>Parameter:&#9;ACK=<I>&lt;acknowledge delay in msec&gt;</P>
+</I><B>
+<P>&nbsp;</P></B></FONT></BODY>
+</HTML>

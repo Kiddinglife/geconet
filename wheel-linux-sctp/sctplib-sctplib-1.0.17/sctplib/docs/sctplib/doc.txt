@@ -1,0 +1,191 @@
+/** @name SCTP Documentation
+
+    \begin{center}
+	{\Large{\bf Documentation of SCTP Source Code}}
+    \end{center}
+
+The current version of this SCTP projects implements SCTP according
+to RFC 2960.
+This RFC describes in section 1.3 a number of functional components of 
+the protocol which each implementation would have to provide.
+Consequently, we have adopted a module concept in our SCTP software
+development project, which was partly derived from
+an SDL specification we did from an earlier version of the draft.
+
+\IMG{../sctp-modules.png}
+
+The image presents the modules we implemented together with the 
+approximate data/control flow.
+We distinguish between SCTP instances (usually there will be one SCTP
+instance per host - this is what we mostly tested),
+and associations. Since an SCTP instance may connect to several SCTP
+endpoints (i. e. it may have a number of established SCTP associations), 
+it can have multiple instances of data structures belonging to an association.
+
+Therefore the data arriving from an upper layer protocol (ULP) or the
+network must be dispatched accordingly to the correct
+association. That is done by the Association Distribution Layer (cf.
+\Ref{distribution}).
+The Adaptation Layer (\Ref{adaptation}) takes care of network input and 
+output as well as timer functions. The protocol can register call-back functions
+associated with a timer, that will be called after a certain
+time has passed.
+
+So there are two kinds of events, that SCTP must react to :
+\begin{itemize}
+\item Network Read Events
+\item Timer Events
+\end{itemize}
+
+For both events the Association Distribution Layer sets the
+correct association, and schedules the necessary functions. If data
+arrives on the network, it is validated and then passed to the
+Bundling Module (see \Ref{bundling}), where the single chunks that 
+may be part of an SCTP packet
+are passed on to the relevant module. That may be either :
+\begin{itemize}
+\item SCTP Controller (see \Ref{sctp-control}) which deals with chunks that 
+change the association's state
+\item SCTP Reception Controller (see \Ref{recvctrl}), which keeps track of 
+data chunks
+\item SCTP Retransmission Handler (\Ref{reltransfer}) that deals with SACK chunks
+\item Path Management (\Ref{pathmanagement}) for Heartbeat Chunks
+\end{itemize}
+
+Timer events trigger the execution of callback functions, often when a
+timer expires that initializes re-transmission of data.
+This is used for heartbeats, initialization and shutdown timers, timer
+based ULP actions, the data re-transmission, the sending of delayed SACKs 
+and the timed reduction of the congestion window if no data is to be sent.
+
+If the association state changes, if data arrives or the ULP is to be
+notified of a change of path state, data is passed
+from the SCTP protocol instance to the ULP. Currently this is
+implemented via function callbacks within one program (i.e.
+the ULP has functions registered at the very beginning of the program,
+that are to be called if some notification is due).
+Right now, there is only {\bf one} ULP instance. In the future the
+communication between SCTP and the ULP shall be done
+with a locally bound UDP socket, that will be used to register a ULP
+instance with the SCTP instance.
+Thus it will be possible to asynchronously call functions of the SCTP
+protocol engine from a process that sends data on
+a local UDP socket, and is passed the results and other notification
+messages back over that socket.
+
+Any data chunks that are received are held back in the 
+Stream Engine, if they do not arrive in order. 
+Normally the chunks are reordered at that level. All chunks are 
+immediately being delivered up to the
+highest stream sequence number that has consecutively arrived.
+
+
+    @memo Documentation for SCTP implementation 
+*/
+
+//@{
+	/** @name Library Interface */
+    	//@{
+			/** @name sctp.h */
+    			//@{
+				    //@Include: sctp.dxx
+			    //@}
+	    //@}
+
+	/** @name Protocol Engine */
+    	//@{
+	
+			/** @name Association Distribution */
+    			//@{
+				    //@Include: distribution.dxx
+			    //@}
+
+			/** @name Sender Bundling Module */
+    			//@{
+		            //@Include: sbundling.dxx
+			    //@}
+
+			/** @name Receive Bundling Module */
+    			//@{
+		            //@Include: rbundling.dxx
+			    //@}
+
+			/** @name SCTP State Machine Controller  */
+    			//@{
+                    //@Include: SCTP-control.dxx
+        	    //@}
+
+			/** @name Path Management Module */
+    			//@{
+		            //@Include: pathmanagement.dxx
+			    //@}
+	
+			/** @name Reception Control Module */
+    			//@{
+		            //@Include: recvctrl.dxx
+			    //@}
+	
+			/** @name Stream Engine */
+    			//@{
+		            //@Include: streamengine.dxx
+			    //@}
+	
+			/** @name Flow Control */
+    			//@{
+		            //@Include: flowcontrol.dxx
+			    //@}
+
+			/** @name Reliable Transfer */
+    			//@{
+		            //@Include: reltransfer.dxx
+			    //@}
+
+			/** @name Error Handler */
+    			//@{
+		            //@Include: errorhandler.dxx
+			    //@}
+
+			/** @name OS Adaptation Layer */
+    			//@{
+		            //@Include: adaptation.dxx
+			    //@}
+
+		//@}
+
+	/** @name Upper Layer  */
+		//@{
+            /** @name Main Program */
+    			//@{
+		            //@Include: main.dxx
+                //@}
+            /** @name Upper Layer Protocol */
+    			//@{
+	    	        //@Include: mini-ulp.dxx
+    	    	//@}
+	    //@}
+
+	/** @name Helper Modules  */
+		//@{
+            /** @name Chunk Assembler */
+    			//@{
+        		    //@Include: chunkHandler.dxx
+        	    //@}
+            /** @name Globally Used Functions and Definitions */
+            	//@{
+		            //@Include: globals.dxx
+	            //@}
+            /** @name Doubly Linked List */
+        		//@{
+	        	    //@Include: dll_main.dxx
+    	        //@}
+            /** @name Timer List Functions */
+       		//@{
+		        //@Include: timer_list.dxx
+	        //@}
+            /** @name Helper Functions */
+       		//@{
+	    	    //@Include: auxiliary.dxx
+    	    //@}
+		//@}
+
+//@}

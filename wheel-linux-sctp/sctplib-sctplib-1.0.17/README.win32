@@ -1,0 +1,37 @@
+	31/08/2009
+
+Sctplib for Windows
+
+* Download the latest sctplib sources (sctplib-1.0.9) and unpack them
+  in a directory of your choice
+
+* In addition you need some files of the glib library. 
+
+  There are two ways to get the files installed:
+
+  1. If you have already Cygwin installed:
+     o Make sure that Cygwin is installed with bash, wget and unzip
+     o Go to sctplib-1.0.8 and type 
+       nmake setup -f Makefile.nmake
+     o The glib files will be downloaded and unzipped in the
+       directory C:\win32-libs
+     o In case you want them unzipped in a different directory, you
+       have to change the Variable WIN32_LIBS in config.nmake
+  
+  2. If Cygwin is not installed on your computer:
+     o Make a directory C:\win32-libs
+     o Download gtk2.12/glib-2.14.3.zip and gtk2.12/glib-dev-2.14.3.zip preferably
+       from http://anonsvn.wireshark.org/wireshark-win32-libs/tags/2007-11-20/packages
+     o Unzip the files in C:\win32-libs\glib
+     o Download libiconv-1.9.1.bin.woe32.zip and gettext-0.14.5.zip preferably
+       from http://anonsvn.wireshark.org/wireshark-win32-libs/tags/2007-11-20/packages
+     o Unzip the files in C:\win32-libs\libiconv-1.9.1.bin.woe32 and 
+       C:\win32-libs\gettext-0.14.5 respectively
+     o In case you want them unzipped in a different directory, you have
+       to change the Variable WIN32_LIBS in config.nmake
+     o Copy glib\bin\libglib-2.0-0.dll libiconv-1.9.1.bin.woe32\bin\iconv.dll 
+
+       gettext-0.14.5\bin\intl.dll to C:\WINDOWS\system32
+
+* Now you can compile the sctplib and additional programs with
+  nmake all -f Makefile.nmake. 

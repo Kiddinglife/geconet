@@ -1,0 +1,1431 @@
+\documentclass[10pt]{article}
+
+\usepackage{fancyhdr}
+%\usepackage{epsfig}
+%\usepackage{german}
+\usepackage{a4wide}
+%\usepackage[latin1]{inputenc}
+%\usepackage{tutor}
+%\usepackage{pstricks}
+\usepackage{fixunder}
+\usepackage{functions}
+\usepackage{times}
+
+\renewcommand{\topfraction}{0,9999}
+\renewcommand{\bottomfraction}{0,9999}
+\renewcommand{\textfraction}{0}
+%\flushbottom
+%\sloppy
+
+\def\function#1{\hbox to 1.4in{
+  \begin{tabular}{|c|}   
+	\hline
+	\texttt{#1}\hfil\\ 
+    \hline
+  \end{tabular}
+	}
+}
+
+\newcommand{\pp}{\vspace{0,5cm} \noindent }
+\newcommand{\p}{\medskip \noindent }
+\newcommand{\funchead}[1]{\index{#1}{\funcfont #1}()}
+
+\newcommand{\td}[1]{\index{#1}{\funcfont #1}()}
+\newcommand{\bv}{\vspace{0,1cm}\noindent \\ Definition:\footnotesize\begin{verbatim}}
+\newcommand{\n}{\normalsize}
+\newcommand{\no}{ }
+
+\newcommand{\lib}{ \libname{libsctp}-library }
+%----------------------------------------------------------------------------
+%   USE EITHER THIS (for dvi generation,  latex2html)
+%\usepackage[dvips]{graphicx}
+%\usepackage{graphicx}
+%\DeclareGraphicsRule{.gif}{eps}{.gif.bb}{`convert #1 'eps:-' }
+%\DeclareGraphicsRule{.png}{eps}{.png.bb}{`convert #1 'eps:-' }
+%\DeclareGraphicsRule{.jpg}{eps}{.jpg.bb}{`convert #1 'eps:-' }
+
+%   OR THIS for direct PDF Generation, and then comment the rest here
+\usepackage[pdftex]{graphicx}
+% \graphicspath{{images/}{pics/}{pdffiles/}}	
+\graphicspath{{images/}{pics/}{epsfiles/}}	
+%----------------------------------------------------------------------------
+%\pagestyle{fancy}
+
+\title{Documentation of the SCTP-Implementation\\
+	 Release: sctplib-1.0}
+
+\author{Andreas Jungmaier\\
+    \textbf{andreas.jungmaier@web.de}\\
+	Michael T\"{u}xen\\
+	\textbf{tuexen@fh-muenster.de}\\
+   Thomas Dreibholz\\
+   \textbf{dreibh@iem.uni-due.de}}
+
+\begin{document}
+\maketitle
+
+\fancyhf{}
+\fancyhead[RO,LE]{Documentation of the SCTP Implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Nomenclature}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Throughout this document, 
+\begin{quote}
+\begin{itemize}
+\item function names are written as \funcname{func_name},
+\item function parameters as \funcparam{parameter}, 
+\item data types as \datatype{typename}, and
+\item file names as \filename{name_of_file}.
+\item constants as \globalname{CONSTANT}
+\end{itemize}
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{General Concepts}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The sctplib-1.0 library release is the product of a cooperation between
+Siemens AG (ICN), Munich, Germany and the Computer Networking Technology Group
+at the IEM of the University of Essen, Germany.
+It has been developed since late 1999 and has been planned to become a fairly
+complete prototype implementation of the SCTP protocol as described in~\cite{RFC4960}.
+
+\p
+The API of the function library was modeled after section 10 of the
+RFC 4960~\cite{RFC4960},
+and most parameters an functions should be self-explanatory to the user familiar
+with this document.
+In addition to the interface functions between an Upper Layer Protocol (ULP)
+and an SCTP instance,
+the library also provides a number of helper functions that can be used
+to manage callback function routines to make them execute at a certain point of 
+time (i.e.\ timer-based)
+or open and bind  UDP sockets on a configurable port, which may then be used
+for an asynchronous interprocess communication.
+
+\p
+All of these functions may be made use of by simply linking the static
+\libname{libsctp}-library to an application, and including the file \filename{sctp.h}.
+As SCTP operates on top of IP, we chose to open a raw socket to catch all
+incoming packets with the IP protocol id byte set to 132 (=SCTP). For this,
+it is necessary that an application using the library functions
+have privileges to do so. On most Unix machines that means this application
+has to be run by root (i.e.\ be made setuid 0).
+
+\p
+An application making use of the \lib can expect to
+be able to manage a large number of associations (e.g. as a server, all bound to
+one port) as well as handle several so-called \emph{SCTP instances}, which may work
+on several different ports. Ports of incoming packets are checked whether they
+belong to an already existing association or may start a new one.
+
+\p
+The concept of the library is the following: After registration of a first
+\emph{SCTP instance}, sockets are opened and an application may register timer
+events, or file descriptors, that asynchronously trigger execution of  callback
+functions. The function callbacks for these routines are passed in the
+registration functions, and callbacks for SCTP  events are passed in
+a \datatype{SCTP_ulpCallbacks} (described more closely in
+sections~\ref{callbacks} and \ref{sctp2ulp}).
+
+Then the application either calls the possibly blocking function 
+\funcname{sctp_eventLoop} or the nonblocking function \funcname{sctp_getEvents}.
+While calling the former, it will react to a previously scheduled timer or any
+file descriptor event (by executing the registered callback functions).
+In case a timer is scheduled at a very late point in time, and no events
+happen on registered file descriptors (e.g. sockets), the program will
+sleep (because the system call \funcname{poll} is used.
+In this case, the control flow is handled by the library, and the user 
+{\bf must} register appropriate callbacks for events and timers before handing 
+control over to the  \funcname{sctp_eventLoop} function.
+The proper use of the \funcname{sctp_eventLoop} is explained in some simple
+example programs in section \ref{programs}.
+
+On the other hand, there is also the function  \funcname{sctp_getEvents}
+which may be used to check for timer or file descriptor events. If there
+are none, it returns immediately. While scheduling CPU intensive functions
+to run, an application should call this function in between in order
+to treat SCTP events while performing other tasks.
+
+\subsection{Notes}
+Note that the \lib depends on a software packet (glib-2.0) for portable definition of
+types, list functions etc.
+Since we started using this late during the
+project's development cycle, its application is sometimes not very 
+consequent. We continue working on that, though, so things should clean
+up a bit during later releases. For one, removal of the \filename{dll_main.c/.h}
+files is planned in favor of the glib-list functions,
+so that linked list handling will become less prone
+to inefficient use of \funcname{malloc} and \funcname{free}.
+
+\section{Convenient Use of the Library}
+If you compile the entire project, and install the files
+\filename{sctp.h} in the directory \texttt{/usr/local/include}
+and \filename{libsctp.a} in \texttt{/usr/local/lib} (by simply
+copying these from the \texttt{libsctp/sctp/} subdirectory
+to their repective destinations, it is trivial to compile
+an application.
+
+Let's assume, your application is named \libname{app}
+and consists of the file \filename{app.c}. If you use \texttt{gcc} as
+compiler, it is sufficient to issue the command
+\begin{verbatim}
+host:~> gcc -o app app.c -lsctp -lglib2.0
+\end{verbatim}
+in order to compile your application.
+
+\section{Features of the Implementation}
+The implementation is able to establish associations according to RFC~4960 and
+its interoperablility has been tested with implementations of about 25 companies.
+It features a complete API according to section 10 of RFC~4960~\cite{RFC4960}.
+Naturally it supports the SCTP multihoming features, and is able to handle
+all-IPv4  as well as all-IPv6 or mixed IPv4/IPv6 associations.
+An association may be established using a Cookie-structure that is secured
+by a secret key and a secure MD5 hash function message authentication
+code.
+
+The data path implements the flow control features as prescribed in the RFC,
+and supports the delayed acknowledgement feature, the delay of which may be configured,
+optionally.
+Using the \funcname{sctp_setPathStatus}, \funcname{sctp_setAssocStatus} and
+\funcname{sctp_setAssocDefaults} functions, a wide range of protocol parameters
+may optionally be configured for each association.
+
+There can be several SCTP instances per host, provided they have a set of
+disjoint local transport addresses.
+The implementation also supports \emph{reassembly} of fragmented chunks, and
+delivery of unordered chunks, as well as ordered chunks.
+
+As of version \libname{sctplib-1.0.0-pre14} we also support fragmented data
+transmission as well as reception of fragmented chunks.
+
+\section{What is Missing}
+\begin{itemize}
+\item Reception and creation of Error Chunks is not fully implemented, a number 
+of hooks are provisioned that do not actually do anything, yet.
+\item Handling of ICMP messages is not currently being done. So we do NOT do MTU
+path discovery, as prescribed by~\cite{RFC4960}.
+\item A few API functions are in the API, but currently do not do anything
+(namely  \funcname{sctp_receiveUnsent}, \funcname{sctp_receiveUnacked} and
+\funcname{sctp_setPathStatus}).
+\item The \texttt{CommunicationError}-notification callback is never
+called.
+\item Probably there is some more. Additions, comments, bug-reports and
+bug-fixes as welll as patches, patches, and patches are always welcome~!
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\newcommand{\funcvoid}{\argc@ount=0}
+%\newcommand{\funcin}{\docomm@\argc@ount=0{\sl /* IN */}\\}
+%\newcommand{\funcinout}{\docomm@\argc@ount=0{\sl /* IN/OUT */}\\}
+%\newcommand{\funcout}{\docomm@\argc@ount=0{\sl /* OUT */}\\}
+%\newcommand{\funcarg}[2]{\docomm@#1 {\argfont #2}\advance\argc@ount by1}
+%\newcommand{\funcparam}[1]{{\argfont #1}}
+%\newcommand{\funcfuncarg}[2]{\docomm@#1 {\argfont #2}(\= \+ \argc@ount=0}
+%\newcommand{\funcendfuncarg}{), \- \\ \argc@ount=0}
+%\newcommand{\libname}[1]{{\argfont #1}}
+%\newcommand{\globalname}[1]{{\argfont #1}}
+%\newcommand{\ptsto}{->\discretionary{}{}{}}
+%\newcommand{\datatype}[1]{{\bf #1}}
+%\newcommand{\filename}[1]{{\sl #1\/}}
+%\newcommand{\funcname}[1]{\underrealtrue\index{#1}\underrealfalse{\funcfont #1}()}
+%\newcommand{\funcnamenoparens}[1]{\underrealtrue\index{#1}\underrealfalse{\funcfont #1}}
+%\newenvironment{funcdecl}[3]{\underrealtrue\index{#1}\underrealfalse%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{The API}
+\subsection{Constants}
+The maximum size of an IPv4/IPv6 address string is limited to \globalname{SCTP_MAX_IP_LEN}.
+An endpoint may (for now) have a maximum number of addresses, which is limited to
+\globalname{SCTP_MAX_NUM_ADDRESSES}. The maximum size of a datagram that may be passed
+to the \funcname{sctp_send} function is \globalname{SCTP_MAXIMUM_DATA_LENGTH}. Since
+we do NOT do proper MTU path discovery in this release, we cannot guarantee that
+IP fragmentation occurs, but for Ethernet hardware type and most packets, these
+settings will ensure that there is no fragmentation.
+\footnotesize
+\begin{verbatim}
+#define SCTP_MAX_IP_LEN           46
+#define SCTP_MAX_NUM_ADDRESSES    20
+#define SCTP_MAXIMUM_DATA_LENGTH  1400
+\end{verbatim}\n
+\noindent
+The following constants  have been defined for the state of an association:
+\footnotesize
+\begin{verbatim}
+#define SCTP_CLOSED               0
+#define SCTP_COOKIE_WAIT          1
+#define SCTP_COOKIE_ECHOED        2
+#define SCTP_ESTABLISHED          3
+#define SCTP_SHUTDOWN_PENDING     4
+#define SCTP_SHUTDOWN_RECEIVED    5
+#define SCTP_SHUTDOWN_SENT        6
+#define SCTP_SHUTDOWNACK_SENT     7
+\end{verbatim}\n
+\noindent
+When the status of a \emph{path} changes, the following values may be assumed:
+\footnotesize
+\begin{verbatim}
+#define SCTP_PATH_OK              0
+#define SCTP_PATH_UNREACHABLE     1
+\end{verbatim}\n
+\noindent
+For setting the heartbeat (see section~\ref{sctp-changeHeartBeat}, \funcname{sctp_changeHeartBeat}),
+these constants may be used:
+\footnotesize
+\begin{verbatim}
+#define SCTP_HEARTBEAT_ON         1
+#define SCTP_HEARTBEAT_OFF        0
+\end{verbatim}\n
+\noindent
+When calling \funcname{sctp_send} (see section~\ref{sctp-send}), the following
+constants may be used to select, how chunks are sent. For delivery with
+or without stream reordering, one may set:
+\footnotesize
+\begin{verbatim}
+#define SCTP_UNORDERED_DELIVERY   1
+#define SCTP_ORDERED_DELIVERY     0
+\end{verbatim}\n
+\noindent
+When calling \funcname{sctp_receive} (see section below), the following flags 
+can be passed along:
+\footnotesize
+\begin{verbatim}
+#define SCTP_MSG_DEFAULT          0x00
+#define SCTP_MSG_PEEK             0x02
+\end{verbatim}\n
+\noindent
+The former can be used to achieve the default behavior, i.e. data is taken
+from the streamengine, and copied into a user-supplied buffer. After that 
+the data is deleted within the stream-engine.
+The use of the \globalname{SCTP_MSG_PEEK} flag allows for copying the data
+into a user-supplied buffer without deleting it from the stream-engine.
+A second call to \funcname{sctp_receive} will then yield the same data.
+
+To prevent messages from being bundled, the following constants may be passed
+as parameters to   \funcname{sctp_send}:
+\footnotesize
+\begin{verbatim}
+#define SCTP_BUNDLING_ENABLED     0
+#define SCTP_BUNDLING_DISABLED    1
+\end{verbatim}\n
+\noindent
+Three more constants may be needed frequently for \funcname{sctp_send},
+\begin{enumerate}
+\item for path selection, if the primary path is to be taken
+(which is the default):
+\footnotesize
+\begin{verbatim}
+#define SCTP_USE_PRIMARY          -1
+\end{verbatim}\n
+\item this is used to have chunks have an unlimited lifetime:
+\footnotesize
+\begin{verbatim}
+#define SCTP_INFINITE_LIFETIME    0
+\end{verbatim}\n
+\item if there is no context passed along (which otherwise might be used for
+data retrieval - but that has not yet been implemented):
+\footnotesize
+\begin{verbatim}
+#define SCTP_NO_CONTEXT           NULL
+\end{verbatim}\n
+\end{enumerate}
+\noindent
+In order to encourage future proper and consequent use of appropriate error
+return codes for functions (which unfortunately up to now has only partially been
+implemented), a number of return codes have been defined. They are:
+\footnotesize
+\begin{verbatim}
+#define SCTP_SUCCESS                    0
+#define SCTP_UNSPECIFIED_ERROR          -1
+#define SCTP_SPECIFIC_FUNCTION_ERROR    1
+\end{verbatim}\n
+
+\subsection{Type Definitions}
+The main include file of \filename{sctp.h} defines a number of types that
+are used throughout the library as well as in some of the interface functions.
+They will be explained in the subsequent sections.
+
+\subsubsection{\datatype{SCTP_ulpCallbacks}}
+\label{callbacks}
+This is a structure containing pointers to functions (used as callbacks for
+SCTP events that may occur and that the ULP needs to be notified of), which are
+all explained in detail in section \ref{sctp2ulp}.
+This structure is usually initialized early in the program, and then passed
+to the function \funcname{sctp_registerInstance} (see section~\ref{register}),
+which in turn 
+registers the appropriate functions from this structure for the corresponding 
+events.
+\bv
+struct SCTP_ulp_Callbacks
+{
+   void  (*dataArriveNotif)  (unsigned int, unsigned int, unsigned int,
+                              unsigned int, unsigned int,   void*);
+   void  (*sendFailureNotif) (unsigned int, unsigned char *, unsigned int,
+                              unsigned int *, void*);
+   void  (*networkStatusChangeNotif) (unsigned int, short, unsigned short, void*);
+   void* (*communicationUpNotif) (unsigned int, unsigned short,
+                                  int, unsigned short, unsigned short, void*);
+   void  (*communicationLostNotif)  (unsigned int, unsigned short, void*);
+   void  (*communicationErrorNotif) (unsigned int, unsigned short, void*);
+   void  (*restartNotif) (unsigned int, void*);
+   void  (*shutdownCompleteNotif) (unsigned int, void*);
+}SCTP_ulpCallbacks;
+\end{verbatim}\n
+
+
+\subsubsection{\datatype{SCTP_InstanceParameters}}
+\label{instance-params}
+This struct contains variables that may be set per SCTP instance (as defaults),
+and can subsequently set or retrieved after an instance has been registered.
+All associations that will be created from this instance will then inherit
+these parameters.
+\bv
+struct SCTP_Instance_Parameters {
+   /* the initial round trip timeout */
+   unsigned int rtoInitial;
+   /** the minimum timeout value */
+   unsigned int rtoMin;
+   /** the lifetime of a cookie */
+   unsigned int validCookieLife;
+   /** maximum retransmissions per association */
+   unsigned int assocMaxRetransmits;
+   /** maximum retransmissions per path */
+   unsigned int pathMaxRetransmits;
+   /** maximum initial retransmissions */
+   unsigned int maxInitRetransmits;
+   /** local receiver window */
+   unsigned int myRwnd;
+   /** delay for delayed ACK in msecs */
+   unsigned int delay;
+   /** per instance: for the IP type of service field. */
+   unsigned char ipTos;
+   /** currently unused, to limit the number of chunks
+       queued in the send queue */
+   unsigned int maxSendQueue;
+   /** currently unused, may limit the number of chunks
+       queued in the receive queue later. */
+   unsigned int maxRecvQueue;
+} SCTP_InstanceParameters;
+\end{verbatim}
+\n
+
+
+\subsubsection{\datatype{SCTP_AssociationStatus}}
+\label{association-status}
+This struct contains variables that may be retrieved for each
+ SCTP association.
+A number of these parameters may even be set, and are marked accordingly in
+the declaration.
+
+These parameters can
+subsequently be set or retrieved after a \texttt{CommunicationUp}
+has been received.
+The values contained in this structure give most of the important
+data about the current association:
+\begin{quote} \begin{description} \no
+\item[rtoInitial]  initial round trip timeout.
+\item[validCookieLife]  cookie life time.
+\item[assocMaxRetransmits]
+ maximum number of retransmission before the peer is considered unreachable.
+\item[pathMaxRetransmits]
+maximum number of retransmission before a destination address is considered unreachable.
+\item[maxInitRetransmits]
+maximum number of retransmissions of init and cookie messages.
+\item[state]
+returns an unsigned integer representing the state of
+the association. The states have been defined as:
+\begin{itemize}
+\item \globalname{SCTP_CLOSED}
+\item \globalname{SCTP_COOKIE_WAIT}
+\item \globalname{SCTP_COOKIE_ECHOED}
+\item \globalname{SCTP_ESTABLISHED}
+\item \globalname{SCTP_SHUTDOWN_PENDING}
+\item \globalname{SCTP_SHUTDOWN_RECEIVED}
+\item \globalname{SCTP_SHUTDOWN_SENT}
+\item \globalname{SCTP_SHUTDOWNACK_SENT}
+\end{itemize}
+\item[numberOfAddresses]
+returns the number of destination addresses this
+association has, i.e.\ the number of possible paths.
+\item[primaryDestinationAddress]
+returns a string containing the primary IP destination address
+\item[inStreams] number of inbound streams
+\item[outStreams] number of outbound streams
+\end{description} \end{quote}
+\bv
+struct SCTP_Association_Status
+{
+  /** (get)  */
+  unsigned short state;
+  /**  (get) */
+  unsigned short numberOfAddresses;
+  /**  (get) */
+  unsigned char  primaryDestinationAddress[SCTP_MAX_IP_LEN];
+  /**  (get) */
+  unsigned short outStreams;
+  /**  (get) */
+  unsigned short inStreams;
+  /**  (get/set) */
+  unsigned short primaryAddressIndex;
+  /**  (get) */
+  unsigned int   currentReceiverWindowSize;
+  /**  (get) */
+  unsigned int   outstandingBytes;
+  /**  (get) */
+  unsigned int   noOfChunksInSendQueue;
+  /**  (get) */
+  unsigned int   noOfChunksInRetransmissionQueue;
+  /**  (get) */
+  unsigned int   noOfChunksInReceptionQueue;
+  /** (get/set) the initial round trip timeout */
+  unsigned int   rtoInitial;
+  /** (get/set) the minimum RTO timeout */
+  unsigned int   rtoMin;
+  /** (get/set) the maximum RTO timeout */
+  unsigned int   rtoMax;
+  /** (get/set) the lifetime of a cookie */
+  unsigned int   validCookieLife;
+  /** (get/set) maximum retransmissions per association */
+  unsigned int   assocMaxRetransmits;
+  /** (get/set) maximum retransmissions per path */
+  unsigned int   pathMaxRetransmits;
+  /** (get/set) maximum initial retransmissions */
+  unsigned int   maxInitRetransmits;
+  /** (get/set) local receiver window */
+  unsigned int myRwnd;
+  /** (get/set) delay for delayed ACK in msecs */
+  unsigned int delay;
+  /** (get/set) per instance: for the IP type of service field. */
+  unsigned char ipTos;
+  /** currently unused, to limit the number of chunks
+       queued in the send queue */
+  unsigned int maxSendQueue;
+   /** currently unused, may limit the number of chunks
+       queued in the receive queue later. */
+  unsigned int maxRecvQueue;
+} SCTP_AssociationStatus;
+\end{verbatim}
+\n
+
+
+\subsubsection{\datatype{SCTP_PathStatus}}
+\label{pathstatus-struct}
+This struct contains path specific parameters. These
+values can only be retrieved using the function \funcname{sctp_getPathStatus},
+ when the association already exists. Setting of these parameters is
+currently NOT implemented, although the API already contains the
+function  \funcname{sctp_setPathStatus}, that may be used for
+this purpose in a later release.
+
+This struct also contains values from the flow control module, and
+may thus be used to check the status of the congestion control
+mechanisms.
+\bv
+struct SCTP_Path_Status
+{
+  unsigned char destinationAddress[SCTP_MAX_IP_LEN];
+  /**  SCTP_PATH_ACTIVE  0, SCTP_PATH_INACTIVE   1    */
+  short state;
+  /** smoothed round trip time in msecs */
+  unsigned int srtt;
+  /** current rto value in msecs */
+  unsigned int rto;
+  /** round trip time variation, in msecs */
+  unsigned int rttvar;
+  /** defines the rate at which heartbeats are sent */
+  unsigned int heartbeatIntervall;
+  /**  congestion window size */
+  unsigned int cwnd;
+  /**  congestion window size 2  */
+  unsigned int cwnd2;
+  /**  Partial Bytes Acked  */
+  unsigned int partialBytesAcked;
+  /**  Slow Start Threshold  */
+  unsigned int ssthresh;
+  unsigned int outstandingBytesPerAddress;
+  /**  Current MTU (flowcontrol) */
+  unsigned int mtu;
+  /** per path ? per instance ? for the IP type of service field. */
+  unsigned char ipTos;
+}SCTP_PathStatus;
+\end{verbatim} \n
+
+
+\subsubsection{\datatype{sctp_socketCallback}}
+\bv
+typedef void (*sctp_socketCallback) (int, unsigned char *, int,
+                                     unsigned char[] , unsigned short);
+
+\end{verbatim}
+\n
+A callback function type used for registering callbacks for 
+socket events (for events POLLIN or POLLPRI).
+The parameters that are passed by the sctp library, when a socket has been
+active are (in this order): 
+\begin{quote} \begin{description} \no
+\item[\datatype{int}] socket file descriptor of the socket where a datagram was received
+\item[\datatype{unsigned char*}] pointer to the data
+\item[\datatype{int}] length of datagram
+\item[\datatype{unsigned char[]}] source address string (from which originated the data)
+\item[\datatype{unsigned short}] source port (for UDP data, not SCTP data !)
+\end{description} \end{quote}
+
+\subsubsection{\datatype{sctp_timerCallback}}
+\bv
+typedef void (*sctp_timerCallback) (unsigned int, void *, void *);
+\end{verbatim}
+\n
+Defines the callback function that is called when a timer expires.
+Parameters: 
+\begin{quote} \begin{description} \no
+\item[\datatype{unsigned int}] ID of timer
+\item[\datatype{void*}] pointer to param1
+\item[\datatype{void*}] pointer to param2
+\end{description} \end{quote}
+param1 and param2 are pointers to data that are returned to the callback
+function, when the timer expires. These must still exist at
+that time and point to valid data !
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Helper Functions}
+The \lib contains a few functions that influence the general
+control flow of a program using them, and are needed to create
+an application that works as expected.
+The important functions needed in {\em any} program using the \lib are
+the functions \funcname{sctp_eventLoop} and \funcname{sctp_getEvents}
+
+\subsubsection{\funchead{sctp_eventLoop}}
+Basically this is a wrapper to a \funcname{poll} or \funcname{select}-system
+call. The function waits until either of one events occurrs:
+\begin{enumerate}
+\item the time for which a timer event was scheduled has passed by, so 
+the callback function belonging to that (previously registered) event is
+executed.
+\item one of the sockets that had previously been registered with 
+the function \funcname{sctp_registerUdpCallback} or the raw socket
+that waits for incoming SCTP packets has encountered a read event, 
+so there is data available. The appropriate function callback is then
+called to treat that event.
+\end{enumerate}
+The control flow of the program is given to the callback function
+which may in turn register new timer events. The function returns
+-1 if an error ocurrs, 0 if a timeout has ocurred, or else
+the number of file descriptor events that have been treated.
+\bv
+int sctp_eventLoop();
+\end{verbatim}
+\n
+
+\subsubsection{\funchead{sctp_getEvents}}
+Basically this is a wrapper to a \funcname{poll} or \funcname{select}-system
+call (if such a syscall exists on the used OS). The function checks whether a timer
+event needs to be handled and does so, if the time has arisen.
+Then it checks via the  \funcname{poll}-system call whether events
+on the socket need to be handled, and does so, if there are any.
+
+After these events have been handled, it returns the number of events
+handled, 0 if none had to be
+handled (i.e.\ a timer had been handled) or -1 if an error has
+occurred.
+\bv
+int sctp_getEvents();
+\end{verbatim}
+\n
+
+\subsubsection{\funchead{sctp_registerUdpCallback}}
+This function is supposed to open and bind a UDP socket listening on a port
+to incoming UDP pakets from a local IP address. 
+After that it registers a callback function that is called, to dispacth
+UDP data which  arrives for that local address.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{me}] local address string (zero-terminated)
+\item[\funcparam{my_port}] the UDP port to bind (locally)
+\item[\funcparam{scf}]  callback funtion that is called when data has arrived
+\end{description} \end{quote}
+It returns a new UDP socket file descriptor, or -1 if error ocurred.
+\bv
+int sctp_registerUdpCallback(unsigned char me[],
+                             unsigned short my_port,
+                             sctp_socketCallback scf);
+\end{verbatim}
+\n
+
+\subsubsection{\funchead{sctp_registerStdinCallback}}
+This function is supposed to register a callback function for catching
+input from the Unix STDIN file descriptor. We expect this to be useful
+in test programs mainly, so it is provided here for convenience.
+Events on this file descriptor are dispatched differently, as applications
+may read directly from STDIN (i.e. the callback  function buffer does not
+contain the data from STDIN, and the registered callback function may retrieve
+this data with functions as \funcname{fgets}).
+
+\begin{quote} \begin{description} \no
+\item[\funcparam{scf}]  callback funtion that is called when data has arrived
+\end{description} \end{quote}
+It returns 0, or -1 if an error ocurred.
+\bv
+int sctp_registerStdinCallback(sctp_socketCallback scf);
+\end{verbatim} \n
+
+\subsubsection{\funchead{sctp_startTimer}}
+This function adds a callback that is to be called some time from now. 
+It realizes the timer (in an ordered list).
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{milliseconds}] action is to be started in milliseconds ms from now
+\item[\funcparam{timer_cb}] pointer to a function to be executed, when timer expires
+\item[\funcparam{param1}]  pointer to be returned to the caller when timer expires
+\item[\funcparam{param2}]  pointer to be returned to the caller when timer expires
+\end{description} \end{quote}
+The function returns a timer ID value, that can be used to cancel or
+restart this timer.
+{\bf NOTE:} the pointers \funcparam{param1} and \funcparam{param2}
+exist to point to data useful for the function callback. They need to 
+point to data that is still valid at the time the callback is activated.
+Do not pass pointers to temporary objects !
+\bv
+unsigned int sctp_startTimer(unsigned int milliseconds,
+                        sctp_timerCallback timer_cb, void *param1, void *param2);
+\end{verbatim}
+\n
+
+\subsubsection{\funchead{sctp_stopTimer}}
+This function stops a previously started timer.
+The function takes the following parameter:
+\begin{quote} \begin{description} \no
+\item[\funcparam{tid}]  timer-id of timer to be removed
+\end{description} \end{quote}
+The function returns 0 on success, 1 if tid not in the list, -1 on error.
+\bv
+int sctp_stopTimer(unsigned int tid);
+\end{verbatim} \n
+
+\subsubsection{\funchead{sctp_restartTimer}}
+Restarts a timer that is currently running.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{timer_id}] the timer id returned by start_timer 
+\item[\funcparam{milliseconds}] action is to be taken in milliseconds ms from now
+\end{description} \end{quote}
+The function returns a new timer ID, zero when there is an error (i.e. the
+timer was not running). The function basically stops the old timer, and sets a new
+timer. So it is there for convenience. The timer ID will be different
+after calling this function !
+\bv
+unsigned int sctp_restartTimer(unsigned int timer_id, unsigned int milliseconds);
+\end{verbatim} \n
+
+
+\subsubsection{\funchead{sctp_getTime}}
+This helper function returns a 32 bit value representing the current time in
+milliseconds. Beware, this counter wraps about once per 20 days. Keep that in
+mind when calculating time differences ! This function may be useful,
+or may not be useful.
+\bv
+unsigned int sctp_getTime(void);
+\end{verbatim} \n
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{ULP-to-SCTP}
+\label{ulp2sctp}
+
+\subsubsection{\funchead{sctp_initLibrary}}
+\label{initLibrary}
+This function will open raw sockets for capturing SCTP packets
+(IPv4 and if possible, IPv6, too) from the network and
+initialize the timer list.
+{\em It needs to be called before any other functions of the
+\lib are called !}
+
+\bv
+int sctp_initLibrary(void);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_registerInstance}}
+\label{register}
+\funcname{sctp_registerInstance} is called to initialize one SCTP instance.
+An application may register several instances with different sets of
+callback functions, but there should not be several instances with
+the same port.
+If the port is set to zero, the instance will not be able to receive any
+datagrams, unless the \funcname{sctp_associate} function is called. So
+it does not make sense to specify 0 as port number, unless the application
+is a client. A server needs a port number greater than 0 here.
+A client may have the \lib choose a free source port by specifying
+zero.\\
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{localPort}] port of this SCTP instance
+\item[\funcparam{noOfInStreams}] default maximum inbound stream number
+\item[\funcparam{noOfOutStreams}] default maximum outbound stream number
+\item[\funcparam{noOfLocalAddresses}]  number of local addresses
+\item[\funcparam{localAddressList}] pointer to an array of local address-strings (zero-terminated)
+\item[\funcparam{ULPcallbackFunctions}]   callback functions for primitives passed to ULP
+\end{description} \end{quote}
+The function returns the  instance name of this new SCTP instance.
+\bv
+unsigned short sctp_registerInstance(unsigned short localPort,
+                                     unsigned short noOfInStreams,
+                                     unsigned short noOfOutStreams,
+                                     unsigned int   noOfLocalAddresses,
+                                     unsigned char  localAddressList[][SCTP_MAX_IP_LEN],
+                                     SCTP_ulpCallbacks ULPcallbackFunctions);
+\end{verbatim}\n
+
+\subsubsection{\funchead{sctp_unregisterInstance}}
+\label{unregister}
+\funcname{sctp_unregisterInstance} is called to release resources used by
+a previously registered SCTP instance.
+If no instances are registered for either
+IPv4 or IPv6 raw sockets any more, callbacks for these sockets are
+also removed.\\
+To be checked here:
+\begin{itemize}
+\item Check that all resources belonging to an instance are correctly
+released. What about chunks that are still in the queues ?
+\end{itemize}
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{instance_name}] name of the SCTP instance to un-register
+\end{description} \end{quote}
+The function returns an error code, 0 on success, -1 on error.
+\bv
+int sctp_unregisterInstance(unsigned short instance_name);
+\end{verbatim}\n
+
+
+
+
+\subsubsection{\funchead{sctp_associate}}
+This function is called to set up an association. It triggers sending of an INIT
+chunk to a server, and when the association gets established, the
+\texttt{CommunicationUp}-notification is called.
+The ULP must specify the SCTP instance which this association belongs to.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{SCTP_InstanceName}]  
+the SCTP instance this association belongs to. If the local port of this SCTP instance 
+is zero, we will get a free port number assigned, else we will use the one
+specified in the call to \funcname{sctp_registerInstance}.
+\item[\funcparam{noOfOutStreams}] number of output streams the ULP would like to have.
+\item[\funcparam{destinationAddress}] destination address string (zero-terminated) containing the
+ address which the INIT will be sent to.
+\item[\funcparam{destinationPort}]  destination port
+\item[\funcparam{ulp_data}]  void pointer, that will be returned with each callback.
+May be used by the ULP to find data faster.
+\end{description} \end{quote}
+The function returns the association ID of this association (identical with local tag), 
+or 0 in case of failures.
+\bv
+unsigned int sctp_associate(unsigned short SCTP_InstanceName,
+                            unsigned short noOfOutStreams,
+                            unsigned char  destinationAddress[],
+                            unsigned short destinationPort,
+                            void* ulp_data);
+\end{verbatim} \n
+
+
+
+\subsubsection{\funchead{sctp_shutdown}}
+\funcname{sctp_shutdown} initiates the shutdown of the specified association.
+Basically triggers sending of a SHUTDOWN chunk. After the shutdown procedure
+is completed, the \texttt{ShutdownComplete}-Notification is called.
+The function takes the following parameter:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  the ID of the addressed association.
+\end{description} \end{quote}
+The function returns 0 for success, 1 for error (assoc. does not exist).
+\bv
+int sctp_shutdown(unsigned int associationID)
+\end{verbatim} \n
+
+\subsubsection{\funchead{sctp_abort}}
+\funcname{sctp_abort} initiates the abort of the specified association.
+The function takes the following parameter:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}] the ID of the addressed association.
+\end{description} \end{quote}
+The function returns 0 for success, 1 for error (assoc. does not exist).
+\bv
+int sctp_abort(unsigned int associationID)
+\end{verbatim} \n
+
+\subsubsection{\funchead{sctp_send}}
+\label{sctp-send}
+\funcname{sctp_send} is used by the ULP to send data as data chunks. There
+are quite a few parameters that can be or must be passed along:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  the ID of the addressed association.
+\item[\funcparam{streamID}]       identifies the stream on which the chunk is sent.
+\item[\funcparam{buffer}]         chunk data.
+\item[\funcparam{length}]         length of chunk data.
+\item[\funcparam{protocolId}]     the payload protocol identifier
+\item[\funcparam{path_id}] index of destination address, if different from primary path.
+    Primary Path is taken, if the constant \globalname{SCTP_USE_PRIMARY} is used here.
+\item[\funcparam{context}]
+    ULP context for this data chunk, to be returned in case of errors.
+    The constant \globalname{SCTP_NO_CONTEXT} may be used here.
+\item[\funcparam{lifetime}]         maximum time of chunk in send queue. Use the constant
+    \globalname{SCTP_INFINITE_LIFETIME} for infinite lifetime (the lifetime feature is not
+    supported yet).
+\item[\funcparam{unorderedDeliver}] the chunk is delivered to peer ULP without resequencing.
+    Use constants \globalname{SCTP_ORDERED_DELIVERY} or \globalname{SCTP_UNORDERED_DELIVERY}
+\item[\funcparam{dontBundle}]       if true, chunk must not be bundled with other data chunks.
+    Use constants \globalname{SCTP_BUNDLING_ENABLED} or \globalname{SCTP_BUNDLING_DISABLED}.
+\end{description} \end{quote}
+The function returns an error code: -1 for send error, 1 for association error, 0 if successful.
+\bv
+int sctp_send(unsigned int associationID, unsigned short streamID,
+              unsigned char *buffer, unsigned int length,
+              unsigned int protocolId, short path_id,
+              void * context, unsigned int lifetime,
+              int unorderedDelivery, int dontBundle);
+\end{verbatim}\n
+
+\subsubsection{\funchead{sctp_setPrimary}}
+\funcname{sctp_setPrimary} changes the primary path of an association.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]     ID of assocation.
+\item[\funcparam{path_id}]  index to the new primary path
+\end{description} \end{quote}
+The function returns an error code: 0 on success, 1 on error (i.e. no assoc, path
+with this index does not exist etc.).
+\bv
+short sctp_setPrimary(unsigned int associationID, short path_id)
+\end{verbatim} \n
+
+\subsubsection{\funchead{sctp_receive}}
+\funcname{sctp_receive} is called in response to the \texttt{DataArrive}-Notification to
+get the received data. You can use a flag of \globalname{SCTP_MSG_PEEK} to just peek at one part of
+the chunk that has arrived. A subsequent call to \funcname{sctp_receive} with the
+\globalname{SCTP_MSG_DEFAULT} flag set will give you the same data.
+You may specify a certain length, and will get data up the maximum length of the
+datagram.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  ID of association.
+\item[\funcparam{streamID}]   the stream on which the data chunk is received.
+\item[\funcparam{buffer}]     pointer to where payload data of arrived chunk will be copied
+\item[\funcparam{length}]     length of chunk data.
+\item[\funcparam{flags}]     \globalname{SCTP_MSG_PEEK} or \globalname{SCTP_MSG_DEFAULT}
+\end{description} \end{quote}
+It returns  1 if association does not exist, 0 if okay.
+\bv
+unsigned short sctp_receive(unsigned int associationID, unsigned short streamID,
+                            unsigned char *buffer, unsigned int *length, unsigned int flags)
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_getAssocDefaults}}
+This function returns all the default values of an SCTP instance, i.e.
+it fills the \datatype{SCTP_InstanceParameters} structure.
+Values that are not supported yet, but already integrated in this
+API are set 0 by default (here: \funcparam{maxSendQueue},
+\funcparam{maxRecvQueue}).\\
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{SCTP_InstanceName}]  instance name
+\item[\funcparam{params}]  pointer to a structure, that will be filled
+\end{description} \end{quote}
+It returns  -1 if the SCTP instance does not exist, 0 if okay.
+\bv
+int sctp_getAssocDefaults(unsigned short SCTP_InstanceName, SCTP_InstanceParameters* params);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_setAssocDefaults}}
+This function sets all the default values for new SCTP instances.
+Some values are not supported yet, but already integrated in this
+API (i.e. \funcparam{maxSendQueue}, \funcparam{maxRecvQueue}).\\
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{SCTP_InstanceName}]  instance name
+\item[\funcparam{params}]  pointer to a structure, that contains new values
+\end{description} \end{quote}
+It returns  -1 if the SCTP instance does not exist, 0 if okay.
+\bv
+int sctp_setAssocDefaults(unsigned short SCTP_InstanceName, SCTP_InstanceParameters* params);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_getAssocStatus}}
+This function may be used to retrieve a number of values or parameters
+that belong to a certain (and already existing) association.
+When it is called, it fills the parameters of a
+\datatype{SCTP_AssociationStatus} structure.
+Some values are not supported yet, but already integrated in this
+API. These will be set to 0 (i.e. \funcparam{maxSendQueue},
+\funcparam{maxRecvQueue}).\\
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  ID of association.
+\item[\funcparam{status}]  pointer to the structure to be filled
+\end{description} \end{quote}
+It returns  -1 if the association does not exist, 0 if okay.
+\bv
+int sctp_getAssocStatus(unsigned int associationID, SCTP_AssociationStatus* status);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_setAssocStatus}}
+This function may be used to set a number of values or parameters
+that belong to a certain (and already existing) association.
+Some values are not supported yet, but already integrated in this
+API (i.e. \funcparam{maxSendQueue}, \funcparam{maxRecvQueue}).\\
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  ID of association.
+\item[\funcparam{status}]  pointer to the structure to be filled
+\end{description} \end{quote}
+It returns  -1 if the association does not exist, 0 if okay.
+\bv
+int sctp_setAssocStatus(unsigned int associationID, SCTP_AssociationStatus* new_status);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_getPathStatus}}
+This function may be used to retrieve a number of path
+specific values or parameters within an existing association.
+When it is called, it fills the parameters of a
+\datatype{SCTP_PathStatus} structure.\\
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  ID of association.
+\item[\funcparam{path_id}]  index of the path for which to get the data
+\item[\funcparam{status}]  pointer to the structure to be filled
+\end{description} \end{quote}
+It returns  -1 if the association or the path does not exist,
+0 if okay.
+\bv
+int sctp_getPathStatus(unsigned int associationID, short path_id,
+                       SCTP_PathStatus* status);
+\end{verbatim}\n
+
+
+
+\subsubsection{\funchead{sctp_setPathStatus}}
+This function is currently not yet implemented, but may be
+implemented in a later release !
+\bv
+int sctp_setPathStatus(unsigned int associationID, short path_id,
+                       SCTP_PathStatus* new_status);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_getPrimary}}
+This function may be conveniently used to get the path index
+of the current primary address. It does not give the IP address
+string~! The function takes the association ID as parameter,
+and returns 0 the primary path as result, or -1 if an error
+occurred.
+\bv
+short sctp_getPrimary(unsigned int associationID);
+\end{verbatim}\n
+
+\subsubsection{\funchead{sctp_setPrimary}}
+This function sets a new primary address. It is given the index
+of the new primary path and the associaton ID as parameter, and
+returns 0 on success, or 1 on error.
+\bv
+short sctp_setPrimary(unsigned int associationID, short path_id);
+\end{verbatim}\n
+
+\subsubsection{\funchead{sctp_getSrttReport}}
+Returns the smoothed round trip time in milliseconds for a  certain
+destination path within an association, or zero on error.
+\bv
+unsigned int sctp_getSrttReport(unsigned int associationID, short path_id);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_changeHeartBeat}}
+\label{sctp-changeHeartBeat}
+\funcname{sctp_changeHeartBeat} turns the heartbeat of an association on or off,
+and sets the interval, if it is turned on. Our \lib implementation is currently missing
+the jitter, that is required by the RFC~\cite{RFC4960}.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]   ID of assocation.
+\item[\funcparam{path_id}] index of the address for which HB is turned
+on/off.
+\item[\funcparam{heartbeatON}]     turn heartbeat on or off.
+    Use constants \globalname{SCTP_HEARTBEAT_ON}  or \globalname{SCTP_HEARTBEAT_OFF}.
+\item[\funcparam{timeIntervall}]   heartbeat time intervall in milliseconds
+\end{description} \end{quote}
+The function returns an error code, 0 for success, 1 if association
+or destination address do not exist.
+\bv
+int sctp_changeHeartBeat(unsigned int associationID, short path_id,
+                         int heartbeatON, unsigned int timeIntervall)
+\end{verbatim}\n
+
+\subsubsection{\funchead{sctp_requestHeartbeat}}
+\funcname{sctp_requestHeartbeat} sends a heartbeat to the given address 
+of an association. This is an explicit request from the ULP to
+the SCTP instance to perform an on-demand heartbeat.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]    ID of assocation.
+\item[\funcparam{path_id}] destination address to which
+the heartbeat shall be sent.
+\end{description} \end{quote}
+Function returns error code (0 == success, 1 == error).
+\bv
+int sctp_requestHeartbeat(unsigned int associationID, short path_id);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_setFailureThreshold}}
+Is used to set the threshold for retransmissions of the given association.
+If the threshold is exceeded, the the destination address is considered
+unreachable.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}] ID of assocation.
+\item[\funcparam{pathMaxRetransmissions}] new threshold for retransmissions.
+\end{description} \end{quote}
+Function returns 0 on success, 1 otherwise.
+\bv
+int sctp_setFailureThreshold(unsigned int associationID,
+                             unsigned short pathMaxRetransmissions)
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_receiveUnsent}}
+\funcname{sctp_receiveUnsent} is currently NOT implemented !
+It will return messages that could not be sent for some reason, e.g. because 
+association was aborted before they could be transmitted for the first 
+time.
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  ID of assocation.
+\item[\funcparam{buffer}]         
+pointer to a buffer that the application needs to pass. Data is copied there.
+\item[\funcparam{length}] pointer to size of the buffer passed by application.
+Contains the actual length of the data chunk after the call returns.
+\item[\funcparam{streamID}] 
+pointer to the stream id, where data should have been sent.
+\item[\funcparam{streamSN}]       
+pointer to stream sequence number of the data chunk that was not sent.
+\item[\funcparam{protocolId}] pointer to the protocol ID of the unsent chunk
+\end{description} \end{quote}
+Function currently not implemented, so it returns -1, always.
+\bv
+int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer,
+                       unsigned int *length, unsigned short *streamID,
+                       unsigned short *streamSN,unsigned int* protocolId);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_receiveUnacked}}
+\funcname{sctp_receiveUnacked} is currently NOT implemented !
+Will return messages that were sent, but have not been acknowlegded by the
+peer before the association was terminated (or aborted).
+The function takes the following parameters:
+\begin{quote} \begin{description} \no
+\item[\funcparam{associationID}]  ID of assocation.
+\item[\funcparam{buffer}]         
+pointer to a buffer that the application needs to pass.
+The data retrieved is copied there.
+\item[\funcparam{length}]  pointer to the size of the buffer
+passed by application. After the function returns, the value
+is changed to the actual length of the chunk.
+\item[\funcparam{streamID}]
+pointer to the stream id, where data should have been sent.
+\item[\funcparam{streamSN}]       
+pointer to stream sequence number of the data chunk that was not acked
+\item[\funcparam{protocolId}] pointer to the protocol ID of the unacked chunk
+\end{description} \end{quote}
+Function currently not implemented, so it returns -1, always.
+\bv
+int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
+                        unsigned int *length, unsigned short *streamID,
+                        unsigned short *streamSN,unsigned int* protocolId);
+\end{verbatim}\n
+
+
+\subsubsection{\funchead{sctp_deleteAssociation}}
+\funcname{sctp_deleteAssociation} is called to  remove all the
+data structures belonging to an association.
+It should be called some time after a \texttt{ShutdownComplete}
+or a \texttt{CommunicationLost}-notification has been received, and
+the ULP has retrieved all the data that may still be in the queues
+using the (currently un-implemented) functions  \funcname{sctp_receiveUnacked}
+and  \funcname{sctp_receiveUnsent}.
+A call to this function finally frees all association resources.\\
+The function returns 0 on success, 1 if association does not exist, and
+-1 if association is still active, and not marked \emph{deleted}.
+\bv
+int sctp_deleteAssociation(unsigned int associationID);
+\end{verbatim}\n
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{SCTP-to-ULP}
+\label{sctp2ulp}
+All notifcations are realized via callbacks, i.e.\ upon registering a new SCTP
+instance, the ULP has to pass a struct containing pointers to a set of functions, 
+that will be called when the respective event occurs, with appropriate
+parameters. 
+
+The \texttt{CommunicationUp}-notification may return a pointer
+to a data structure that the upper layer is interested in. This pointer
+is subsequently registered within the new association structure, and passed
+along transparently with all callbacks.
+
+\subsubsection{DataArrive Notification}
+Indicates that new data has arrived from peer (chapter 10.2.A).
+The parameters passed with this callback are (in this order):
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{unsigned int}] stream ID
+ \item[\datatype{unsigned int}] length of data
+ \item[\datatype{unsigned int}] protocol ID
+ \item[\datatype{unsigned int}] unordered flag
+(uses constants SCTP_UNORDERED_DELIVERY==1,or SCTP_ORDERED_DELIVERY==0 for normal
+numbered chunk)
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*dataArriveNotif) (unsigned int, unsigned int, unsigned int,
+                         unsigned int, unsigned int, void*);
+\end{verbatim}\n
+
+\subsubsection{Send Failure Indication}
+Indicates a send failure, i.e. the data could not be sent
+for some reason (chapter 10.2.B).
+The parameters passed with this callback are (in this order):
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{unsigned char *}] pointer to data that was not sent
+ \item[\datatype{unsigned int}] length of data
+ \item[\datatype{unsigned int *}] pointer to context from sctp_send
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*sendFailureNotif) (unsigned int, unsigned char *,
+                          unsigned int, unsigned int *, void*);
+\end{verbatim}\n
+
+\subsubsection{NetworkStatusChange Indication}
+Indicates a change of network status, i.e. a path has changed from state
+SCTP_PATH_OK to SCTP_PATH_UNREACHABLE, or vice versa. (chapter 10.2.C).
+If there is only \emph{one} active path left, which turns INACTIVE, a
+\texttt{CommunicationLost}-notification is given instead of a
+\texttt{NetworkStatusChange}.\\
+The parameters passed with this callback are (in this order):
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{short}] index of  the destination address concerned
+ \item[\datatype{unsigned short}] new path state (uses constants
+\globalname{SCTP_PATH_OK},  \globalname{SCTP_PATH_UNREACHABLE})
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*networkStatusChangeNotif) (unsigned int, short, unsigned short, void*);
+\end{verbatim}\n
+
+\subsubsection{CommunicationUp Notification}
+Indicates that an association has been successfully established (chapter 10.2.D).
+The parameters passed with this callback are (in this order):
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{unsigned short}] status, type of event; 
+	the following events are defined: 
+	\begin{itemize}
+	\item \globalname{SCTP_COMM_UP_RECEIVED_VALID_COOKIE}
+	\item \globalname{SCTP_COMM_UP_RECEIVED_COOKIE_ACK}
+	\item \globalname{SCTP_COMM_UP_RECEIVED_COOKIE_RESTART}
+	\end{itemize}
+ \item[\datatype{int}] number of destination addresses
+ \item[\datatype{unsigned short}] number input streamns
+ \item[\datatype{unsigned short}] number output streams
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+The function (i.e.\ the upper layer~!) may return a pointer that
+the upper layer is intersted in.
+This pointer will then be passed along with all subsequent notification
+calls.
+\bv
+void* (*communicationUpNotif) (unsigned int, unsigned short, int,
+                               unsigned short, unsigned short, void*);
+\end{verbatim}\n
+
+\subsubsection{CommunicationLost Notification}
+Indicates that the association with the peer was closed for
+some reason (chapter 10.2.E). 
+The parameters passed with this callback are (in this order):
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{unsigned short}] status, type of event;
+	the following events are defined: 
+	\begin{itemize}
+	\item \globalname{SCTP_COMM_LOST_ABORTED} \\
+ULP has called \funcname{sctp_abort}, and an ABORT chunk has been sent
+out, or we have received an ABORT chunk from the peer. The association
+has been terminated.
+	\item \globalname{SCTP_COMM_LOST_ENDPOINT_UNREACHABLE} \\
+All paths have turned unreachable.
+	\item \globalname{SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS}\\
+The number of retransmissions has been exceeded in normal
+transmission of data or heartbeat chunks, or the number of
+retransmissions of INIT, COOKIE_ECHO, SHUTDOWN or SHUTDOWN_COMPLETE
+chunks have been exceeded.
+	\item \globalname{SCTP_COMM_LOST_NO_TCB}\\
+SCTP instance has received SHUTDOWN chunk from a peer in state
+\globalname{SCTP_CLOSED}, or a SHUTDOWN_ACK in any of the states
+\globalname{SCTP_CLOSED}, \globalname{SCTP_COOKIE_WAIT} or
+\globalname{SCTP_COOKIE_ECHOED}.
+	\item \globalname{SCTP_COMM_LOST_ZERO_STREAMS}\\
+SCTP instance has received an otherwise valid INIT chunk requesting either
+0 inbound or 0 outbound streams. We send an ABORT, and terminate the
+association, if it exists.
+	\item \globalname{SCTP_COMM_LOST_FAILURE}\\
+Currently unsused.
+	\end{itemize}
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*communicationLostNotif) (unsigned int, unsigned short, void*);
+\end{verbatim}\n
+
+\subsubsection{CommunicationError Notification}
+Indicates that communication had an error (chapter 10.2.F).
+Currently not implemented !
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{unsigned short}] status, type of error
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*communicationErrorNotif) (unsigned int, unsigned short, void*);
+\end{verbatim}\n
+
+\subsubsection{Restart Indication}
+Indicates that a restart has occurred (chapter 10.2.G).
+The notification has been added to our implementation lately,
+but the restart scenario is still somewhat untested. So we need
+feedback here~!
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*restartNotif) (unsigned int, void*);
+\end{verbatim}\n
+
+\subsubsection{ShutdownComplete Indication}
+Indicates that a Shutdown has been successfully completed (chapter 10.2.H).
+\begin{quote} \begin{description} \no
+ \item[\datatype{unsigned int}] association ID
+ \item[\datatype{void*}] pointer to upper layer data
+\end{description} \end{quote}
+\bv
+void (*shutdownCompleteNotif) (unsigned int, void*);
+\end{verbatim}\n
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Example Programs}
+\label{programs}
+\subsection{A Discard Server}
+\label{discard}
+The discard-server is a very simple example for an
+application and the appropriate use of the \lib.
+The \funcname{main} function calls \funcname{getArgs}, which
+parses some command line options,
+that allow for changing default behavior of the discard server
+to verbose or very verbose (respective \texttt{-v} or \texttt{-V}
+options) and for specifying a number of source addresses.
+
+Then, \funcname{main} assigns all callback functions to a
+\datatype{SCTP_ulpCallbacks} variable, and calls upon
+\funcname{sctp_registerInstance}, passing a number of default parameters
+(e.g.\ port number 9). Finally, the function \funcname{sctp_eventLoop} is
+executed in a loop that only terminates if a severe error is encountered.
+
+The specified callback functions do nothing except logging the callback
+events in verbose mode, and put received data into a local buffer that is
+overwritten each time data arrives. So any data that arrives is discarded.
+
+\subsection{An Echo Server}
+\label{echo1}
+The echo server is structured similarly to the discard server (see section~\ref{discard}).
+The main difference of their functionalities is, of course, in
+the callback functions. The general control flow is as follows:
+
+the \funcname{main} function calls \funcname{getArgs}, which
+parses some command line options,
+that allow for changing default behavior of the echo server
+to verbose or very verbose (respective \texttt{-v} or \texttt{-V}
+options) and for specifying a number of source addresses.
+
+Then, \funcname{main} assigns all callback functions to a
+\datatype{SCTP_ulpCallbacks} variable, and calls upon
+\funcname{sctp_registerInstance}, passing a number of default parameters
+(e.g.\ port number 7). Finally, the function \funcname{sctp_eventLoop} is
+executed in a loop that only terminates if a severe error is encountered.
+The maximum number of associations the echo server can handle is
+limited by the constant \globalname{MAXIMUM_NUMBER_OF_ASSOCIATIONS}.
+
+\pp
+The \texttt{CommunicationUp} callback function limits this number of
+existing associations in that it calls \funcname{sctp_abort} when the
+maximum number of existing associations is exceeded.
+
+The interesting callback function is actually that for the \texttt{DataArrive}
+notification. It receives the arrived data into a local buffer using the function
+\funcname{sctp_receive}, and calls \funcname{sctp_send} to echo the data
+back to the peer.
+
+The callback for the \texttt{NetworkStatusChange} makes sure that as long as there
+is an active path left in the association, the primary path is an active
+path.
+
+\subsection{An Echo Tool}
+\label{echo2}
+The echo tool works very  similar to the echo server, but has several modes
+of operation. In the first, executed after using the \texttt{-b} switch, it
+echoes incoming data back to all existing associations. 
+Thus, it may be thought of as a multicast server.
+
+In the second, executed after using the \texttt{-d} switch, it sends 
+a configurable number of packets to a target endpoint. If this target
+endpoint runs an echo server, the two endpoints will start echoing the
+initial packets to each other. This supposedly generates high network load.
+
+Finally, both modes may be combined.
+The echo client takes the following command line options:
+\begin{description}
+\item[\texttt{-s source address}] an IP source address belonging to this host
+\item[\texttt{-d destination}] IP address of a destination (which may be
+    running an echo server)
+\item[\texttt{-b}] send back incoming data on all existing associations
+\item[\texttt{-l length}] length of payload in bytes (must be less than
+    SCTP_MAXIMUM_DATA_LENGTH==1400 bytes)
+\item[\texttt{-n packets}] number of initial packets
+\item[\texttt{-t IP_TOS_BYTE}] sets the IP_TOS_BYTE in the IP header. These values
+    should be 2, 4, 8 or 16
+\item[\texttt{-m}] print number of received bytes an chunks per period of time
+\item[\texttt{-p period}] set period for the measurements in milliseconds
+\item[\texttt{-v}] verbose execution
+\item[\texttt{-V}] very verbose execution
+\end{description}
+
+\begin{thebibliography}{9}
+
+\bibitem[1]{RFC2960} Stewart, R.R. and  Xie, Q. and others:
+\textbf{RFC 2960 - Stream Control Transmission Protocol},
+IETF, Network Working Group, October 2000
+
+\bibitem[2]{RFC4960} Stewart, R.R.:
+\textbf{RFC 4960 - Stream Control Transmission Protocol},
+IETF, Network Working Group, September 2007
+
+\end{thebibliography}
+
+\end{document}
