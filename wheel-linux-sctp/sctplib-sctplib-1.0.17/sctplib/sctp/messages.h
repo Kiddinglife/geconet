@@ -50,8 +50,8 @@
 
 
 #ifdef  STDC_HEADERS
-    #include <sys/types.h>
-    #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #endif
 
 #include <glib.h>
@@ -68,10 +68,10 @@
 /* #define SCTP_OVER_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
 typedef struct UDP_HEADER {
-   gushort src_port;
-   gushort dest_port;
-   gushort length;
-   gushort checksum;
+    gushort src_port;
+    gushort dest_port;
+    gushort length;
+    gushort checksum;
 } udp_header;
 #endif
 
@@ -171,7 +171,7 @@ typedef struct SCTP_DATA_CHUNK_HEADER
 }
 SCTP_data_chunk_header;
 
-#define  FIXED_DATA_CHUNK_SIZE      (sizeof(SCTP_chunk_header) + sizeof(SCTP_data_chunk_header))
+#define  FIXED_DATA_CHUNK_SIZE (sizeof(SCTP_chunk_header) + sizeof(SCTP_data_chunk_header))
 
 #define SCTP_DATA_BEGIN_SEGMENT	     0x02
 #define SCTP_DATA_MIDDLE_SEGMENT     0x00
@@ -388,7 +388,7 @@ SCTP_heartbeat;
 
    simple chunk can also be used for transfering chunks to/from bundling, since bundling
    looks only on the chunk header.
-*/
+   */
 #define MAX_SIMPLE_CHUNKDATA_LENGTH   (MAX_SCTP_PDU - sizeof(SCTP_chunk_header))
 
 typedef struct SCTP_SIMPLE_CHUNK
@@ -449,7 +449,7 @@ typedef struct SCTP_OUR_COOKIE
 SCTP_our_cookie;
 /* the variable parameters should be appended in that
    same order to the cookie
- */
+   */
 
 
 typedef struct SCTP_COOKIE_PARAM

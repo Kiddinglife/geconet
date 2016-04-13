@@ -23,38 +23,37 @@
 /**************************** SCTP common message definitions *********************************/
 #define MAX_MTU_SIZE 1500
 #define IP_HDR_SIZE 20
-#define SCTP_IP_PACKET_COMM_HDR_SIZE  2 * (sizeof(UInt16) + sizeof(UInt32))
-#define SCTP_UDP_PACKET_COMM_HDR_SIZE  4*sizeof(UInt16)
-#define MAX_SCTP_IP_PACKET_VALUE_SIZE \
-MAX_MTU_SIZE - IP_HDR_SIZE- SCTP_IP_PACKET_COMM_HDR_SIZE
-#define MAX_SCTP_UDP_PACKET_VALUE_SIZE\
-MAX_MTU_SIZE - IP_HDR_SIZE - SCTP_UDP_PACKET_COMM_HDR_SIZE
 
 #ifdef SCTP_OVER_UDP
+#define PACKET_COMM_HDR_SIZE  4*sizeof(UInt16)
+#define MAX_PACKET_VALUE_SIZE \
+(MAX_MTU_SIZE - IP_HDR_SIZE - PACKET_COMM_HDR_SIZE)
 /* #define SCTP_OVER_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
-struct sctp_udp_packet_comm_hdr_st
+struct packet_comm_hdr_t
 {
     UInt16 src_port;
     UInt16 dest_port;
     UInt16 length;
     UInt16 checksum;
 };
-#endif
-
-struct sctp_ip_packet_comm_hdr_st
+#else
+#define PACKET_COMM_HDR_SIZE  2 * (sizeof(UInt16) + sizeof(UInt32))
+#define MAX_PACKET_VALUE_SIZE \
+MAX_MTU_SIZE - IP_HDR_SIZE- PACKET_COMM_HDR_SIZE
+struct packet_comm_hdr_t
 {
     UInt16 src_port;
     UInt16 dest_port;
     UInt32 verification_tag;
     UInt32 checksum;
 };
-
+#endif
 // A general struct for an SCTP-message
-struct sctp_ip_packet_st
+struct packet_t
 {
-    sctp_ip_packet_comm_hdr_st schdr;
-    UInt8 chunk[MAX_SCTP_IP_PACKET_VALUE_SIZE];
+    packet_comm_hdr_t pk_comm_hdr;
+    UInt8 chunk[MAX_PACKET_VALUE_SIZE];
 };
 
 /**************************** SCTP chunk definitions ******************************************/
@@ -90,7 +89,8 @@ struct sctp_ip_packet_st
 (((UInt8)chunk_id & 0xC0)==0xC0))
 
 /*--------------------------- common chunk header -------------------------------------------*/
-struct comm_chunk_hdr_st
+#define CHUNK_FIXED_SIZE (2*sizeof(UInt8)+sizeof(UInt16))
+struct chunk_fixed_t
 {
     UInt8 chunk_type; /* e.g. CHUNK_DATA etc. */
     UInt8 chunk_flag; /* usually 0    */
@@ -101,28 +101,29 @@ struct comm_chunk_hdr_st
 #define FLAG_NO_TCB               0x01
 
 /*--------------------------- data chunk ----------------------------------------------------*/
-#define DATA_CHUNK_FIXED_HDR_SIZE   \
-2*sizeof(UInt8) + 4*sizeof(UInt16)+sizeof(UInt32)
-#define B_DATA_CHUNK_SEGMENT      0x02 //BEGIN
-#define M_DATA_CHUNK_SEGMENT     0x00 //MIDDLE
-#define E_DATA_CHUNK_SEGMENT        0x01 //END
-#define U_DATA_CHUNK          0x04
-#define DATA_CHUNK_FIXED_HDR_SIZE sizeof(UInt32)+3*sizeof(UInt16)
-#define MAX_SCTP_IP_DATA_CHUNK_VALUE_SIZE  \
-(MAX_SCTP_IP_PACKET_VALUE_SIZE-sizeof(comm_chunk_hdr_st)-sizeof(data_chunk_fixed_hdr_st))
+#define DATA_CHUNK_FIRST_SEGMENT      0x02 //BEGIN
+#define DATA_CHUNK_MIDDLE_SEGMENT     0x00 //MIDDLE
+#define DATA_CHUNK_LAST_SEGMENT        0x01 //END
+#define UNORDER_DATA_CHUNK          0x04
+#define DATA_CHUNK_FIXED_HDR_SIZE (sizeof(UInt32)+3*sizeof(UInt16))
+#define DATA_CHUNK_FIXED_SIZE   \
+(CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_HDR_SIZE)
+#define MAX_DATA_CHUNK_VALUE_SIZE  \
+(MAX_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZE)
+
 /* when chunk_id == CHUNK_DATA */
-struct data_chunk_fixed_hdr_st
+struct data_chunk_fixed_hdr_t
 {
     UInt32 trans_seq_num;
     UInt16 stream_identity;
     UInt16 stream_seq_num;
     UInt16 protocol_id;
 };
-struct data_chunk_st
+struct data_chunk_t
 {
-    comm_chunk_hdr_st cc_hdr;
-    data_chunk_fixed_hdr_st dc_hdr;
-    UInt8 data[MAX_SCTP_IP_DATA_CHUNK_VALUE_SIZE];
+    chunk_fixed_t comm_chunk_hdr;
+    data_chunk_fixed_hdr_t data_chunk_hdr;
+    UInt8 data[MAX_DATA_CHUNK_VALUE_SIZE];
 };
 
 /*--------------------------- variable length parameter definitions ------------------------*/
@@ -157,15 +158,15 @@ struct data_chunk_st
 #define VLPARAM_ADAPTATION_LAYER_IND    0xC006
 
 /* Header of variable length parameters */
-struct vlparam_hdr_st
+struct vlparam_fixed_t
 {
     UInt16 param_type;
     UInt16 param_length;
 };
 
-struct sctp_ip_addr_st
+struct ip_address
 {
-    vlparam_hdr_st vlparam_header;
+    vlparam_fixed_t vlparam_header;
     union
     {
         UInt32 sctp_ipv4;
@@ -174,16 +175,16 @@ struct sctp_ip_addr_st
 };
 
 /* Supported Addresstypes */
-struct supported_addresstypes_st
+struct vlparam_supported_address_types_t
 {
-    vlparam_hdr_st vlparam_header;
+    vlparam_fixed_t vlparam_header;
     UInt16 address_type[4];
 };
 
 /* Cookie Preservative */
-struct cookie_preservative_st
+struct vlparam_cookie_preservative
 {
-    vlparam_hdr_st vlparam_header;
+    vlparam_fixed_t vlparam_header;
     UInt32 cookieLifetimeInc;
 };
 
@@ -219,7 +220,7 @@ struct cookie_preservative_st
  * it MAY take some additional variable length params.....
  * and MAY also be used for INIT_ACK chunks.
  */
-struct init_chunk_fixed_hdr_st
+struct init_chunk_fixed_t
 {
     UInt32 init_tag;
     UInt32 rwnd;
@@ -228,8 +229,88 @@ struct init_chunk_fixed_hdr_st
     UInt32 initial_tsn;
 };
 /* max. length of optional parameters */
-#define INIT_CHUNK_FIXED_HDR_SIZE (3*sizeof(UInt32)+2*sizeof(UInt16))
-#define MAX_INIT_OPTIONS_LENGTH  \
-(MAX_SCTP_IP_PACKET_VALUE_SIZE - INIT_CHUNK_FIXED_HDR_SIZE)
+#define INIT_CHUNK_FIXED_SIZE (3*sizeof(UInt32)+2*sizeof(UInt16))
+#define MAX_INIT_CHUNK_VALUE_SIZE  \
+(MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE -INIT_CHUNK_FIXED_SIZE)
+/* init chunk structure, also used for initAck */
+struct init_chunk_t
+{
+    chunk_fixed_t chunk_header;
+    init_chunk_fixed_t   init_fixed;
+    UInt8                               variableParams[MAX_INIT_CHUNK_VALUE_SIZE];
+};
 
+/*--------------------------- selective acknowledgements defs --------------------------------*/
+//  see RFC4960 Section 2.3.3 
+#define SACK_CHUNK_FIXED_SIZE (2*sizeof(UInt32)+2*sizeof(UInt16))
+#define MAX_SACK_CHUNK_VALUE_SIZE  \
+(MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE - SACK_CHUNK_FIXED_SIZE )
+struct sack_chunk_fixed_t
+{
+    UInt32 cumulative_tsn_ack;
+    UInt32 a_rwnd;
+    UInt16 num_of_fragments;
+    UInt16 num_of_duplicates;
+};
+struct sack_chunk_t
+{
+    chunk_fixed_t chunk_header;
+    sack_chunk_fixed_t sack_fixed;
+    UInt8 fragments_and_dups[MAX_SACK_CHUNK_VALUE_SIZE];
+};
+struct segment32_t
+{
+    UInt32 start_tsn;
+    UInt32 stop_tsn;
+};
+struct segment_t
+{
+    UInt32 start;
+    UInt32 stop;
+};
+typedef  UInt32 duplicate_tsn_t;
+
+/*--------------------------- heartbeat chunk defs --------------------------------*/
+/* our heartbeat chunk structure */
+struct heartbeat_chunk_t
+{
+    chunk_fixed_t chunk_header;
+    vlparam_fixed_t HB_Info;
+    UInt32 sendingTime;
+    UInt32 pathID;
+#ifdef MD5_HMAC
+    UInt8 hmac[16];
+#elif SHA_HMAC
+    UInt32 hmac[5];
+#endif
+};
+
+/*--------------------------- simple chunk --------------------------------------------------*/
+/* Simple chunks for chunks without or with bytestrings as chunk data.
+Can be used for the following chunk types:
+CHUNK_ABORT
+CHUNK_SHUTDOWN_ACK
+CHUNK_COOKIE_ACK
+? CHUNK_COOKIE_ECHO ?
+
+simple chunk can also be used for transfering chunks to/from bundling, since bundling
+looks only on the chunk header.
+*/
+#define MAX_SIMPLE_CHUNK_VALUE_SIZE  (MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE)
+struct simple_chunk_t
+{
+    chunk_fixed_t chunk_header;
+    UInt8 data[MAX_SIMPLE_CHUNK_VALUE_SIZE];
+};
+struct pr_stream_data_t
+{
+    UInt16 stream_id;
+    UInt16 stream_sn;
+};
+struct forward_tsn_chunk_t
+{
+    chunk_fixed_t   chunk_header;
+    UInt32              forward_tsn;
+    UInt8                variableParams[MAX_PACKET_VALUE_SIZE];
+};
 #endif /* MY_MESSAGES_H_ */
