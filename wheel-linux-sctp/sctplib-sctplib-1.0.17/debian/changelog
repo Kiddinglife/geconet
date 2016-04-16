@@ -1,6 +1,0 @@
-sctplib (1:1.0.17-1ubuntu1) trusty; urgency=low
-
-  * New upstream version.
-  * Initial Ubuntu release (LP: #228052).
-
- -- Thomas Dreibholz <dreibh@iem.uni-due.de>  Wed, 06 Apr 2016 08:08:08 +0200

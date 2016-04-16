@@ -1,3 +1,0 @@
-version=3
-opts=pgpsigurlmangle=s/$/.asc/ \
-http://www.iem.uni-due.de/~dreibh/rserpool/  download/sctplib-(.*)\.tar\.gz
