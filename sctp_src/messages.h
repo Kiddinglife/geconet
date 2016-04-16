@@ -89,8 +89,8 @@ typedef struct SCTP_COMMON_HEADER
 {
     gushort src_port;
     gushort dest_port;
-    guint32 verification_tag;
-    guint32 checksum;
+    uint32 verification_tag;
+    uint32 checksum;
 }
 SCTP_common_header;
 
@@ -106,7 +106,7 @@ SCTP_common_header;
 typedef struct SCTP_MESSAGE
 {
     SCTP_common_header common_header;
-    guchar sctp_pdu[MAX_SCTP_PDU];
+    uchar sctp_pdu[MAX_SCTP_PDU];
 }
 SCTP_message;
 
@@ -137,18 +137,18 @@ SCTP_message;
 #define CHUNK_ASCONF            0xC1
 #define CHUNK_ASCONF_ACK        0x80
 
-#define STOP_PROCESSING(chunk_id)               (((guint8)chunk_id & 0xC0)==0x00))
-#define STOP_PROCESSING_WITH_ERROR(chunk_id)    (((guint8)chunk_id & 0xC0)==0x40))
-#define SKIP_CHUNK(chunk_id)                    (((guint8)chunk_id & 0xC0)==0x80))
-#define SKIP_CHUNK_WITH_ERROR(chunk_id)         (((guint8)chunk_id & 0xC0)==0xC0))
+#define STOP_PROCESSING(chunk_id)               (((uint8)chunk_id & 0xC0)==0x00))
+#define STOP_PROCESSING_WITH_ERROR(chunk_id)    (((uint8)chunk_id & 0xC0)==0x40))
+#define SKIP_CHUNK(chunk_id)                    (((uint8)chunk_id & 0xC0)==0x80))
+#define SKIP_CHUNK_WITH_ERROR(chunk_id)         (((uint8)chunk_id & 0xC0)==0xC0))
 
 /*--------------------------- common chunk header -------------------------------------------*/
 
 typedef struct SCTP_CHUNK_HEADER
 {
-    guint8 chunk_id;            /* e.g. CHUNK_DATA etc. */
-    guint8 chunk_flags;         /* usually 0    */
-    guint16 chunk_length;       /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
+    uint8 chunk_id;            /* e.g. CHUNK_DATA etc. */
+    uint8 chunk_flags;         /* usually 0    */
+    uint16 chunk_length;       /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 }
 SCTP_chunk_header;
 
@@ -164,10 +164,10 @@ SCTP_chunk_header;
 /* when chunk_id == CHUNK_DATA */
 typedef struct SCTP_DATA_CHUNK_HEADER
 {
-    guint32 tsn;
-    guint16 stream_id;
-    guint16 stream_sn;
-    guint32 protocolId;
+    uint32 tsn;
+    uint16 stream_id;
+    uint16 stream_sn;
+    uint32 protocolId;
 }
 SCTP_data_chunk_header;
 
@@ -183,14 +183,14 @@ SCTP_data_chunk_header;
 
 typedef struct SCTP_DATA_CHUNK
 {
-    guint8 chunk_id;
-    guint8 chunk_flags;
-    guint16 chunk_length;
-    guint32 tsn;
-    guint16 stream_id;
-    guint16 stream_sn;
-    guint32 protocolId;
-    guchar data[MAX_DATACHUNK_PDU_LENGTH];
+    uint8 chunk_id;
+    uint8 chunk_flags;
+    uint16 chunk_length;
+    uint32 tsn;
+    uint16 stream_id;
+    uint16 stream_sn;
+    uint32 protocolId;
+    uchar data[MAX_DATACHUNK_PDU_LENGTH];
 }
 SCTP_data_chunk;
 
@@ -201,10 +201,10 @@ SCTP_data_chunk;
 /*                                                                                          */
 /*------------------------------------------------------------------------------------------*/
 
-#define STOP_PARAM_PROCESSING(param_type)               (((guint16)param_type & 0xC000)==0x0000)
-#define STOP_PARAM_PROCESSING_WITH_ERROR(param_type)    (((guint16)param_type & 0xC000)==0x4000)
-#define SKIP_PARAM(param_type)                          (((guint16)param_type & 0xC000)==0x8000)
-#define SKIP_PARAM_WITH_ERROR(param_type)               (((guint16)param_type & 0xC000)==0xC000)
+#define STOP_PARAM_PROCESSING(param_type)               (((uint16)param_type & 0xC000)==0x0000)
+#define STOP_PARAM_PROCESSING_WITH_ERROR(param_type)    (((uint16)param_type & 0xC000)==0x4000)
+#define SKIP_PARAM(param_type)                          (((uint16)param_type & 0xC000)==0x8000)
+#define SKIP_PARAM_WITH_ERROR(param_type)               (((uint16)param_type & 0xC000)==0xC000)
 
 
 /* optional and variable length parameter types */
@@ -229,8 +229,8 @@ SCTP_data_chunk;
 /* Header of variable length parameters */
 typedef struct SCTP_VLPARAM_HEADER
 {
-    guint16 param_type;
-    guint16 param_length;
+    uint16 param_type;
+    uint16 param_length;
 }
 SCTP_vlparam_header;
 
@@ -239,8 +239,8 @@ typedef struct SCTP_IP_ADDRESS
     SCTP_vlparam_header vlparam_header;
     union __dest_addr
     {
-        guint32 sctp_ipv4;
-        guint32 sctp_ipv6[4];
+        uint32 sctp_ipv4;
+        uint32 sctp_ipv6[4];
     }
     dest_addr;
 }
@@ -282,7 +282,7 @@ SCTP_ip_address;
 typedef struct SCTP_SUPPORTED_ADDRESSTYPES
 {
     SCTP_vlparam_header vlparam_header;
-    guint16 address_type[4];
+    uint16 address_type[4];
 }
 SCTP_supported_addresstypes;
 
@@ -291,7 +291,7 @@ SCTP_supported_addresstypes;
 typedef struct SCTP_COOKIE_PRESERVATIVE
 {
     SCTP_vlparam_header vlparam_header;
-    guint32 cookieLifetimeInc;
+    uint32 cookieLifetimeInc;
 }
 SCTP_cookie_preservative;
 
@@ -305,11 +305,11 @@ SCTP_cookie_preservative;
  */
 typedef struct SCTP_INIT_FIXED
 {
-    guint32 init_tag;
-    guint32 rwnd;
-    guint16 outbound_streams;
-    guint16 inbound_streams;
-    guint32 initial_tsn;
+    uint32 init_tag;
+    uint32 rwnd;
+    uint16 outbound_streams;
+    uint16 inbound_streams;
+    uint32 initial_tsn;
 }
 SCTP_init_fixed;
 
@@ -321,7 +321,7 @@ typedef struct SCTP_INIT
 {
     SCTP_chunk_header chunk_header;
     SCTP_init_fixed   init_fixed;
-    guchar            variableParams[MAX_INIT_OPTIONS_LENGTH];
+    uchar            variableParams[MAX_INIT_OPTIONS_LENGTH];
 }
 SCTP_init;
 
@@ -332,31 +332,31 @@ SCTP_init;
 typedef struct SCTP_SACK_CHUNK
 {
     SCTP_chunk_header chunk_header;
-    guint32 cumulative_tsn_ack;
-    guint32 a_rwnd;
-    guint16 num_of_fragments;
-    guint16 num_of_duplicates;
-    guchar fragments_and_dups[MAX_VARIABLE_SACK_SIZE];
+    uint32 cumulative_tsn_ack;
+    uint32 a_rwnd;
+    uint16 num_of_fragments;
+    uint16 num_of_duplicates;
+    uchar fragments_and_dups[MAX_VARIABLE_SACK_SIZE];
 }
 SCTP_sack_chunk;
 
 typedef struct _fragment32
 {
-    guint32 start_tsn;
-    guint32 stop_tsn;
+    uint32 start_tsn;
+    uint32 stop_tsn;
 }
 fragment32;
 
 typedef struct _fragment
 {
-    guint16 start;
-    guint16 stop;
+    uint16 start;
+    uint16 stop;
 }
 fragment;
 
 typedef struct _duplicate
 {
-    guint32 duplicate_tsn;
+    uint32 duplicate_tsn;
 }
 duplicate;
 
@@ -367,12 +367,12 @@ typedef struct SCTP_HEARTBEAT
 {
     SCTP_chunk_header chunk_header;
     SCTP_vlparam_header HB_Info;
-    guint32 sendingTime;
-    guint32 pathID;
+    uint32 sendingTime;
+    uint32 pathID;
 #ifdef MD5_HMAC
-    guint8 hmac[16];
+    uint8 hmac[16];
 #elif SHA_HMAC
-    guint32 hmac[5];
+    uint32 hmac[5];
 #endif
 }
 SCTP_heartbeat;
@@ -399,16 +399,16 @@ typedef struct SCTP_SIMPLE_CHUNK
 
 typedef struct __pr_stream_data
 {
-    guint16 stream_id;
-    guint16 stream_sn;
+    uint16 stream_id;
+    uint16 stream_sn;
 }
 pr_stream_data;
 
 typedef struct SCTP_FORWARD_TSN_CHUNK
 {
     SCTP_chunk_header   chunk_header;
-    guint32             forward_tsn;
-    guchar              variableParams[MAX_SCTP_PDU];
+    uint32             forward_tsn;
+    uchar              variableParams[MAX_SCTP_PDU];
 }
 SCTP_forward_tsn_chunk;
 
@@ -428,23 +428,23 @@ typedef struct SCTP_OUR_COOKIE
 {
     SCTP_init_fixed z_side_initAck;
     SCTP_init_fixed a_side_init;
-    guint16 src_port;
-    guint16 dest_port;
-    guint32 local_tie_tag;
-    guint32 peer_tie_tag;
-    guint32 sendingTime;
-    guint32 cookieLifetime;
+    uint16 src_port;
+    uint16 dest_port;
+    uint32 local_tie_tag;
+    uint32 peer_tie_tag;
+    uint32 sendingTime;
+    uint32 cookieLifetime;
 #ifdef MD5_HMAC
-    guint8 hmac[16];
+    uint8 hmac[16];
 #elif SHA_HMAC
-    guint32 hmac[5];
+    uint32 hmac[5];
 #endif
-    guint16 no_local_ipv4_addresses;
-    guint16 no_remote_ipv4_addresses;
-    guint16 no_local_ipv6_addresses;
-    guint16 no_remote_ipv6_addresses;
-    guint16 no_local_dns_addresses;
-    guint16 no_remote_dns_addresses;
+    uint16 no_local_ipv4_addresses;
+    uint16 no_remote_ipv4_addresses;
+    uint16 no_local_ipv6_addresses;
+    uint16 no_remote_ipv6_addresses;
+    uint16 no_local_dns_addresses;
+    uint16 no_remote_dns_addresses;
 }
 SCTP_our_cookie;
 /* the variable parameters should be appended in that
@@ -469,7 +469,7 @@ typedef struct SCTP_COOKIE_ECHO
 {
     SCTP_chunk_header chunk_header;
     SCTP_our_cookie cookie;
-    guchar vlparams[MAX_COOKIE_VLP_LENGTH];
+    uchar vlparams[MAX_COOKIE_VLP_LENGTH];
 }
 SCTP_cookie_echo;
 
@@ -490,7 +490,7 @@ typedef struct SCTP_ERROR_CAUSE
 {
     unsigned short cause_code;
     unsigned short cause_length;
-    guchar cause_information[MAX_SCTP_PDU];
+    uchar cause_information[MAX_SCTP_PDU];
 }SCTP_error_cause;
 
 
@@ -522,15 +522,15 @@ typedef struct SCTP_ERROR_CAUSE
 typedef struct SCTP_STALECOOKIEERROR
 {
     SCTP_vlparam_header vlparam_header;
-    guint32 staleness;
+    uint32 staleness;
 }
 SCTP_staleCookieError;
 
 
 typedef struct SCTP_INVALID_STREAMID_ERROR
 {
-    guint16 stream_id;
-    guint16 reserved;
+    uint16 stream_id;
+    uint16 reserved;
 }
 SCTP_InvalidStreamIdError;
 
@@ -538,14 +538,14 @@ SCTP_InvalidStreamIdError;
 typedef struct SCTP_UNRESOLVABLE_ADDRESS_ERROR
 {
     SCTP_vlparam_header vlparam_header;
-    guchar the_address[MAX_SCTP_PDU];
+    uchar the_address[MAX_SCTP_PDU];
 }
 SCTP_UnresolvableAddress;
 
 typedef struct SCTP_UNRECOGNIZED_PARAMS_ERROR
 {
     SCTP_vlparam_header vlparam_header;
-    guchar the_params[MAX_SCTP_PDU];
+    uchar the_params[MAX_SCTP_PDU];
 }
 SCTP_UnrecognizedParams;
 
@@ -560,19 +560,19 @@ SCTP_MissingParams;
 
 typedef struct SCTP_ASCONF_FIXED
 {
-    guint32     serial_number;
-    guint16     reserved16;
-    guint8      reserved8;
-    guint8      address_type;
-    guint32     sctp_address[4];
-    guchar      variableParams[MAX_SCTP_PDU];
+    uint32     serial_number;
+    uint16     reserved16;
+    uint8      reserved8;
+    uint8      address_type;
+    uint32     sctp_address[4];
+    uchar      variableParams[MAX_SCTP_PDU];
 }
 SCTP_asconf_fixed;
 
 typedef struct SCTP_ASCONF_ACK
 {
-    guint32     serial_number;
-    guchar      variableParams[MAX_SCTP_PDU];
+    uint32     serial_number;
+    uchar      variableParams[MAX_SCTP_PDU];
 }
 SCTP_asconf_ack;
 
@@ -581,7 +581,7 @@ typedef struct SCTP_ASCONF
 {
     SCTP_chunk_header  chunk_header;
     SCTP_asconf_fixed  asc_fixed;
-    guchar             variableParams[MAX_INIT_OPTIONS_LENGTH];
+    uchar             variableParams[MAX_INIT_OPTIONS_LENGTH];
 }
 SCTP_asconf;
 
@@ -589,7 +589,7 @@ typedef struct SCTP_ASCONF_ACK_CHUNK
 {
     SCTP_chunk_header  chunk_header;
     SCTP_asconf_ack    asc_ack;
-    guchar             variableParams[MAX_INIT_OPTIONS_LENGTH];
+    uchar             variableParams[MAX_INIT_OPTIONS_LENGTH];
 }
 SCTP_asconf_ack_chunk;
 

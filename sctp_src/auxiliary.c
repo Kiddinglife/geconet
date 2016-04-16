@@ -64,7 +64,7 @@
 
 #define CRC32C(c,d) (c=(c>>8)^crc_c[(c^(d))&0xFF])
 
-uint32_t crc_c[256] =
+uint32 crc_c[256] =
 {
     0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4,
     0xC79A971F, 0x35F1141C, 0x26A1E7E8, 0xD4CA64EB,
@@ -142,7 +142,7 @@ static int (*insert_checksum) (unsigned char* buffer, int length) = insert_crc32
 static int (*validate_checksum) (unsigned char* buffer, int length) = validate_crc32;
 
 
-static uint32_t sctp_adler32(uint32_t adler, const unsigned char *buf, unsigned int len);
+static uint32 sctp_adler32(uint32 adler, const unsigned char *buf, unsigned int len);
 
 
 int set_checksum_algorithm(int algorithm){
@@ -162,7 +162,7 @@ int set_checksum_algorithm(int algorithm){
 unsigned char* key_operation(int operation_code)
 {
     static unsigned char *secret_key = NULL;
-    uint32_t              count = 0, tmp;
+    uint32              count = 0, tmp;
 
     if (operation_code == KEY_READ) return secret_key;
     else if (operation_code == KEY_INIT) {
@@ -174,8 +174,8 @@ unsigned char* key_operation(int operation_code)
         while (count < SECRET_KEYSIZE){
             /* if you care for security, you need to use a cryptographically secure PRNG */
             tmp = adl_random();
-            memcpy(&secret_key[count], &tmp, sizeof(uint32_t));
-            count += sizeof(uint32_t);
+            memcpy(&secret_key[count], &tmp, sizeof(uint32));
+            count += sizeof(uint32);
         }
     } else {
         error_log(ERROR_MAJOR, "unknown key operation code !");
@@ -193,7 +193,7 @@ int aux_insert_checksum(unsigned char *buffer, int length)
 static int insert_adler32(unsigned char *buffer, int length)
 {
     SCTP_message *message;
-    uint32_t      a32;
+    uint32      a32;
     /* save crc value from PDU */
     if (length > NMAX || length < NMIN)
         return -1;
@@ -212,10 +212,10 @@ static int insert_adler32(unsigned char *buffer, int length)
     return 1;
 }
 
-static uint32_t generate_crc32c(unsigned char *buffer, int length)
+static uint32 generate_crc32c(unsigned char *buffer, int length)
 {
     unsigned char byte0, byte1, byte2, byte3, swap;
-    uint32_t      crc32 = ~0L;
+    uint32      crc32 = ~0L;
     int           i;
 
     for (i = 0; i < length; i++)
@@ -239,7 +239,7 @@ static uint32_t generate_crc32c(unsigned char *buffer, int length)
 static int insert_crc32(unsigned char *buffer, int length)
 {
     SCTP_message *message;
-    uint32_t      crc32c;
+    uint32      crc32c;
 
     /* check packet length */
     if (length > NMAX  || length < NMIN)
@@ -269,8 +269,8 @@ int validate_size(unsigned char *header_start, int length)
 static int validate_adler32(unsigned char *header_start, int length)
 {
     SCTP_message *message;
-    uint32_t      old_crc32;
-    uint32_t      a32;
+    uint32      old_crc32;
+    uint32      a32;
 
     /* save crc value from PDU */
     message = (SCTP_message *) header_start;
@@ -291,8 +291,8 @@ static int validate_adler32(unsigned char *header_start, int length)
 static int validate_crc32(unsigned char *buffer, int length)
 {
     SCTP_message *message;
-    uint32_t      original_crc32;
-    uint32_t      crc32 = ~0;
+    uint32      original_crc32;
+    uint32      crc32 = ~0;
 
     /* check packet length */
 
@@ -326,10 +326,10 @@ int validate_datagram(unsigned char *buffer, int length)
  * For conditions of distribution and use, see copyright notice in zlib.h
  * available, e.g. from  http://www.cdrom.com/pub/infozip/zlib/
  */
-static uint32_t sctp_adler32(uint32_t adler, const unsigned char *buf, unsigned int len)
+static uint32 sctp_adler32(uint32 adler, const unsigned char *buf, unsigned int len)
 {
-    uint32_t s1 = adler & 0xffff;
-    uint32_t s2 = (adler >> 16) & 0xffff;
+    uint32 s1 = adler & 0xffff;
+    uint32 s2 = (adler >> 16) & 0xffff;
     int      k;
 
     if (buf == NULL)

@@ -44,25 +44,54 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include <config.h>
+//#include <config.h>
 
 
 #include <stdio.h>
-#include <glib.h>
+//#include <glib.h>
 #include <string.h>
 #include <stdlib.h>
 
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+
+#if defined(__GNUC__) || defined(__GCCXML__) || defined(__SNC__) || defined(__S3E__)
+#include <stdint.h>
+typedef int8_t int8;
+typedef uint8_t uint8;
+typedef int16_t int16;
+typedef uint16 uint16;
+typedef int32_t int32;
+typedef uint32 uint32;
+typedef int64_t int64;
+typedef uint64_t uint64;
+#else
+typedef char int8;
+typedef unsigned char uint8;
+typedef short int16;
+typedef unsigned short uint16;
+typedef __int32 int32;
+typedef unsigned __int32 uint32;
+#   if defined(_MSC_VER) && _MSC_VER < 1300
+typedef unsigned __int64 uint64;
+typedef signed __int64 int64;
+#  else
+typedef long long int64;
+typedef unsigned long long uint64;
+#  endif
+#endif
 
 #ifdef  STDC_HEADERS
- #ifdef  HAVE_SYS_TIME_H
-  #include <sys/time.h>
-  #ifdef TIME_WITH_SYS_TIME
-   #include <time.h>
-  #endif
- #endif
- #ifdef  HAVE_UNISTD_H
-  #include <unistd.h>
- #endif
+#ifdef  HAVE_SYS_TIME_H
+#include <sys/time.h>
+#ifdef TIME_WITH_SYS_TIME
+#include <time.h>
+#endif
+#endif
+#ifdef  HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #endif
 
 #ifdef WIN32
@@ -210,7 +239,7 @@ typedef struct chunk_data_struct
    ....
 
    The file must be terminated by a null line.
-*/
+   */
 void read_tracelevels(void);
 
 
@@ -233,9 +262,9 @@ void perr_exit(const char *infostring);
    @param module_name :     the name of the module that received the event.
    @param log_info :        the info that is printed with the modulename.
    @param anyno :           optional pointer to unsigned int, which is printed along with log_info.
-                            The conversion specification must be contained in log_info.
+   The conversion specification must be contained in log_info.
    @author     H�zlwimmer
-*/
+   */
 void event_log1(short event_log_level, const char *module_name, const char *log_info, ...);
 
 
@@ -247,7 +276,7 @@ void event_log1(short event_log_level, const char *module_name, const char *log_
    @param line_no :         the line number within above module.
    @param log_info :        the info that is printed with the modulename.
    @author     H�zlwimmer
-*/
+   */
 void error_log1(short error_log_level, const char *module_name, int line_no, const char *log_info, ...);
 
 
@@ -260,7 +289,7 @@ void error_log1(short error_log_level, const char *module_name, int line_no, con
    @param errnumber :       the errno from systemlibrary.
    @param log_info :        the info that is printed with the modulename and error text.
    @author     H�zlwimmer
-*/
+   */
 void error_log_sys1(short error_log_level, const char *module_name, int line_no, short errnumber);
 
 
@@ -301,8 +330,8 @@ void free_list_element(gpointer list_element, gpointer user_data);
 /* shortcut macro to specify address field of struct sockaddr */
 #define sock2ip(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
 #ifdef HAVE_IPV6
-    #define sock2ip6(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
-    #define sock2ip6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
+#define sock2ip6(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
+#define sock2ip6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
 #endif                          /* HAVE_IPV6 */
 
 /* union for handling either type of addresses: ipv4 and ipv6 */
@@ -327,18 +356,18 @@ union sockunion
 #define SUPPORT_ADDRESS_TYPE_DNS         0x00000004
 
 typedef enum {
-      flag_HideLoopback           = (1 << 0),
-      flag_HideLinkLocal          = (1 << 1),
-      flag_HideSiteLocal          = (1 << 2),
-      flag_HideLocal              = flag_HideLoopback|flag_HideLinkLocal|flag_HideSiteLocal,
-      flag_HideAnycast            = (1 << 3),
-      flag_HideMulticast          = (1 << 4),
-      flag_HideBroadcast          = (1 << 5),
-      flag_HideReserved           = (1 << 6),
-      flag_Default                = flag_HideBroadcast|flag_HideMulticast|flag_HideAnycast,
-      flag_HideAllExceptLoopback  = (1 << 7),
-      flag_HideAllExceptLinkLocal = (1 << 8),
-      flag_HideAllExceptSiteLocal = (1 << 9)
+    flag_HideLoopback = (1 << 0),
+    flag_HideLinkLocal = (1 << 1),
+    flag_HideSiteLocal = (1 << 2),
+    flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal | flag_HideSiteLocal,
+    flag_HideAnycast = (1 << 3),
+    flag_HideMulticast = (1 << 4),
+    flag_HideBroadcast = (1 << 5),
+    flag_HideReserved = (1 << 6),
+    flag_Default = flag_HideBroadcast | flag_HideMulticast | flag_HideAnycast,
+    flag_HideAllExceptLoopback = (1 << 7),
+    flag_HideAllExceptLinkLocal = (1 << 8),
+    flag_HideAllExceptSiteLocal = (1 << 9)
 } AddressScopingFlags;
 
 
