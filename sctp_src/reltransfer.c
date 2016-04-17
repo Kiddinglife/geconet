@@ -528,7 +528,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
     old_own_ctsna = rtx->lowest_tsn;
     event_logii(VERBOSE, "Received ctsna==%u, old_own_ctsna==%u", ctsna, old_own_ctsna);
 
-    adl_gettime(&(rtx->sack_arrival_time));
+    get_time_now(&(rtx->sack_arrival_time));
 
     event_logii(VERBOSE, "SACK Arrival Time : %lu secs, %06lu usecs",
                 rtx->sack_arrival_time.tv_sec, rtx->sack_arrival_time.tv_usec);
@@ -814,7 +814,7 @@ int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, chunk
 
     if (rtx->chunk_list == NULL) return 0;
 
-    adl_gettime(&now);
+    get_time_now(&now);
 
     tmp = g_list_first(rtx->chunk_list);
 

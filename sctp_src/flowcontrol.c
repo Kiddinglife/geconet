@@ -164,7 +164,7 @@ void *fc_new_flowcontrol(unsigned int peer_rwnd,
         (tmp->cparams[count]).partial_bytes_acked = 0L;
         (tmp->cparams[count]).ssthresh = peer_rwnd;
         (tmp->cparams[count]).mtu = MAX_SCTP_PDU;
-        adl_gettime( &(tmp->cparams[count].time_of_cwnd_adjustment));
+        get_time_now( &(tmp->cparams[count].time_of_cwnd_adjustment));
         timerclear(&(tmp->cparams[count].last_send_time));
     }
     tmp->outstanding_bytes = 0;
@@ -211,7 +211,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
         (tmp->cparams[count]).partial_bytes_acked = 0L;
         (tmp->cparams[count]).ssthresh = new_rwnd;
         (tmp->cparams[count]).mtu = MAX_SCTP_PDU;
-        adl_gettime( &(tmp->cparams[count].time_of_cwnd_adjustment) );
+        get_time_now( &(tmp->cparams[count].time_of_cwnd_adjustment) );
         timerclear(&(tmp->cparams[count].last_send_time));
     }
     tmp->outstanding_bytes = 0;
@@ -377,7 +377,7 @@ int fc_reset_cwnd(unsigned int pathId)
         return SCTP_PARAMETER_PROBLEM;
     }
     pId = (short)pathId;
-    adl_gettime(&now);
+    get_time_now(&now);
     rto = pm_readRTO(pId);
     resetTime = fc->cparams[pathId].last_send_time;
     adl_add_msecs_totime(&resetTime, rto);
@@ -385,7 +385,7 @@ int fc_reset_cwnd(unsigned int pathId)
         event_logi(INTERNAL_EVENT_0, "----- fc_reset_cwnd(): resetting CWND for idle path %u ------", pathId);
         /* path has been idle for at least on RTO */
         fc->cparams[pathId].cwnd = 2 * MAX_MTU_SIZE;
-        adl_gettime(&(fc->cparams[pathId].last_send_time));
+        get_time_now(&(fc->cparams[pathId].last_send_time));
         event_logii(INTERNAL_EVENT_0, "resetting cwnd[%d], setting it to : %d\n", pathId, fc->cparams[pathId].cwnd);
     }
     return SCTP_SUCCESS;
@@ -739,7 +739,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
 
         bu_put_Data_Chunk((SCTP_simple_chunk *) dat->data, &destination);
         data_is_submitted = TRUE;
-        adl_gettime(&(fc->cparams[destination].last_send_time));
+        get_time_now(&(fc->cparams[destination].last_send_time));
 
         /* -------------------- DEBUGGING --------------------------------------- */
         event_logi(VERBOSE, "sent chunk (tsn=%u) to bundling", dat->chunk_tsn);
@@ -748,7 +748,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
 
         fc_update_chunk_data(fc, dat, destination);
         if (dat->num_of_transmissions == 1) {
-            adl_gettime(&(dat->transmission_time));
+            get_time_now(&(dat->transmission_time));
             event_log(INTERNAL_EVENT_0, "Storing chunk in retransmission list -> calling rtx_save_retrans");
             rtx_save_retrans_chunks(dat);
         } else {
@@ -989,9 +989,9 @@ int fc_send_data_chunk(chunk_data * chunkd,
     if (lifetime == 0xFFFFFFFF) {
         timerclear(&(chunkd->expiry_time));
     } else if (lifetime == 0) {
-        adl_gettime(&(chunkd->expiry_time));
+        get_time_now(&(chunkd->expiry_time));
     } else {
-        adl_gettime(&(chunkd->expiry_time));
+        get_time_now(&(chunkd->expiry_time));
         adl_add_msecs_totime(&(chunkd->expiry_time), lifetime);
     }
 
@@ -1062,7 +1062,7 @@ int fc_adjustCounters(fc_data *fc, unsigned int addressIndex,
 
        if (new_data_acked == TRUE) {
            fc->cparams[addressIndex].cwnd += min(MAX_MTU_SIZE, num_acked);
-           adl_gettime(&(fc->cparams[addressIndex].time_of_cwnd_adjustment));
+           get_time_now(&(fc->cparams[addressIndex].time_of_cwnd_adjustment));
        }
 
     } else {                    /* CONGESTION AVOIDANCE, as per section 6.2.2 */
@@ -1082,7 +1082,7 @@ int fc_adjustCounters(fc_data *fc, unsigned int addressIndex,
         rtt_time = pm_readSRTT((short)addressIndex);
         last_update = fc->cparams[addressIndex].time_of_cwnd_adjustment;
         adl_add_msecs_totime(&last_update, rtt_time);
-        adl_gettime(&now);
+        get_time_now(&now);
         diff = adl_timediff_to_msecs(&now, &last_update); /* a-b */
         event_logii(VVERBOSE, "CONG. AVOIDANCE : rtt_time=%u diff=%d", rtt_time, diff);
 
@@ -1094,7 +1094,7 @@ int fc_adjustCounters(fc_data *fc, unsigned int addressIndex,
                 /* update time of window adjustment (i.e. now) */
                 event_log(VVERBOSE,
                           "CONG. AVOIDANCE : updating time of adjustment !!!!!!!!!! NOW ! ");
-                adl_gettime(&(fc->cparams[addressIndex].time_of_cwnd_adjustment));
+                get_time_now(&(fc->cparams[addressIndex].time_of_cwnd_adjustment));
             }
             event_logii(VERBOSE, "CONG. AVOIDANCE : updated counters: %u bytes outstanding, cwnd=%u",
                         fc->outstanding_bytes, fc->cparams[addressIndex].cwnd);
@@ -1215,7 +1215,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
     /* make sure that SACK chunk is actually sent ! */
     if (result != 0) bu_sendAllChunks(NULL);
 
-    adl_gettime(&(fc->cparams[address_index].time_of_cwnd_adjustment));
+    get_time_now(&(fc->cparams[address_index].time_of_cwnd_adjustment));
 
     return 1;
 }     /* end: fc_fast_retransmission */

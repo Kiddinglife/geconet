@@ -1402,7 +1402,7 @@ void adl_add_msecs_totime(struct timeval *t, unsigned int msecs)
 /**
  * helper function for the sake of a cleaner interface :-)
  */
-int adl_gettime(struct timeval *tv)
+int get_time_now(struct timeval *tv)
 {
 #ifdef WIN32
       struct timeb tb;
@@ -1766,7 +1766,7 @@ int adl_init_adaptation_layer(int * myRwnd)
 #endif
 
     /* initialize random number generator */
-    adl_gettime(&curTime);
+    get_time_now(&curTime);
 #ifdef HAVE_RANDOM
     rstate[0] = curTime.tv_sec;
     rstate[1] = curTime.tv_usec;
@@ -2009,7 +2009,7 @@ unsigned int adl_startMicroTimer(unsigned int seconds, unsigned int microseconds
     delta.tv_sec += (microseconds / 1000000);  /* usually 0 */
     delta.tv_usec = (microseconds % 1000000);
 
-    adl_gettime(&now);
+    get_time_now(&now);
     item = (AlarmTimer*)malloc(sizeof(AlarmTimer));
     if (item == NULL) return 0;
 

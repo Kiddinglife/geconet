@@ -50,8 +50,8 @@
 #include "pathmanagement.h"
 
 void bu_init_bundling(void);
-gint bu_put_Ctrl_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
-gint bu_put_Data_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
+int bu_put_Ctrl_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
+int bu_put_Data_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
 
 
 /*
@@ -113,7 +113,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
  * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
  *             that many addresses in the chunk.
  */
-gint rbu_findAddress(guchar * chunk, guint n, union sockunion* foundAddress, int supportedAddressTypes);
+int rbu_findAddress(guchar * chunk, guint n, union sockunion* foundAddress, int supportedAddressTypes);
 
 /*
  * rbu_rcvDatagram: Hands a lower layer datagram over to bundling (for de-bundling)
@@ -124,7 +124,7 @@ gint rbu_findAddress(guchar * chunk, guint n, union sockunion* foundAddress, int
  * Those modules must get a pointer to the start of a chunk and 
  * information about its size (without padding).
  */
-gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len);
+int rbu_rcvDatagram(guint address_index, guchar * datagram, guint len);
 
 
 void bu_lock_sender(void);
@@ -137,7 +137,7 @@ gboolean bu_userDataOutbound(void);
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return error value, 0 on success, -1 on error
  */
-gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int* dest_index);
+int bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int* dest_index);
 
 
 /*
@@ -146,7 +146,7 @@ gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int* dest_index);
  * Return value: error value
  * Chunks sent are deleted afterwards.
  */
-gint bu_sendAllChunks(guint * ad_idx);
+int bu_sendAllChunks(guint * ad_idx);
 
 void bu_request_sack(void);
 

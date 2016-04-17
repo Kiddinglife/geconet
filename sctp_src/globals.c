@@ -142,7 +142,7 @@ void read_tracelevels()
             if (ferror(fptr))
                 abort();
             if (feof(fptr))
-                break;
+                break; //in case we have less than 
             globalTrace = FALSE;
         }
         noOftracedModules = i;
@@ -159,7 +159,6 @@ void read_tracelevels()
       printf("%20s %2d %2d\n", tracedModules[i], errorTraceLevel[i], eventTraceLevel[i]);
     */
 }
-
 
 
 boolean traceModule(const char *moduleName, int *moduleIndex)
@@ -181,14 +180,12 @@ boolean traceModule(const char *moduleName, int *moduleIndex)
 }
 
 
-
-
 int debug_vwrite(FILE * fd, const char *format, va_list ap)
 {
     struct timeval tv;
     struct tm *the_time;
 
-    adl_gettime(&tv);
+    get_time_now(&tv);
     the_time = localtime((time_t *) & (tv.tv_sec));
 
     if (fprintf(fd, "%02d:%02d:%02d.%03d - ",
@@ -200,7 +197,6 @@ int debug_vwrite(FILE * fd, const char *format, va_list ap)
     return (0);
 }
 
-
 void debug_print(FILE * fd, const char *f, ...)
 {
     va_list va;
@@ -211,24 +207,18 @@ void debug_print(FILE * fd, const char *f, ...)
     return;
 }
 
-
-
 void perr_exit(const char *infostring)
 {
     perror(infostring);
     abort();
 }
 
-
 void print_time(short level)
 {
     struct timeval now;
-
-    adl_gettime(&now);
+    get_time_now(&now);
     event_logii(level, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
 }
-
-
 
 /**
   This function logs events.
@@ -259,7 +249,7 @@ void event_log1(short event_log_level, const char *module_name, const char *log_
                 debug_print(stdout, "Event in Module: %s............\n", module_name);
             }
         }
-        adl_gettime(&tv);
+        get_time_now(&tv);
         the_time = localtime((time_t *) & (tv.tv_sec));
         if (fileTrace == TRUE) {
             fprintf(logfile, "%02d:%02d:%02d.%03d - ",
@@ -278,9 +268,6 @@ void event_log1(short event_log_level, const char *module_name, const char *log_
     va_end(va);
     return;
 }
-
-
-
 
 /**
    This function logs errors.
@@ -344,7 +331,6 @@ void error_log_sys1(short error_log_level, const char *module_name, int line_no,
     error_log1(error_log_level, module_name, line_no, strerror(errnumber));
 }
 
-
 /**
  * functions correctly handle wraparound
  */
@@ -368,8 +354,6 @@ int sBefore(unsigned short seq1, unsigned short seq2)
     return (int)((short) (seq1 - seq2) < 0);
 }
 
-
-
 /**
  *  is s1 <= s2 <= s3 ?
  */
@@ -378,7 +362,7 @@ int between(unsigned int seq1, unsigned int seq2, unsigned int seq3)
     return seq3 - seq1 >= seq2 - seq1;
 }
 
-void free_list_element(gpointer list_element, gpointer user_data)
+void free_list_element(void* list_element, void* user_data)
 {
     chunk_data * chunkd = (chunk_data*) list_element;
 

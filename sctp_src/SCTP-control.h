@@ -81,17 +81,17 @@
    Together with the parameters of the function, they are used to create the init-message.
    This data are also stored in a newly created association-record.
    Params: noOfOutStreams:              # of send streams.
-           noOfInStreams:               # of receive streams.
-           primaryDestinationAddress:   primary destination address, the init message is sent to this
-                                        address.
-           noOfDestinationAddresses:    # of destination addresses if multihoming is used
-           DestinationAddressList:      list destination addresses if multihoming is used
-*/
+   noOfInStreams:               # of receive streams.
+   primaryDestinationAddress:   primary destination address, the init message is sent to this
+   address.
+   noOfDestinationAddresses:    # of destination addresses if multihoming is used
+   DestinationAddressList:      list destination addresses if multihoming is used
+   */
 void scu_associate(unsigned short noOfOutStreams,
-                   unsigned short noOfInStreams,
-                   union sockunion* destinationList,
-                   unsigned int numDestAddresses,
-                   gboolean withPRSCTP);
+    unsigned short noOfInStreams,
+union sockunion* destinationList,
+    unsigned int numDestAddresses,
+    bool withPRSCTP);
 
 
 /* initiates the shutdown of this association.
@@ -112,13 +112,13 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
    New data must not be allocated for this new association.
    The following data are created and included in the init acknowledgement:
    - cookie: contains init-data, local tag, initial TSN, # of send streams, # of receive streams
-     and a signature.
+   and a signature.
    - local tag: randomly generated, is included in the cookie and the initiate tag field of the
-                init acknowledgement.
+   init acknowledgement.
    - inititial TSN: randomly generated, is included in the cookie and the initial TSN field of the
-                    init acknowledgement.
+   init acknowledgement.
    Params: init:    data of init-chunk including optional parameters without chunk header
-*/
+   */
 int sctlr_init(SCTP_init * init);
 
 
@@ -128,13 +128,13 @@ int sctlr_init(SCTP_init * init);
    - remote tag from the initiate tag field
    - receiver window credit of the peer
    - # of send streams of the peer, must be lower or equal the # of receive streams this host
-     has 'announced' with the init-chunk.
+   has 'announced' with the init-chunk.
    - # of receive streams the peer allows the receiver of this initAck to use.
 
    The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
 
    Params: initAck: data of initAck-chunk including optional parameters without chunk header
-*/
+   */
 int sctlr_initAck(SCTP_init * initAck);
 
 
@@ -142,16 +142,16 @@ int sctlr_initAck(SCTP_init * initAck);
 /* sctlr_cookie_echo is called by bundling when a cookie chunk was received from  the peer.
    The following data are retrieved from the cookie and saved for this association:
    - from the init chunk: + peers tag.
-                          + peers receiver window credit.
-                          + peers initial TSN.
-                          + peers network address list if multihoming is used.
+   + peers receiver window credit.
+   + peers initial TSN.
+   + peers network address list if multihoming is used.
    - local tag generated before the initAck was sent.
    - this side initial TSN generated before the initAck was sent.
    - # of send streams this side uses, must be lower or equal to peers # of receive streams from init
-     chunk
+   chunk
    - # of receive streams this side uses, can be lower than peers # of send streams the requested in
-     the init chunk.
-*/
+   the init chunk.
+   */
 void sctlr_cookie_echo(SCTP_cookie_echo * cookie);
 
 
@@ -161,7 +161,7 @@ void sctlr_cookie_echo(SCTP_cookie_echo * cookie);
    The association is established after this function is called.
    StartOfDataTX is called at Flowcontrol to start transmission of data chunks.
    The ULP is informed by the communication up notification.
-*/
+   */
 void sctlr_cookieAck(SCTP_simple_chunk * cookieAck);
 
 
@@ -169,14 +169,14 @@ void sctlr_cookieAck(SCTP_simple_chunk * cookieAck);
 /* sctlr_shutdown is called by bundling when a shutdown chunk was received from  the peer.
    The function initiates a gracefull shutdown of the association.
    Params: cumulativeTSN_ack: highest consecutive TSN acked.
-*/
+   */
 int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk);
 
 
 
 /* sctlr_shutdownAck is called by bundling when a shutdownAck chunk was received from  the peer.
    The function initiates a gracefull shutdown of the association.
-*/
+   */
 int sctlr_shutdownAck(void);
 
 /* sctlr_shutdownComplete is called by bundling when a shutdownComplete chunk was received from the peer.
@@ -185,7 +185,7 @@ int sctlr_shutdownComplete(void);
 
 /* sctlr_abort is called by bundling when a abort chunk was received from  the peer.
    The association is terminated imediately.
-*/
+   */
 int sctlr_abort(void);
 
 
@@ -193,7 +193,7 @@ int sctlr_abort(void);
 /* sctlr_staleCookie is called by bundling when a error chunk with cause 'stale cookie'
    was received from  the peer.
    Params: staleness: microseconds the cookie life time was exceeded.
-*/
+   */
 void sctlr_staleCookie(SCTP_simple_chunk * error_chunk);
 
 
@@ -202,7 +202,7 @@ void sctlr_staleCookie(SCTP_simple_chunk * error_chunk);
 
 /* This function is called by reliable transfer if all sent chunks in its retransmission queue have
    been acked.
-*/
+   */
 void sci_allChunksAcked(void);
 
 
@@ -222,7 +222,7 @@ void sci_deleteSCTP_control(void *sctpControlData);
 /**
  * function returns the state of the current SCTP instance
  */
-guint32 sci_getState(void);
+uint sci_getState(void);
 
 
 int sci_getMaxAssocRetransmissions(void);
@@ -242,6 +242,6 @@ int sci_setCookieLifeTime(int new_max);
  * is in the SHUTDOWNs, else FALSE
  */
 
-gboolean sci_shutdown_procedure_started(void);
+bool sci_shutdown_procedure_started(void);
 
 #endif

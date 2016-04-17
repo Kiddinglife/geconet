@@ -64,16 +64,16 @@
 
 /* This function is called to instanciate one Stream Engine for an association.
    It is called by Message Distribution.
-   called from MessageDisribution 
-   returns: the pointer to the Stream Engine 
-*/
-void* se_new_stream_engine (unsigned int numberReceiveStreams,        /* max of streams to receive */
-                            unsigned int numberSendStreams,           /* max of streams to send */
-                            gboolean assocSupportsPRSCTP);
+   called from MessageDisribution
+   returns: the pointer to the Stream Engine
+   */
+void* se_new_stream_engine(unsigned int numberReceiveStreams,        /* max of streams to receive */
+    unsigned int numberSendStreams,           /* max of streams to send */
+    bool assocSupportsPRSCTP);
 
-/* 
+/*
  * se_delete_stream_engine: Deletes a stream engine instance
- * 
+ *
  * Params: Pointer/handle which was returned by se_new()
  * Return value: error value
  */
@@ -90,13 +90,13 @@ int se_readNumberOfStreams(unsigned short *inStreams, unsigned short *outStreams
  * This function is called to send a chunk.
  *  called from MessageDistribution
  * @return 0 for success, -1 for error (e.g. data sent in shutdown state etc.)
-*/
+ */
 int se_ulpsend(unsigned short streamId,
-               unsigned char *buffer,
-               unsigned int byteCount, unsigned int protocolId,
-               short destAddressIndex, void* context, unsigned int lifetime,
-               gboolean unorderedDelivery,  /* optional (=FALSE if none) */
-               gboolean dontBundle);         /* optional (=null if none)  */
+    unsigned char *buffer,
+    unsigned int byteCount, unsigned int protocolId,
+    short destAddressIndex, void* context, unsigned int lifetime,
+    bool unorderedDelivery,  /* optional (=FALSE if none) */
+    bool dontBundle);         /* optional (=null if none)  */
 
 
 
@@ -111,8 +111,8 @@ int se_doNotifications(void);
 /* This function is called from ULP to receive a chunk.
 */
 short se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
-                        unsigned short streamId, unsigned short* streamSN,
-                        unsigned int * tsn, unsigned int* addressIndex, unsigned int flags);
+    unsigned short streamId, unsigned short* streamSN,
+    unsigned int * tsn, unsigned int* addressIndex, unsigned int flags);
 
 
 /*
@@ -125,19 +125,19 @@ int se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount, unsign
  * function to return the number of chunks that can be retrieved
  * by the ULP - this function may need to be refined !!!!!!
  */
-guint32 se_numOfQueuedChunks(void);
+uint se_numOfQueuedChunks(void);
 
 /**
  * function to return the number of streams that we may
  * send on
  */
-guint16 se_numOfSendStreams(void);
+ushort se_numOfSendStreams(void);
 
 /**
  * function to return the number of streams that we are allowed to
  * receive data on
  */
-guint16 se_numOfRecvStreams(void);
+ushort se_numOfRecvStreams(void);
 
 
 int se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk);

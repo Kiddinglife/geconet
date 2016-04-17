@@ -27,28 +27,28 @@
 #define IP_HDR_SIZE 20
 
 #ifdef SCTP_OVEREASON_UDP
-#define PACKET_COMM_HDR_SIZE  4*sizeof(uint16)
+#define PACKET_COMM_HDR_SIZE  4*sizeof(ushort)
 #define MAX_PACKET_VALUE_SIZE \
 (MAX_MTU_SIZE - IP_HDR_SIZE - PACKET_COMM_HDR_SIZE)
 /* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
 struct network_packet_fixed_t
 {
-    uint16 src_port;
-    uint16 dest_port;
-    uint16 length;
-    uint16 checksum;
+    ushort src_port;
+    ushort dest_port;
+    ushort length;
+    ushort checksum;
 };
 #else
-#define PACKET_COMM_HDR_SIZE  2 * (sizeof(uint16) + sizeof(uint32))
+#define PACKET_COMM_HDR_SIZE  2 * (sizeof(ushort) + sizeof(uint))
 #define MAX_PACKET_VALUE_SIZE \
 MAX_MTU_SIZE - IP_HDR_SIZE- PACKET_COMM_HDR_SIZE
 struct network_packet_fixed_t
 {
-    uint16 src_port;
-    uint16 dest_port;
-    uint32 verification_tag;
-    uint32 checksum;
+    ushort src_port;
+    ushort dest_port;
+    uint verification_tag;
+    uint checksum;
 };
 #endif
 // A general struct for an SCTP-message
@@ -91,12 +91,12 @@ struct network_packet_t
 (((uchar)chunk_id & 0xC0)==0xC0))
 
 /*--------------------------- common chunk header -------------------------------------------*/
-#define CHUNK_FIXED_SIZE (2*sizeof(uchar)+sizeof(uint16))
+#define CHUNK_FIXED_SIZE (2*sizeof(uchar)+sizeof(ushort))
 struct chunk_fixed_t
 {
     uchar chunk_type; /* e.g. CHUNK_DATA etc. */
     uchar chunk_flag; /* usually 0    */
-    uint16 chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
+    ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 };
 #define FLAG_NONE                 0x00
 #define FLAG_DESTROYED_TCB        0x00
@@ -107,7 +107,7 @@ struct chunk_fixed_t
 #define DATA_CHUNK_MIDDLE_SEGMENT     0x00 //MIDDLE
 #define DATA_CHUNK_LAST_SEGMENT        0x01 //END
 #define UNORDEREASON_DATA_CHUNK          0x04
-#define DATA_CHUNK_FIXED_HDR_SIZE (sizeof(uint32)+3*sizeof(uint16))
+#define DATA_CHUNK_FIXED_HDR_SIZE (sizeof(uint)+3*sizeof(ushort))
 #define DATA_CHUNK_FIXED_SIZE   \
 (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_HDR_SIZE)
 #define MAX_DATA_CHUNK_VALUE_SIZE  \
@@ -116,10 +116,10 @@ struct chunk_fixed_t
 /* when chunk_id == CHUNK_DATA */
 struct data_chunk_fixed_t
 {
-    uint32 trans_seq_num;
-    uint16 stream_identity;
-    uint16 stream_seq_num;
-    uint16 protocol_id;
+    uint trans_seq_num;
+    ushort stream_identity;
+    ushort stream_seq_num;
+    ushort protocol_id;
 };
 struct data_chunk_t
 {
@@ -132,13 +132,13 @@ struct data_chunk_t
 // See RFC4960 Section 3.2.1 Optional/Variable-Length Parameter Format From Page 19
 // vl params only appear in control chunks
 #define STOP_PROCESS_PARAM(param_type)   \
-(((uint16)param_type & 0xC000)==0x0000)
+(((ushort)param_type & 0xC000)==0x0000)
 #define STOP_PROCES_PARAM_REPORT_EREASONROR(param_type)    \
-(((uint16)param_type & 0xC000)==0x4000)
+(((ushort)param_type & 0xC000)==0x4000)
 #define SKIP_PARAM(param_type)       \
-(((uint16)param_type & 0xC000)==0x8000)
+(((ushort)param_type & 0xC000)==0x8000)
 #define SKIP_PARAM_REPORT_EREASONROR(param_type)    \
-(((uint16)param_type & 0xC000)==0xC000)
+(((ushort)param_type & 0xC000)==0xC000)
 
 /* optional and variable length parameter types */
 #define VLPARAM_HB_INFO                 0x0001
@@ -162,29 +162,29 @@ struct data_chunk_t
 /* Header of variable length parameters */
 struct vlparam_fixed_t
 {
-    uint16 param_type;
-    uint16 param_length;
+    ushort param_type;
+    ushort param_length;
 };
 struct ip_address
 {
     vlparam_fixed_t vlparam_header;
     union
     {
-        uint32 sctp_ipv4;
-        uint32 sctp_ipv6[4];
+        uint sctp_ipv4;
+        uint sctp_ipv6[4];
     } dest_addr_un;
 };
 /* Supported Addresstypes */
 struct vlparam_supported_address_types_t
 {
     vlparam_fixed_t vlparam_header;
-    uint16 address_type[4];
+    ushort address_type[4];
 };
 /* Cookie Preservative */
 struct vlparam_cookie_preservative
 {
     vlparam_fixed_t vlparam_header;
-    uint32 cookieLifetimeInc;
+    uint cookieLifetimeInc;
 };
 
 #define IS_IPV4_ADDRESS_NBO(a)  \
@@ -221,14 +221,14 @@ struct vlparam_cookie_preservative
 */
 struct init_chunk_fixed_t
 {
-    uint32 init_tag;
-    uint32 rwnd;
-    uint16 outbound_streams;
-    uint16 inbound_streams;
-    uint32 initial_tsn;
+    uint init_tag;
+    uint rwnd;
+    ushort outbound_streams;
+    ushort inbound_streams;
+    uint initial_tsn;
 };
 /* max. length of optional parameters */
-#define INIT_CHUNK_FIXED_SIZE (3*sizeof(uint32)+2*sizeof(uint16))
+#define INIT_CHUNK_FIXED_SIZE (3*sizeof(uint)+2*sizeof(ushort))
 #define MAX_INIT_CHUNK_VALUE_SIZE  \
 (MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE -INIT_CHUNK_FIXED_SIZE)
 /* init chunk structure, also used for initAck */
@@ -241,15 +241,15 @@ struct init_chunk_t
 
 /*--------------------------- selective acknowledgements defs --------------------------------*/
 //  see RFC4960 Section 2.3.3 
-#define SACK_CHUNK_FIXED_SIZE (2*sizeof(uint32)+2*sizeof(uint16))
+#define SACK_CHUNK_FIXED_SIZE (2*sizeof(uint)+2*sizeof(ushort))
 #define MAX_SACK_CHUNK_VALUE_SIZE  \
 (MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE - SACK_CHUNK_FIXED_SIZE )
 struct sack_chunk_fixed_t
 {
-    uint32 cumulative_tsn_ack;
-    uint32 a_rwnd;
-    uint16 num_of_fragments;
-    uint16 num_of_duplicates;
+    uint cumulative_tsn_ack;
+    uint a_rwnd;
+    ushort num_of_fragments;
+    ushort num_of_duplicates;
 };
 struct sack_chunk_t
 {
@@ -259,15 +259,15 @@ struct sack_chunk_t
 };
 struct segment32_t
 {
-    uint32 start_tsn;
-    uint32 stop_tsn;
+    uint start_tsn;
+    uint stop_tsn;
 };
 struct segment_t
 {
-    uint32 start;
-    uint32 stop;
+    uint start;
+    uint stop;
 };
-typedef uint32 duplicate_tsn_t;
+typedef uint duplicate_tsn_t;
 
 /*--------------------------- heartbeat chunk defs --------------------------------*/
 /* our heartbeat chunk structure */
@@ -275,12 +275,12 @@ struct heartbeat_chunk_t
 {
     chunk_fixed_t chunk_header;
     vlparam_fixed_t HB_Info;
-    uint32 sendingTime;
-    uint32 pathID;
+    uint sendingTime;
+    uint pathID;
 #ifdef MD5_HMAC
     uchar hmac[16];
 #elif SHA_HMAC
-    uint32 hmac[5];
+    uint hmac[5];
 #endif
 };
 
@@ -304,7 +304,7 @@ struct simple_chunk_t
 struct forward_tsn_chunk_t
 {
     chunk_fixed_t chunk_header;
-    uint32 forward_tsn;
+    uint forward_tsn;
     uchar variableParams[MAX_PACKET_VALUE_SIZE];
 };
 
@@ -323,32 +323,32 @@ struct forward_tsn_chunk_t
 /* cookie chunks fixed params length including chunk header */
 #ifdef MD5_HMAC
 #define COOKIE_FIXED_SIZE  \
-(16*sizeof(uchar)+8*sizeof(uint16)+4*sizeof(uint32) +2*INIT_CHUNK_FIXED_SIZE)
+(16*sizeof(uchar)+8*sizeof(ushort)+4*sizeof(uint) +2*INIT_CHUNK_FIXED_SIZE)
 #elif SHA_HMAC
 #define COOKIE_FIXED_SIZE  \
-(5*sizeof(uint32)+8*sizeof(uint16)+4*sizeof(uint32) +2*INIT_CHUNK_FIXED_SIZE)
+(5*sizeof(uint)+8*sizeof(ushort)+4*sizeof(uint) +2*INIT_CHUNK_FIXED_SIZE)
 #endif
 struct cookie_fixed_t
 {
     init_chunk_fixed_t z_side_initAck;
     init_chunk_fixed_t a_side_init;
-    uint16 src_port;
-    uint16 dest_port;
-    uint32 local_tie_tag;
-    uint32 peer_tie_tag;
-    uint32 sendingTime;
-    uint32 cookieLifetime;
+    ushort src_port;
+    ushort dest_port;
+    uint local_tie_tag;
+    uint peer_tie_tag;
+    uint sendingTime;
+    uint cookieLifetime;
 #ifdef MD5_HMAC
     uchar hmac[16];
 #elif SHA_HMAC
-    uint32 hmac[5];
+    uint hmac[5];
 #endif
-    uint16 no_local_ipv4_addresses;
-    uint16 no_remote_ipv4_addresses;
-    uint16 no_local_ipv6_addresses;
-    uint16 no_remote_ipv6_addresses;
-    uint16 no_local_dns_addresses;
-    uint16 no_remote_dns_addresses;
+    ushort no_local_ipv4_addresses;
+    ushort no_remote_ipv4_addresses;
+    ushort no_local_ipv6_addresses;
+    ushort no_remote_ipv6_addresses;
+    ushort no_local_dns_addresses;
+    ushort no_remote_dns_addresses;
 };
 /* max. length of cookie variable length params parameters */
 #define MAX_COOKIE_VLPARAMS_SIZE (MAX_PACKET_VALUE_SIZE -  COOKIE_FIXED_SIZE)
@@ -407,12 +407,12 @@ struct error_reason_t
 struct stale_cookie_err_t
 {
     vlparam_fixed_t vlparam_header;
-    uint32 staleness;
+    uint staleness;
 };
 struct invalid_stream_id_err_t
 {
-    uint16 stream_id;
-    uint16 reserved;
+    ushort stream_id;
+    ushort reserved;
 };
 struct unresolved_addr_err_t
 {
@@ -433,16 +433,16 @@ struct missing_mandaory_params_err_t
 /*--------------------------- ASCONF Chunk and Parameter Types ---------------------------------*/
 struct asconfig_chunk_fixed_t
 {
-    uint32 serial_number;
-    uint16 reserved16;
+    uint serial_number;
+    ushort reserved16;
     uchar reserved8;
     uchar address_type;
-    uint32 sctp_address[4];
+    uint sctp_address[4];
     uchar variableParams[MAX_PACKET_VALUE_SIZE];
 };
 struct asconfig_ack_chunk_fixed_t
 {
-    uint32 serial_number;
+    uint serial_number;
     uchar variableParams[MAX_PACKET_VALUE_SIZE];
 };
 struct asconfig_chunk_t

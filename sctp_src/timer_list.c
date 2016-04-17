@@ -242,7 +242,7 @@ unsigned int update_item(unsigned int id, unsigned int msecs)
     timer_list = g_list_remove(timer_list, tmp->data);
 
     /* update action time, and  write back to the list */
-    adl_gettime(&(tmp_item->action_time));
+    get_time_now(&(tmp_item->action_time));
     adl_add_msecs_totime(&(tmp_item->action_time), msecs);
 
     /* print_debug_list(VERBOSE); */
@@ -277,7 +277,7 @@ unsigned int micro_update_item(unsigned int id, unsigned int seconds, unsigned i
     delta.tv_usec = (microseconds % 1000000); /* usually == microseconds */
 
     /* update action time, and  write back to the list */
-    adl_gettime(&now);
+    get_time_now(&now);
     timeradd(&now, &delta, &(tmp_item->action_time));
 
     /* print_debug_list(VERBOSE); */
@@ -363,7 +363,7 @@ int get_msecs_to_nexttimer()
 
     if (result == NULL) return -1;
 
-    adl_gettime(&now);
+    get_time_now(&now);
     next = (AlarmTimer*)result->data;
 
     secs = next->action_time.tv_sec - now.tv_sec;

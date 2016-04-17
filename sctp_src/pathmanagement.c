@@ -153,7 +153,7 @@ unsigned int pm_getTime(void)
     unsigned int curTimeMilli;
     struct timeval curTime;
 
-    adl_gettime(&curTime);
+    get_time_now(&curTime);
 
     /* modulo operation overlfows every 20 days */
     curTimeMilli = (curTime.tv_sec % 1728000) * 1000 + curTime.tv_usec / 1000;
@@ -569,7 +569,7 @@ void pm_chunksAcked(short pathID, unsigned int newRTT)
 
     if (pmData->pathData[pathID].state == PM_ACTIVE) {
         /* Update RTO only if is the first data chunk acknowldged in this RTT intervall. */
-        adl_gettime(&now);
+        get_time_now(&now);
         if (timercmp(&now, &(pmData->pathData[pathID].rto_update), < )) {
             event_logiiii(VERBOSE, "pm_chunksAcked: now %lu sec, %lu usec - no update before %lu sec, %lu usec",
                         now.tv_sec, now.tv_usec,
@@ -1244,7 +1244,7 @@ short pm_setPaths(short noOfPaths, short primaryPathID)
                                     (void *) &pmData->pathData[i].pathID);
             }
             /* after RTO we can do next RTO update */
-            adl_gettime(&(pmData->pathData[i].rto_update));
+            get_time_now(&(pmData->pathData[i].rto_update));
 
         }
 

@@ -87,12 +87,12 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[], int n
 int ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
                   SCTP_init_fixed * init_fixed,
                   SCTP_init_fixed * initAck_fixed,
-                  guint32 cookieLifetime,
-                  guint32 local_tie_tag,
-                  guint32 peer_tie_tag,
+                  uint cookieLifetime,
+                  uint local_tie_tag,
+                  uint peer_tie_tag,
                   union sockunion local_Addresses[],
-                  guint16 num_local_Addresses,
-                  union sockunion peer_Addresses[], guint16 num_peer_Addresses);
+                  ushort num_local_Addresses,
+                  union sockunion peer_Addresses[], ushort num_peer_Addresses);
 
 /*
  * ch_enterUnrecognizedParameters enters unrecognized params from Init into initAck chunk
@@ -154,14 +154,14 @@ unsigned int ch_cookieLifeTime(ChunkID chunkID);
 /**
  * functions read peer/local tie tag from a received cookie echo chunk
  */
-guint32 ch_CookieLocalTieTag(ChunkID chunkID);
-guint32 ch_CookiePeerTieTag(ChunkID chunkID);
+uint ch_CookieLocalTieTag(ChunkID chunkID);
+uint ch_CookiePeerTieTag(ChunkID chunkID);
 
 /**
  * functions read src/dest port from a received cookie echo chunk
  */
-guint16 ch_CookieDestPort(ChunkID chunkID);
-guint16 ch_CookieSrcPort(ChunkID chunkID);
+ushort ch_CookieDestPort(ChunkID chunkID);
+ushort ch_CookieSrcPort(ChunkID chunkID);
 
 
 /* ch_IPaddresses reads the IP-addresses from an init or initAck */

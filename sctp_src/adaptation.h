@@ -148,7 +148,7 @@ int adl_timediff_to_msecs(struct timeval *a, struct timeval *b);
 
 void adl_add_msecs_totime(struct timeval *t, unsigned int msecs);
 
-int adl_gettime(struct timeval *tv);
+int get_time_now(struct timeval *tv);
 
 int adl_extendedGetEvents(void (*lock)(void* data), void (*unlock)(void* data), void* data);
 
