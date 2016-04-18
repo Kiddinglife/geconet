@@ -56,7 +56,7 @@
 #endif
 #define MAX_DEST    16
 
-//<--------------------------------------------------------- log --------------------------------------------->
+//<--------------------------------- log ------------------------->
 #define TRACE_MUDULE_SIZE 50
 #define open_byte_string_log   false  /* set to != 0 if byte string logging should be done */
 
@@ -76,7 +76,7 @@
 /* Defines the level up to which the events are prInt32ed.
 VVERBOSE (6) means all events are prInt32ed.
 This parameter could also come from a command line option */
-#define current_event_loglvl 0
+#define current_event_loglvl 6
 
 /* Definition of levels for the logging of errors */
 /* warning, recovery not necessary. */
@@ -91,7 +91,7 @@ This parameter could also come from a command line option */
 /* Defines the level up to which the errors are prInt32ed.
 *ERROR_WARNING (4) means all events are prInt32ed.
 *This parameter could also come from a command line option*/
-#define current_error_loglvl 1
+#define current_error_loglvl 4
 
 #define event_log(x,y)\
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y))
@@ -148,13 +148,8 @@ if (x <= current_error_loglvl) {y}
 * directory.
 */
 extern void read_trace_levels(void);
-
+// print fixed date and then the msg
 extern void debug_print(FILE * fd, const char *f, ...);
-
-/**
-* function to output the result of the get_time_now-call, i.e. the time now
-*/
-extern void print_time_now(ushort level);
 
 /**
 * print the error string after a system call and exit
@@ -171,6 +166,7 @@ see http://www.cnblogs.com/zhangyabin---acm/p/3203745.html
 http://blog.csdn.net/lalor/article/details/7555019
 */
 extern void perr_exit(const char *infostring);
+extern void perr_abort(const char *infostring);
 
 /* This function logs events.
 Parameters:
@@ -208,8 +204,7 @@ Parameters:
 extern void error_log_sys1(short error_loglvl, const char *module_name,
     int line_no, short errnumber);
 
-//<--------------------------------------------------------- timer --------------------------------------------->
-typedef uchar boolean;
+//<---------------- time-------------------->
 typedef uint TimerID;
 #define TIMER_TYPE_INIT       0
 #define   TIMER_TYPE_SHUTDOWN   1
@@ -218,8 +213,14 @@ typedef uint TimerID;
 #define   TIMER_TYPE_CWND       4
 #define   TIMER_TYPE_HEARTBEAT  5
 #define   TIMER_TYPE_USER       6
+//the_time reply on timeval and so for high efficicy, you will be always be given 
+// timeval when you need date calling second getitmenow
+extern int gettimenow(struct timeval *tv);
+extern int gettimenow(struct timeval *tv, struct tm *the_time);
+// function to output the result of the get_time_now-call, i.e. the time now
+extern void print_time_now(ushort level);
 
-//<--------------------------------------------------------- helpers --------------------------------------------->
+//<---------------------- helpers --------------------->
 struct internal_stream_data_t
 {
     ushort stream_id;
@@ -229,7 +230,7 @@ struct internal_data_chunk_t
 {
     uint chunk_len;
     uint chunk_tsn; /* for efficiency */
-    uchar data[MAX_PACKET_VALUE_SIZE];
+    uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
 
     uint gap_reports;
 
@@ -266,16 +267,16 @@ struct internal_data_chunk_t
 * 　1） 使用头文件 <limits.h> 里面分别有关于最大、最小的char 、int、long的。
 * 2） 分别将-1转换成对应的unsigned char 、unsigned int、unsigned long值
 */
-bool safe_before(uint seq1, uint seq2);
-bool safe_after(uint seq1, uint seq2);
-bool safe_before(ushort seq1, ushort seq2);
-bool safe_after(ushort seq1, ushort seq2);
+extern bool safe_before(uint seq1, uint seq2);
+extern bool safe_after(uint seq1, uint seq2);
+extern bool safe_before(ushort seq1, ushort seq2);
+extern bool safe_after(ushort seq1, ushort seq2);
 
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
-bool safe_between(uint seq1, uint seq2, uint seq3);
+extern bool safe_between(uint seq1, uint seq2, uint seq3);
 // @pre make sure seq1 <= seq3
-bool unsafe_between(uint seq1, uint seq2, uint seq3);
+extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
 
 /**
 * compute IP checksum yourself. If packet does not have even packet boundaries,
@@ -284,13 +285,10 @@ bool unsafe_between(uint seq1, uint seq2, uint seq3);
 * Make sure the checksum is computed last thing before sending, and the checksum
 * field is initialized to 0 before starting the computation
 */
-ushort in_check(uchar *buf, int sz);
+extern ushort in_check(uchar *buf, int sz);
 int sort_ssn(const internal_stream_data_t& one,
     const internal_stream_data_t& two);
 // function that correctly sorts TSN values, minding wrapround
-int sort_tsn(const internal_data_chunk_t& one,
+extern int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two);
-
-int gettimenow(struct timeval *tv);
-int gettimenow(struct timeval *tv, struct tm *the_time);
 #endif /* MY_GLOBALS_H_ */

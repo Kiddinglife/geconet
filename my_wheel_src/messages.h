@@ -22,14 +22,14 @@
 #undef   SHA_HMAC
 #define  HMAC_LEN   16 /* 16 bytes == 128 Bits == 4 doublewords */
 
-/**************************** SCTP common message definitions *********************************/
+/**************************** SCTP common message definitions ***************************/
 #define MAX_MTU_SIZE 1500
 #define IP_HDR_SIZE 20
 
 #ifdef SCTP_OVEREASON_UDP
-#define PACKET_COMM_HDR_SIZE  4*sizeof(ushort)
-#define MAX_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE - PACKET_COMM_HDR_SIZE)
+#define NETWORK_PACKET_FIXED_SIZE  4*sizeof(ushort)
+#define MAX_NETWORK_PACKET_VALUE_SIZE \
+(MAX_MTU_SIZE - IP_HDR_SIZE - NETWORK_PACKET_FIXED_SIZE)
 /* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
 struct network_packet_fixed_t
@@ -40,9 +40,9 @@ struct network_packet_fixed_t
     ushort checksum;
 };
 #else
-#define PACKET_COMM_HDR_SIZE  2 * (sizeof(ushort) + sizeof(uint))
-#define MAX_PACKET_VALUE_SIZE \
-MAX_MTU_SIZE - IP_HDR_SIZE- PACKET_COMM_HDR_SIZE
+#define NETWORK_PACKET_FIXED_SIZE  2 * (sizeof(ushort) + sizeof(uint))
+#define MAX_NETWORK_PACKET_VALUE_SIZE \
+MAX_MTU_SIZE - IP_HDR_SIZE- NETWORK_PACKET_FIXED_SIZE
 struct network_packet_fixed_t
 {
     ushort src_port;
@@ -55,11 +55,11 @@ struct network_packet_fixed_t
 struct network_packet_t
 {
     network_packet_fixed_t pk_comm_hdr;
-    uchar chunk[MAX_PACKET_VALUE_SIZE];
+    uchar chunk[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 /**************************** SCTP chunk definitions ******************************************/
-/*--------------------------- chunk types -------------------------------------------*/
+/*--------------------------- chunk types --------------------------------*/
 // See RFC4060 section 3.2 Chunk Field Descriptions Page17
 #define CHUNK_DATA              0x00
 #define CHUNK_INIT              0x01
@@ -90,28 +90,28 @@ struct network_packet_t
 #define SKIP_CHUNK_REPORT_EREASONROR(chunk_id)\
 (((uchar)chunk_id & 0xC0)==0xC0))
 
-/*--------------------------- common chunk header -------------------------------------------*/
+/*------------------- common chunk header ----------------------*/
 #define CHUNK_FIXED_SIZE (2*sizeof(uchar)+sizeof(ushort))
 struct chunk_fixed_t
 {
-    uchar chunk_type; /* e.g. CHUNK_DATA etc. */
-    uchar chunk_flag; /* usually 0    */
+    uchar chunk_id; /* e.g. CHUNK_DATA etc. */
+    uchar chunk_flags; /* usually 0    */
     ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 };
 #define FLAG_NONE                 0x00
 #define FLAG_DESTROYED_TCB        0x00
 #define FLAG_NO_TCB               0x01
 
-/*--------------------------- chunk_value chunk ----------------------------------------------------*/
+/*------------------ chunk_value chunk -------------------------*/
 #define DATA_CHUNK_FIRST_SEGMENT      0x02 //BEGIN
 #define DATA_CHUNK_MIDDLE_SEGMENT     0x00 //MIDDLE
 #define DATA_CHUNK_LAST_SEGMENT        0x01 //END
 #define UNORDEREASON_DATA_CHUNK          0x04
-#define DATA_CHUNK_FIXED_HDR_SIZE (sizeof(uint)+3*sizeof(ushort))
-#define DATA_CHUNK_FIXED_SIZE   \
-(CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_HDR_SIZE)
+
+#define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+3*sizeof(ushort))
+#define DATA_CHUNK_FIXED_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
 #define MAX_DATA_CHUNK_VALUE_SIZE  \
-(MAX_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZE)
+(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
 
 /* when chunk_id == CHUNK_DATA */
 struct data_chunk_fixed_t
@@ -128,16 +128,16 @@ struct data_chunk_t
     uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
 
-/*--------------------------- variable length parameter definitions ------------------------*/
+/*--------------------- variable length parameter definitions ----------------*/
 // See RFC4960 Section 3.2.1 Optional/Variable-Length Parameter Format From Page 19
 // vl params only appear in control chunks
 #define STOP_PROCESS_PARAM(param_type)   \
 (((ushort)param_type & 0xC000)==0x0000)
-#define STOP_PROCES_PARAM_REPORT_EREASONROR(param_type)    \
+#define STOP_PROCES_PARAM_REPORT_EREASON(param_type)    \
 (((ushort)param_type & 0xC000)==0x4000)
 #define SKIP_PARAM(param_type)       \
 (((ushort)param_type & 0xC000)==0x8000)
-#define SKIP_PARAM_REPORT_EREASONROR(param_type)    \
+#define SKIP_PARAM_REPORT_EREASON(param_type)    \
 (((ushort)param_type & 0xC000)==0xC000)
 
 /* optional and variable length parameter types */
@@ -165,7 +165,7 @@ struct vlparam_fixed_t
     ushort param_type;
     ushort param_length;
 };
-struct ip_address
+struct ip_address_t
 {
     vlparam_fixed_t vlparam_header;
     union
@@ -175,13 +175,13 @@ struct ip_address
     } dest_addr_un;
 };
 /* Supported Addresstypes */
-struct vlparam_supported_address_types_t
+struct supported_address_types_t
 {
     vlparam_fixed_t vlparam_header;
     ushort address_type[4];
 };
 /* Cookie Preservative */
-struct vlparam_cookie_preservative
+struct cookie_preservative_t
 {
     vlparam_fixed_t vlparam_header;
     uint cookieLifetimeInc;
@@ -212,7 +212,7 @@ struct vlparam_cookie_preservative
 ((p->vlparam_header.param_type==VLPARAM_IPV6_ADDRESS)&&\
                                  (p->vlparam_header.param_length==20))
 
-/*--------------------------- init chunk ----------------------------------------------------*/
+/*--------------------------- init chunk ------------------------*/
 // See RFC4960 Section 3.3.2.Initiation (INIT) From Page 24
 /**
 * this is the INIT specific part of the sctp_chunk, which is ALWAYS sent
@@ -229,21 +229,21 @@ struct init_chunk_fixed_t
 };
 /* max. length of optional parameters */
 #define INIT_CHUNK_FIXED_SIZE (3*sizeof(uint)+2*sizeof(ushort))
-#define MAX_INIT_CHUNK_VALUE_SIZE  \
-(MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE -INIT_CHUNK_FIXED_SIZE)
+#define MAX_INIT_CHUNK_OPTIONS_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE -INIT_CHUNK_FIXED_SIZE)
 /* init chunk structure, also used for initAck */
 struct init_chunk_t
 {
     chunk_fixed_t chunk_header;
     init_chunk_fixed_t init_fixed;
-    uchar variableParams[MAX_INIT_CHUNK_VALUE_SIZE];
+    uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 
-/*--------------------------- selective acknowledgements defs --------------------------------*/
+/*--------------------- selective acknowledgements defs -------------------------*/
 //  see RFC4960 Section 2.3.3 
 #define SACK_CHUNK_FIXED_SIZE (2*sizeof(uint)+2*sizeof(ushort))
 #define MAX_SACK_CHUNK_VALUE_SIZE  \
-(MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE - SACK_CHUNK_FIXED_SIZE )
+(MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE - SACK_CHUNK_FIXED_SIZE )
 struct sack_chunk_fixed_t
 {
     uint cumulative_tsn_ack;
@@ -262,12 +262,15 @@ struct segment32_t
     uint start_tsn;
     uint stop_tsn;
 };
-struct segment_t
+struct segment16_t
 {
-    uint start;
-    uint stop;
+    ushort start;
+    ushort stop;
 };
-typedef uint duplicate_tsn_t;
+struct duplicate_tsn_t
+{
+    uint duplicate_tsn;
+};
 
 /*--------------------------- heartbeat chunk defs --------------------------------*/
 /* our heartbeat chunk structure */
@@ -295,7 +298,7 @@ CHUNK_COOKIE_ACK
 simple chunk can also be used for transfering chunks to/from bundling, since bundling
 looks only on the chunk header.
 */
-#define MAX_SIMPLE_CHUNK_VALUE_SIZE  (MAX_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE)
+#define MAX_SIMPLE_CHUNK_VALUE_SIZE  (MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE)
 struct simple_chunk_t
 {
     chunk_fixed_t chunk_header;
@@ -305,7 +308,7 @@ struct forward_tsn_chunk_t
 {
     chunk_fixed_t chunk_header;
     uint forward_tsn;
-    uchar variableParams[MAX_PACKET_VALUE_SIZE];
+    uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 /*--------------------------- parameter definitions ------------------------------------------*/
@@ -351,7 +354,7 @@ struct cookie_fixed_t
     ushort no_remote_dns_addresses;
 };
 /* max. length of cookie variable length params parameters */
-#define MAX_COOKIE_VLPARAMS_SIZE (MAX_PACKET_VALUE_SIZE -  COOKIE_FIXED_SIZE)
+#define MAX_COOKIE_VLPARAMS_SIZE (MAX_NETWORK_PACKET_VALUE_SIZE -  COOKIE_FIXED_SIZE)
 /* cookie echo chunk structure */
 struct cookie_echo_chunk_t
 {
@@ -376,32 +379,33 @@ struct error_chunk_t
     chunk_fixed_t chunk_header;
     uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
-struct error_reason_t
+struct error_cause_t
 {
     unsigned short error_reason_code;
     unsigned short error_reason_length;
-    uchar error_reason[MAX_PACKET_VALUE_SIZE];
+    uchar error_reason[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 // Error reson codes
-#define EREASON_INVALID_STREAM_ID                   1
-#define EREASON_MISSING_MANDATORY_PARAM             2
-#define EREASON_STALE_COOKIE_EREASONROR                  3
-#define EREASON_OUT_OF_RESOURCE_EREASONROR               4
-#define EREASON_UNRESOLVABLE_ADDRESS                5
-#define EREASON_UNRECOGNIZED_CHUNKTYPE              6
-#define EREASON_INVALID_MANDATORY_PARAM             7
-#define EREASON_UNRECOGNIZED_PARAMS                 8
-#define EREASON_NO_USEREASON_DATA                        9
-#define EREASON_COOKIE_RECEIVED_DURING_SHUTDWN      10
-#define EREASON_RESTART_WITH_NEW_ADDRESSES          11
+#define ECC_INVALID_STREAM_ID                   1
+#define ECC_MISSING_MANDATORY_PARAM             2
+#define ECC_STALE_COOKIE_ERROR                  3
+#define ECC_OUT_OF_RESOURCE_ERROR               4
+#define ECC_UNRESOLVABLE_ADDRESS                5
+#define ECC_UNRECOGNIZED_CHUNKTYPE              6
+#define ECC_INVALID_MANDATORY_PARAM             7
+#define ECC_UNRECOGNIZED_PARAMS                 8
+#define ECC_NO_USER_DATA                        9
+#define ECC_COOKIE_RECEIVED_DURING_SHUTDWN      10
+#define ECC_RESTART_WITH_NEW_ADDRESSES          11
 
-#define EREASON_USEREASON_INITIATED_ABORT                12
-#define EREASON_PROTOCOL_VIOLATION                  13
+#define ECC_USER_INITIATED_ABORT                12
+#define ECC_PROTOCOL_VIOLATION                  13
 
-#define EREASON_DELETE_LAST_IP_FAILED       0xC
-#define EREASON_OP_REFUSED_NO_RESOURCES     0xD
-#define EREASON_DELETE_SOURCE_ADDRESS       0xE
+
+#define ECC_DELETE_LAST_IP_FAILED       0xC
+#define ECC_OP_REFUSED_NO_RESOURCES     0xD
+#define ECC_DELETE_SOURCE_ADDRESS       0xE
 
 // Error REASON param defs
 struct stale_cookie_err_t
@@ -417,12 +421,12 @@ struct invalid_stream_id_err_t
 struct unresolved_addr_err_t
 {
     vlparam_fixed_t vlparam_header;
-    uchar addrs[MAX_PACKET_VALUE_SIZE];
+    uchar addrs[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
-struct unkonwn_params_err_t
+struct unrecognized_params_err_t
 {
     vlparam_fixed_t vlparam_header;
-    uchar params[MAX_PACKET_VALUE_SIZE];
+    uchar params[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct missing_mandaory_params_err_t
 {
@@ -438,24 +442,24 @@ struct asconfig_chunk_fixed_t
     uchar reserved8;
     uchar address_type;
     uint sctp_address[4];
-    uchar variableParams[MAX_PACKET_VALUE_SIZE];
+    uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct asconfig_ack_chunk_fixed_t
 {
     uint serial_number;
-    uchar variableParams[MAX_PACKET_VALUE_SIZE];
+    uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct asconfig_chunk_t
 {
     chunk_fixed_t chunk_header;
     asconfig_chunk_fixed_t asc_fixed;
-    uchar variableParams[MAX_INIT_CHUNK_VALUE_SIZE];
+    uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 struct asconf_ack_chunk_t
 {
     chunk_fixed_t chunk_header;
     asconfig_ack_chunk_fixed_t asc_ack;
-    uchar variableParams[MAX_INIT_CHUNK_VALUE_SIZE];
+    uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 
 /*--------------------------- and some useful (?) macros ----------------------------------------*/

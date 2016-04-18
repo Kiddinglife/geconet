@@ -65,23 +65,23 @@ void rxc_delete_recvctrl(void *rxc_instance);
  * For now this function treats only one incoming data chunk
  * recvcontrol eventually passes chunk on to stream_engine !
  */
-int rxc_data_chunk_rx(SCTP_data_chunk * se_chk, unsigned int ad_idx);
+int rxc_data_chunk_rx(data_chunk_t * se_chk, unsigned int ad_idx);
 
 /**
  * Function triggered by flowcontrol, tells recvcontrol to create a SACK struct
  * and send it to bundling using bu_put_SACK_Chunk() function.
  * @param  destination_address pointer to address to send sack to  (or null for default)
  * @param  send_at_once, set by timer to send it at once....
- * @return boolean to indicate, whether a SACK was generated, and should be sent !
+ * @return bool to indicate, whether a SACK was generated, and should be sent !
  */
-boolean rxc_create_sack(unsigned int *destination_address, boolean force_sack);
+bool rxc_create_sack(unsigned int *destination_address, bool force_sack);
 
 /**
  * Function triggered by bundling (methinks), in order to signal to
  * rx control that all data chunks coming from an address have been processed,
  * and a new SACK may be generated
  */
-void rxc_all_chunks_processed(boolean new_data_received);
+void rxc_all_chunks_processed(bool new_data_received);
 
 /**
  * Function returns the current cumulative TSN, that this association has RECEIVED
@@ -100,7 +100,7 @@ int rxc_start_sack_timer(unsigned int oldQueueLen);
  */
 void rxc_stop_sack_timer(void);
 
-boolean rxc_sack_timer_is_running(void);
+bool rxc_sack_timer_is_running(void);
 
 void rxc_send_sack_everytime(void);
 void rxc_send_sack_every_second_time(void);

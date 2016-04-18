@@ -94,9 +94,9 @@ typedef struct SCTP_CONTROLDATA
     /** Counter for init and cookie retransmissions */
     short initRetransCounter;
     /** pointer to the init chunk data structure (for retransmissions) */
-    SCTP_init *initChunk;
+    init_chunk_t *initChunk;
     /** pointer to the cookie chunk data structure (for retransmissions) */
-    SCTP_cookie_echo *cookieChunk;
+    cookie_echo_chunk_t *cookieChunk;
     /** my tie tag for cross initialization and other sick cases */
     guint32 local_tie_tag;
     /** peer's tie tag for cross initialization and other sick cases */
@@ -173,7 +173,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
         if (localData->initRetransCounter < localData->assocMaxInitRetransmissions) {
             /* increase retransmissission-counter, resend init and restart init-timer */
             localData->initRetransCounter++;
-            bu_put_Ctrl_Chunk((SCTP_simple_chunk *) localData->initChunk,NULL);
+            bu_put_Ctrl_Chunk((simple_chunk_t *) localData->initChunk,NULL);
             bu_sendAllChunks(NULL);
             /* restart init timer after timer backoff */
             localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
@@ -203,7 +203,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
         if (localData->initRetransCounter < localData->assocMaxInitRetransmissions) {
             /* increase retransmissission-counter, resend init and restart init-timer */
             localData->initRetransCounter++;
-            bu_put_Ctrl_Chunk((SCTP_simple_chunk *) localData->cookieChunk,NULL);
+            bu_put_Ctrl_Chunk((simple_chunk_t *) localData->cookieChunk,NULL);
             bu_sendAllChunks(NULL);
             /* restart cookie timer after timer backoff */
             localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
@@ -385,15 +385,15 @@ void scu_associate(unsigned short noOfOutStreams,
 
 #ifdef HAVE_IPV6
         if (supportedTypes == SUPPORT_ADDRESS_TYPE_IPV6) {
-            ch_enterSupportedAddressTypes(initCID, FALSE, TRUE, FALSE);
+            ch_enterSupportedAddressTypes(initCID, FALSE, true, FALSE);
         } else if (supportedTypes == SUPPORT_ADDRESS_TYPE_IPV4) {
-            ch_enterSupportedAddressTypes(initCID, TRUE, FALSE, FALSE);
+            ch_enterSupportedAddressTypes(initCID, true, FALSE, FALSE);
         } else if (supportedTypes == (SUPPORT_ADDRESS_TYPE_IPV6 | SUPPORT_ADDRESS_TYPE_IPV4)) {
-                ch_enterSupportedAddressTypes(initCID, TRUE, TRUE, FALSE);
+                ch_enterSupportedAddressTypes(initCID, true, true, FALSE);
         } else
             error_log(ERROR_MAJOR, "CHECKME: Did not set correct SUPPORTED ADDR TYPES parram");
 #else
-        ch_enterSupportedAddressTypes(initCID, TRUE, FALSE, FALSE);
+        ch_enterSupportedAddressTypes(initCID, true, FALSE, FALSE);
 #endif
 
         event_logi(VERBOSE, "2: supportedTypes : %u", supportedTypes);
@@ -402,12 +402,12 @@ void scu_associate(unsigned short noOfOutStreams,
             ch_enterIPaddresses(initCID, lAddresses, nlAddresses);
 
 
-        localData->initChunk = (SCTP_init *) ch_chunkString(initCID);
+        localData->initChunk = (init_chunk_t *) ch_chunkString(initCID);
         ch_forgetChunk(initCID);
 
         /* send init chunk */
         for (count = 0; count < numDestAddresses; count++) {
-            bu_put_Ctrl_Chunk((SCTP_simple_chunk *) localData->initChunk, &count);
+            bu_put_Ctrl_Chunk((simple_chunk_t *) localData->initChunk, &count);
             bu_sendAllChunks(&count);
         }
 
@@ -445,7 +445,7 @@ void scu_shutdown()
 {
     guint32 state;
     ChunkID shutdownCID;
-    boolean readyForShutdown;
+    bool readyForShutdown;
 
     if ((localData = (SCTP_controlData *) mdi_readSCTP_control()) == NULL) {
         /* error log */
@@ -602,7 +602,7 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
         }
         /* delete all data of this association */
         mdi_deleteCurrentAssociation();
-        removed = TRUE;
+        removed = true;
         break;
 
     case ESTABLISHED:
@@ -625,7 +625,7 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
         ch_deleteChunk(abortCID);
         /* delete all data of this association */
         mdi_deleteCurrentAssociation();
-        removed = TRUE;
+        removed = true;
 
         break;
     default:
@@ -634,7 +634,7 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
         break;
     }
 
-    if (removed == TRUE) {
+    if (removed == true) {
         mdi_communicationLostNotif(SCTP_COMM_LOST_ABORTED);
         mdi_clearAssociationData();
     }
@@ -650,7 +650,7 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
  * a COOKIE parameter.
  * @param init  pointer to the received init-chunk (including optional parameters)
  */
-int sctlr_init(SCTP_init * init)
+int sctlr_init(init_chunk_t * init)
 {
     /*  this function does not expect any data allocated for the new association,
        but if there are, implementation will act according to section 5.2.1 (simultaneous
@@ -676,7 +676,7 @@ int sctlr_init(SCTP_init * init)
 
     event_log(EXTERNAL_EVENT, "sctlr_init() is executed");
 
-    initCID = ch_makeChunk((SCTP_simple_chunk *) init);
+    initCID = ch_makeChunk((simple_chunk_t *) init);
 
     if (ch_chunkType(initCID) != CHUNK_INIT) {
         /* error logging */
@@ -755,7 +755,7 @@ int sctlr_init(SCTP_init * init)
             error_log(ERROR_FATAL, "BAKEOFF: Program error, no common address types in sctlr_init()");
 
         /* enter variable length params initAck */
-        mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes,TRUE);
+        mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes,true);
         /* enter local addresses into initAck */
         if (nlAddresses > 1)
             ch_enterIPaddresses(initAckCID, lAddresses, nlAddresses);
@@ -827,7 +827,7 @@ int sctlr_init(SCTP_init * init)
             inbound_streams = min(ch_noOutStreams(initCID), mdi_readLocalInStreams( ));
 
             /* Set length of chunk to HBO !! */
-            initCID_local = ch_makeChunk((SCTP_simple_chunk *) localData->initChunk);
+            initCID_local = ch_makeChunk((simple_chunk_t *) localData->initChunk);
             /* section 5.2.1 : take original parameters from first INIT chunk */
             initAckCID = ch_makeInitAck(ch_initiateTag(initCID_local),
                                         ch_receiverWindow(initCID_local),
@@ -844,7 +844,7 @@ int sctlr_init(SCTP_init * init)
 
             /* the initAck (and consequently the Cookie) will contain my assocID as my local
                tag, and the peers tag from the init we got here */
-            mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
+            mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, true);
             /* enter local addresses into initAck */
             if (nlAddresses > 1)
                 ch_enterIPaddresses(initAckCID, lAddresses, nlAddresses);
@@ -903,7 +903,7 @@ int sctlr_init(SCTP_init * init)
             /* retreive remote source addresses from message */
             nrAddresses = ch_IPaddresses(initCID, supportedTypes, rAddresses, &peerSupportedTypes, &last_source);
 
-            mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
+            mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, true);
 
             /* enter local addresses into initAck */
             if (nlAddresses > 1)
@@ -969,7 +969,7 @@ int sctlr_init(SCTP_init * init)
  * The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
  * @param initAck  pointer to received initAck-chunk including optional parameters without chunk header
  */
-gboolean sctlr_initAck(SCTP_init * initAck)
+gboolean sctlr_initAck(init_chunk_t * initAck)
 {
     guint32 state;
     int result;
@@ -986,7 +986,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
     ChunkID initCID;
     ChunkID initAckCID;
     ChunkID errorCID, abortCID;
-    SCTP_MissingParams missing_params;
+    missing_mandaory_params_err_t missing_params;
     int return_state = STATE_OK;
 
     union sockunion preferredPrimary;
@@ -997,7 +997,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
     gboolean peerSupportsIPV6 = FALSE;
     short preferredPath;
 
-    initAckCID = ch_makeChunk((SCTP_simple_chunk *) initAck);
+    initAckCID = ch_makeChunk((simple_chunk_t *) initAck);
 
     if (ch_chunkType(initAckCID) != CHUNK_INIT_ACK) {
         /* error logging */
@@ -1020,7 +1020,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
         event_log(EXTERNAL_EVENT, "event: initAck in state COOKIE_WAIT");
 
         /* Set length of chunk to HBO !! */
-        initCID = ch_makeChunk((SCTP_simple_chunk *) localData->initChunk);
+        initCID = ch_makeChunk((simple_chunk_t *) localData->initChunk);
 
         /* FIXME: check also the noPeerOutStreams <= noLocalInStreams */
         if (ch_noOutStreams(initAckCID) == 0 || ch_noInStreams(initAckCID) == 0 || ch_initiateTag(initAckCID) == 0) {
@@ -1145,7 +1145,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
             return_state = STATE_STOP_PARSING;
         }
 
-        localData->cookieChunk = (SCTP_cookie_echo *) ch_chunkString(cookieCID);
+        localData->cookieChunk = (cookie_echo_chunk_t *) ch_chunkString(cookieCID);
         /* populate tie tags -> section 5.2.1/5.2.2 */
         localData->local_tie_tag = mdi_readLocalTag();
         localData->peer_tie_tag = ch_initiateTag(initAckCID);
@@ -1163,9 +1163,9 @@ gboolean sctlr_initAck(SCTP_init * initAck)
             if (adl_equal_address(&(dAddresses[index]),&destAddress)) break;
 
         /* send cookie */
-        bu_put_Ctrl_Chunk((SCTP_simple_chunk *) localData->cookieChunk, &index);
+        bu_put_Ctrl_Chunk((simple_chunk_t *) localData->cookieChunk, &index);
         if (errorCID != 0) {
-            bu_put_Ctrl_Chunk((SCTP_simple_chunk *)ch_chunkString(errorCID), &index);
+            bu_put_Ctrl_Chunk((simple_chunk_t *)ch_chunkString(errorCID), &index);
             ch_deleteChunk(errorCID);
         }
 
@@ -1173,7 +1173,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
         bu_unlock_sender(&index);
         event_logi(INTERNAL_EVENT_1, "event: sent cookie echo to PATH %u", index);
 
-        if (preferredSet == TRUE) {
+        if (preferredSet == true) {
             preferredPath = mdi_getIndexForAddress(&preferredPrimary);
             if (preferredPath != -1)
                 pm_setPrimaryPath(preferredPath);
@@ -1231,7 +1231,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
     \end{itemiz}
    @param  cookie_echo pointer to the received cookie echo chunk
  */
-void sctlr_cookie_echo(SCTP_cookie_echo * cookie_echo)
+void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
 {
     union sockunion destAddress;
     union sockunion dAddresses[MAX_NUM_ADDRESSES];
@@ -1259,7 +1259,7 @@ void sctlr_cookie_echo(SCTP_cookie_echo * cookie_echo)
 
     event_log(INTERNAL_EVENT_0, "sctlr_cookie_echo() is being executed");
 
-    cookieCID = ch_makeChunk((SCTP_simple_chunk *) cookie_echo);
+    cookieCID = ch_makeChunk((simple_chunk_t *) cookie_echo);
 
     if (ch_chunkType(cookieCID) != CHUNK_COOKIE_ECHO) {
         /* error logging */
@@ -1634,7 +1634,7 @@ void sctlr_cookie_echo(SCTP_cookie_echo * cookie_echo)
   Communication up is signalled to the upper layer in this case.
   @param cookieAck pointer to the received cookie ack chunk
 */
-void sctlr_cookieAck(SCTP_simple_chunk * cookieAck)
+void sctlr_cookieAck(simple_chunk_t * cookieAck)
 {
     guint32 state;
     ChunkID cookieAckCID;
@@ -1707,10 +1707,10 @@ void sctlr_cookieAck(SCTP_simple_chunk * cookieAck)
   This function initiates a graceful shutdown of the association.
   @param  shutdown_chunk pointer to the received shutdown chunk
 */
-int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk)
+int sctlr_shutdown(simple_chunk_t * shutdown_chunk)
 {
     guint32 state, new_state;
-    boolean readyForShutdown;
+    bool readyForShutdown;
     gboolean removed = FALSE, sendNotification = FALSE;
     unsigned int lastFromPath;
     int return_state = STATE_OK;
@@ -1749,7 +1749,7 @@ int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk)
         ch_deleteChunk(abortCID);
         /* delete all data of this association */
         mdi_deleteCurrentAssociation();
-        removed = TRUE;
+        removed = true;
         return_state = STATE_STOP_PARSING_REMOVED;
         break;
 
@@ -1776,7 +1776,7 @@ int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk)
         readyForShutdown = (rtx_readNumberOfUnackedChunks() == 0) &&
                            (fc_readNumberOfQueuedChunks() == 0);
 
-        sendNotification = TRUE;
+        sendNotification = true;
 
         if (readyForShutdown) {
             /* retransmissions are not necessary */
@@ -1805,7 +1805,7 @@ int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk)
         readyForShutdown = (rtx_readNumberOfUnackedChunks() == 0) &&
             (fc_readNumberOfQueuedChunks() == 0);
 
-        sendNotification = TRUE;
+        sendNotification = true;
 
         if (readyForShutdown) {
             /* retransmissions are not necessary */
@@ -1840,7 +1840,7 @@ int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk)
 
     localData->association_state = new_state;
     localData = NULL;
-    if (removed == TRUE) {
+    if (removed == true) {
         mdi_communicationLostNotif(SCTP_COMM_LOST_NO_TCB);
         mdi_clearAssociationData();
     }
@@ -1859,7 +1859,7 @@ int sctlr_shutdownAck()
 {
     guint32 state, new_state;
     unsigned int lastFromPath, lastTag;
-    boolean tagWasZero = FALSE;
+    bool tagWasZero = FALSE;
     ChunkID shdcCID;
     int return_state = STATE_OK;
     int removed = 0;    /* i.e. meaning FALSE here ! */
@@ -1888,7 +1888,7 @@ int sctlr_shutdownAck()
 
         /* make sure the shutdown_complete is written to the peer with his tag */
         if (mdi_readTagRemote() == 0) {
-            tagWasZero = TRUE;
+            tagWasZero = true;
             lastTag = mdi_readLastInitiateTag();
             mdi_rewriteTagRemote(lastTag);
         }
@@ -1899,7 +1899,7 @@ int sctlr_shutdownAck()
         ch_deleteChunk(shdcCID);
         return_state = STATE_OK;
 
-        if (tagWasZero == TRUE) {
+        if (tagWasZero == true) {
             mdi_rewriteTagRemote(0);
         }
         break;
@@ -2113,13 +2113,13 @@ int sctlr_abort()
    sctlr_staleCookie is called by bundling when a 'stale cookie' error chunk was received.
    @param error_chunk pointer to the received error chunk
 */
-void sctlr_staleCookie(SCTP_simple_chunk * error_chunk)
+void sctlr_staleCookie(simple_chunk_t * error_chunk)
 {
     guint32 state;
     ChunkID errorCID;
     ChunkID initCID;
 
-    errorCID = ch_makeChunk((SCTP_simple_chunk *) error_chunk);
+    errorCID = ch_makeChunk((simple_chunk_t *) error_chunk);
 
     if (ch_chunkType(errorCID) != CHUNK_ERROR) {
         /* error logging */
@@ -2140,7 +2140,7 @@ void sctlr_staleCookie(SCTP_simple_chunk * error_chunk)
     case COOKIE_ECHOED:
 
         /* make chunkHandler init chunk from stored init chunk string */
-        initCID = ch_makeChunk((SCTP_simple_chunk *) localData->initChunk);
+        initCID = ch_makeChunk((simple_chunk_t *) localData->initChunk);
 
         /* read staleness from error chunk and enter it into the cookie preserv. */
         ch_enterCookiePreservative(initCID, ch_stalenessOfCookieError(errorCID));
@@ -2494,7 +2494,7 @@ gboolean sci_shutdown_procedure_started()
     localData = old_data;
 
     if (state == SHUTDOWNPENDING || state == SHUTDOWNRECEIVED
-        || state == SHUTDOWNSENT || state == SHUTDOWNACKSENT) return TRUE;
+        || state == SHUTDOWNSENT || state == SHUTDOWNACKSENT) return true;
     else
         return FALSE;
 }

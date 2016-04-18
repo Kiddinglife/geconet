@@ -44,7 +44,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-//#include <config.h>
+#include <config.h>
 
 
 #include <stdio.h>
@@ -162,7 +162,7 @@ typedef unsigned long long ulonglong;
                                    ERROR_WARNING (4) means all events are printed.
                                    This parameter could also come from a command line option */
 
-typedef unsigned char boolean;
+typedef unsigned char bool;
 typedef unsigned int TimerID;
 
 #define   TIMER_TYPE_INIT       0
@@ -173,11 +173,11 @@ typedef unsigned int TimerID;
 #define   TIMER_TYPE_HEARTBEAT  5
 #define   TIMER_TYPE_USER       6
 
-typedef struct chunk_data_struct
+typedef struct 
 {
     unsigned int chunk_len;
     unsigned int chunk_tsn;     /* for efficiency */
-    unsigned char data[MAX_SCTP_PDU];
+    unsigned char data[MAX_NETWORK_PACKET_VALUE_SIZE];
     unsigned int gap_reports;
     struct timeval transmission_time;
     /* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
@@ -196,7 +196,7 @@ typedef struct chunk_data_struct
     gboolean hasBeenFastRetransmitted;
     gboolean hasBeenRequeued;
     gpointer context;
-} chunk_data;
+} internal_data_chunk_t;
 
 #ifndef max
 #define max(x,y)            ((x)>(y))?(x):(y)
@@ -315,7 +315,7 @@ int sort_prChunk(pr_stream_data* one, pr_stream_data* two);
  * function that correctly sorts TSN values, minding the
  * wrapround
  */
-int sort_tsn(chunk_data * one, chunk_data * two);
+int sort_tsn(internal_data_chunk_t * one, internal_data_chunk_t * two);
 
 void free_list_element(gpointer list_element, gpointer user_data);
 

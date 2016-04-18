@@ -98,7 +98,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen);
  * @param destAddressIndex index to address to send data structure to...
  * @return -1 on error, 0 on success, (1 if problems occurred ?)
  */
-int fc_send_data_chunk(chunk_data * chunk, short destAddressIndex, /* negative -> primary p., else path index */
+int fc_send_data_chunk(internal_data_chunk_t * chunk, short destAddressIndex, /* negative -> primary p., else path index */
                        unsigned int lifetime, /* 0xFFFFFFFF -> infinite */
                        gboolean dontBundle,
                        gpointer context);      /* FALSE==0==bundle, TRUE==1==don't bundle */
@@ -118,10 +118,10 @@ int fc_send_data_chunk(chunk_data * chunk, short destAddressIndex, /* negative -
  * @return   -1 on error, 0 on success, (1 if problems occurred ?)
  */
 int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd,unsigned int ctsna,
-                         unsigned int rtx_bytes, boolean all_data_acked,
-                         boolean new_data_acked, unsigned int num_acked,
+                         unsigned int rtx_bytes, bool all_data_acked,
+                         bool new_data_acked, unsigned int num_acked,
                          unsigned int number_of_addresses,
-                         int number_of_rtx_chunks, chunk_data ** chunks);
+                         int number_of_rtx_chunks, internal_data_chunk_t ** chunks);
 
 /**
  * function called by Reliable Transfer, after it has got a SACK chunk
@@ -134,8 +134,8 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd,unsign
  * @param   num_acked_per_address array of integers, that hold number of bytes acked for each address
  */
 void fc_sack_info(unsigned int address_index, unsigned int arwnd, unsigned int ctsna,
-                  boolean all_data_acked,
-                  boolean new_data_acked,
+                  bool all_data_acked,
+                  bool new_data_acked,
                   unsigned int num_acked,
                   unsigned int number_of_addresses);
 

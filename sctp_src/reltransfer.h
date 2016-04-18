@@ -90,7 +90,7 @@ int rtx_update_retrans_chunks(void *data_chunk, unsigned int dest);
  * been sent to the address that timed out
  */
 int rtx_t3_timeout(void *rtx_instance, unsigned int address,
-                   unsigned int mtu, chunk_data ** rtx_chunks);
+                   unsigned int mtu, internal_data_chunk_t ** rtx_chunks);
 
 
 

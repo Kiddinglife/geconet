@@ -71,7 +71,7 @@ int pm_doHB(gshort pathID);
 /* pm_heartbeat is called when a heartbeat was received from the peer.
    params: heartbeatChunk: the heartbeat chunk
 */
-void pm_heartbeat(SCTP_heartbeat * heartbeatChunk, unsigned int source_address);
+void pm_heartbeat(heartbeat_chunk_t * heartbeatChunk, unsigned int source_address);
 
 
 /******************** Signals *********************************************************************/
@@ -90,7 +90,7 @@ void pm_heartbeatTimer(TimerID timerID, void *associationIDvoid, void *pathIDvoi
 /* pm_heartbeatAck is called when a heartbeat acknowledgement was received from the peer.
    params: heartbeatChunk: the heartbeat chunk
 */
-void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk);
+void pm_heartbeatAck(heartbeat_chunk_t * heartbeatChunk);
 
 /*------------------- Signals from SCTP internal modules -----------------------------------------*/
 

@@ -50,8 +50,8 @@
 #include "pathmanagement.h"
 
 void bu_init_bundling(void);
-int bu_put_Ctrl_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
-int bu_put_Data_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
+int bu_put_Ctrl_Chunk(simple_chunk_t * chunk,unsigned int * dest_index);
+int bu_put_Data_Chunk(simple_chunk_t * chunk,unsigned int * dest_index);
 
 
 /*
@@ -137,7 +137,7 @@ gboolean bu_userDataOutbound(void);
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return error value, 0 on success, -1 on error
  */
-int bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int* dest_index);
+int bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int* dest_index);
 
 
 /*

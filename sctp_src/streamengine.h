@@ -118,7 +118,7 @@ short se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 /*
  * This function is called from RX_Control to receive a chunk.
  */
-int se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount, unsigned int address_index);
+int se_recvDataChunk(data_chunk_t * dataChunk, unsigned int byteCount, unsigned int address_index);
 
 
 /**
@@ -140,7 +140,7 @@ ushort se_numOfSendStreams(void);
 ushort se_numOfRecvStreams(void);
 
 
-int se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk);
+int se_deliver_unreliably(unsigned int up_to_tsn, forward_tsn_chunk_t* chk);
 
 
 int se_getQueuedBytes(void);

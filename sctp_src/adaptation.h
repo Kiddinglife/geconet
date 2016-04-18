@@ -59,7 +59,7 @@
 
 unsigned int adl_random(void);
 
-boolean adl_equal_address(union sockunion *one, union sockunion *two);
+bool adl_equal_address(union sockunion *one, union sockunion *two);
 
 
 /**

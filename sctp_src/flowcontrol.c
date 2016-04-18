@@ -98,15 +98,15 @@ typedef struct flowcontrol_struct
     /** */
     unsigned int my_association;
     /** */
-    boolean shutdown_received;
+    bool shutdown_received;
     /** */
-    boolean waiting_for_sack;
+    bool waiting_for_sack;
     /** */
-    boolean t3_retransmission_sent;
+    bool t3_retransmission_sent;
     /** */
-    boolean one_packet_inflight;
+    bool one_packet_inflight;
     /** */
-    boolean doing_retransmission;
+    bool doing_retransmission;
     /** */
     unsigned int maxQueueLen;
     /*@} */
@@ -163,7 +163,7 @@ void *fc_new_flowcontrol(unsigned int peer_rwnd,
         (tmp->cparams[count]).cwnd2 = 0L;
         (tmp->cparams[count]).partial_bytes_acked = 0L;
         (tmp->cparams[count]).ssthresh = peer_rwnd;
-        (tmp->cparams[count]).mtu = MAX_SCTP_PDU;
+        (tmp->cparams[count]).mtu = MAX_NETWORK_PACKET_VALUE_SIZE;
         get_time_now( &(tmp->cparams[count].time_of_cwnd_adjustment));
         timerclear(&(tmp->cparams[count].last_send_time));
     }
@@ -210,7 +210,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
         (tmp->cparams[count]).cwnd2 = 0L;
         (tmp->cparams[count]).partial_bytes_acked = 0L;
         (tmp->cparams[count]).ssthresh = new_rwnd;
-        (tmp->cparams[count]).mtu = MAX_SCTP_PDU;
+        (tmp->cparams[count]).mtu = MAX_NETWORK_PACKET_VALUE_SIZE;
         get_time_now( &(tmp->cparams[count].time_of_cwnd_adjustment) );
         timerclear(&(tmp->cparams[count].last_send_time));
     }
@@ -280,11 +280,11 @@ void fc_debug_cparams(short event_log_level)
         event_logi(event_log_level, "chunks queued in flowcontrol== %lu; ", fc->list_length);
         event_logii(event_log_level,
                     "shutdown_received == %s; waiting_for_sack == %s",
-                    ((fc->shutdown_received == TRUE) ? "TRUE" : "FALSE"),
-                    ((fc->waiting_for_sack == TRUE) ? "TRUE" : "FALSE"));
+                    ((fc->shutdown_received == true) ? "true" : "FALSE"),
+                    ((fc->waiting_for_sack == true) ? "true" : "FALSE"));
 
         event_logi(event_log_level, "t3_retransmission_sent == %s ",
-                   ((fc->t3_retransmission_sent == TRUE) ? "TRUE" : "FALSE"));
+                   ((fc->t3_retransmission_sent == true) ? "true" : "FALSE"));
         for (count = 0; count < fc->number_of_addresses; count++) {
             event_logiii(event_log_level,"cwnd:%u  ssthresh:%u  address=%u XYZ",
                          (fc->cparams[count]).cwnd, (fc->cparams[count]).ssthresh,count);
@@ -316,7 +316,7 @@ void fc_shutdown()
         error_log(ERROR_MINOR, "fc_data instance not set !");
         return;
     }
-    fc->shutdown_received = TRUE;
+    fc->shutdown_received = true;
     return;
 }
 
@@ -412,14 +412,14 @@ unsigned int fc_getNextActivePath(fc_data* fc, unsigned int start)
  * @return index of the address where we should send this chunk to, now
  */
 unsigned int
-fc_select_destination(fc_data * fc, chunk_data * dat,
-                      boolean data_retransmitted, unsigned int *old_destination)
+fc_select_destination(fc_data * fc, internal_data_chunk_t * dat,
+                      bool data_retransmitted, unsigned int *old_destination)
 {
     /* TODO : check for number_of_addresses == 1, ==2 */
     unsigned int next = pm_readPrimaryPath();
 
     event_logiii(VVERBOSE, "fc_select_destination: chunk-tsn=%u, retrans=%s, primary path=%d ",
-                 dat->chunk_tsn, ((data_retransmitted == TRUE) ? "TRUE" : "FALSE"), next);
+                 dat->chunk_tsn, ((data_retransmitted == true) ? "true" : "FALSE"), next);
 
     if (old_destination) {
         event_logi(VERBOSE, "fc_select_destination: old_dest = %u\n", *old_destination);
@@ -442,7 +442,7 @@ fc_select_destination(fc_data * fc, chunk_data * dat,
     if ((data_retransmitted == FALSE) && (pm_readState((short)next) == PM_ACTIVE))
         return next;
     /* 4. send retransmitted chunks to the next possible address */
-    if (data_retransmitted == TRUE) next = dat->last_destination;
+    if (data_retransmitted == true) next = dat->last_destination;
 
     return (fc_getNextActivePath(fc, next));
 }
@@ -463,7 +463,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
     unsigned int oldListLen;
     int count;
     int num_of_chunks;
-    chunk_data **chunks;
+    internal_data_chunk_t **chunks;
     gboolean removed_association = FALSE;
 
     res = mdi_setAssociationData(*(unsigned int *) assoc);
@@ -491,7 +491,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
 
     if (num_of_chunks <= 0) {
         event_log(VERBOSE, "Number of Chunks was 0 BEFORE calling rtx_t3_timeout - returning");
-        if (fc->shutdown_received == TRUE) {
+        if (fc->shutdown_received == true) {
             error_log(ERROR_MAJOR,
                       "T3 Timeout with 0 chunks in rtx-queue,  sci_allChunksAcked() should have been called !");
         }
@@ -499,7 +499,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
         return;
     }
 
-    chunks = (chunk_data**)malloc(num_of_chunks * sizeof(chunk_data *));
+    chunks = (internal_data_chunk_t**)malloc(num_of_chunks * sizeof(internal_data_chunk_t *));
     num_of_chunks = rtx_t3_timeout(&(fc->my_association), ad_idx, fc->cparams[ad_idx].mtu, chunks);
     if (num_of_chunks <= 0) {
         event_log(VERBOSE, "No Chunks to re-transmit - AFTER calling rtx_t3_timeout - returning");
@@ -539,7 +539,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
             if (chunks[count]->hasBeenAcked == FALSE) {
                 fc->chunk_list = g_list_insert_sorted(fc->chunk_list, chunks[count], (GCompareFunc) sort_tsn);
                 /* these chunks will not be counted, until they are actually sent again */
-                chunks[count]->hasBeenRequeued = TRUE;
+                chunks[count]->hasBeenRequeued = true;
                 fc->list_length++;
             }
         } else {
@@ -554,7 +554,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
     free(chunks);
 
     /* section 7.2.3 : assure that only one data packet is in flight, until a new sack is received */
-    fc->waiting_for_sack        = TRUE;
+    fc->waiting_for_sack        = true;
     fc->t3_retransmission_sent  = FALSE; /* we may again send one packet ! */
     fc->one_packet_inflight     = FALSE;
 
@@ -567,7 +567,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
     }
     pm_rto_backoff((short)ad_idx);
 
-    fc_check_for_txmit(fc, oldListLen, TRUE);
+    fc_check_for_txmit(fc, oldListLen, true);
 
     mdi_clearAssociationData();
     return;
@@ -576,7 +576,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
 /**
  * function increases chunk's number of transmissions, stores used destination, updates counts per addresses
  */
-void fc_update_chunk_data(fc_data * fc, chunk_data * dat, unsigned int destination)
+void fc_update_chunk_data(fc_data * fc, internal_data_chunk_t * dat, unsigned int destination)
 {
     unsigned int rwnd;
 
@@ -618,7 +618,7 @@ void fc_update_chunk_data(fc_data * fc, chunk_data * dat, unsigned int destinati
 }
 
 gboolean fc_send_okay(fc_data* fc,
-                      chunk_data* nextChunk,
+                      internal_data_chunk_t* nextChunk,
                       unsigned int destination,
                       unsigned int totalSize,
                       unsigned int obpa)
@@ -627,13 +627,13 @@ gboolean fc_send_okay(fc_data* fc,
     if (nextChunk == NULL) return FALSE;
 
 
-    if (fc->doing_retransmission == TRUE) {
+    if (fc->doing_retransmission == true) {
         if (totalSize + nextChunk->chunk_len > fc->cparams[destination].mtu) {
             fc->doing_retransmission = FALSE;
         } else {
             /* we must send at least on MTU worth of data without paying */
             /* attention to the CWND */
-            return TRUE;
+            return true;
         }
     }
     if ((totalSize + obpa < (fc->cparams[destination].cwnd+fc->cparams[destination].mtu-1)) &&
@@ -641,8 +641,8 @@ gboolean fc_send_okay(fc_data* fc,
          ((nextChunk->num_of_transmissions==0)&&(rtx_read_remote_receiver_window() > nextChunk->chunk_len)) ||
          (fc->one_packet_inflight == FALSE) ||
          (nextChunk->num_of_transmissions > 0)) ) {
-        event_logii(VERBOSE, "fc_send_okay --> TRUE (totalSize == %u, obpa == %u)",totalSize, obpa);
-        return TRUE;
+        event_logii(VERBOSE, "fc_send_okay --> true (totalSize == %u, obpa == %u)",totalSize, obpa);
+        return true;
     }
     event_logii(VERBOSE, "fc_send_okay --> FALSE (totalSize == %u, obpa == %u)",totalSize, obpa);
     return FALSE;
@@ -660,7 +660,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
 {
     unsigned int len, obpa;
     fc_data *fc;
-    chunk_data *dat;
+    internal_data_chunk_t *dat;
     unsigned int total_size, destination, oldDestination, peer_rwnd;
 
     gboolean data_is_retransmitted = FALSE;
@@ -673,12 +673,12 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
     fc = (fc_data *) fc_instance;
 
     if (fc->chunk_list != NULL) {
-        dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
     } else {
         return -1;
     }
 
-    if (dat->num_of_transmissions >= 1)  data_is_retransmitted = TRUE;
+    if (dat->num_of_transmissions >= 1)  data_is_retransmitted = true;
 
     destination = fc_select_destination(fc, dat, (unsigned char)data_is_retransmitted, NULL);
 
@@ -690,7 +690,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
                   destination, fc->cparams[destination].cwnd, fc->cparams[destination].mtu, MAX_MTU_SIZE);
     /* ------------------------------------- DEBUGGING --------------------------------------------------- */
 
-    if (peer_rwnd == 0 && fc->one_packet_inflight == TRUE) {    /* section 6.1.A */
+    if (peer_rwnd == 0 && fc->one_packet_inflight == true) {    /* section 6.1.A */
         event_log(VERBOSE, "NOT SENDING (peer rwnd == 0 and already one packet in flight ");
         event_log(VERBOSE, "################## -> Returned in fc_check_for_txmit ##################");
         return 1;
@@ -710,13 +710,13 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
         }
     } else {
         /* set this flag here, it will be reset after the while loop */
-        fc->doing_retransmission = TRUE;
+        fc->doing_retransmission = true;
     }
 
     /*   make sure we send only one retransmission after T3 timeout      */
-    /*   waiting_for_sack is only TRUE after T3 timeout.                 */
-    if (fc->waiting_for_sack == TRUE && data_is_retransmitted == TRUE) {
-        if (fc->t3_retransmission_sent == TRUE) {
+    /*   waiting_for_sack is only true after T3 timeout.                 */
+    if (fc->waiting_for_sack == true && data_is_retransmitted == true) {
+        if (fc->t3_retransmission_sent == true) {
             event_log(VERBOSE, "################## -> Returned in fc_check_for_txmit ##################");
             return 1;
         }
@@ -725,7 +725,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
     /* if so, reset CWND to 2*MTU                                         */
     fc_reset_cwnd(destination);
 
-    while (fc_send_okay(fc, dat, destination, total_size, obpa) == TRUE) {
+    while (fc_send_okay(fc, dat, destination, total_size, obpa) == true) {
 
         /* size is used to see, whether we may send this next chunk, too */
         total_size += dat->chunk_len;
@@ -737,8 +737,8 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
                     dat->ack_time, dat->num_of_transmissions);
         /* -------------------- DEBUGGING --------------------------------------- */
 
-        bu_put_Data_Chunk((SCTP_simple_chunk *) dat->data, &destination);
-        data_is_submitted = TRUE;
+        bu_put_Data_Chunk((simple_chunk_t *) dat->data, &destination);
+        data_is_submitted = true;
         get_time_now(&(fc->cparams[destination].last_send_time));
 
         /* -------------------- DEBUGGING --------------------------------------- */
@@ -756,13 +756,13 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
                 /* must not be reset to FALSE here */
                 lowest_tsn_is_retransmitted = rtx_is_lowest_tsn(dat->chunk_tsn);
         }
-        fc->one_packet_inflight = TRUE;
+        fc->one_packet_inflight = true;
         fc->chunk_list = g_list_remove(fc->chunk_list, (gpointer) dat);
         fc->list_length--;
 
-        dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
         if (dat != NULL) {
-            if (dat->num_of_transmissions >= 1)    data_is_retransmitted = TRUE;
+            if (dat->num_of_transmissions >= 1)    data_is_retransmitted = true;
             else if (dat->num_of_transmissions == 0) data_is_retransmitted = FALSE;
             oldDestination = destination;
             destination = fc_select_destination(fc, dat, (unsigned char)data_is_retransmitted, &destination);
@@ -785,11 +785,11 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
     }  /* while ((dat != NULL) && */
 
 
-    if ((fc->waiting_for_sack == TRUE) && (fc->t3_retransmission_sent == FALSE)) {
-        if (data_is_submitted == TRUE && data_is_retransmitted == TRUE) {
+    if ((fc->waiting_for_sack == true) && (fc->t3_retransmission_sent == FALSE)) {
+        if (data_is_submitted == true && data_is_retransmitted == true) {
             event_log(VERBOSE, "Retransmission Condition in fc_check_for_txmit !!!!!!!! ");
             /* Keep me from retransmitting more than once */
-            fc->t3_retransmission_sent = TRUE;
+            fc->t3_retransmission_sent = true;
         }
     }
 
@@ -824,8 +824,8 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
 
     len = fc->list_length;
 
-    if (data_is_submitted == TRUE) {
-        fc->one_packet_inflight = TRUE;
+    if (data_is_submitted == true) {
+        fc->one_packet_inflight = true;
         bu_sendAllChunks(&destination);
 
         if (fc->maxQueueLen != 0) {
@@ -855,7 +855,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
   @param all_acked   has all data been acked ?
   @param new_acked   have new chunks been acked ? CHECKME : has the ctsna advanced ?
 */
-void fc_check_t3(unsigned int ad_idx, boolean all_acked, boolean new_acked)
+void fc_check_t3(unsigned int ad_idx, bool all_acked, bool new_acked)
 {
     fc_data *fc = NULL;
     int result, obpa = 0;
@@ -870,9 +870,9 @@ void fc_check_t3(unsigned int ad_idx, boolean all_acked, boolean new_acked)
     if (obpa < 0) return;
 
     event_logiiii(INTERNAL_EVENT_0, "fc_check_t3(), outstanding==%u on path %u (all_acked=%s, new_acked=%s)... ",
-                    obpa, ad_idx, (all_acked == TRUE) ? "true" : "false", (new_acked == TRUE) ? "true" : "false");
+                    obpa, ad_idx, (all_acked == true) ? "true" : "false", (new_acked == true) ? "true" : "false");
 
-    if (all_acked == TRUE) {
+    if (all_acked == true) {
         for (count = 0; count < fc->number_of_addresses; count++) {
             if (fc->T3_timer[count] != 0) {
                 result = sctp_stopTimer(fc->T3_timer[count]);
@@ -898,7 +898,7 @@ void fc_check_t3(unsigned int ad_idx, boolean all_acked, boolean new_acked)
      *  still data outstanding on that address
      */
 
-    if (new_acked == TRUE) {
+    if (new_acked == true) {
         /* 6.2.4.4) Restart T3, if SACK acked lowest outstanding tsn, OR
          *                      we are retransmitting the first outstanding data chunk
          */
@@ -934,10 +934,10 @@ void fc_check_t3(unsigned int ad_idx, boolean all_acked, boolean new_acked)
  * @param  lifetime NULL if unused, else pointer to a value of msecs,
            after which data will not be sent anymore
  * @param   dontBundle NULL if unused, by default bundling is allowed,
-            else pointer to boolean indicating whether it is or it is not allowed.
+            else pointer to bool indicating whether it is or it is not allowed.
  * @return -1 on error, 0 on success, (1 if problems occurred ?)
  */
-int fc_send_data_chunk(chunk_data * chunkd,
+int fc_send_data_chunk(internal_data_chunk_t * chunkd,
                        short destAddressIndex,
                        unsigned int lifetime,
                        gboolean dontBundle,
@@ -945,7 +945,7 @@ int fc_send_data_chunk(chunk_data * chunkd,
 {
     fc_data *fc=NULL;
 
-    SCTP_data_chunk* s_chunk;
+    data_chunk_t* s_chunk;
 
     event_log(INTERNAL_EVENT_0, "fc_send_data_chunk is being executed.");
 
@@ -955,9 +955,9 @@ int fc_send_data_chunk(chunk_data * chunkd,
         return (SCTP_MODULE_NOT_FOUND);
     }
 
-    if (fc->shutdown_received == TRUE) {
+    if (fc->shutdown_received == true) {
         error_log(ERROR_MAJOR,
-                  "fc_send_data_chunk() called, but shutdown_received==TRUE - send not allowed !");
+                  "fc_send_data_chunk() called, but shutdown_received==true - send not allowed !");
         free(chunkd);
         /* FIXME: see that error treatment gives direct feedback of  this to the ULP ! */
         return SCTP_SPECIFIC_FUNCTION_ERROR;
@@ -968,7 +968,7 @@ int fc_send_data_chunk(chunk_data * chunkd,
 
     event_log(VERBOSE, "FlowControl got a Data Chunk to send ");
 
-    s_chunk = (SCTP_data_chunk*)chunkd->data;
+    s_chunk = (data_chunk_t*)chunkd->data;
 
     /* early TSN assignment */
     s_chunk->tsn        =  htonl(fc->current_tsn++);
@@ -1014,7 +1014,7 @@ int fc_send_data_chunk(chunk_data * chunkd,
 
 int fc_dequeue_acked_chunks(unsigned int ctsna)
 {
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList* tmp = NULL;
     fc_data *fc = NULL;
 
@@ -1027,7 +1027,7 @@ int fc_dequeue_acked_chunks(unsigned int ctsna)
     tmp = g_list_first(fc->chunk_list);
 
     while (tmp != NULL) {
-        dat = (chunk_data*)tmp->data;
+        dat = (internal_data_chunk_t*)tmp->data;
          if (before(dat->chunk_tsn, ctsna) || (dat->chunk_tsn == ctsna)) {
             tmp = g_list_next(tmp);
             fc->chunk_list = g_list_remove(fc->chunk_list, (gpointer) dat);
@@ -1060,13 +1060,13 @@ int fc_adjustCounters(fc_data *fc, unsigned int addressIndex,
             fc->cparams[count].partial_bytes_acked = 0;
         }
 
-       if (new_data_acked == TRUE) {
+       if (new_data_acked == true) {
            fc->cparams[addressIndex].cwnd += min(MAX_MTU_SIZE, num_acked);
            get_time_now(&(fc->cparams[addressIndex].time_of_cwnd_adjustment));
        }
 
     } else {                    /* CONGESTION AVOIDANCE, as per section 6.2.2 */
-        if (new_data_acked == TRUE) {
+        if (new_data_acked == true) {
             fc->cparams[addressIndex].partial_bytes_acked += num_acked;
             event_logii(VVERBOSE, "CONG. AVOIDANCE : new data acked: increase PBA(%u) to %u",
                 addressIndex, fc->cparams[addressIndex].partial_bytes_acked);
@@ -1104,7 +1104,7 @@ int fc_adjustCounters(fc_data *fc, unsigned int addressIndex,
                     addressIndex, fc->cparams[addressIndex].partial_bytes_acked);
 
         /* see section 7.2.2 */
-        if (all_data_acked == TRUE) fc->cparams[addressIndex].partial_bytes_acked = 0;
+        if (all_data_acked == true) fc->cparams[addressIndex].partial_bytes_acked = 0;
 
     }
     return SCTP_SUCCESS;
@@ -1124,10 +1124,10 @@ int fc_adjustCounters(fc_data *fc, unsigned int addressIndex,
  * @return   -1 on error, 0 on success, (1 if problems occurred ?)
  */
 int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsigned int ctsna,
-                     unsigned int rtx_bytes, boolean all_data_acked,
-                     boolean new_data_acked, unsigned int num_acked,
+                     unsigned int rtx_bytes, bool all_data_acked,
+                     bool new_data_acked, unsigned int num_acked,
                      unsigned int number_of_addresses,
-                     int number_of_rtx_chunks, chunk_data ** chunks)
+                     int number_of_rtx_chunks, internal_data_chunk_t ** chunks)
 {
     fc_data *fc;
     int count, result;
@@ -1202,15 +1202,15 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
     /* section 6.2.1.C */
     rtx_set_remote_receiver_window(peer_rwnd);
 
-    if (all_data_acked == TRUE) {
+    if (all_data_acked == true) {
         fc->one_packet_inflight = FALSE;
     } else {
-        fc->one_packet_inflight = TRUE;
+        fc->one_packet_inflight = true;
     }
 
     /* send as many to bundling as allowed, requesting new destination address */
     if (fc->chunk_list != NULL){
-       result = fc_check_for_txmit(fc, oldListLen, TRUE);
+       result = fc_check_for_txmit(fc, oldListLen, true);
     }
     /* make sure that SACK chunk is actually sent ! */
     if (result != 0) bu_sendAllChunks(NULL);
@@ -1231,7 +1231,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
  *          actually that value may also be retrieved from the association struct (?)
  */
 void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ctsna,
-             boolean all_data_acked, boolean new_data_acked,
+             bool all_data_acked, bool new_data_acked,
              unsigned int num_acked, unsigned int number_of_addresses)
 {
     fc_data *fc;
@@ -1263,7 +1263,7 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
     if (fc->outstanding_bytes == 0) {
         fc->one_packet_inflight = FALSE;
     } else {
-        fc->one_packet_inflight = TRUE;
+        fc->one_packet_inflight = true;
     }
 
 
@@ -1295,7 +1295,7 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
 int fc_dequeueUnackedChunk(unsigned int tsn)
 {
     fc_data *fc = NULL;
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList *tmp = NULL;
     gboolean found = FALSE;
     fc = (fc_data *) mdi_readFlowControl();
@@ -1303,17 +1303,17 @@ int fc_dequeueUnackedChunk(unsigned int tsn)
         error_log(ERROR_MAJOR, "flow control instance not set !");
         return SCTP_MODULE_NOT_FOUND;
     }
-    dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+    dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
     tmp = fc->chunk_list;
     while (dat != NULL && tmp != NULL) {
         event_logii(VVERBOSE, "fc_dequeueOldestUnsentChunks(): checking chunk tsn=%u, num_rtx=%u ", dat->chunk_tsn, dat->num_of_transmissions);
         if (dat->chunk_tsn == tsn) {
-            found = TRUE;
+            found = true;
             break;
         } else {
             tmp = g_list_next(tmp);
             if (tmp != NULL) {
-                dat = (chunk_data*)tmp->data;
+                dat = (internal_data_chunk_t*)tmp->data;
             } else {
                 dat = NULL;
             }
@@ -1335,9 +1335,9 @@ int fc_dequeueOldestUnsentChunk(unsigned char *buf, unsigned int *len, unsigned 
                                 unsigned char* flags, gpointer* ctx)
 {
     fc_data *fc = NULL;
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList *tmp = NULL;
-    SCTP_data_chunk* dchunk;
+    data_chunk_t* dchunk;
     int listlen;
 
     fc = (fc_data *) mdi_readFlowControl();
@@ -1350,13 +1350,13 @@ int fc_dequeueOldestUnsentChunk(unsigned char *buf, unsigned int *len, unsigned 
 
     if (listlen <= 0)               return SCTP_UNSPECIFIED_ERROR;
     if (fc->chunk_list == NULL) return  SCTP_UNSPECIFIED_ERROR;
-    dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+    dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
     tmp = fc->chunk_list;
     while (dat != NULL && tmp != NULL) {
         event_logii(VVERBOSE, "fc_dequeueOldestUnsentChunks(): checking chunk tsn=%u, num_rtx=%u ", dat->chunk_tsn, dat->num_of_transmissions);
         if (dat->num_of_transmissions != 0) {
             tmp = g_list_next(tmp);
-            dat = (chunk_data*)tmp->data;
+            dat = (internal_data_chunk_t*)tmp->data;
         /* should be a sorted list, and not happen here */
         } else break;
     }
@@ -1364,7 +1364,7 @@ int fc_dequeueOldestUnsentChunk(unsigned char *buf, unsigned int *len, unsigned 
 
     event_logii(VVERBOSE, "fc_dequeueOldestUnsentChunks(): returning chunk tsn=%u, num_rtx=%u ", dat->chunk_tsn, dat->num_of_transmissions);
 
-    dchunk = (SCTP_data_chunk*) dat->data;
+    dchunk = (data_chunk_t*) dat->data;
     *len = dat->chunk_len - FIXED_DATA_CHUNK_SIZE;
     memcpy(buf, dchunk->data, dat->chunk_len - FIXED_DATA_CHUNK_SIZE);
     *tsn = dat->chunk_tsn;
@@ -1387,7 +1387,7 @@ int fc_readNumberOfUnsentChunks(void)
     int queue_len = 0;
     fc_data *fc;
     GList* tmp;
-    chunk_data *cdat = NULL;
+    internal_data_chunk_t *cdat = NULL;
 
     fc = (fc_data *) mdi_readFlowControl();
     if (!fc) {
@@ -1397,7 +1397,7 @@ int fc_readNumberOfUnsentChunks(void)
     if (fc->chunk_list == NULL) return 0;
     tmp = g_list_first(fc->chunk_list);
     while (tmp) {
-        cdat = (chunk_data*)tmp->data; /* deref list data */
+        cdat = (internal_data_chunk_t*)tmp->data; /* deref list data */
         event_logii(VERBOSE, "fc_readNumberOfUnsentChunks(): checking chunk tsn=%u, num_rtx=%u ", cdat->chunk_tsn, cdat->num_of_transmissions);
         if (cdat->num_of_transmissions == 0) queue_len++;
         tmp = g_list_next(tmp);

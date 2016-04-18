@@ -50,8 +50,8 @@
 #include "reltransfer.h"
 #include "errorhandler.h"
 
-#define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(SCTP_common_header))
-#define SACK_SIZE(buf)		((buf)->ctrl_position+(buf)->data_position- sizeof(SCTP_common_header))
+#define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(network_packet_fixed_t))
+#define SACK_SIZE(buf)		((buf)->ctrl_position+(buf)->data_position- sizeof(network_packet_fixed_t))
 /**
  * this struct contains all data belonging to a bundling module
  */
@@ -118,9 +118,9 @@ gpointer bu_new(void)
         error_log(ERROR_MAJOR, "Malloc failed");
         return 0;
     }
-    ptr->ctrl_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
-    ptr->data_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
-    ptr->sack_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
+    ptr->ctrl_position = sizeof(network_packet_fixed_t); /* start adding data after that header ! */
+    ptr->data_position = sizeof(network_packet_fixed_t); /* start adding data after that header ! */
+    ptr->sack_position = sizeof(network_packet_fixed_t); /* start adding data after that header ! */
 
     ptr->data_in_buffer = FALSE;
     ptr->ctrl_chunk_in_buffer = FALSE;
@@ -158,7 +158,7 @@ void bu_lock_sender()
         event_log(VERBOSE, "Setting global bundling buffer ");
         bu_ptr = global_buffer;
     }
-    bu_ptr->locked = TRUE;
+    bu_ptr->locked = true;
     bu_ptr->got_send_request = FALSE;
 }
 
@@ -177,9 +177,9 @@ void bu_unlock_sender(guint* ad_idx)
     }
     bu_ptr->locked = FALSE;
     event_logi(VERBOSE, "bu_unlock_sender() was called..and got %s send request -> processing",
-       (bu_ptr->got_send_request == TRUE)?"A":"NO");
+       (bu_ptr->got_send_request == true)?"A":"NO");
 
-    if (bu_ptr->got_send_request == TRUE) bu_sendAllChunks(ad_idx);
+    if (bu_ptr->got_send_request == true) bu_sendAllChunks(ad_idx);
 
 }
 
@@ -190,7 +190,7 @@ void bu_unlock_sender(guint* ad_idx)
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return error value, 0 on success, -1 on error
  */
-gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int * dest_index)
+gint bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int * dest_index)
 {
     bundling_instance *bu_ptr;
     gboolean lock;
@@ -204,32 +204,32 @@ gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int * dest_index)
         bu_ptr = global_buffer;
     }
 
-    if (SACK_SIZE(bu_ptr) + CHUNKP_LENGTH((SCTP_chunk_header *) chunk) >= MAX_SCTP_PDU) {
+    if (SACK_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
         lock = bu_ptr->locked;
          event_logi(VERBOSE,
-                  "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
+                  "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
                     (dest_index==NULL)?0:*dest_index);
         if (lock) bu_ptr->locked = FALSE;
         bu_sendAllChunks(dest_index);
-        if (lock) bu_ptr->locked = TRUE;
+        if (lock) bu_ptr->locked = true;
     } else if (dest_index != NULL) {
-        bu_ptr->got_send_address = TRUE;
+        bu_ptr->got_send_address = true;
         bu_ptr->requested_destination = *dest_index;
     }
 
-    if (bu_ptr->sack_in_buffer == TRUE) { /* multiple calls in between */
+    if (bu_ptr->sack_in_buffer == true) { /* multiple calls in between */
         event_log(INTERNAL_EVENT_0,
                   "bu_put_SACK_Chunk was called a second time, deleting first chunk");
-        bu_ptr->sack_position = sizeof(SCTP_common_header);
+        bu_ptr->sack_position = sizeof(network_packet_fixed_t);
     }
 
     memcpy(&(bu_ptr->sack_buf[bu_ptr->sack_position]), chunk,
-           CHUNKP_LENGTH((SCTP_chunk_header *) chunk));
-    bu_ptr->sack_position += CHUNKP_LENGTH((SCTP_chunk_header *) chunk);
-    bu_ptr->sack_in_buffer = TRUE;
+           CHUNKP_LENGTH((chunk_fixed_t *) chunk));
+    bu_ptr->sack_position += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+    bu_ptr->sack_in_buffer = true;
 
     event_logii(VERBOSE, "Put SACK Chunk Length : %u , Total buffer size now: %u\n",
-                CHUNKP_LENGTH((SCTP_chunk_header *) chunk), TOTAL_SIZE(bu_ptr));
+                CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
     /* SACK always multiple of 32 bytes, do not care about padding */
     return 0;
@@ -242,7 +242,7 @@ gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int * dest_index)
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return TODO : error value, 0 on success
  */
-gint bu_put_Ctrl_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index)
+gint bu_put_Ctrl_Chunk(simple_chunk_t * chunk,unsigned int * dest_index)
 {
     bundling_instance *bu_ptr;
     gint count;
@@ -257,33 +257,33 @@ gint bu_put_Ctrl_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index)
         bu_ptr = global_buffer;
     }
 
-    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((SCTP_chunk_header *) chunk) >= MAX_SCTP_PDU) {
+    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
         lock = bu_ptr->locked;
         event_logi(VERBOSE,
-                  "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
+                  "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
                     (dest_index==NULL)?0:*dest_index);
         if (lock) bu_ptr->locked = FALSE;
         bu_sendAllChunks(dest_index);
-        if (lock) bu_ptr->locked = TRUE;
+        if (lock) bu_ptr->locked = true;
     } else if (dest_index != NULL) {
-        bu_ptr->got_send_address = TRUE;
+        bu_ptr->got_send_address = true;
         bu_ptr->requested_destination = *dest_index;
     }
 
     memcpy(&(bu_ptr->ctrl_buf[bu_ptr->ctrl_position]), chunk,
-           CHUNKP_LENGTH((SCTP_chunk_header *) chunk));
-    bu_ptr->ctrl_position += CHUNKP_LENGTH((SCTP_chunk_header *) chunk);
+           CHUNKP_LENGTH((chunk_fixed_t *) chunk));
+    bu_ptr->ctrl_position += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
     /* insert padding, if necessary */
-    if ((CHUNKP_LENGTH((SCTP_chunk_header *) chunk) % 4) != 0) {
-        for (count = 0; count < (4 - (CHUNKP_LENGTH((SCTP_chunk_header *) chunk) % 4)); count++) {
+    if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0) {
+        for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4)); count++) {
             bu_ptr->ctrl_buf[bu_ptr->ctrl_position] = 0;
             bu_ptr->ctrl_position++;
         }
     }
     event_logii(VERBOSE, "Put Control Chunk Length : %u , Total buffer size now (includes pad): %u\n",
-                CHUNKP_LENGTH((SCTP_chunk_header *) chunk), TOTAL_SIZE(bu_ptr));
+                CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
-    bu_ptr->ctrl_chunk_in_buffer = TRUE;
+    bu_ptr->ctrl_chunk_in_buffer = true;
     return 0;
 }
 
@@ -296,7 +296,7 @@ gboolean bu_userDataOutbound(void)
         event_log(VERBOSE, "Setting global bundling buffer ");
         bu_ptr = global_buffer;
     }
-    event_logi(VERBOSE, "bu_userDataOutbound() was called... and is %s ",(bu_ptr->data_in_buffer==TRUE)?"TRUE":"FALSE");
+    event_logi(VERBOSE, "bu_userDataOutbound() was called... and is %s ",(bu_ptr->data_in_buffer==true)?"true":"FALSE");
     return bu_ptr->data_in_buffer;
 }
 
@@ -307,7 +307,7 @@ gboolean bu_userDataOutbound(void)
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return TODO : error value, 0 on success
  */
-gint bu_put_Data_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index)
+gint bu_put_Data_Chunk(simple_chunk_t * chunk,unsigned int * dest_index)
 {
     bundling_instance *bu_ptr;
     gint count;
@@ -322,37 +322,37 @@ gint bu_put_Data_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index)
         bu_ptr = global_buffer;
     }
 
-    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((SCTP_chunk_header *) chunk) >= MAX_SCTP_PDU) {
+    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
         lock = bu_ptr->locked;
         event_logi(VERBOSE,
-                  "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
+                  "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
                     (dest_index==NULL)?0:*dest_index);
         if (lock) bu_ptr->locked = FALSE;
         bu_sendAllChunks(dest_index);
-        if (lock) bu_ptr->locked = TRUE;
+        if (lock) bu_ptr->locked = true;
     } else if (dest_index != NULL) {
-        bu_ptr->got_send_address = TRUE;
+        bu_ptr->got_send_address = true;
         bu_ptr->requested_destination = *dest_index;
     }
     memcpy(&(bu_ptr->data_buf[bu_ptr->data_position]), chunk,
-           CHUNKP_LENGTH((SCTP_chunk_header *) chunk));
-    bu_ptr->data_position += CHUNKP_LENGTH((SCTP_chunk_header *) chunk);
+           CHUNKP_LENGTH((chunk_fixed_t *) chunk));
+    bu_ptr->data_position += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
 
 
     /* insert padding, if necessary */
-    if ((CHUNKP_LENGTH((SCTP_chunk_header *) chunk) % 4) != 0) {
-        for (count = 0; count < (4 - (CHUNKP_LENGTH((SCTP_chunk_header *) chunk) % 4)); count++) {
+    if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0) {
+        for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4)); count++) {
             bu_ptr->data_buf[bu_ptr->data_position] = 0;
             bu_ptr->data_position++;
         }
     }
     event_logii(VERBOSE, "Put Data Chunk Length : %u , Total buffer size (incl. padding): %u\n",
-                CHUNKP_LENGTH((SCTP_chunk_header *) chunk), TOTAL_SIZE(bu_ptr));
+                CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
-    bu_ptr->data_in_buffer = TRUE;
+    bu_ptr->data_in_buffer = true;
 
     /* if SACK is waiting, force sending it along */
-    if (rxc_sack_timer_is_running() == TRUE) rxc_create_sack(dest_index, TRUE);
+    if (rxc_sack_timer_is_running() == true) rxc_create_sack(dest_index, true);
 
     return 0;
 }
@@ -383,10 +383,10 @@ gint bu_sendAllChunks(guint * ad_idx)
         event_log(VERBOSE, "Sending data from global bundling buffer ");
         bu_ptr = global_buffer;
     }
-    if (bu_ptr->locked == TRUE) {
-        bu_ptr->got_send_request = TRUE;
+    if (bu_ptr->locked == true) {
+        bu_ptr->got_send_request = true;
         if (ad_idx) {
-            bu_ptr->got_send_address = TRUE;
+            bu_ptr->got_send_address = true;
             bu_ptr->requested_destination = *ad_idx;
         }
         event_log(INTERNAL_EVENT_0, "bu_sendAllChunks : sender is LOCKED ---> returning ");
@@ -422,21 +422,21 @@ gint bu_sendAllChunks(guint * ad_idx)
     if (bu_ptr->sack_in_buffer) {
         rxc_stop_sack_timer();
         /* SACKs by default go to the last active address, from which data arrived */
-        send_len = bu_ptr->sack_position; /* at least sizeof(SCTP_common_header) */
+        send_len = bu_ptr->sack_position; /* at least sizeof(network_packet_fixed_t) */
         /* at most pointing to the end of SACK chunk */
         event_logi(VVERBOSE, "bu_sendAllChunks(sack) : send_len == %d ", send_len);
         if (bu_ptr->ctrl_chunk_in_buffer) {
             memcpy(&send_buffer[send_len],
-                   &(bu_ptr->ctrl_buf[sizeof(SCTP_common_header)]),
-                   (bu_ptr->ctrl_position - sizeof(SCTP_common_header)));
-            send_len += bu_ptr->ctrl_position - sizeof(SCTP_common_header);
+                   &(bu_ptr->ctrl_buf[sizeof(network_packet_fixed_t)]),
+                   (bu_ptr->ctrl_position - sizeof(network_packet_fixed_t)));
+            send_len += bu_ptr->ctrl_position - sizeof(network_packet_fixed_t);
             event_logi(VVERBOSE, "bu_sendAllChunks(sack+ctrl) : send_len == %d ", send_len);
         }
         if (bu_ptr->data_in_buffer) {
             memcpy(&send_buffer[send_len],
-                   &(bu_ptr->data_buf[sizeof(SCTP_common_header)]),
-                   (bu_ptr->data_position - sizeof(SCTP_common_header)));
-            send_len += bu_ptr->data_position - sizeof(SCTP_common_header);
+                   &(bu_ptr->data_buf[sizeof(network_packet_fixed_t)]),
+                   (bu_ptr->data_position - sizeof(network_packet_fixed_t)));
+            send_len += bu_ptr->data_position - sizeof(network_packet_fixed_t);
             event_logi(VVERBOSE, "bu_sendAllChunks(sack+data) : send_len == %d ", send_len);
         }
     } else if (bu_ptr->ctrl_chunk_in_buffer) {
@@ -444,9 +444,9 @@ gint bu_sendAllChunks(guint * ad_idx)
         event_logi(VVERBOSE, "bu_sendAllChunks(ctrl) : send_len == %d ", send_len);
         if (bu_ptr->data_in_buffer) {
             memcpy(&send_buffer[send_len],
-                   &(bu_ptr->data_buf[sizeof(SCTP_common_header)]),
-                   (bu_ptr->data_position - sizeof(SCTP_common_header)));
-            send_len += bu_ptr->data_position - sizeof(SCTP_common_header);
+                   &(bu_ptr->data_buf[sizeof(network_packet_fixed_t)]),
+                   (bu_ptr->data_position - sizeof(network_packet_fixed_t)));
+            send_len += bu_ptr->data_position - sizeof(network_packet_fixed_t);
             event_logi(VVERBOSE, "bu_sendAllChunks(ctrl+data) : send_len == %d ", send_len);
         }
 
@@ -465,7 +465,7 @@ gint bu_sendAllChunks(guint * ad_idx)
 
     event_logii(VERBOSE, "bu_sendAllChunks() : sending message len==%u to adress idx=%d", send_len, idx);
 
-    result = mdi_send_message((SCTP_message *) send_buffer, send_len, idx);
+    result = mdi_send_message((network_packet_t *) send_buffer, send_len, idx);
 
     event_logi(VVERBOSE, "bu_sendAllChunks(): result == %s ", (result==0)?"OKAY":"ERROR");
 
@@ -476,9 +476,9 @@ gint bu_sendAllChunks(guint * ad_idx)
     bu_ptr->got_send_request = FALSE;
     bu_ptr->got_send_address = FALSE;
 
-    bu_ptr->data_position = sizeof(SCTP_common_header);
-    bu_ptr->ctrl_position = sizeof(SCTP_common_header);
-    bu_ptr->sack_position = sizeof(SCTP_common_header);
+    bu_ptr->data_position = sizeof(network_packet_fixed_t);
+    bu_ptr->ctrl_position = sizeof(network_packet_fixed_t);
+    bu_ptr->sack_position = sizeof(network_packet_fixed_t);
 
     return result;
 }

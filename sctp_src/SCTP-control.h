@@ -119,7 +119,7 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
    init acknowledgement.
    Params: init:    data of init-chunk including optional parameters without chunk header
    */
-int sctlr_init(SCTP_init * init);
+int sctlr_init(init_chunk_t * init);
 
 
 
@@ -135,7 +135,7 @@ int sctlr_init(SCTP_init * init);
 
    Params: initAck: data of initAck-chunk including optional parameters without chunk header
    */
-int sctlr_initAck(SCTP_init * initAck);
+int sctlr_initAck(init_chunk_t * initAck);
 
 
 
@@ -152,7 +152,7 @@ int sctlr_initAck(SCTP_init * initAck);
    - # of receive streams this side uses, can be lower than peers # of send streams the requested in
    the init chunk.
    */
-void sctlr_cookie_echo(SCTP_cookie_echo * cookie);
+void sctlr_cookie_echo(cookie_echo_chunk_t * cookie);
 
 
 
@@ -162,7 +162,7 @@ void sctlr_cookie_echo(SCTP_cookie_echo * cookie);
    StartOfDataTX is called at Flowcontrol to start transmission of data chunks.
    The ULP is informed by the communication up notification.
    */
-void sctlr_cookieAck(SCTP_simple_chunk * cookieAck);
+void sctlr_cookieAck(simple_chunk_t * cookieAck);
 
 
 
@@ -170,7 +170,7 @@ void sctlr_cookieAck(SCTP_simple_chunk * cookieAck);
    The function initiates a gracefull shutdown of the association.
    Params: cumulativeTSN_ack: highest consecutive TSN acked.
    */
-int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk);
+int sctlr_shutdown(simple_chunk_t * shutdown_chunk);
 
 
 
@@ -194,7 +194,7 @@ int sctlr_abort(void);
    was received from  the peer.
    Params: staleness: microseconds the cookie life time was exceeded.
    */
-void sctlr_staleCookie(SCTP_simple_chunk * error_chunk);
+void sctlr_staleCookie(simple_chunk_t * error_chunk);
 
 
 

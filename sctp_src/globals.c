@@ -57,8 +57,8 @@
 #include <process.h>
 #endif
 
-boolean globalTrace;
-boolean fileTrace = FALSE;
+bool globalTrace;
+bool fileTrace = FALSE;
 FILE* logfile;
 static int noOftracedModules;
 static char tracedModules[50][70];
@@ -71,7 +71,7 @@ static int eventTraceLevel[50];
  * @param  two pointer to other chunk data
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
-int sort_tsn(chunk_data * one, chunk_data * two)
+int sort_tsn(internal_data_chunk_t * one, internal_data_chunk_t * two)
 {
     if (before(one->chunk_tsn, two->chunk_tsn))
     {
@@ -136,7 +136,7 @@ void read_tracelevels()
 
     if (fptr != NULL)
     {
-        globalTrace = TRUE;
+        globalTrace = true;
 
         for (i = 0; i < 50; i++)
         {
@@ -148,7 +148,7 @@ void read_tracelevels()
                     /*
                      printf("Logging all errors and events to file ./tmp%d.log\n", (int)getpid());
                      */
-                    fileTrace = TRUE;
+                    fileTrace = true;
                     sprintf(filename, "./tmp%d.log", (int) getpid());
                     logfile = fopen(filename, "w+");
                     return;
@@ -162,14 +162,14 @@ void read_tracelevels()
         }
         noOftracedModules = i;
         if (i <= 1)
-            globalTrace = TRUE;
+            globalTrace = true;
         /*
-         printf("  globalTrace = %s \n",  (globalTrace==TRUE)?"TRUE":"FALSE");
+         printf("  globalTrace = %s \n",  (globalTrace==true)?"true":"FALSE");
          */
     }
     else
     {
-        globalTrace = TRUE; /* ??? */
+        globalTrace = true; /* ??? */
     }
     /*
      printf("global = %d, #of modules = %d\n", (int) globalTrace, noOftracedModules);
@@ -178,17 +178,17 @@ void read_tracelevels()
      */
 }
 
-boolean traceModule(const char *moduleName, int *moduleIndex)
+bool traceModule(const char *moduleName, int *moduleIndex)
 {
     int i;
-    boolean found;
+    bool found;
 
     found = FALSE;
 
     for (i = 0; i < noOftracedModules; i++)
         if (!strcmp(tracedModules[i], moduleName))
         {
-            found = TRUE;
+            found = true;
             break;
         }
 
@@ -263,7 +263,7 @@ void event_log1(short event_log_level, const char *module_name,
 
         if (event_log_level < VERBOSE)
         {
-            if (fileTrace == TRUE)
+            if (fileTrace == true)
             {
                 debug_print(logfile, "Event in Module: %s............\n",
                         module_name);
@@ -276,7 +276,7 @@ void event_log1(short event_log_level, const char *module_name,
         }
         get_time_now(&tv);
         the_time = localtime((time_t *) &(tv.tv_sec));
-        if (fileTrace == TRUE)
+        if (fileTrace == true)
         {
             fprintf(logfile, "%02d:%02d:%02d.%03d - ", the_time->tm_hour,
                     the_time->tm_min, the_time->tm_sec,
@@ -301,7 +301,7 @@ void event_log1(short event_log_level, const char *module_name,
 
 /**
  This function logs errors.
- @param error_log_level  ERROR_MINOR ERROR_MAJOR ERROR_FATAL
+ @param error_loglvl  ERROR_MINOR ERROR_MAJOR ERROR_FATAL
  @param module_name      the name of the module that received the event.
  @param line_no          the line number within above module.
  @param log_info         the info that is printed with the modulename.
@@ -309,7 +309,7 @@ void event_log1(short event_log_level, const char *module_name,
  The conversion specification must be contained in log_info.
 
  */
-void error_log1(short error_log_level, const char *module_name, int line_no,
+void error_log1(short error_loglvl, const char *module_name, int line_no,
         const char *log_info, ...)
 {
     int mi;
@@ -317,33 +317,33 @@ void error_log1(short error_log_level, const char *module_name, int line_no,
 
     va_start(va, log_info);
 
-    if ((globalTrace && error_log_level <= Current_error_log_)
+    if ((globalTrace && error_loglvl <= Current_error_log_)
             || (!globalTrace && traceModule(module_name, &mi)
-                    && error_log_level <= eventTraceLevel[mi]))
+                    && error_loglvl <= eventTraceLevel[mi]))
     {
-        if (fileTrace == TRUE)
+        if (fileTrace == true)
         {
-            if (error_log_level > ERROR_MINOR)
+            if (error_loglvl <= ERROR_MINOR)
                 debug_print(logfile,
                         "+++++++++++++++  Error (Level %2d) in %s at line %d  +++++++++++++++++++\n",
-                        error_log_level, module_name, line_no);
+                        error_loglvl, module_name, line_no);
             fprintf(logfile, "Error Info: ");
             debug_vwrite(logfile, log_info, va);
             fprintf(logfile, "\n");
         }
         else
         {
-            if (error_log_level > ERROR_MINOR)
+            if (error_loglvl <= ERROR_MINOR)
                 debug_print(stderr,
                         "+++++++++++++++  Error (Level %2d) in %s at line %d  +++++++++++++++++++\n",
-                        error_log_level, module_name, line_no);
+                        error_loglvl, module_name, line_no);
             fprintf(stderr, "Error Info: ");
             debug_vwrite(stderr, log_info, va);
             fprintf(stderr, "\n");
         }
     }
     va_end(va);
-    if (fileTrace == TRUE)
+    if (fileTrace == true)
     {
         fflush(logfile);
     }
@@ -351,7 +351,7 @@ void error_log1(short error_log_level, const char *module_name, int line_no,
     {
         fflush(stderr);
     }
-    if (error_log_level == ERROR_FATAL)
+    if (error_loglvl == ERROR_FATAL)
     {
         abort();
     }
@@ -404,7 +404,7 @@ int between(unsigned int seq1, unsigned int seq2, unsigned int seq3)
 
 void free_list_element(void* list_element, void* user_data)
 {
-    chunk_data * chunkd = (chunk_data*) list_element;
+    internal_data_chunk_t * chunkd = (internal_data_chunk_t*) list_element;
 
     if (user_data == NULL)
     {

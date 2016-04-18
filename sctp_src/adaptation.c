@@ -491,7 +491,7 @@ int adl_sockunion2str(union sockunion *su, guchar * buf, size_t len)
     return 0;
 }
 
-boolean adl_equal_address(union sockunion * a, union sockunion * b)
+bool adl_equal_address(union sockunion * a, union sockunion * b)
 {
 #ifdef HAVE_IPV6
    union sockunion        my_a;
@@ -546,7 +546,7 @@ boolean adl_equal_address(union sockunion * a, union sockunion * b)
         for (count = 0; count < 16; count++)
             if (sock2ip6(one)[count] != sock2ip6(two)[count])
                 return FALSE;
-        return TRUE;
+        return true;
         break;
 #endif
     default:
@@ -2105,7 +2105,7 @@ int adl_remove_cb(int sfd)
  * An address filtering function
  * @param newAddress  a pointer to a sockunion address
  * @param flags       bit mask hiding (i.e. filtering) address classes
- * returns TRUE if address is not filtered, else FALSE if address is filtered by mask
+ * returns true if address is not filtered, else FALSE if address is filtered by mask
  */
 gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags  flags)
 {
@@ -2163,7 +2163,7 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
         return FALSE;
         break;
     }
-    return TRUE;
+    return true;
 }
 
 
@@ -2173,7 +2173,7 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
  * this is an ugly part to code, so it was taken an adapted from the
  * SCTP reference implementation by Randy Stewart
  * see http://www.sctp.org
- * returns TRUE is successful, else FALSE
+ * returns true is successful, else FALSE
  *
  * Changed by Stefan Jansen <stefan.jansen@gmx.de>, Aug 1st, 2002.
  * When going through the ifreq array, numAlocAddr was used as upper bound.
@@ -2306,7 +2306,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
    *addresses = localAddresses;
     *numberOfNets=slist->iAddressCount;
    *max_mtu=1500;
-   return TRUE;
+   return true;
 #else
 #if defined (LINUX)
     int addedNets;
@@ -2596,7 +2596,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
 
     }
     *addresses = localAddresses;
-    return(TRUE);
+    return(true);
 #endif
 }
 

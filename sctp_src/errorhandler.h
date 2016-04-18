@@ -65,7 +65,7 @@ void eh_delete(void *instancePtr);
  *  accordingly....
  *  @return  error code, 0 for success, less than one for error
  */
-int eh_recv_chunk(SCTP_simple_chunk * errchunk);
+int eh_recv_chunk(simple_chunk_t * errchunk);
 
 /**
  * function to trigger sending of error chunk, after receiving an invalid stream id

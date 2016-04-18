@@ -85,8 +85,8 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[], int n
 
 /* ch_enterCookieVLP enters the variable length params of cookie into an initAck */
 int ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
-                  SCTP_init_fixed * init_fixed,
-                  SCTP_init_fixed * initAck_fixed,
+                  init_chunk_fixed_t * init_fixed,
+                  init_chunk_fixed_t * initAck_fixed,
                   uint cookieLifetime,
                   uint local_tie_tag,
                   uint peer_tie_tag,
@@ -171,12 +171,12 @@ int ch_IPaddresses(ChunkID chunkID, unsigned int mySupportedTypes, union sockuni
 
 
 /* ch_cookieParam reads the cookie from an initAck */
-SCTP_cookie_param *ch_cookieParam(ChunkID chunkID);
+cookie_param_t *ch_cookieParam(ChunkID chunkID);
 
 
 
 /* ch_initFixed reads the fixed part from an init or initAck as complete structure */
-SCTP_init_fixed *ch_initFixed(ChunkID chunkID);
+init_chunk_fixed_t *ch_initFixed(ChunkID chunkID);
 
 
 
@@ -185,7 +185,7 @@ SCTP_init_fixed *ch_initFixed(ChunkID chunkID);
 /**
  * ch_makeCookie creates a cookie chunk.
  */
-ChunkID ch_makeCookie(SCTP_cookie_param * cookieParam);
+ChunkID ch_makeCookie(cookie_param_t * cookieParam);
 
 
 
@@ -218,7 +218,7 @@ unsigned int ch_staleCookie(ChunkID chunkID);
 
 
 /* check if this is a good cookie */
-boolean ch_goodCookie(ChunkID chunkID);
+bool ch_goodCookie(ChunkID chunkID);
 
 
 
@@ -312,12 +312,12 @@ unsigned short ch_chunkLength(ChunkID chunkID);
 
 /* returns a pointer to the beginning of a simple chunk.
 */
-SCTP_simple_chunk *ch_chunkString(ChunkID chunkID);
+simple_chunk_t *ch_chunkString(ChunkID chunkID);
 
 
 
 /* ch_makeChunk makes a chunk from a simple chunk, which is nearly a byte string */
-ChunkID ch_makeChunk(SCTP_simple_chunk * chunk);
+ChunkID ch_makeChunk(simple_chunk_t * chunk);
 
 
 

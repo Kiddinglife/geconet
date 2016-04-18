@@ -74,19 +74,19 @@ void eh_delete(void *instancePtr)
  *  accordingly....
  *  @return  error code, 0 for success, less than one for error
  */
-int eh_recv_chunk(SCTP_simple_chunk * errchunk)
+int eh_recv_chunk(simple_chunk_t * errchunk)
 {
-    SCTP_error_chunk *chunk;
-    SCTP_vlparam_header *header;
-    SCTP_error_cause *cause;
+    error_chunk_t *chunk;
+    vlparam_fixed_t *header;
+    error_cause_t *cause;
     unsigned char* data;
 
     unsigned short err_cause;
     unsigned short cause_len;
     int result = (-1);
 
-    chunk = (SCTP_error_chunk *) errchunk;
-    cause = (SCTP_error_cause *) chunk->data;
+    chunk = (error_chunk_t *) errchunk;
+    cause = (error_cause_t *) chunk->data;
     data =  cause->cause_information;
 
     err_cause = ntohs(cause->cause_code);
@@ -100,7 +100,7 @@ int eh_recv_chunk(SCTP_simple_chunk * errchunk)
         break;
     case ECC_STALE_COOKIE_ERROR:
         event_logi(EXTERNAL_EVENT, "Stale Cookie Error, Len %u ", cause_len);
-        sctlr_staleCookie((SCTP_simple_chunk *) errchunk);
+        sctlr_staleCookie((simple_chunk_t *) errchunk);
         result = 0;
         break;
     case ECC_OUT_OF_RESOURCE_ERROR:
@@ -117,7 +117,7 @@ int eh_recv_chunk(SCTP_simple_chunk * errchunk)
         break;
     case ECC_UNRECOGNIZED_PARAMS:
         event_logi(EXTERNAL_EVENT, "Unrecognized Params Error with Len %u ", cause_len);
-        header = (SCTP_vlparam_header*)data;
+        header = (vlparam_fixed_t*)data;
         if (ntohs(header->param_type) == VLPARAM_PRSCTP) {
             /* set peer does not understand PRSCTP - do not use it in this ASSOC ! */
             event_log(EXTERNAL_EVENT, "Unrecognized Parameter: PR_SCTP ");
@@ -142,7 +142,7 @@ int eh_recv_chunk(SCTP_simple_chunk * errchunk)
 int eh_make_invalid_streamid_error(unsigned short streamid)
 {
     ChunkID errorCID;
-    SCTP_InvalidStreamIdError error_info;
+    invalid_stream_id_err_t error_info;
     
     /* build chunk */
     errorCID = ch_makeErrorChunk();

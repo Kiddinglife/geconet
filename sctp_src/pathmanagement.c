@@ -66,20 +66,20 @@ typedef struct PATHDATA
     /** operational state of pathmanagement for one path */
     short state;
     /** true if heartbeat is enabled */
-    boolean heartbeatEnabled;
+    bool heartbeatEnabled;
     /** true as long as RTO-Calc. has been done */
-    boolean firstRTO;
+    bool firstRTO;
     /** Only once per HB-intervall */
-    boolean timerBackoff;
+    bool timerBackoff;
     /** set to true when data chunks are acknowledged */
-    boolean chunksAcked;
-    /** TRUE, if chunks have been sent over that path within last RTO */
-    boolean chunksSent;
+    bool chunksAcked;
+    /** true, if chunks have been sent over that path within last RTO */
+    bool chunksSent;
     /** set to true when a heartbeat is sent. */
-    boolean heartbeatSent;
+    bool heartbeatSent;
     /** set to true when a hearbeat is acknowledged and to false when a
        heartbeat is sent when the heartbeat timer expires. */
-    boolean heartbeatAcked;
+    bool heartbeatAcked;
     /** Counter for retransmissions on a single path */
     unsigned int pathRetranscount;
     /** Retransmission time out used for all retrans. timers */
@@ -167,12 +167,12 @@ unsigned int pm_getTime(void)
  *  has not been acknowledged within the current heartbeat-intervall. It increases path- and peer-
  *  retransmission counters and compares these counters to the corresonding thresholds.
  *  @param  pathID index to the path that CAUSED retransmission
- *  @return TRUE if association was deleted, FALSE if not
+ *  @return true if association was deleted, FALSE if not
  */
 static gboolean handleChunksRetransmitted(short pathID)
 {
     short pID;
-    boolean allPathsInactive;
+    bool allPathsInactive;
     PathmanData *old_pmData;
 
     if (!pmData->pathData) {
@@ -205,7 +205,7 @@ static gboolean handleChunksRetransmitted(short pathID)
         mdi_clearAssociationData();
 
         event_log(INTERNAL_EVENT_0, "handleChunksRetransmitted: communication lost");
-        return TRUE;
+        return true;
     }
 
     if (pmData->pathData[pathID].pathRetranscount >= (unsigned int)pmData->maxPathRetransmissions) {
@@ -213,7 +213,7 @@ static gboolean handleChunksRetransmitted(short pathID)
         pmData->pathData[pathID].state = PM_INACTIVE;
         event_logi(INTERNAL_EVENT_0, "handleChunksRetransmitted: path %d to INACTIVE ", pathID);
         /* check if an active path is left */
-        allPathsInactive = TRUE;
+        allPathsInactive = true;
         for (pID = 0; pID < pmData->numberOfPaths; pID++) {
             if (pmData->pathData[pID].state == PM_ACTIVE) {
                 allPathsInactive = FALSE;
@@ -227,7 +227,7 @@ static gboolean handleChunksRetransmitted(short pathID)
                 mdi_clearAssociationData(); */
             event_log(INTERNAL_EVENT_0,
                       "handleChunksRetransmitted: communication lost (all paths are INACTIVE)");
-            return TRUE;
+            return true;
         } else {
             old_pmData = pmData;
             mdi_networkStatusChangeNotif(pathID, PM_INACTIVE);
@@ -302,11 +302,11 @@ static void handleChunksAcked(short pathID, unsigned int newRTT)
   @param heartbeatChunk pointer to the heartbeat chunk
   @param source_address address we received the HB chunk from (and where it is echoed)
 */
-void pm_heartbeat(SCTP_heartbeat * heartbeatChunk, unsigned int source_address)
+void pm_heartbeat(heartbeat_chunk_t * heartbeatChunk, unsigned int source_address)
 {
     heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
 
-    bu_put_Ctrl_Chunk((SCTP_simple_chunk *) heartbeatChunk, &source_address);
+    bu_put_Ctrl_Chunk((simple_chunk_t *) heartbeatChunk, &source_address);
     bu_sendAllChunks(&source_address);
 }                               /* end: pm_heartbeat */
 
@@ -389,7 +389,7 @@ void pm_heartbeatTimer(TimerID timerID, void *associationIDvoid, void *pathIDvoi
         bu_put_Ctrl_Chunk(ch_chunkString(heartbeatCID), &pathID);
         bu_sendAllChunks(&pathID);
         ch_deleteChunk(heartbeatCID);
-        pmData->pathData[pathID].heartbeatSent = TRUE;
+        pmData->pathData[pathID].heartbeatSent = true;
     } else if (!removed_association) {
         pmData->pathData[pathID].heartbeatSent = FALSE;
     }
@@ -454,7 +454,7 @@ int pm_doHB(gshort pathID)
     bu_put_Ctrl_Chunk(ch_chunkString(heartbeatCID),&pid);
     bu_sendAllChunks(&pid);
     ch_deleteChunk(heartbeatCID);
-    pmData->pathData[pathID].heartbeatSent = TRUE;
+    pmData->pathData[pathID].heartbeatSent = true;
 
     return SCTP_SUCCESS;
 }
@@ -465,7 +465,7 @@ int pm_doHB(gshort pathID)
  * checks RTTs, normally resets error counters, may set path back to ACTIVE state
  * @param heartbeatChunk pointer to the received heartbeat ack chunk
  */
-void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
+void pm_heartbeatAck(heartbeat_chunk_t * heartbeatChunk)
 {
     unsigned int roundtripTime;
     unsigned int sendingTime;
@@ -485,14 +485,14 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
         return;
     }
 
-    heartbeatCID = ch_makeChunk((SCTP_simple_chunk *) heartbeatChunk);
+    heartbeatCID = ch_makeChunk((simple_chunk_t *) heartbeatChunk);
     pathID = ch_HBpathID(heartbeatCID);
     sendingTime = ch_HBsendingTime(heartbeatCID);
     roundtripTime = pm_getTime() - sendingTime;
     event_logii(INTERNAL_EVENT_0, "HBAck for path %u, RTT = %u msecs", pathID, roundtripTime);
 
     hbSignatureOkay = ch_verifyHeartbeat(heartbeatCID);
-    event_logi(EXTERNAL_EVENT, "HB Signature is %s", (hbSignatureOkay == TRUE)?"correct":"FALSE");
+    event_logi(EXTERNAL_EVENT, "HB Signature is %s", (hbSignatureOkay == true)?"correct":"FALSE");
 
     if (hbSignatureOkay == FALSE) {
         error_log(ERROR_FATAL, "pm_heartbeatAck: FALSE SIGNATURE !!!!!!!!!!!!!!!");
@@ -527,7 +527,7 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
                             (void *) &pmData->associationID,
                             (void *) &pmData->pathData[pathID].pathID);
     }
-    pmData->pathData[pathID].heartbeatAcked = TRUE;
+    pmData->pathData[pathID].heartbeatAcked = true;
     pmData->pathData[pathID].timerBackoff = FALSE;
 
 }                               /* end: pm_heartbeatAck */
@@ -584,7 +584,7 @@ void pm_chunksAcked(short pathID, unsigned int newRTT)
             }
         }
         handleChunksAcked(pathID, newRTT);
-        pmData->pathData[pathID].chunksAcked = TRUE;
+        pmData->pathData[pathID].chunksAcked = true;
     } else {
         /* FIX :::::::
             we got an ACK possibly from on an inactive path */
@@ -599,7 +599,7 @@ void pm_chunksAcked(short pathID, unsigned int newRTT)
 
 
 /**
- * helper function, that simply sets the chunksSent flag of this path management instance to TRUE
+ * helper function, that simply sets the chunksSent flag of this path management instance to true
  * @param pathID  index of the address, where flag is set
  */
 void pm_chunksSentOn(short pathID)
@@ -620,7 +620,7 @@ void pm_chunksSentOn(short pathID)
         return;
     }
     event_logi(VERBOSE, "Calling pm_chunksSentOn(%d)", pathID);
-    pmData->pathData[pathID].chunksSent = TRUE;
+    pmData->pathData[pathID].chunksSent = true;
 
 }
 
@@ -691,7 +691,7 @@ void pm_rto_backoff(short pathID)
         event_logii(INTERNAL_EVENT_0,
                         "pm_rto_backoff called for path %u: new RTO =%d",
                         pathID, pmData->pathData[pathID].rto);
-        pmData->pathData[pathID].timerBackoff = TRUE;
+        pmData->pathData[pathID].timerBackoff = true;
     } else {
         /* stale acknowledgement, silently discard */
         error_logi(ERROR_MINOR, "pm_rto_backoff: timer backoff for an inactive path %d", pathID);
@@ -733,9 +733,9 @@ int pm_enableHB(short pathID, unsigned int hearbeatIntervall)
 
 
     if (!pmData->pathData[pathID].heartbeatEnabled) {
-        pmData->pathData[pathID].heartbeatEnabled = TRUE;
+        pmData->pathData[pathID].heartbeatEnabled = true;
 
-        pmData->pathData[pathID].firstRTO = TRUE;
+        pmData->pathData[pathID].firstRTO = true;
         pmData->pathData[pathID].pathRetranscount = 0;
         pmData->peerRetranscount = 0;
 
@@ -1199,8 +1199,8 @@ short pm_setPaths(short noOfPaths, short primaryPathID)
             if (i == primaryPathID) {
                 pmData->pathData[i].state = PM_ACTIVE;
             }
-            pmData->pathData[i].heartbeatEnabled = TRUE;
-            pmData->pathData[i].firstRTO = TRUE;
+            pmData->pathData[i].heartbeatEnabled = true;
+            pmData->pathData[i].firstRTO = true;
             pmData->pathData[i].pathRetranscount = 0;
             pmData->pathData[i].rto = pmData->rto_initial;
             pmData->pathData[i].srtt = pmData->rto_initial;
