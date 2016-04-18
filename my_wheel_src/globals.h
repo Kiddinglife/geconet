@@ -39,7 +39,6 @@
 #include <stdarg.h>
 #endif
 
-
 #include "messages.h"
 
 /* Define a protocol id to be used in the IP Header..... */
@@ -63,71 +62,71 @@
 
 /* Definition of levels for the logging of events */
 /* very verbose logging of events   */
-#define trace_vverbos           6
+#define loglvl_vverbos           6
 /* more verbose logging of events   */
-#define trace_verbose            5  
+#define loglvl_verbose            5
 /* pure execution flow trace */
-#define trace_intevent   4 
+#define loglvl_intevent   4
 /* important inernal events */
-#define trace_intevent_important  3  
+#define loglvl_intevent_important  3
 /* for events from ULP, peer or Timers */
-#define trace_extevent   2 
+#define loglvl_extevent   2
 /* for unexpected external events from ULP, peer or Timers */
-#define trace_extevent_unexpected 1
+#define loglvl_extevent_unexpected 1
 /* Defines the level up to which the events are prInt32ed.
 VVERBOSE (6) means all events are prInt32ed.
 This parameter could also come from a command line option */
-#define current_event_log_level 0
+#define current_event_loglvl 0
 
 /* Definition of levels for the logging of errors */
 /* warning, recovery not necessary. */
-#define trace_error_no_need_recovery 4
+#define loglvl_warnning_error 4
 /* recovery from error was possible without affecting the system. */
-#define trace_error_can_full_recovery  3
+#define loglvl_minor_error  3
 /*recovery from error was possible with some affects to the system,
 * for instance abort of an association.*/
-#define trace_error_can_partial_recovery  2
+#define loglvl_major_error_abort  2
 /* recovery from error was not possible, the program exits. */
-#define trace_error_cannot_recover 1
+#define loglvl_fatal_error_exit 1
 /* Defines the level up to which the errors are prInt32ed.
 *ERROR_WARNING (4) means all events are prInt32ed.
 *This parameter could also come from a command line option*/
-#define current_error_log_level 1
+#define current_error_loglvl 1
 
 #define event_log(x,y)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y))
 #define event_logi(x,y,z)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y), (z))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z))
 #define event_logii(x,y,z,i)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y), (z), (i))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i))
 #define event_logiii(x,y,z,i,j)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y), (z), (i), (j))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j))
 #define event_logiiii(x,y,z,i,j,k)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k))
 #define event_logiiiii(x,y,z,i,j,k,l)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l))
 #define event_logiiiiiiii(x,y,z,i,j,k,l,m,n,o)\
-if (current_event_log_level >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n),(o))
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n),(o))
 
 #define error_log(x,y)  \
-if (current_error_log_level >= x) error_log1((x), __FILE__, __LINE__, (y))
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y))
 #define error_logi(x,y,z)\
-if (current_error_log_level >= x) error_log1((x), __FILE__, __LINE__, (y),(z))
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z))
 #define error_logii(x,y,z,i)   \
-if (current_error_log_level >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i))
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i))
 #define error_logiii(x,y,z,i,j)     \
-if (current_error_log_level >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j))
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j))
 #define error_logiiii(x,y,z,i,j,k)    \
-if (current_error_log_level >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j),(k))
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j),(k))
 
 #define error_log_sys(x,y)    \
 error_log_sys1((x), __FILE__, __LINE__, (y))
 
 #define DLL_error_log(x,y)    \
-if (current_error_log_level >= x) error_log1((x), __FILE__, __LINE__, (y))
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y))
 
 #define IF_LOG(x, y)       \
-if (x <= current_error_log_level) {y}
+if (x <= current_error_loglvl) {y}
 
 /**
 *read_tracelevels reads from a file the tracelevels for errors and events for each module.
@@ -148,14 +147,14 @@ if (x <= current_error_log_level) {y}
 * in that file, which causes all output from event_logs() to go into a logfile in the local
 * directory.
 */
-void read_trace_levels(void);
+extern void read_trace_levels(void);
 
-void debug_print(FILE * fd, const char *f, ...);
+extern void debug_print(FILE * fd, const char *f, ...);
 
 /**
 * function to output the result of the get_time_now-call, i.e. the time now
 */
-void print_time(ushort level);
+extern void print_time_now(ushort level);
 
 /**
 * print the error string after a system call and exit
@@ -171,42 +170,42 @@ stderror 只向屏幕输出， 但是stdout可以被重定向到各种输出设�
 see http://www.cnblogs.com/zhangyabin---acm/p/3203745.html
 http://blog.csdn.net/lalor/article/details/7555019
 */
-void perr_exit(const char *infostring);
+extern void perr_exit(const char *infostring);
 
 /* This function logs events.
 Parameters:
-@param event_log_level : INTERNAL_EVENT_0 INTERNAL_EVENT_1 EXTERNAL_EVENT_X EXTERNAL_EVENT
+@param event_loglvl : INTERNAL_EVENT_0 INTERNAL_EVENT_1 EXTERNAL_EVENT_X EXTERNAL_EVENT
 @param module_name :     the name of the module that received the event.
 @param log_info :        the info that is prInt32ed with the modulename.
 @param anyno :           optional poInt32er to uint, which is prInt32ed along with log_info.
 The conversion specification must be contained in log_info.
 @author     H�zlwimmer
 */
-void event_log1(short event_log_level, const char *module_name,
+extern void event_log1(short event_loglvl, const char *module_name,
     const char *log_info, ...);
 
 /* This function logs errors.
 Parameters:
-@param error_log_level : ERROR_MINOR ERROR_MAJOR ERROR_FATAL
+@param error_loglvl : ERROR_MINOR ERROR_MAJOR ERROR_FATAL
 @param module_name :     the name of the module that received the event.
 @param line_no :         the line number within above module.
 @param log_info :        the info that is prInt32ed with the modulename.
 @author     H�zlwimmer
 */
-void error_log1(short error_log_level, const char *module_name, int line_no,
+extern void error_log1(short error_loglvl, const char *module_name, int line_no,
     const char *log_info, ...);
 
 /* This function logs system call errors.
 This function calls error_log.
 Parameters:
-@param error_log_level : ERROR_MINOR ERROR_MAJOR ERROR_FATAL
+@param error_loglvl : ERROR_MINOR ERROR_MAJOR ERROR_FATAL
 @param module_name :     the name of the module that received the event.
 @param line_no :         the line number within above module.
 @param errnumber :       the errno from systemlibrary.
 @param log_info :        the info that is prInt32ed with the modulename and error text.
 @author     H�zlwimmer
 */
-void error_log_sys1(short error_log_level, const char *module_name,
+extern void error_log_sys1(short error_loglvl, const char *module_name,
     int line_no, short errnumber);
 
 //<--------------------------------------------------------- timer --------------------------------------------->
@@ -292,5 +291,6 @@ int sort_ssn(const internal_stream_data_t& one,
 int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two);
 
-int get_time_now(struct timeval *tv);
+int gettimenow(struct timeval *tv);
+int gettimenow(struct timeval *tv, struct tm *the_time);
 #endif /* MY_GLOBALS_H_ */

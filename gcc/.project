@@ -24,4 +24,16 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>sctp_src</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/sctp_src</locationURI>
+		</link>
+		<link>
+			<name>src/my_wheel_src</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/my_wheel_src</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>

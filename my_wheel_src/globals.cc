@@ -20,9 +20,9 @@
 #endif
 
 //++++++++++++++++++ logging ++++++++++++++++++++
-bool globalTrace;
+bool globalTrace = true;
 bool fileTrace = false;
-FILE* logfile;
+FILE* logfile = 0;
 static int noOftracedModules;
 static char traced_modules[TRACE_MUDULE_SIZE][70];
 static int error_trace_levels[TRACE_MUDULE_SIZE];
@@ -30,7 +30,7 @@ static int event_trace_levels[TRACE_MUDULE_SIZE];
 
 void read_trace_levels(void)
 {
-    size_t i;
+    int i;
     int ret;
     char filename[100];
     noOftracedModules = 0;
@@ -44,14 +44,16 @@ void read_trace_levels(void)
         for (i = 0; i < TRACE_MUDULE_SIZE; i++)
         {
             ret = fscanf(fptr, "%s%d%d", traced_modules[i],
-                &error_trace_levels[i], &event_trace_levels[i]);
+                    &error_trace_levels[i], &event_trace_levels[i]);
             if (ret >= 1)
             {
                 if (strcmp(traced_modules[i], "LOGFILE") == 0)
                 {
-                    printf("Logging all errors and events to file ./tmp%d.log\n", (int)getpid());
+                    printf(
+                            "Logging all errors and events to file ./tmp%d.log\n",
+                            (int) getpid());
                     fileTrace = true;
-                    sprintf(filename, "./tmp%d.log", (int)getpid());
+                    sprintf(filename, "./tmp%d.log", (int) getpid());
                     logfile = fopen(filename, "w+");
                     return;
                 }
@@ -61,12 +63,14 @@ void read_trace_levels(void)
                 abort();
 
             //if we have less than TRACE_MUDULE_SIZE mudlues to trace, this will break loop
-            if (feof(fptr)) break;
+            if (feof(fptr))
+                break;
 
             globalTrace = false;
         }
         noOftracedModules = i;
-        if (i <= 1) globalTrace = true;
+        if (i <= 1)
+            globalTrace = true;
         printf("  globalTrace = %s \n", globalTrace ? "TRUE" : "FALSE");
     }
     else
@@ -74,14 +78,14 @@ void read_trace_levels(void)
         globalTrace = true;
     }
     printf("globalTrace '%s', modules size '%d'\n",
-        globalTrace ? "TRUE" : "FALSE", noOftracedModules);
+            globalTrace ? "TRUE" : "FALSE", noOftracedModules);
     for (i = 0; i < noOftracedModules; i++)
         printf("%20s %2d %2d\n", traced_modules[i], error_trace_levels[i],
-        event_trace_levels[i]);
+                event_trace_levels[i]);
 }
 
 // -1 not found, >0 = module index
-static int  is_module_traced(const char* modulename)
+static int is_module_traced(const char* modulename)
 {
     for (int i = 0; i < TRACE_MUDULE_SIZE; i++)
     {
@@ -93,11 +97,10 @@ static int  is_module_traced(const char* modulename)
     return -1;
 }
 
-
 /**
-* helper function for the sake of a cleaner interface :-)
-*/
-int get_time_now(struct timeval *tv)
+ * helper function for the sake of a cleaner interface :-)
+ */
+inline int gettimenow(struct timeval *tv)
 {
 #ifdef WIN32
     struct timeb tb;
@@ -109,25 +112,42 @@ int get_time_now(struct timeval *tv)
     return (gettimeofday(tv, (struct timezone *) NULL));
 #endif
 }
-static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
+inline int gettimenow(struct timeval *tv, struct tm *the_time)
 {
-    struct timeval tv; // this is used for get usec
-    struct tm *the_time; // only contains data infos, no ms and us
-
-    get_time_now(&tv);
-    time_t tt = (time_t)tv.tv_sec;
-    the_time = localtime(&tt);
-
-    // write fixed log header 
-    if (fprintf(fd, "%02d:%02d:%02d.%03d - ",
-        the_time->tm_hour,
-        the_time->tm_min, the_time->tm_sec, (int)(tv.tv_usec / 1000)) < 1) // change to  ms
+    if (!gettimenow(tv))
+    {
+        time_t tt = (time_t) tv->tv_sec;
+        the_time = localtime(&tt);
+        return 0;
+    }
+    else
+    {
         return -1;
-    // then write log msg
-    if (vfprintf(fd, formate, ap) < 1) return -1;
-    return 0;
+    }
 }
-void debug_print(FILE * fd, const char *f, ...)
+
+inline static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
+{
+    struct timeval* tv;    // this is used for get usec
+    struct tm *the_time; // only contains data infos, no ms and us
+    if (!gettimenow(tv, the_time))
+    {
+        // write fixed log header
+        if (fprintf(fd, "%02d:%02d:%02d.%03d - ", the_time->tm_hour,
+                the_time->tm_min, the_time->tm_sec, (int) (tv.tv_usec / 1000))
+                < 1) // change to  ms
+            return -1;
+        // then write log msg
+        if (vfprintf(fd, formate, ap) < 1)
+            return -1;
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+inline void debug_print(FILE * fd, const char *f, ...)
 {
     va_list va;
     va_start(va, f);
@@ -135,11 +155,46 @@ void debug_print(FILE * fd, const char *f, ...)
     va_end(va);
     fflush(fd);
 }
-void print_time(ushort level)
+
+void print_time_now(ushort level)
 {
-    struct timeval now;
-    get_time_now(&now);
-    event_logii(level, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
+    struct timeval* now;
+    gettimenow(now);
+    event_logii(level, "Time now: %ld sec, %ld usec \n", now->tv_sec,
+            now->tv_usec);
+}
+extern void event_log1(short event_log_level, const char *module_name,
+        const char *log_info, ...)
+{
+    int mi;
+    struct timeval* tv;
+    struct tm *the_time;
+
+    va_list va;
+    va_start(va, log_info);
+    bool f1 = globalTrace == true && event_log_level <= current_event_loglvl;
+    int moduleindex = is_module_traced(module_name);
+    bool f2 = globalTrace == false && moduleindex > 0
+            && event_log_level <= event_trace_levels[moduleindex];
+    if (f1 || f2)
+    {
+        if (event_log_level < loglvl_verbose)
+        {
+            if (fileTrace == true)
+            {
+                debug_print(logfile, "Event in Module: %s............\n",
+                        module_name);
+            }
+            else
+            {
+                debug_print(stdout, "Event in Module: %s............\n",
+                        module_name);
+            }
+        }
+        gettimenow(tv, the_time);
+
+    }
+    va_end(va);
 }
 inline void perr_exit(const char *infostring)
 {
@@ -153,31 +208,31 @@ inline bool safe_before(uint seq1, uint seq2)
     // INT32_MIN = (-2147483647-1)
     // UINT32_MAX = 4294967295U
     // assume a extream situation where seq1 = 0, seq2 = UINT32_MAX,
-    // seq1 - seq2 = -4294967295 Òç³öint£¬Êµ¼ÊÖµµÈÓÚ (int) £¨-1£¬ ÒòÎª
-    // INT32_MAX-INT32_MIN µÈÓÚUINT32_MAX£¬¸ÕºÃÒç³öµ½intµÄ¸ºÖµÇøÓò
-    // Ò²¾ÍÊÇÐ¡ÓÚ0£¬ ·ûºÏÎÒÃÇµÄÐèÒª
-    // Êµ¼ÊÉÏÎÒÃÇ»¹¿ÉÒÔ·µ»ØÒ»¸ö±È±È½ÏµÄÀàÐÍ¸ü´óµÄÀàÐÍ£¬·ÄÖ¯Òç³öÎÊÌâµÄ²úÉú
-    // ÀýÈç   return (uint64) (seq1 - seq2) < 0;
-    return ((int)(seq1 - seq2)) < 0;
+    // seq1 - seq2 = -4294967295 ï¿½ï¿½ï¿½intï¿½ï¿½Êµï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ (int) ï¿½ï¿½-1ï¿½ï¿½ ï¿½ï¿½Îª
+    // INT32_MAX-INT32_MIN ï¿½ï¿½ï¿½ï¿½UINT32_MAXï¿½ï¿½ï¿½Õºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½intï¿½Ä¸ï¿½Öµï¿½ï¿½ï¿½ï¿½
+    // Ò²ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½0ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½Òª
+    // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç»ï¿½ï¿½ï¿½ï¿½Ô·ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½È±È½Ïµï¿½ï¿½ï¿½ï¿½Í¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½Ö¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ï¿½   return (uint64) (seq1 - seq2) < 0;
+    return ((int) (seq1 - seq2)) < 0;
 }
 inline bool safe_after(uint seq1, uint seq2)
 {
-    return ((int)(seq2 - seq1)) < 0;
+    return ((int) (seq2 - seq1)) < 0;
 }
 inline bool safe_before(ushort seq1, ushort seq2)
 {
-    return ((short)(seq1 - seq2)) < 0;
+    return ((short) (seq1 - seq2)) < 0;
 }
 inline bool safe_after(ushort seq1, ushort seq2)
 {
-    return ((short)(seq2 - seq1)) < 0;
+    return ((short) (seq2 - seq1)) < 0;
 }
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
 inline bool safe_between(uint seq1, uint seq2, uint seq3)
 {
     return safe_before(seq1, seq3) ?
-        seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
+            seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
 }
 // @pre make sure seq1 <= seq3
 inline bool unsafe_between(uint seq1, uint seq2, uint seq3)
@@ -191,7 +246,7 @@ inline bool unsafe_between(uint seq1, uint seq2, uint seq3)
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
 inline int sort_tsn(const internal_data_chunk_t& one,
-    const internal_data_chunk_t& two)
+        const internal_data_chunk_t& two)
 {
     if (safe_before(one.chunk_tsn, two.chunk_tsn))
         return -1;
@@ -201,7 +256,7 @@ inline int sort_tsn(const internal_data_chunk_t& one,
         return 0; /* one==two */
 }
 inline int sort_ssn(const internal_stream_data_t& one,
-    const internal_stream_data_t& two)
+        const internal_stream_data_t& two)
 {
     if (one.stream_id < two.stream_id)
     {
