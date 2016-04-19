@@ -113,7 +113,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
  * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
  *             that many addresses in the chunk.
  */
-int rbu_findAddress(guchar * chunk, guint n, union sockunion* foundAddress, int supportedAddressTypes);
+int rbu_findAddress(guchar * chunk, guint n, union sockaddrunion* foundAddress, int supportedAddressTypes);
 
 /*
  * rbu_rcvDatagram: Hands a lower layer datagram over to bundling (for de-bundling)

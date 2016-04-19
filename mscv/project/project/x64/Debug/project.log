@@ -1,16 +1,21 @@
-﻿Build started 4/18/2016 7:51:16 PM.
+﻿Build started 4/19/2016 8:13:39 PM.
      1>Project "D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\project\project.vcxproj" on node 2 (Build target(s)).
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(364,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I"D:\VS2013WorkSpace\wheel-of-sctp\my_wheel_src" /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt main.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I"D:\VS2013WorkSpace\wheel-of-sctp\my_wheel_src" /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\my_wheel_src\globals.cc main.cpp
+         globals.cc
+     1>..\..\..\my_wheel_src\globals.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\wheel-of-sctp\my_wheel_src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\wheel-of-sctp\my_wheel_src\globals.h(307): error C2079: 'sockaddrunion::sin6' uses undefined struct 'sockaddr_in6'
+     1>..\..\..\my_wheel_src\globals.cc(125): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+         Generating Code...
+         Compiling...
          main.cpp
      1>D:\VS2013WorkSpace\wheel-of-sctp\my_wheel_src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-       Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.lib" /MACHINE:X64 x64\Debug\globals.obj
-         x64\Debug\main.obj
-         project.vcxproj -> D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.exe
-     1>Done Building Project "D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\project\project.vcxproj" (Build target(s)).
+     1>D:\VS2013WorkSpace\wheel-of-sctp\my_wheel_src\globals.h(307): error C2079: 'sockaddrunion::sin6' uses undefined struct 'sockaddr_in6'
+         Generating Code...
+     1>Done Building Project "D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\project\project.vcxproj" (Build target(s)) -- FAILED.
 
-Build succeeded.
+Build FAILED.
 
-Time Elapsed 00:00:00.96
+Time Elapsed 00:00:01.81

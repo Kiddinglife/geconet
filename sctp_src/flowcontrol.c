@@ -972,7 +972,7 @@ int fc_send_data_chunk(internal_data_chunk_t * chunkd,
 
     /* early TSN assignment */
     s_chunk->tsn        =  htonl(fc->current_tsn++);
-    chunkd->chunk_len   = CHUNKP_LENGTH(s_chunk);
+    chunkd->chunk_len   = get_chunk_length(s_chunk);
     chunkd->chunk_tsn   = ntohl(s_chunk->tsn);
     chunkd->gap_reports = 0L;
     chunkd->ack_time    = 0;
@@ -1360,13 +1360,13 @@ int fc_dequeueOldestUnsentChunk(unsigned char *buf, unsigned int *len, unsigned 
         /* should be a sorted list, and not happen here */
         } else break;
     }
-    if ((*len) <  (dat->chunk_len - FIXED_DATA_CHUNK_SIZE)) return SCTP_BUFFER_TOO_SMALL;
+    if ((*len) <  (dat->chunk_len - DATA_CHUNK_FIXED_SIZES)) return SCTP_BUFFER_TOO_SMALL;
 
     event_logii(VVERBOSE, "fc_dequeueOldestUnsentChunks(): returning chunk tsn=%u, num_rtx=%u ", dat->chunk_tsn, dat->num_of_transmissions);
 
     dchunk = (data_chunk_t*) dat->data;
-    *len = dat->chunk_len - FIXED_DATA_CHUNK_SIZE;
-    memcpy(buf, dchunk->data, dat->chunk_len - FIXED_DATA_CHUNK_SIZE);
+    *len = dat->chunk_len - DATA_CHUNK_FIXED_SIZES;
+    memcpy(buf, dchunk->data, dat->chunk_len - DATA_CHUNK_FIXED_SIZES);
     *tsn = dat->chunk_tsn;
     *sID = ntohs(dchunk->stream_id);
     *sSN = ntohs(dchunk->stream_sn);

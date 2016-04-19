@@ -79,7 +79,7 @@ void ch_enterCookiePreservative(ChunkID chunkID, unsigned int lifespanIncrement)
 
 
 /* ch_enterIPaddresses enters local IP-addresses to an init or initAck */
-int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[], int noOfAddresses);
+int ch_enterIPaddresses(ChunkID chunkID, union sockaddrunion sock_addresses[], int noOfAddresses);
 
 
 
@@ -90,9 +90,9 @@ int ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
                   uint cookieLifetime,
                   uint local_tie_tag,
                   uint peer_tie_tag,
-                  union sockunion local_Addresses[],
+                  union sockaddrunion local_Addresses[],
                   ushort num_local_Addresses,
-                  union sockunion peer_Addresses[], ushort num_peer_Addresses);
+                  union sockaddrunion peer_Addresses[], ushort num_peer_Addresses);
 
 /*
  * ch_enterUnrecognizedParameters enters unrecognized params from Init into initAck chunk
@@ -113,7 +113,7 @@ int ch_enterUnrecognizedParameters(ChunkID initCID,ChunkID AckCID, unsigned int 
 int ch_enterUnrecognizedErrors(ChunkID initAckID,
                                unsigned int supportedTypes,
                                ChunkID *errorchunk,
-                               union sockunion* preferredDest,
+                               union sockaddrunion* preferredDest,
                                gboolean* destSet,
                                gboolean* peerSupportsIPV4,
                                gboolean* peerSupportsIPV6,
@@ -165,8 +165,8 @@ ushort ch_CookieSrcPort(ChunkID chunkID);
 
 
 /* ch_IPaddresses reads the IP-addresses from an init or initAck */
-int ch_IPaddresses(ChunkID chunkID, unsigned int mySupportedTypes, union sockunion addresses[],
-                    unsigned int *supportedTypes, union sockunion* lastSource);
+int ch_IPaddresses(ChunkID chunkID, unsigned int mySupportedTypes, union sockaddrunion addresses[],
+                    unsigned int *supportedTypes, union sockaddrunion* lastSource);
 
 
 
@@ -205,9 +205,9 @@ ChunkID ch_cookieInitAckFixed(ChunkID chunkID);
 
 /* ch_cookieIPaddresses reads the IP-addresses from a cookie */
 int ch_cookieIPDestAddresses(ChunkID chunkID, unsigned int mySupportedTypes,
-                             union sockunion addresses[],
+                             union sockaddrunion addresses[],
                              unsigned int *peerSupportedAddressTypes,
-                             union sockunion* lastSource);
+                             union sockaddrunion* lastSource);
 
 
 

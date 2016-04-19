@@ -86,7 +86,7 @@ int sort_tsn(internal_data_chunk_t * one, internal_data_chunk_t * two)
         return 0;
 }
 
-int sort_prChunk(pr_stream_data* one, pr_stream_data* two)
+int sort_stream_data(pr_stream_data* one, pr_stream_data* two)
 {
     if (one->stream_id < two->stream_id)
     {

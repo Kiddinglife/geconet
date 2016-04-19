@@ -204,7 +204,7 @@ gint bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int * dest_index)
         bu_ptr = global_buffer;
     }
 
-    if (SACK_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
+    if (SACK_SIZE(bu_ptr) + get_chunk_length((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
         lock = bu_ptr->locked;
          event_logi(VERBOSE,
                   "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
@@ -224,12 +224,12 @@ gint bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int * dest_index)
     }
 
     memcpy(&(bu_ptr->sack_buf[bu_ptr->sack_position]), chunk,
-           CHUNKP_LENGTH((chunk_fixed_t *) chunk));
-    bu_ptr->sack_position += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+           get_chunk_length((chunk_fixed_t *) chunk));
+    bu_ptr->sack_position += get_chunk_length((chunk_fixed_t *) chunk);
     bu_ptr->sack_in_buffer = true;
 
     event_logii(VERBOSE, "Put SACK Chunk Length : %u , Total buffer size now: %u\n",
-                CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
+                get_chunk_length((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
     /* SACK always multiple of 32 bytes, do not care about padding */
     return 0;
@@ -257,7 +257,7 @@ gint bu_put_Ctrl_Chunk(simple_chunk_t * chunk,unsigned int * dest_index)
         bu_ptr = global_buffer;
     }
 
-    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
+    if (TOTAL_SIZE(bu_ptr) + get_chunk_length((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
         lock = bu_ptr->locked;
         event_logi(VERBOSE,
                   "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
@@ -271,17 +271,17 @@ gint bu_put_Ctrl_Chunk(simple_chunk_t * chunk,unsigned int * dest_index)
     }
 
     memcpy(&(bu_ptr->ctrl_buf[bu_ptr->ctrl_position]), chunk,
-           CHUNKP_LENGTH((chunk_fixed_t *) chunk));
-    bu_ptr->ctrl_position += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+           get_chunk_length((chunk_fixed_t *) chunk));
+    bu_ptr->ctrl_position += get_chunk_length((chunk_fixed_t *) chunk);
     /* insert padding, if necessary */
-    if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0) {
-        for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4)); count++) {
+    if ((get_chunk_length((chunk_fixed_t *) chunk) % 4) != 0) {
+        for (count = 0; count < (4 - (get_chunk_length((chunk_fixed_t *) chunk) % 4)); count++) {
             bu_ptr->ctrl_buf[bu_ptr->ctrl_position] = 0;
             bu_ptr->ctrl_position++;
         }
     }
     event_logii(VERBOSE, "Put Control Chunk Length : %u , Total buffer size now (includes pad): %u\n",
-                CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
+                get_chunk_length((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
     bu_ptr->ctrl_chunk_in_buffer = true;
     return 0;
@@ -322,7 +322,7 @@ gint bu_put_Data_Chunk(simple_chunk_t * chunk,unsigned int * dest_index)
         bu_ptr = global_buffer;
     }
 
-    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
+    if (TOTAL_SIZE(bu_ptr) + get_chunk_length((chunk_fixed_t *) chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
         lock = bu_ptr->locked;
         event_logi(VERBOSE,
                   "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
@@ -335,19 +335,19 @@ gint bu_put_Data_Chunk(simple_chunk_t * chunk,unsigned int * dest_index)
         bu_ptr->requested_destination = *dest_index;
     }
     memcpy(&(bu_ptr->data_buf[bu_ptr->data_position]), chunk,
-           CHUNKP_LENGTH((chunk_fixed_t *) chunk));
-    bu_ptr->data_position += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+           get_chunk_length((chunk_fixed_t *) chunk));
+    bu_ptr->data_position += get_chunk_length((chunk_fixed_t *) chunk);
 
 
     /* insert padding, if necessary */
-    if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0) {
-        for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4)); count++) {
+    if ((get_chunk_length((chunk_fixed_t *) chunk) % 4) != 0) {
+        for (count = 0; count < (4 - (get_chunk_length((chunk_fixed_t *) chunk) % 4)); count++) {
             bu_ptr->data_buf[bu_ptr->data_position] = 0;
             bu_ptr->data_position++;
         }
     }
     event_logii(VERBOSE, "Put Data Chunk Length : %u , Total buffer size (incl. padding): %u\n",
-                CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
+                get_chunk_length((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
     bu_ptr->data_in_buffer = true;
 

@@ -18,6 +18,7 @@
 
 #ifdef WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <time.h>
 #include <sys/types.h>
 #endif
@@ -291,4 +292,42 @@ int sort_ssn(const internal_stream_data_t& one,
 // function that correctly sorts TSN values, minding wrapround
 extern int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two);
+
+/*================ struct sockaddr =================*/
+#define s4addr(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
+#define sin4addr(X)   (((struct sockaddr_in *)(X))->sin_addr)
+#define s6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
+#define sin6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
+
+#define SUPPORT_ADDRESS_TYPE_IPV4        0x00000001
+#define SUPPORT_ADDRESS_TYPE_IPV6        0x00000002
+#define SUPPORT_ADDRESS_TYPE_DNS         0x00000004
+
+#define DEFAULT_MTU_CEILING     1500
+
+enum hide_address_flag_t
+{
+    flag_HideLoopback = (1 << 0),
+    flag_HideLinkLocal = (1 << 1),
+    flag_HideSiteLocal = (1 << 2),
+    flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal | flag_HideSiteLocal,
+    flag_HideAnycast = (1 << 3),
+    flag_HideMulticast = (1 << 4),
+    flag_HideBroadcast = (1 << 5),
+    flag_HideReserved = (1 << 6),
+    flag_Default = flag_HideBroadcast | flag_HideMulticast | flag_HideAnycast,
+    flag_HideAllExceptLoopback = (1 << 7),
+    flag_HideAllExceptLinkLocal = (1 << 8),
+    flag_HideAllExceptSiteLocal = (1 << 9)
+};
+
+/* union for handling either type of addresses: ipv4 and ipv6 */
+union sockaddrunion
+{
+    struct sockaddr sa;
+    struct sockaddr_in sin;
+    struct sockaddr_in6 sin6;
+};
+
+
 #endif /* MY_GLOBALS_H_ */

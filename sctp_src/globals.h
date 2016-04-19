@@ -309,7 +309,7 @@ int between(unsigned int seq1, unsigned int seq2, unsigned int seq3);
 unsigned short in_check(unsigned char *buf, int sz);
 
 
-int sort_prChunk(pr_stream_data* one, pr_stream_data* two);
+int sort_stream_data(pr_stream_data* one, pr_stream_data* two);
 
 /*
  * function that correctly sorts TSN values, minding the
@@ -321,30 +321,26 @@ void free_list_element(gpointer list_element, gpointer user_data);
 
 
 /* shortcut macro to specify address field of struct sockaddr */
-#define sock2ip(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
-#ifdef HAVE_IPV6
-#define sock2ip6(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
-#define sock2ip6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
-#endif                          /* HAVE_IPV6 */
+#define s4addr(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
+#define sin4addr(X)   (((struct sockaddr_in *)(X))->sin_addr)
+#define s6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
+#define sin6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
 
 /* union for handling either type of addresses: ipv4 and ipv6 */
 #ifndef SOCKUNION_DEFINE
 #define SOCKUNION_DEFINE    1
-union sockunion
+union sockaddrunion
 {
     struct sockaddr sa;
     struct sockaddr_in sin;
-#ifdef HAVE_IPV6
     struct sockaddr_in6 sin6;
-#endif                          /* HAVE_IPV6 */
 };
 
 #endif  /* SOCKUNION_DEFINE */
 
-#define sockunion_family(X)  (X)->sa.sa_family
+#define get_sockaddr_family(X)  (X)->sa.sa_family
 
 #define SUPPORT_ADDRESS_TYPE_IPV4        0x00000001
-
 #define SUPPORT_ADDRESS_TYPE_IPV6        0x00000002
 #define SUPPORT_ADDRESS_TYPE_DNS         0x00000004
 
@@ -361,11 +357,7 @@ typedef enum {
     flag_HideAllExceptLoopback = (1 << 7),
     flag_HideAllExceptLinkLocal = (1 << 8),
     flag_HideAllExceptSiteLocal = (1 << 9)
-} AddressScopingFlags;
-
-
-#define DEFAULT_MTU_CEILING     1500
-
+} hide_address_flag_t;
 
 #ifndef CHECK
 #define CHECK(cond) if(!(cond)) { fprintf(stderr, "INTERNAL ERROR in %s, line %u: condition %s is not satisfied!\n", __FILE__, __LINE__, #cond); abort(); }

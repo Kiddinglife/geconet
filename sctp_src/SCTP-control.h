@@ -89,7 +89,7 @@
    */
 void scu_associate(unsigned short noOfOutStreams,
     unsigned short noOfInStreams,
-union sockunion* destinationList,
+union sockaddrunion* destinationList,
     unsigned int numDestAddresses,
     bool withPRSCTP);
 

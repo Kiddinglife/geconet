@@ -24,6 +24,7 @@
 
 /**************************** SCTP common message definitions ***************************/
 #define MAX_MTU_SIZE 1500
+#define DEFAULT_MTU_CEILING     1500
 #define IP_HDR_SIZE 20
 
 #ifdef SCTP_OVEREASON_UDP
@@ -61,26 +62,29 @@ struct network_packet_t
 /**************************** SCTP chunk definitions ******************************************/
 /*--------------------------- chunk types --------------------------------*/
 // See RFC4060 section 3.2 Chunk Field Descriptions Page17
-#define CHUNK_DATA              0x00
-#define CHUNK_INIT              0x01
-#define CHUNK_INIT_ACK          0x02
-#define CHUNK_SACK              0x03
-#define CHUNK_HBREQ             0x04
-#define CHUNK_HBACK             0x05
-#define CHUNK_ABORT             0x06
-#define CHUNK_SHUTDOWN          0x07
-#define CHUNK_SHUTDOWN_ACK      0x08
-#define CHUNK_EREASONROR             0x09
-#define CHUNK_COOKIE_ECHO       0x0A
-#define CHUNK_COOKIE_ACK        0x0B
-#define CHUNK_ECNE              0x0C
-#define CHUNK_CWR               0x0D
-#define CHUNK_SHUTDOWN_COMPLETE 0x0E
+#define CHUNK_DATA              0x00 //0
+#define CHUNK_INIT              0x01 //1
+#define CHUNK_INIT_ACK          0x02 //2
+#define CHUNK_SACK              0x03 //3
+#define CHUNK_HBREQ             0x04 //4
+#define CHUNK_HBACK             0x05 //5
+#define CHUNK_ABORT             0x06 //6
+#define CHUNK_SHUTDOWN          0x07 //7
+#define CHUNK_SHUTDOWN_ACK      0x08 //8
+#define CHUNK_EREASONROR             0x09 //9
+#define CHUNK_COOKIE_ECHO       0x0A //10
+#define CHUNK_COOKIE_ACK        0x0B //11
+#define CHUNK_ECNE              0x0C //12
+#define CHUNK_CWR               0x0D //13
+#define CHUNK_SHUTDOWN_COMPLETE 0x0E //14
 
-#define CHUNK_FORWARD_TSN       0xC0
-#define CHUNK_ASCONF            0xC1
-#define CHUNK_ASCONF_ACK        0x80
+#define CHUNK_FORWARD_TSN       0xC0 //192
+#define CHUNK_ASCONF            0xC1//193
+#define CHUNK_ASCONF_ACK        0x80//128
 
+// 0xc0 = 192 = 11000000
+// 0x40 = 64   = 01000000
+// 0x80 = 128 = 10000000
 #define STOP_PROCESS_CHUNK(chunk_id)\
 (((uchar)chunk_id & 0xC0)==0x00))
 #define STOP_PROCESS_CHUNK_REPORT_EREASONROR(chunk_id)\
@@ -103,10 +107,17 @@ struct chunk_fixed_t
 #define FLAG_NO_TCB               0x01
 
 /*------------------ chunk_value chunk -------------------------*/
-#define DATA_CHUNK_FIRST_SEGMENT      0x02 //BEGIN
-#define DATA_CHUNK_MIDDLE_SEGMENT     0x00 //MIDDLE
-#define DATA_CHUNK_LAST_SEGMENT        0x01 //END
-#define UNORDEREASON_DATA_CHUNK          0x04
+#define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10
+#define DCHUNK_FLAG_MIDDLE_FRAG ((uchar)0x00) //MIDDLE 10base: 0    2base : 00
+#define DCHUNK_FLAG_LAST_FRG      0x01 //END               10base: 1      2base : 01
+#define DCHUNK_FLAG_FL_FRG      0x01 //Unfragmented   10base: 11    2base : 11
+
+#define DCHUNK_FLAG_UNORDER 0x04
+//unordered data chunk     10base: 4    2base :  100
+#define DCHUNK_FLAG_UNRELIABLE 0x08
+// unreliable data chunk     10base: 8    2base : 1000
+
+
 
 #define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+3*sizeof(ushort))
 #define DATA_CHUNK_FIXED_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
@@ -463,20 +474,20 @@ struct asconf_ack_chunk_t
 };
 
 /*--------------------------- and some useful (?) macros ----------------------------------------*/
-#define CHUNKP_LENGTH(chunk)        (ntohs((chunk)->chunk_length))
+#define get_chunk_length(chunk)        (ntohs((chunk)->chunk_length))
 // Chunk classes for distribution and any other modules which might need it
-#define isInitControlChunk(chunk) \
+#define is_init_control_chunk(chunk) \
 ((chunk)->chunk_header.chunk_id == CHUNK_INIT       || \
 (chunk)->chunk_header.chunk_id == CHUNK_INIT_ACK   || \
 (chunk)->chunk_header.chunk_id == CHUNK_COOKIE_ECHO || \
 (chunk)->chunk_header.chunk_id == CHUNK_COOKIE_ACK)
-#define isInitCookieChunk(chunk)\
+#define is_init_cookie_chunk(chunk)\
 ((chunk)->chunk_header.chunk_id == CHUNK_INIT || \
 (chunk)->chunk_header.chunk_id == CHUNK_COOKIE_ECHO)
-#define isInitAckChunk(chunk)   \
+#define is_init_ack_chunk(chunk)   \
 ((chunk)->chunk_header.chunk_id == CHUNK_INIT_ACK)
-#define isShutDownAckChunk(chunk) \
+#define is_shutdown_ack_chunk(chunk) \
 ((chunk)->chunk_header.chunk_id == CHUNK_SHUTDOWN_ACK)
-#define isShutDownCompleteChunk(chunk) \
+#define is_shutdown_complete_chunk(chunk) \
 ((chunk)->chunk_header.chunk_id == CHUNK_SHUTDOWN_COMPLETE)
 #endif /* MY_MESSAGES_H_ */

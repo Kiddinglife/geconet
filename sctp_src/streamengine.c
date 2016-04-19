@@ -352,8 +352,8 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
         dchunk = (data_chunk_t*)cdata->data;
 
         dchunk->chunk_id      = CHUNK_DATA;
-        dchunk->chunk_flags   = (guint8)DATA_CHUNK_FIRST_SEGMENT + DATA_CHUNK_LAST_SEGMENT;
-        dchunk->chunk_length  = htons ((unsigned short)(byteCount + FIXED_DATA_CHUNK_SIZE));
+        dchunk->chunk_flags   = (guint8)DCHUNK_FLAG_FIRST_FRAG + DCHUNK_FLAG_LAST_FRG;
+        dchunk->chunk_length  = htons ((unsigned short)(byteCount + DATA_CHUNK_FIXED_SIZES));
         dchunk->tsn = 0;        /* gets assigned in the flowcontrol module */
         dchunk->stream_id     = htons (streamId);
         dchunk->protocolId    = protocolId;
@@ -361,7 +361,7 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
         if (unorderedDelivery)
         {
             dchunk->stream_sn = htons (0);
-            dchunk->chunk_flags += UNORDEREASON_DATA_CHUNK;
+            dchunk->chunk_flags += DCHUNK_FLAG_UNORDER;
         }
         else
         {       /* unordered flag not put */
@@ -417,19 +417,19 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
             }
             else if (i == 1)
             {
-                dchunk->chunk_flags = DATA_CHUNK_FIRST_SEGMENT;
+                dchunk->chunk_flags = DCHUNK_FLAG_FIRST_FRAG;
                 event_log (VERBOSE, "NEXT FRAGMENTED CHUNK -> BEGIN");
                 bCount = SCTP_MAXIMUM_DATA_LENGTH;
             }
             else if (i == numberOfSegments)
             {
-                dchunk->chunk_flags = DATA_CHUNK_LAST_SEGMENT;
+                dchunk->chunk_flags = DCHUNK_FLAG_LAST_FRG;
                 event_log (EXTERNAL_EVENT, "NEXT FRAGMENTED CHUNK -> END");
                 bCount = residual;
             }
 
         dchunk->chunk_id = CHUNK_DATA;
-        dchunk->chunk_length = htons ((unsigned short)(bCount + FIXED_DATA_CHUNK_SIZE));
+        dchunk->chunk_length = htons ((unsigned short)(bCount + DATA_CHUNK_FIXED_SIZES));
         dchunk->tsn = htonl (0);
         dchunk->stream_id = htons (streamId);
         dchunk->protocolId = protocolId;
@@ -437,7 +437,7 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
         if (unorderedDelivery)
         {
             dchunk->stream_sn = 0;
-            dchunk->chunk_flags += UNORDEREASON_DATA_CHUNK;
+            dchunk->chunk_flags += DCHUNK_FLAG_UNORDER;
         }
         else
         {   /* unordered flag not put */
@@ -644,7 +644,7 @@ int se_recvDataChunk (data_chunk_t * dataChunk, unsigned int byteCount, unsigned
     d_chunk = (delivery_data*)malloc (sizeof (delivery_data));
     if (d_chunk == NULL) return SCTP_OUT_OF_RESOURCES;
 
-    datalength =  byteCount - FIXED_DATA_CHUNK_SIZE;
+    datalength =  byteCount - DATA_CHUNK_FIXED_SIZES;
     d_chunk->stream_id =    ntohs (dataChunk->stream_id);
 
     if (d_chunk->stream_id >= se->numReceiveStreams) {
@@ -710,7 +710,7 @@ int se_recvDataChunk (data_chunk_t * dataChunk, unsigned int byteCount, unsigned
 
         currentSID = d_chunk->stream_id;
         currentSSN = d_chunk->stream_sn;
-        unordered = (d_chunk->chunk_flags & UNORDEREASON_DATA_CHUNK);
+        unordered = (d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER);
 
         if((se->RecvStreams[currentSID].highestSSNused) && (sAfter(se->RecvStreams[currentSID].highestSSN, currentSSN)))
         {
@@ -725,7 +725,7 @@ int se_recvDataChunk (data_chunk_t * dataChunk, unsigned int byteCount, unsigned
         }
 
 
-        if(d_chunk->chunk_flags & DATA_CHUNK_FIRST_SEGMENT)
+        if(d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG)
         {
             event_log (VVERBOSE, "Found Begin Segment");
 
@@ -733,10 +733,10 @@ int se_recvDataChunk (data_chunk_t * dataChunk, unsigned int byteCount, unsigned
             firstItem = tmp;
             firstTSN = d_chunk->tsn;
 
-            if((sBefore(currentSSN, se->RecvStreams[currentSID].nextSSN)) || (currentSSN == se->RecvStreams[currentSID].nextSSN) || (d_chunk->chunk_flags & UNORDEREASON_DATA_CHUNK))
+            if((sBefore(currentSSN, se->RecvStreams[currentSID].nextSSN)) || (currentSSN == se->RecvStreams[currentSID].nextSSN) || (d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER))
             {
 
-                if(d_chunk->chunk_flags & DATA_CHUNK_LAST_SEGMENT)
+                if(d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
                 {
                     event_log (VVERBOSE, "Complete PDU found");
                     complete = true;
@@ -758,19 +758,19 @@ int se_recvDataChunk (data_chunk_t * dataChunk, unsigned int byteCount, unsigned
                         && ((d_chunk->stream_sn == currentSSN) || unordered)
                         && (firstTSN + nrOfChunks - 1 == d_chunk->tsn))
                     {
-                        if(d_chunk->chunk_flags & DATA_CHUNK_FIRST_SEGMENT)
+                        if(d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG)
                         {
                             error_logi(VERBOSE, "Multiple Begins found with SSN: %u", d_chunk->stream_sn);
                             scu_abort(ECC_PROTOCOL_VIOLATION, 0, NULL);
                             return SCTP_UNSPECIFIED_ERROR;
                         }
-                        else if((d_chunk->chunk_flags & UNORDEREASON_DATA_CHUNK) != unordered)
+                        else if((d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER) != unordered)
                         {
                             error_logi(VERBOSE, "Mix Ordered and unordered Segments found with SSN: %u", d_chunk->stream_sn);
                             scu_abort(ECC_PROTOCOL_VIOLATION, 0, NULL);
                             return SCTP_UNSPECIFIED_ERROR;
                         }
-                        else if(d_chunk->chunk_flags & DATA_CHUNK_LAST_SEGMENT)
+                        else if(d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
                         {
                             event_log (VVERBOSE, "Complete PDU found");
                             complete = true;
@@ -881,7 +881,7 @@ int se_deliverWaiting(StreamEngine* se, unsigned short sid)
         d_pdu = (delivery_pdu*)waitingListItem->data;
         se->RecvStreams[sid].pduList = g_list_append(se->RecvStreams[sid].pduList, d_pdu);
         mdi_dataArriveNotif(sid, d_pdu->total_length, d_pdu->ddata[0]->stream_sn, d_pdu->ddata[0]->tsn,
-                                d_pdu->ddata[0]->protocolId, (d_pdu->ddata[0]->chunk_flags & UNORDEREASON_DATA_CHUNK) ? 1 : 0);
+                                d_pdu->ddata[0]->protocolId, (d_pdu->ddata[0]->chunk_flags & DCHUNK_FLAG_UNORDER) ? 1 : 0);
         if(waitingListItem != NULL)
             waitingListItem = g_list_next(waitingListItem);
     }

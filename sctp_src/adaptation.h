@@ -59,17 +59,17 @@
 
 unsigned int adl_random(void);
 
-bool adl_equal_address(union sockunion *one, union sockunion *two);
+bool adl_equal_address(union sockaddrunion *one, union sockaddrunion *two);
 
 
 /**
  *  converts address-string (hex for ipv6, dotted decimal for ipv4
- *  to a sockunion structure
+ *  to a sockaddrunion structure
  *  @return 0 for success, else -1.
  */
-int adl_str2sockunion(guchar * str, union sockunion *su);
+int adl_str2sockunion(guchar * str, union sockaddrunion *su);
 
-int adl_sockunion2str(union sockunion *su, guchar * buf, size_t len);
+int adl_sockunion2str(union sockaddrunion *su, guchar * buf, size_t len);
 
 
 
@@ -101,7 +101,7 @@ gint adl_get_sctpv6_socket(void);
  * @param	dest_len size of the address
  * @return returns number of bytes actually sent, or error
  */
-int adl_send_message(int sfd, void *buf, int len, union sockunion *dest, unsigned char tos);
+int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, unsigned char tos);
 
 
 /**
@@ -187,7 +187,7 @@ int adl_eventLoop();
 
 int adl_extendedEventLoop(void (*lock)(void* data), void (*unlock)(void* data), void* data);
 
-gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags  flags);
+gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_flag_t  flags);
 
 /*
  * this is an ugly part to code, so it was taken an adapted from the
@@ -196,12 +196,12 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
  * maybe I should rewrite it to use the Linux Netlink socket also
  * returns TRUE is successful, else FALSE
  */
-gboolean adl_gatherLocalAddresses(union sockunion **localAddresses,
+gboolean adl_gatherLocalAddresses(union sockaddrunion **localAddresses,
      int *numberOfNets,
      int sctp_fd,
      gboolean with_ipv6,
      int *max_mtu,
-     const AddressScopingFlags  flags);
+     const hide_address_flag_t  flags);
 
 
 #endif

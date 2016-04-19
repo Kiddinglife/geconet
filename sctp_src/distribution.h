@@ -94,8 +94,8 @@
  *  @param portnum            bogus port number
  */
 void mdi_receiveMessage(int socket_fd, unsigned char *buffer,
-    int bufferLength, union sockunion * source_addr,
-union sockunion * dest_addr);
+    int bufferLength, union sockaddrunion * source_addr,
+union sockaddrunion * dest_addr);
 
 /*------------------- Functions called by the SCTP bundling --------------------------------------*/
 
@@ -296,13 +296,13 @@ unsigned int mdi_generateStartTSN(void);
    */
 
 bool mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
-union sockunion* addressList);
+union sockaddrunion* addressList);
 
 
 /* sets the address from which the last datagramm was received (host byte order).
     Returns 0 if successful, 1 if address could not be set !
     */
-int mdi_readLastFromAddress(union sockunion* fromAddress);
+int mdi_readLastFromAddress(union sockaddrunion* fromAddress);
 
 
 /* reads the path from which the last DG was received. -1 is returned if no DG was received.
@@ -365,16 +365,16 @@ bool mdi_supportsPRSCTP(void);
 bool mdi_peerSupportsPRSCTP(void);
 /*------------- functions to write and read addresses --------------------------------------------*/
 
-void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
+void mdi_writeDestinationAddresses(union sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 
-void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
+void mdi_readLocalAddresses(union sockaddrunion laddresses[MAX_NUM_ADDRESSES],
     ushort * noOfAddresses,
-union sockunion *peerAddress,
+union sockaddrunion *peerAddress,
     unsigned int numPeerAddresses,
     unsigned int addressTypes,
     bool receivedFromPeer);
 
-short mdi_getIndexForAddress(union sockunion* address);
+short mdi_getIndexForAddress(union sockaddrunion* address);
 
 /*------------- functions to set and clear the association data ----------------------------------*/
 
@@ -421,7 +421,7 @@ unsigned short mdi_newAssociation(void*  sInstance,
     unsigned int tagLocal,
     short primaryDestinitionAddress,
     short noOfDestinationAddresses,
-union sockunion *destinationAddressList);
+union sockaddrunion *destinationAddressList);
 
 
 
@@ -447,7 +447,7 @@ unsigned int remoteInitialTSN,
 unsigned int localInitialTSN,
 short  noOfPaths,
 short primaryAddress,
-union sockunion *destinationAddressList,
+union sockaddrunion *destinationAddressList,
     bool assocSupportsPRSCTP, bool assocSupportsADDIP);
 
 

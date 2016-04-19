@@ -199,19 +199,19 @@ static gint32 retrieveVLParamFromString(guint16 paramType, guchar * mstring, gui
  * @return  number of IPv4 addresses found
 */
 static gint32
-setIPAddresses(unsigned char *mstring, guint16 length, union sockunion addresses[],
-                unsigned int* peerTypes, unsigned int myTypes, union sockunion* lastSource,
+setIPAddresses(unsigned char *mstring, guint16 length, union sockaddrunion addresses[],
+                unsigned int* peerTypes, unsigned int myTypes, union sockaddrunion* lastSource,
                 gboolean ignore_dups, gboolean ignoreLast)
 {
     gint32 cursabs = 0;
     gint32 cursrel = 0;
-    union sockunion tmpAddr;
+    union sockaddrunion tmpAddr;
     ip_address_t *address;
     int nAddresses = 0, v4found = 0, idx;
 #ifdef HAVE_IPV6
     int v6found = 0;
-    union sockunion tmp_su;
-    AddressScopingFlags filterFlags;
+    union sockaddrunion tmp_su;
+    hide_address_flag_t filterFlags;
     gboolean localHostFound=FALSE, linkLocalFound = FALSE, siteLocalFound = FALSE;
 #endif
     gboolean discard = FALSE, last_found = FALSE, new_found;
@@ -292,11 +292,11 @@ setIPAddresses(unsigned char *mstring, guint16 length, union sockunion addresses
         if (localHostFound == FALSE) {
             /* this is from a normal address, get all except loopback */
             if (linkLocalFound) {
-                filterFlags = (AddressScopingFlags)(flag_Default|flag_HideLoopback);
+                filterFlags = (hide_address_flag_t)(flag_Default|flag_HideLoopback);
             } else if (siteLocalFound) {
-                filterFlags = (AddressScopingFlags)(flag_Default|flag_HideLinkLocal|flag_HideLoopback);
+                filterFlags = (hide_address_flag_t)(flag_Default|flag_HideLinkLocal|flag_HideLoopback);
             } else {
-                filterFlags = (AddressScopingFlags)(flag_Default|flag_HideLocal);
+                filterFlags = (hide_address_flag_t)(flag_Default|flag_HideLocal);
             }
         } else  /* if localHostFound == true) */ {
              /* this is from a loopback, get all */
@@ -402,9 +402,9 @@ setIPAddresses(unsigned char *mstring, guint16 length, union sockunion addresses
             if (adl_equal_address(lastSource, &addresses[idx]) == true) last_found = true;
 
         if (last_found == FALSE) {
-            memcpy(&addresses[nAddresses], lastSource, sizeof(union sockunion));
+            memcpy(&addresses[nAddresses], lastSource, sizeof(union sockaddrunion));
             event_log(VERBOSE, "Added also lastFromAddress to the addresslist !");
-            switch(sockunion_family(lastSource)) {
+            switch(get_sockaddr_family(lastSource)) {
                 case AF_INET : (*peerTypes) |= SUPPORT_ADDRESS_TYPE_IPV4; break;
 #ifdef HAVE_IPV6
                 case AF_INET6 : (*peerTypes) |= SUPPORT_ADDRESS_TYPE_IPV6; break;
@@ -618,7 +618,7 @@ void ch_enterCookiePreservative(ChunkID chunkID, unsigned int lifespanIncrement)
 /**
  *  ch_enterIPaddresses appends local IP addresses to a chunk, usually an init or initAck
  */
-int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[], int noOfAddresses)
+int ch_enterIPaddresses(ChunkID chunkID, union sockaddrunion sock_addresses[], int noOfAddresses)
 {
     unsigned char *mstring;
     int i,length;
@@ -648,11 +648,11 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[], int n
 
         address = (ip_address_t *) & mstring[length];
 
-        switch (sockunion_family(&(sock_addresses[i]))) {
+        switch (get_sockaddr_family(&(sock_addresses[i]))) {
             case AF_INET:
                 address->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
                 address->vlparam_header.param_length = htons(8);
-                address->dest_addr.sctp_ipv4 = sock2ip(&(sock_addresses[i]));
+                address->dest_addr.sctp_ipv4 = s4addr(&(sock_addresses[i]));
                 length += 8;
                 break;
 #ifdef HAVE_IPV6
@@ -660,13 +660,13 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[], int n
                 address->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
                 address->vlparam_header.param_length = htons(20);
                 memcpy(address->dest_addr.sctp_ipv6,
-                       &(sock2ip6(&(sock_addresses[i]))), sizeof(struct in6_addr));
+                       &(s6addr(&(sock_addresses[i]))), sizeof(struct in6_addr));
                 length += 20;
                 break;
 #endif
             default:
                 error_logi(ERROR_MAJOR, "Unsupported Address Family %d",
-                           sockunion_family(&(sock_addresses[i])));
+                           get_sockaddr_family(&(sock_addresses[i])));
                 break;
 
         }   /* switch */
@@ -840,9 +840,9 @@ ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
                   guint32 cookieLifetime,
                   guint32 local_tie_tag,
                   guint32 peer_tie_tag,
-                  union sockunion local_Addresses[],
+                  union sockaddrunion local_Addresses[],
                   guint16 num_local_Addresses,
-                  union sockunion peer_Addresses[], guint16 num_peer_Addresses)
+                  union sockaddrunion peer_Addresses[], guint16 num_peer_Addresses)
 {
     cookie_param_t *cookie;
     unsigned short wCurs;
@@ -879,7 +879,7 @@ ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
         cookie->ck.dest_port = mdi_readLastDestPort();
 
         for (count = 0; count <  num_local_Addresses; count++) {
-            switch(sockunion_family(&(local_Addresses[count]))) {
+            switch(get_sockaddr_family(&(local_Addresses[count]))) {
                 case AF_INET :
                     no_local_ipv4_addresses++;
 
@@ -895,7 +895,7 @@ ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
             }
         }
         for (count = 0; count <  num_peer_Addresses; count++) {
-            switch(sockunion_family(&(peer_Addresses[count]))) {
+            switch(get_sockaddr_family(&(peer_Addresses[count]))) {
                 case AF_INET :
                     no_remote_ipv4_addresses++;
 
@@ -1064,7 +1064,7 @@ int ch_enterUnrecognizedParameters(ChunkID initCID, ChunkID AckCID, unsigned int
 int ch_enterUnrecognizedErrors(ChunkID initAckID,
                                unsigned int supportedTypes,
                                ChunkID *errorchunk,
-                               union sockunion* preferredDest,
+                               union sockaddrunion* preferredDest,
                                gboolean* destSet,
                                gboolean* peerSupportsIPV4,
                                gboolean* peerSupportsIPV6,
@@ -1480,8 +1480,8 @@ unsigned int ch_getSupportedAddressTypes(ChunkID chunkID)
 
 
 /* ch_IPaddresses reads the IP-addresses from an init or initAck */
-int ch_IPaddresses(ChunkID chunkID, unsigned int mySupportedTypes, union sockunion addresses[],
-                    unsigned int *supportedTypes, union sockunion* lastSource)
+int ch_IPaddresses(ChunkID chunkID, unsigned int mySupportedTypes, union sockaddrunion addresses[],
+                    unsigned int *supportedTypes, union sockaddrunion* lastSource)
 {
     int noOfAddresses;
 
@@ -1679,16 +1679,16 @@ ChunkID ch_cookieInitAckFixed(ChunkID chunkID)
 
 /* ch_cookieIPaddresses reads the IP-addresses from a cookie */
 int ch_cookieIPDestAddresses(ChunkID chunkID, unsigned int mySupportedTypes,
-                             union sockunion addresses[],
+                             union sockaddrunion addresses[],
                              unsigned int *peerSupportedAddressTypes,
-                             union sockunion* lastSource)
+                             union sockaddrunion* lastSource)
 {
     int nAddresses;
     int vl_param_total_length;
     guint16 no_loc_ipv4_addresses, no_remote_ipv4_addresses;
     guint16 no_loc_ipv6_addresses, no_remote_ipv6_addresses;
 
-    union sockunion temp_addresses[MAX_NUM_ADDRESSES];
+    union sockaddrunion temp_addresses[MAX_NUM_ADDRESSES];
 
     if (chunks[chunkID] == NULL) {
         error_log(ERROR_MAJOR, "Invalid chunk ID");
@@ -1729,14 +1729,14 @@ int ch_cookieIPDestAddresses(ChunkID chunkID, unsigned int mySupportedTypes,
         }
 
         memcpy(addresses, &temp_addresses[no_loc_ipv4_addresses],
-               no_remote_ipv4_addresses * sizeof(union sockunion));
+               no_remote_ipv4_addresses * sizeof(union sockaddrunion));
 
         if (no_remote_ipv6_addresses != 0)
             memcpy(&addresses[no_remote_ipv4_addresses],
                    &temp_addresses[no_loc_ipv4_addresses +
                                    no_remote_ipv4_addresses +
                                    no_loc_ipv6_addresses],
-                   no_remote_ipv6_addresses * sizeof(union sockunion));
+                   no_remote_ipv6_addresses * sizeof(union sockaddrunion));
 
 
         return (no_remote_ipv4_addresses+no_remote_ipv6_addresses);

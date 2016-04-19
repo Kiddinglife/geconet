@@ -420,14 +420,14 @@ static struct event_cb *event_callbacks[NUM_FDS];
 
 /**
  *  converts address-string (hex for ipv6, dotted decimal for ipv4
- *  to a sockunion structure
+ *  to a sockaddrunion structure
  *  @return 0 for success, else -1.
  */
-int adl_str2sockunion(guchar * str, union sockunion *su)
+int adl_str2sockunion(guchar * str, union sockaddrunion *su)
 {
     int ret;
 
-    memset((void*)su, 0, sizeof(union sockunion));
+    memset((void*)su, 0, sizeof(union sockaddrunion));
 
 #ifndef WIN32
    ret = inet_aton((const char *)str, &su->sin.sin_addr);
@@ -460,7 +460,7 @@ int adl_str2sockunion(guchar * str, union sockunion *su)
 }
 
 
-int adl_sockunion2str(union sockunion *su, guchar * buf, size_t len)
+int adl_sockunion2str(union sockaddrunion *su, guchar * buf, size_t len)
 {
     char        ifnamebuffer[IFNAMSIZ];
     const char* ifname;
@@ -491,13 +491,13 @@ int adl_sockunion2str(union sockunion *su, guchar * buf, size_t len)
     return 0;
 }
 
-bool adl_equal_address(union sockunion * a, union sockunion * b)
+bool adl_equal_address(union sockaddrunion * a, union sockaddrunion * b)
 {
 #ifdef HAVE_IPV6
-   union sockunion        my_a;
-   union sockunion        my_b;
-   const union sockunion* one;
-   const union sockunion* two;
+   union sockaddrunion        my_a;
+   union sockaddrunion        my_b;
+   const union sockaddrunion* one;
+   const union sockaddrunion* two;
    unsigned int           count;
 
 #if defined __APPLE__ || defined FreeBSD
@@ -529,28 +529,28 @@ bool adl_equal_address(union sockunion * a, union sockunion * b)
       two = b;
    }
 #else
-   const union sockunion* one = a;
-   const union sockunion* two = b;
+   const union sockaddrunion* one = a;
+   const union sockaddrunion* two = b;
 #endif
 
-    switch (sockunion_family(one)) {
+    switch (get_sockaddr_family(one)) {
     case AF_INET:
-        if (sockunion_family(two) != AF_INET)
+        if (get_sockaddr_family(two) != AF_INET)
             return FALSE;
-        return (sock2ip(one) == sock2ip(two));
+        return (s4addr(one) == s4addr(two));
         break;
 #ifdef HAVE_IPV6
     case AF_INET6:
-        if (sockunion_family(two) != AF_INET6)
+        if (get_sockaddr_family(two) != AF_INET6)
             return FALSE;
         for (count = 0; count < 16; count++)
-            if (sock2ip6(one)[count] != sock2ip6(two)[count])
+            if (s6addr(one)[count] != s6addr(two)[count])
                 return FALSE;
         return true;
         break;
 #endif
     default:
-        error_logi(ERROR_MAJOR, "Address family %d not supported", sockunion_family(one));
+        error_logi(ERROR_MAJOR, "Address family %d not supported", get_sockaddr_family(one));
         return FALSE;
         break;
     }
@@ -679,12 +679,12 @@ gint adl_get_sctpv6_socket(void)
  * interprocess communication with an Upper Layer process.
  * @return the socket file descriptor. Used to register a callback function
  */
-int adl_open_udp_socket(union sockunion* me)
+int adl_open_udp_socket(union sockaddrunion* me)
 {
     guchar buf[1000];
     int ch, sfd;
 
-    switch (sockunion_family(me)) {
+    switch (get_sockaddr_family(me)) {
         case AF_INET:
             if ((sfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
                 error_log(ERROR_FATAL, "SCTP: socket creation failed for UDP socket !");
@@ -730,7 +730,7 @@ int adl_open_udp_socket(union sockunion* me)
 int adl_sendUdpData(int sfd, unsigned char* buf, int length,
                      unsigned char destination[], unsigned short dest_port)
 {
-    union sockunion dest_su;
+    union sockaddrunion dest_su;
     int dest_len;
     int result;
 
@@ -761,7 +761,7 @@ int adl_sendUdpData(int sfd, unsigned char* buf, int length,
         error_log(ERROR_MAJOR, "Invalid port in sctp_sendUdpData()");
         return -1;
     }
-    switch (sockunion_family(&dest_su)) {
+    switch (get_sockaddr_family(&dest_su)) {
         case AF_INET:
             dest_su.sin.sin_port = htons(dest_port);
             dest_len = sizeof(struct sockaddr_in);
@@ -793,7 +793,7 @@ int adl_sendUdpData(int sfd, unsigned char* buf, int length,
  * @param    dest_len size of the address
  * @return returns number of bytes actually sent, or error
  */
-int adl_send_message(int sfd, void *buf, int len, union sockunion *dest, unsigned char tos)
+int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, unsigned char tos)
 {
     int txmt_len = 0;
     unsigned char old_tos;
@@ -808,7 +808,7 @@ int adl_send_message(int sfd, void *buf, int len, union sockunion *dest, unsigne
     guchar hostname[MAX_MTU_SIZE];
 #endif
 
-    switch (sockunion_family(dest)) {
+    switch (get_sockaddr_family(dest)) {
 
     case AF_INET:
         number_of_sendevents++;
@@ -850,7 +850,7 @@ int adl_send_message(int sfd, void *buf, int len, union sockunion *dest, unsigne
 #ifdef HAVE_IPV6
     case AF_INET6:
         number_of_sendevents++;
-        inet_ntop(AF_INET6, sock2ip6(dest), (char *)hostname, MAX_MTU_SIZE);
+        inet_ntop(AF_INET6, s6addr(dest), (char *)hostname, MAX_MTU_SIZE);
 
         event_logiiii(VVERBOSE,
                      "AF_INET6: adl_send_message : sfd : %d, len %d, destination : %s, send_events: %u",
@@ -881,7 +881,7 @@ int adl_send_message(int sfd, void *buf, int len, union sockunion *dest, unsigne
     default:
         error_logi(ERROR_MAJOR,
                    "adl_send_message : Adress Family %d not supported here",
-                   sockunion_family(dest));
+                   get_sockaddr_family(dest));
         txmt_len = -1;
     }
     return txmt_len;
@@ -1042,7 +1042,7 @@ if (sfd!=0)
  * @param  to       destination address of that message
  * @return returns number of bytes received with this call
  */
-int adl_receive_message(int sfd, void *dest, int maxlen, union sockunion *from, union sockunion *to)
+int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *from, union sockaddrunion *to)
 {
     int len;
 #ifdef SCTP_OVER_UDP
@@ -1219,7 +1219,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockunion *from, 
  * @param    from_len size of the address
  * @return returns number of bytes received with this call
  */
-int adl_get_message(int sfd, void *dest, int maxlen, union sockunion *from, socklen_t *from_len)
+int adl_get_message(int sfd, void *dest, int maxlen, union sockaddrunion *from, socklen_t *from_len)
 {
     int len;
 
@@ -1241,7 +1241,7 @@ void dispatch_event(int num_of_events)
     int i = 0;
     int length=0;
     socklen_t src_len;
-    union sockunion src, dest;
+    union sockaddrunion src, dest;
     struct sockaddr_in *src_in;
     guchar src_address[SCTP_MAX_IP_LEN];
     unsigned short portnum=0;
@@ -1280,7 +1280,7 @@ void dispatch_event(int num_of_events)
                 event_logi(VERBOSE, "Message %d bytes - Activating UDP callback", length);
                 adl_sockunion2str(&src, src_address, SCTP_MAX_IP_LEN);
 
-                switch (sockunion_family(&src)) {
+                switch (get_sockaddr_family(&src)) {
                     case AF_INET :
                         portnum = ntohs(src.sin.sin_port);
                         break;
@@ -1300,10 +1300,10 @@ void dispatch_event(int num_of_events)
 
                 if(length < 0) break;
 
-                event_logiiii(VERBOSE, "SCTP-Message on socket %u , len=%d, portnum=%d, sockunion family %u",
-                     poll_fds[i].fd, length, portnum, sockunion_family(&src));
+                event_logiiii(VERBOSE, "SCTP-Message on socket %u , len=%d, portnum=%d, sockaddrunion family %u",
+                     poll_fds[i].fd, length, portnum, get_sockaddr_family(&src));
 
-                switch (sockunion_family(&src)) {
+                switch (get_sockaddr_family(&src)) {
                 case AF_INET:
                     src_in = (struct sockaddr_in *) &src;
                     event_logi(VERBOSE, "IPv4/SCTP-Message from %s -> activating callback",
@@ -1339,7 +1339,7 @@ void dispatch_event(int num_of_events)
 
 #endif                          /* HAVE_IPV6 */
                 default:
-                    error_logi(ERROR_MAJOR, "Unsupported Address Family Type %u ", sockunion_family(&src));
+                    error_logi(ERROR_MAJOR, "Unsupported Address Family Type %u ", get_sockaddr_family(&src));
                     break;
 
                 }
@@ -1527,7 +1527,7 @@ int adl_eventLoop()
    int n, ret,i, j;
    WSANETWORKEVENTS  ne;
    int length=0, hlen=0, msecs;
-   union sockunion src, dest;
+   union sockaddrunion src, dest;
    struct ip *iph;
    struct sockaddr_in *src_in;
    unsigned short portnum;
@@ -1578,8 +1578,8 @@ int adl_eventLoop()
                   length = adl_receive_message(fds[i], rbuf, MAX_MTU_SIZE, &src, &dest);
                   portnum = ntohs(src.sin.sin_port);
                   if(length < 0) break;
-                  event_logiiii(VERBOSE, "SCTP-Message on socket %u , len=%d, portnum=%d, sockunion family %u",
-                     fds[i], length, portnum, sockunion_family(&src));
+                  event_logiiii(VERBOSE, "SCTP-Message on socket %u , len=%d, portnum=%d, sockaddrunion family %u",
+                     fds[i], length, portnum, get_sockaddr_family(&src));
 
                     src_in = (struct sockaddr_in *) &src;
                     event_logi(VERBOSE, "IPv4/SCTP-Message from %s -> activating callback",
@@ -1833,7 +1833,7 @@ int adl_init_adaptation_layer(int * myRwnd)
 
 /**
  * this function is supposed to open and bind a UDP socket listening on a port
- * to incoming udp pakets on a local interface (a local union sockunion address)
+ * to incoming udp pakets on a local interface (a local union sockaddrunion address)
  * @param  me   pointer to a local address, that will trigger callback, if it receives UDP data
  * @param  scf  callback funtion that is called when data has arrived
  * @return new UDP socket file descriptor, or -1 if error ocurred
@@ -1843,7 +1843,7 @@ int adl_registerUdpCallback(unsigned char me[],
                             sctp_socketCallback scf)
 {
     int result, new_sfd;
-    union sockunion my_address;
+    union sockaddrunion my_address;
 
 #ifdef WIN32
    error_log(ERROR_MAJOR, "WIN32: Registering ULP-Callbacks for UDP not installed !");
@@ -1858,7 +1858,7 @@ int adl_registerUdpCallback(unsigned char me[],
         return -1;
     }
 
-    switch (sockunion_family(&my_address)) {
+    switch (get_sockaddr_family(&my_address)) {
         case AF_INET:
             event_logi(VERBOSE, "Registering ULP-Callback for UDP socket on port %u",ntohs(my_port));
             my_address.sin.sin_port = htons(my_port);
@@ -2103,13 +2103,13 @@ int adl_remove_cb(int sfd)
 
 /**
  * An address filtering function
- * @param newAddress  a pointer to a sockunion address
+ * @param newAddress  a pointer to a sockaddrunion address
  * @param flags       bit mask hiding (i.e. filtering) address classes
  * returns true if address is not filtered, else FALSE if address is filtered by mask
  */
-gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags  flags)
+gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_flag_t  flags)
 {
-    switch (sockunion_family(newAddress)) {
+    switch (get_sockaddr_family(newAddress)) {
         case AF_INET :
             event_log(VERBOSE, "Trying IPV4 address");
             if (
@@ -2192,17 +2192,17 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
  * to any OS.
  *
  */
-gboolean adl_gatherLocalAddresses(union sockunion **addresses,
+gboolean adl_gatherLocalAddresses(union sockaddrunion **addresses,
      int *numberOfNets,
      int sctp_fd,
      gboolean with_ipv6,
      int *max_mtu,
-     const AddressScopingFlags  flags)
+     const hide_address_flag_t  flags)
 
 {
 
 #ifdef WIN32
-   union sockunion *localAddresses=NULL;
+   union sockaddrunion *localAddresses=NULL;
 
    SOCKET           s[MAXIMUM_WAIT_OBJECTS];
     WSAEVENT         hEvent[MAXIMUM_WAIT_OBJECTS];
@@ -2276,7 +2276,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
             }
 
             slist = (SOCKET_ADDRESS_LIST *)addrbuf;
-         localAddresses = calloc(slist->iAddressCount,sizeof(union sockunion));
+         localAddresses = calloc(slist->iAddressCount,sizeof(union sockaddrunion));
             for(j=0; j < slist->iAddressCount ;j++)
             {
             if ((rc = getnameinfo(slist->Address[j].lpSockaddr, slist->Address[j].iSockaddrLength,
@@ -2329,7 +2329,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
     struct ifreq local;
     struct ifreq *ifrequest,*nextif;
     int dup,xxx,tmp;
-    union sockunion * localAddresses = NULL;
+    union sockaddrunion * localAddresses = NULL;
 
     cf.ifc_buf = buffer;
     cf.ifc_len = 8192;
@@ -2385,7 +2385,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
     event_logii(VERBOSE, "Found additional %d v6 addresses, total now %d\n",addedNets,numAlocAddr);
 #endif
     /* now allocate the appropriate memory */
-    localAddresses = (union sockunion*)calloc(numAlocAddr,sizeof(union sockunion));
+    localAddresses = (union sockaddrunion*)calloc(numAlocAddr,sizeof(union sockaddrunion));
 
     if(localAddresses == NULL){
         error_log(ERROR_MAJOR, "Out of Memory in adl_gatherLocalAddresses() !");
@@ -2496,7 +2496,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
 #endif
         toUse = &ifrequest->ifr_addr;
 
-        adl_sockunion2str((union sockunion*)toUse, (guchar *)addrBuffer2, SCTP_MAX_IP_LEN);
+        adl_sockunion2str((union sockaddrunion*)toUse, (guchar *)addrBuffer2, SCTP_MAX_IP_LEN);
         event_logi(VERBOSE, "we are talking about the address %s", addrBuffer2);
 
 
@@ -2517,13 +2517,13 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
 
 
         if (flags & flag_HideLoopback){
-            if (adl_filterInetAddress((union sockunion*)toUse, flag_HideLoopback) == FALSE){
+            if (adl_filterInetAddress((union sockaddrunion*)toUse, flag_HideLoopback) == FALSE){
                 /* skip the loopback */
                 event_logi(VERBOSE, "Interface %d, skipping loopback",ii);
                 continue;
             }
         }
-        if (adl_filterInetAddress((union sockunion*)toUse, flag_HideReserved) == FALSE) {
+        if (adl_filterInetAddress((union sockaddrunion*)toUse, flag_HideReserved) == FALSE) {
             /* skip reserved */
             event_logi(VERBOSE, "Interface %d, skipping reserved",ii);
             continue;
@@ -2547,7 +2547,7 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
             /* scan for the dup */
             for(xxx=0; xxx < tmp; xxx++) {
                 event_logi(VERBOSE, "duplicates loop xxx=%d",xxx);
-                if(adl_equal_address(&localAddresses[xxx], (union sockunion*)toUse)) {
+                if(adl_equal_address(&localAddresses[xxx], (union sockaddrunion*)toUse)) {
 #ifdef HAVE_IPV6
                    if((localAddresses[xxx].sa.sa_family == AF_INET6) &&
                       (toUse->sa_family == AF_INET) &&

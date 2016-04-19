@@ -71,7 +71,7 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
         event_logii(VERBOSE, "rbu_scanPDU : len==%u, processed_len == %u", len, processed_len);
 
         chunk = (simple_chunk_t *) current_position;
-        chunk_len = CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+        chunk_len = get_chunk_length((chunk_fixed_t *) chunk);
 
         if (chunk_len < 4 || chunk_len + processed_len > len) return result;
 
@@ -85,7 +85,7 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
         processed_len += chunk_len;
         pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
         processed_len += pad_bytes;
-        chunk_len = (CHUNKP_LENGTH((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
+        chunk_len = (get_chunk_length((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
 
         if (chunk_len < 4 || chunk_len + processed_len > len) return result;
         current_position += chunk_len;
@@ -178,13 +178,13 @@ guchar* rbu_findChunk(guchar * datagram, guint len, gushort chunk_type)
         if (chunk->chunk_header.chunk_id == chunk_type)
             return current_position;
         else {
-            chunk_len = CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+            chunk_len = get_chunk_length((chunk_fixed_t *) chunk);
             if (chunk_len < 4 || chunk_len + processed_len > len) return NULL;
 
-            processed_len += CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+            processed_len += get_chunk_length((chunk_fixed_t *) chunk);
             pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
             processed_len += pad_bytes;
-            chunk_len = (CHUNKP_LENGTH((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
+            chunk_len = (get_chunk_length((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
             if (chunk_len < 4 || chunk_len + processed_len > len) return NULL;
             current_position += chunk_len;
         }
@@ -204,7 +204,7 @@ guchar* rbu_findChunk(guchar * datagram, guint len, gushort chunk_type)
  * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
  *             that many addresses in the chunk.
  */
-gint rbu_findAddress(guchar * chunk, guint n, union sockunion* foundAddress, int supportedAddressTypes)
+gint rbu_findAddress(guchar * chunk, guint n, union sockaddrunion* foundAddress, int supportedAddressTypes)
 {
     gushort processed_len;
     guint len = 0, parameterLength = 0;
@@ -304,7 +304,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
                     "rbu_scanDatagramForError : len==%u, processed_len == %u", len, processed_len);
 
         chunk = (simple_chunk_t *) current_position;
-        chunk_length = CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+        chunk_length = get_chunk_length((chunk_fixed_t *) chunk);
         if (chunk_length < 4 || chunk_length + processed_len > len) return FALSE;
 
         if (chunk->chunk_header.chunk_id == CHUNK_ERROR) {
@@ -333,7 +333,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
         processed_len += chunk_length;
         pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
         processed_len += pad_bytes;
-        chunk_length = (CHUNKP_LENGTH((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
+        chunk_length = (get_chunk_length((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
         if (chunk_length < 4 || chunk_length + processed_len > len) return FALSE;
         current_position += chunk_length;
     }
@@ -387,7 +387,7 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
     while (processed_len < len) {
 
         chunk = (simple_chunk_t *) current_position;
-        chunk_len = CHUNKP_LENGTH((chunk_fixed_t *) chunk);
+        chunk_len = get_chunk_length((chunk_fixed_t *) chunk);
         event_logiiii(INTERNAL_EVENT_0,
                      "rbu_rcvDatagram(address=%u) : len==%u, processed_len = %u, chunk_len=%u",
                      address_index, len, processed_len, chunk_len);

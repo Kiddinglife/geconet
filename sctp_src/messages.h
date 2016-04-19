@@ -77,6 +77,7 @@ typedef struct UDP_HEADER {
 
 
 #define MAX_MTU_SIZE              1500
+#define DEFAULT_MTU_CEILING     1500
 #define IP_HEADERLENGTH             20
 
 /**
@@ -170,12 +171,12 @@ typedef struct
     uint protocolId;
 }data_chunk_fixed_t;
 
-#define  FIXED_DATA_CHUNK_SIZE (sizeof(chunk_fixed_t) + sizeof(data_chunk_fixed_t))
+#define  DATA_CHUNK_FIXED_SIZES (sizeof(chunk_fixed_t) + sizeof(data_chunk_fixed_t))
 
-#define DATA_CHUNK_FIRST_SEGMENT	     0x02
-#define DATA_CHUNK_MIDDLE_SEGMENT     0x00
-#define DATA_CHUNK_LAST_SEGMENT        0x01
-#define UNORDEREASON_DATA_CHUNK          0x04
+#define DCHUNK_FLAG_FIRST_FRAG	     0x02
+#define DCHUNK_FLAG_MIDDLE_FRAG     0x00
+#define DCHUNK_FLAG_LAST_FRG        0x01
+#define DCHUNK_FLAG_UNORDER          0x04 //unordered chunk
 
 #define MAX_DATA_CHUNK_VALUE_SIZE  (MAX_NETWORK_PACKET_VALUE_SIZE-sizeof(chunk_fixed_t)-sizeof(data_chunk_fixed_t))
 
@@ -584,22 +585,22 @@ asconf_ack_chunk_t;
 
 /*--------------------------- and some useful (?) macros ----------------------------------------*/
 
-#define CHUNKP_LENGTH(chunk)		(ntohs((chunk)->chunk_length))
+#define get_chunk_length(chunk)		(ntohs((chunk)->chunk_length))
 
 /* Chunk classes for distribution and any other modules which might need it */
-#define isInitControlChunk(chunk) ((chunk)->chunk_header.chunk_id == CHUNK_INIT       || \
+#define is_init_control_chunk(chunk) ((chunk)->chunk_header.chunk_id == CHUNK_INIT       || \
                                    (chunk)->chunk_header.chunk_id == CHUNK_INIT_ACK   || \
                                    (chunk)->chunk_header.chunk_id == CHUNK_COOKIE_ECHO || \
                                    (chunk)->chunk_header.chunk_id == CHUNK_COOKIE_ACK)
 
-#define isInitCookieChunk(chunk)  ((chunk)->chunk_header.chunk_id == CHUNK_INIT       || \
+#define is_init_cookie_chunk(chunk)  ((chunk)->chunk_header.chunk_id == CHUNK_INIT       || \
                                    (chunk)->chunk_header.chunk_id == CHUNK_COOKIE_ECHO)
 
-#define isInitAckChunk(chunk)     ((chunk)->chunk_header.chunk_id == CHUNK_INIT_ACK)
+#define is_init_ack_chunk(chunk)     ((chunk)->chunk_header.chunk_id == CHUNK_INIT_ACK)
 
-#define isShutDownAckChunk(chunk) ((chunk)->chunk_header.chunk_id == CHUNK_SHUTDOWN_ACK)
+#define is_shutdown_ack_chunk(chunk) ((chunk)->chunk_header.chunk_id == CHUNK_SHUTDOWN_ACK)
 
-#define isShutDownCompleteChunk(chunk) ((chunk)->chunk_header.chunk_id == CHUNK_SHUTDOWN_COMPLETE)
+#define is_shutdown_complete_chunk(chunk) ((chunk)->chunk_header.chunk_id == CHUNK_SHUTDOWN_COMPLETE)
 
 
 #endif

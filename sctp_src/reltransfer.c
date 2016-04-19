@@ -1058,11 +1058,11 @@ int rtx_dequeueOldestUnackedChunk(unsigned char *buf, unsigned int *len, unsigne
     if (listlen <= 0) return SCTP_UNSPECIFIED_ERROR;
     dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, 0);
     if (dat->num_of_transmissions == 0) return SCTP_UNSPECIFIED_ERROR;
-    if ((*len) <  (dat->chunk_len - FIXED_DATA_CHUNK_SIZE)) return SCTP_BUFFER_TOO_SMALL;
+    if ((*len) <  (dat->chunk_len - DATA_CHUNK_FIXED_SIZES)) return SCTP_BUFFER_TOO_SMALL;
 
     dchunk = (data_chunk_t*) dat->data;
-    *len = dat->chunk_len - FIXED_DATA_CHUNK_SIZE;
-    memcpy(buf, dchunk->data, dat->chunk_len - FIXED_DATA_CHUNK_SIZE);
+    *len = dat->chunk_len - DATA_CHUNK_FIXED_SIZES;
+    memcpy(buf, dchunk->data, dat->chunk_len - DATA_CHUNK_FIXED_SIZES);
     *tsn = dat->chunk_tsn;
     *sID = ntohs(dchunk->stream_id);
     *sSN = ntohs(dchunk->stream_sn);

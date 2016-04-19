@@ -326,13 +326,13 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
  */
 void scu_associate(unsigned short noOfOutStreams,
                    unsigned short noOfInStreams,
-                   union sockunion* destinationList,
+                   union sockaddrunion* destinationList,
                    unsigned int numDestAddresses,
                    gboolean withPRSCTP)
 {
     guint32 state;
     guint16 nlAddresses;
-    union sockunion lAddresses[MAX_NUM_ADDRESSES];
+    union sockaddrunion lAddresses[MAX_NUM_ADDRESSES];
     ChunkID initCID;
     unsigned int supportedTypes = 0, count;
 
@@ -659,10 +659,10 @@ int sctlr_init(init_chunk_t * init)
 
     unsigned int state;
     guint16 nlAddresses;
-    union sockunion lAddresses[MAX_NUM_ADDRESSES];
+    union sockaddrunion lAddresses[MAX_NUM_ADDRESSES];
     guint16 nrAddresses;
-    union sockunion rAddresses[MAX_NUM_ADDRESSES];
-    union sockunion last_source;
+    union sockaddrunion rAddresses[MAX_NUM_ADDRESSES];
+    union sockaddrunion last_source;
 
     ChunkID initCID;
     ChunkID initCID_local;
@@ -974,8 +974,8 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
     guint32 state;
     int result;
     unsigned int index=0;
-    union sockunion destAddress;
-    union sockunion dAddresses[MAX_NUM_ADDRESSES];
+    union sockaddrunion destAddress;
+    union sockaddrunion dAddresses[MAX_NUM_ADDRESSES];
     unsigned int ndAddresses;
     unsigned short inbound_streams;
     unsigned short outbound_streams;
@@ -989,7 +989,7 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
     missing_mandaory_params_err_t missing_params;
     int return_state = STATE_OK;
 
-    union sockunion preferredPrimary;
+    union sockaddrunion preferredPrimary;
     gboolean preferredSet      = FALSE;
     gboolean peerSupportsPRSCTP = FALSE;
     gboolean peerSupportsADDIP = FALSE;
@@ -1233,8 +1233,8 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
  */
 void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
 {
-    union sockunion destAddress;
-    union sockunion dAddresses[MAX_NUM_ADDRESSES];
+    union sockaddrunion destAddress;
+    union sockaddrunion dAddresses[MAX_NUM_ADDRESSES];
     int ndAddresses, result;
     guint32 state, new_state = 0xFFFFFFFF;
     unsigned int cookieLifetime;
