@@ -1,11 +1,11 @@
 /*
-* messages.h
-*
-*  Created on: 13 Apr 2016
-*  Finish on: 14 April 2016
-*      Author: jakez
-*
-*/
+ * messages.h
+ *
+ *  Created on: 13 Apr 2016
+ *  Finish on: 14 April 2016
+ *      Author: jakez
+ *
+ */
 
 #ifndef MY_MESSAGES_H_
 #define MY_MESSAGES_H_
@@ -18,17 +18,44 @@
 #include <sys/socket.h>
 #endif
 
-#define  MD5_HMAC   1
-#undef   SHA_HMAC
-#define  HMAC_LEN   16 /* 16 bytes == 128 Bits == 4 doublewords */
+/**
+ * RC32为32bit的简单hash，MD5为128bit较复杂的hash算法。
+ * 直觉上貌似CRC32的计算速度要比MD5快的。
+ * 今天用FlexHEX计算大文件的hash时发现CRC32相对MD5并没有明显优势。
+ * 实验发现：Linux操作系统下用md5sum和cksum取文件哈希：MD5仅花费CRC32时间的72%左右。
+ * MD5计算速度要明显优于CRC32！
+ * SHA系列算法的摘要长度分别为：
+ * SHA为20字节（160位）、SHA256为32字节（256位, SHA384为48字节（384位）、SHA512为64字节（512位），
+ * 由于它产生的数据摘要的长度更长，因此更难以发生碰撞，因此也更为安全，它是未来数据摘要算法的发展方向。
+ * 由于SHA系列算法的数据摘要长度较长，因此其运算速度与MD5相比，也相对较慢。
+ * 目前SHA1的应用较为广泛，主要应用于CA和数字证书中，
+ * 另外在目前互联网中流行的BT软件中，也是使用SHA1来进行文件校验的。
+ */
+#define  MD5_HMAC
+#undef   SHA20_HMAC
+#undef   SHA32_HMAC
+#undef   SHA48_HMAC
+#undef   SHA64_HMAC
 
-/**************************** SCTP common message definitions ***************************/
+#if defined(MD5_HMAC)
+#define  HMAC_LEN   16 /* 16 bytes == 128 Bits == 4 doublewords */
+#elif defined(SHA20_HMAC)
+#define  HMAC_LEN   20 /* 20 bytes == 160 Bits == 5 doublewords */
+#elif defined(SHA32_HMAC)
+#define  HMAC_LEN   32
+#elif defined(SHA48_HMAC)
+#define  HMAC_LEN   48
+#elif defined(SHA64_HMAC)
+#define  HMAC_LEN   64
+#endif
+
+/**************************** packet definitions ***************************/
 #define MAX_MTU_SIZE 1500
 #define DEFAULT_MTU_CEILING     1500
 #define IP_HDR_SIZE 20
 
 #ifdef SCTP_OVEREASON_UDP
-#define NETWORK_PACKET_FIXED_SIZE  4*sizeof(ushort)
+#define NETWORK_PACKET_FIXED_SIZE  (4*sizeof(ushort))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
 (MAX_MTU_SIZE - IP_HDR_SIZE - NETWORK_PACKET_FIXED_SIZE)
 /* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
@@ -41,9 +68,9 @@ struct network_packet_fixed_t
     ushort checksum;
 };
 #else
-#define NETWORK_PACKET_FIXED_SIZE  2 * (sizeof(ushort) + sizeof(uint))
+#define NETWORK_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-MAX_MTU_SIZE - IP_HDR_SIZE- NETWORK_PACKET_FIXED_SIZE
+(MAX_MTU_SIZE - IP_HDR_SIZE- NETWORK_PACKET_FIXED_SIZE)
 struct network_packet_fixed_t
 {
     ushort src_port;
@@ -94,7 +121,7 @@ struct network_packet_t
 #define SKIP_CHUNK_REPORT_EREASONROR(chunk_id)\
 (((uchar)chunk_id & 0xC0)==0xC0))
 
-/*------------------- common chunk header ----------------------*/
+/*************** common chunk header ******************/
 #define CHUNK_FIXED_SIZE (2*sizeof(uchar)+sizeof(ushort))
 struct chunk_fixed_t
 {
@@ -106,7 +133,7 @@ struct chunk_fixed_t
 #define FLAG_DESTROYED_TCB        0x00
 #define FLAG_NO_TCB               0x01
 
-/*------------------ chunk_value chunk -------------------------*/
+/**************** chunk_value chunk *******************/
 #define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10
 #define DCHUNK_FLAG_MIDDLE_FRAG ((uchar)0x00) //MIDDLE 10base: 0    2base : 00
 #define DCHUNK_FLAG_LAST_FRG      0x01 //END               10base: 1      2base : 01
@@ -116,8 +143,6 @@ struct chunk_fixed_t
 //unordered data chunk     10base: 4    2base :  100
 #define DCHUNK_FLAG_UNRELIABLE 0x08
 // unreliable data chunk     10base: 8    2base : 1000
-
-
 
 #define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+3*sizeof(ushort))
 #define DATA_CHUNK_FIXED_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
@@ -139,7 +164,7 @@ struct data_chunk_t
     uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
 
-/*--------------------- variable length parameter definitions ----------------*/
+/*************************** variable length parameter definitions ***************************/
 // See RFC4960 Section 3.2.1 Optional/Variable-Length Parameter Format From Page 19
 // vl params only appear in control chunks
 #define STOP_PROCESS_PARAM(param_type)   \
@@ -223,13 +248,13 @@ struct cookie_preservative_t
 ((p->vlparam_header.param_type==VLPARAM_IPV6_ADDRESS)&&\
                                  (p->vlparam_header.param_length==20))
 
-/*--------------------------- init chunk ------------------------*/
+/*************************** init chunk ***************************/
 // See RFC4960 Section 3.3.2.Initiation (INIT) From Page 24
 /**
-* this is the INIT specific part of the sctp_chunk, which is ALWAYS sent
-* it MAY take some additional variable length params.....
-* and MAY also be used for INIT_ACK chunks.
-*/
+ * this is the INIT specific part of the sctp_chunk, which is ALWAYS sent
+ * it MAY take some additional variable length params.....
+ * and MAY also be used for INIT_ACK chunks.
+ */
 struct init_chunk_fixed_t
 {
     uint init_tag;
@@ -250,7 +275,7 @@ struct init_chunk_t
     uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 
-/*--------------------- selective acknowledgements defs -------------------------*/
+/*************************** selective acknowledgements defs ***************************/
 //  see RFC4960 Section 2.3.3 
 #define SACK_CHUNK_FIXED_SIZE (2*sizeof(uint)+2*sizeof(ushort))
 #define MAX_SACK_CHUNK_VALUE_SIZE  \
@@ -283,7 +308,7 @@ struct duplicate_tsn_t
     uint duplicate_tsn;
 };
 
-/*--------------------------- heartbeat chunk defs --------------------------------*/
+/************************** heartbeat chunk defs ***************************/
 /* our heartbeat chunk structure */
 struct heartbeat_chunk_t
 {
@@ -298,17 +323,17 @@ struct heartbeat_chunk_t
 #endif
 };
 
-/*--------------------------- simple chunk --------------------------------------------------*/
+/*************************** simple chunk ***************************/
 /* Simple chunks for chunks without or with bytestrings as chunk chunk_value.
-Can be used for the following chunk types:
-CHUNK_ABORT
-CHUNK_SHUTDOWN_ACK
-CHUNK_COOKIE_ACK
-? CHUNK_COOKIE_ECHO ?
+ Can be used for the following chunk types:
+ CHUNK_ABORT
+ CHUNK_SHUTDOWN_ACK
+ CHUNK_COOKIE_ACK
+ ? CHUNK_COOKIE_ECHO ?
 
-simple chunk can also be used for transfering chunks to/from bundling, since bundling
-looks only on the chunk header.
-*/
+ simple chunk can also be used for transfering chunks to/from bundling, since bundling
+ looks only on the chunk header.
+ */
 #define MAX_SIMPLE_CHUNK_VALUE_SIZE  (MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE)
 struct simple_chunk_t
 {
@@ -322,17 +347,17 @@ struct forward_tsn_chunk_t
     uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
-/*--------------------------- parameter definitions ------------------------------------------*/
+/***************************- parameter definitions***************************/
 /**
-* The cookie definition as used by this implementation
-*  We include all parameters that where sent with the initAck to the a-side.
-*  In detail, the cookie contains the follwing params in the given order:
-*  - fixed part of initAck.
-*  - fixed part of init.
-*  - variable part of initAck (address list).
-*  - variable part of init (address list).
-*  Only the fixed part is defined here.
-*/
+ * The cookie definition as used by this implementation
+ *  We include all parameters that where sent with the initAck to the a-side.
+ *  In detail, the cookie contains the follwing params in the given order:
+ *  - fixed part of initAck.
+ *  - fixed part of init.
+ *  - variable part of initAck (address list).
+ *  - variable part of init (address list).
+ *  Only the fixed part is defined here.
+ */
 
 /* cookie chunks fixed params length including chunk header */
 #ifdef MD5_HMAC
@@ -380,11 +405,11 @@ struct cookie_param_t
     cookie_fixed_t ck;
 };
 
-/*--------------------------- Error definitions -----------------------------------------*/
+/*************************** Error definitions ***************************/
 /**
-* Errorchunks: for error-chunks the SCTP_simple_chunk can be used since it contains
-* only varible length params.
-*/
+ * Errorchunks: for error-chunks the SCTP_simple_chunk can be used since it contains
+ * only varible length params.
+ */
 struct error_chunk_t
 {
     chunk_fixed_t chunk_header;
@@ -412,7 +437,6 @@ struct error_cause_t
 
 #define ECC_USER_INITIATED_ABORT                12
 #define ECC_PROTOCOL_VIOLATION                  13
-
 
 #define ECC_DELETE_LAST_IP_FAILED       0xC
 #define ECC_OP_REFUSED_NO_RESOURCES     0xD
@@ -445,7 +469,7 @@ struct missing_mandaory_params_err_t
     unsigned short params[20];
 };
 
-/*--------------------------- ASCONF Chunk and Parameter Types ---------------------------------*/
+/************* ASCONF Chunk and Parameter Types *************/
 struct asconfig_chunk_fixed_t
 {
     uint serial_number;
@@ -473,7 +497,7 @@ struct asconf_ack_chunk_t
     uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 
-/*--------------------------- and some useful (?) macros ----------------------------------------*/
+/******************** some useful macros ************************/
 #define get_chunk_length(chunk)        (ntohs((chunk)->chunk_length))
 // Chunk classes for distribution and any other modules which might need it
 #define is_init_control_chunk(chunk) \
