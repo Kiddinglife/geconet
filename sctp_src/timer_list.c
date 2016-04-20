@@ -279,7 +279,7 @@ unsigned int micro_update_item(unsigned int id, unsigned int seconds, unsigned i
 
     /* update action time, and  write back to the list */
     get_time_now(&now);
-    timeradd(&now, &delta, &(tmp_item->action_time));
+    sum_time(&now, &delta, &(tmp_item->action_time));
 
     /* print_debug_list(VERBOSE); */
 

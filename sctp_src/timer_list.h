@@ -66,7 +66,7 @@
 #endif
 
 #if (defined (SOLARIS) || defined (WIN32))
-#define timeradd(a, b, result) \
+#define sum_time(a, b, result) \
   do {                                                                        \
     (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;                             \
     (result)->tv_usec = (a)->tv_usec + (b)->tv_usec;                          \
@@ -77,7 +77,7 @@
       }                                                                       \
   } while (0)
 
-#define timersub(a, b, result)                                                \
+#define  subtract_time(a, b, result)                                                \
   do {                                                                        \
     (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;                             \
     (result)->tv_usec = (a)->tv_usec - (b)->tv_usec;                          \

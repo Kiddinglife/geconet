@@ -1394,7 +1394,7 @@ void adl_add_msecs_totime(struct timeval *t, unsigned int msecs)
     tmp.tv_sec = seconds;
     tmp.tv_usec = microseconds;
 
-    timeradd(t, &tmp, &res);
+    sum_time(t, &tmp, &res);
     memcpy(t, &res, sizeof(res));
     return;
 }
@@ -1426,7 +1426,7 @@ int adl_timediff_to_msecs(struct timeval *a, struct timeval *b)
     struct timeval result;
     int retval;
     /* result = a-b */
-    timersub(a, b, &result);
+     subtract_time(a, b, &result);
     retval = result.tv_sec * 1000 + result.tv_usec / 1000;
     event_logi(VVERBOSE, "Computed Time Difference : %d msecs", retval);
     return ((retval < 0) ? -1 : retval);
@@ -2013,7 +2013,7 @@ unsigned int adl_startMicroTimer(unsigned int seconds, unsigned int microseconds
     item = (AlarmTimer*)malloc(sizeof(AlarmTimer));
     if (item == NULL) return 0;
 
-    timeradd(&now, &delta, &talarm);
+    sum_time(&now, &delta, &talarm);
     item->timer_type = ttype;
     item->action_time = talarm;
     item->action = timer_cb;
