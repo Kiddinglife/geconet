@@ -10,14 +10,12 @@
 #ifndef MY_MESSAGES_H_
 #define MY_MESSAGES_H_
 
-#include "config.h"
-#include "basic-type.h"
 #include <sys/types.h>
-
 #ifndef WIN32
 #include <sys/socket.h>
 #endif
-
+#include "config.h"
+#include "basic-type.h"
 /**
  * RC32为32bit的简单hash，MD5为128bit较复杂的hash算法。
  * 直觉上貌似CRC32的计算速度要比MD5快的。

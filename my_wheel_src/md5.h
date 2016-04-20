@@ -42,7 +42,8 @@
  The following makes PROTOTYPES default to 0 if it has not already
  been defined with C compiler flags.
  */
-
+#ifndef MY_MD5_H_
+#define MY_MD5_H_
 #include <string.h>
 /* POINTER defines a generic pointer type */
 typedef unsigned char *POINTER;
@@ -72,3 +73,5 @@ extern void MD5Final(unsigned char dest_digest[16] , MD5_CTX * ctx);
 
 #define MD5_memcpy(output,input,len) 	memcpy(output,input,len)
 #define MD5_memset(output,input,len) 	memset(output,input,len)
+
+#endif

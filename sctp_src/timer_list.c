@@ -41,24 +41,25 @@
  *          andreas.jungmaier@web.de
  */
 
-#include "timer_list.h"
+#include "timers.h"
 #include "adaptation.h"
 
 #include <stdio.h>
 #include <glib.h>
 
 static unsigned int tid = 1;
-static GList* timer_list = NULL;
+static GList* timers = NULL;
 
 
 /**
- *	function to initialize a list. Creates a timer_list structure
+ *	function to initialize a list. Creates a timers structure
  *	@param	new_list 	pointer to newly alloc'ed list structure
  */
 void init_timer_list()
 {
-    if (timer_list != NULL) error_log(ERROR_FATAL, "init_timer_list() should not have been called -> fix program");
-    timer_list = NULL;
+    if (timers != NULL)
+        error_log(ERROR_FATAL, "init_timer_list() should not have been called -> fix program");
+    timers = NULL;
 }
 
 
@@ -101,14 +102,14 @@ int idcompare(gconstpointer a, gconstpointer b)
 
 /**
  *	function to delete a list. Walks through the list and deallocates
- *	all timer_item structs. Finally destroys the timer_list struct
- *	@param	del_list	pointer to the timer_list struct to be deleted
+ *	all timer_item structs. Finally destroys the timers struct
+ *	@param	del_list	pointer to the timers struct to be deleted
  *	@return	0 on success, -1 if pointer was NULL or other error
  */
 void del_timer_list(void)
 {
-    g_list_foreach(timer_list, &free_list_element, NULL);
-    g_list_free(timer_list);
+    g_list_foreach(timers, &free_list_element, NULL);
+    g_list_free(timers);
 }
 
 
@@ -118,7 +119,7 @@ void del_timer_list(void)
  *	and updates length, and possibly one timeval entry. Checks whether
  *	we insert at beginning/end first. timer_item must have been alloc'ed
  *	first by the application, this is not done by this function !
- *	@param	tlist		pointer to the timer_list instance
+ *	@param	tlist		pointer to the timers instance
  *	@param	item	pointer to the event item that is to be added
  *	@return	timer_id on success, 0 if a pointer was NULL or other error
  */
@@ -133,7 +134,7 @@ unsigned int insert_item(AlarmTimer * item)
         tid++;
         item->timer_id = 1;
     }
-    timer_list = g_list_insert_sorted(timer_list, item, timercompare);
+    timers = g_list_insert_sorted(timers, item, timercompare);
 
     /* print_debug_list(VERBOSE); */
 
@@ -144,7 +145,7 @@ unsigned int insert_item(AlarmTimer * item)
 /**
  *	a function to remove a certain action item,
  *	then traverses the list from the start, updates length etc.
- *	@param	tlist		pointer to the timer_list instance
+ *	@param	tlist		pointer to the timers instance
  *	@param	tid	id of the timer to be removed
  *	@param	item	pointer to where deleted data is to be copied !
  *	@return	0 on success, -1 if a pointer was NULL or other error, -1 if not found
@@ -156,7 +157,7 @@ int remove_item(unsigned int id)
 
     event_logi(VERBOSE, "Remove item : timer id %u called", id);
 
-    tmp = g_list_find_custom(timer_list, &id, idcompare);
+    tmp = g_list_find_custom(timers, &id, idcompare);
 
     if (tmp != NULL) {
         event_logi(VERBOSE, "Remove item : found timer id %u", ((AlarmTimer*)(tmp->data))->timer_id);
@@ -168,7 +169,7 @@ int remove_item(unsigned int id)
 
     dat = tmp->data;
     free_list_element(dat, NULL);
-    timer_list=g_list_remove(timer_list, dat);
+    timers=g_list_remove(timers, dat);
 
     /* print_debug_list(VERBOSE); */
 
@@ -181,7 +182,7 @@ int remove_timer(AlarmTimer* item)
 
     event_logi(VERBOSE, "Remove item : timer id %u called", item->timer_id);
 
-    timer_list=g_list_remove(timer_list, item);
+    timers=g_list_remove(timers, item);
     free_list_element(item, NULL);
     /* print_debug_list(VERBOSE); */
 
@@ -191,7 +192,7 @@ int remove_timer(AlarmTimer* item)
 /**
  *	a function to get the pointer to a certain action item, traverses the list
  *    copies the item into the provided pointer (reserve enough space !!)
- *	@param	tlist		pointer to the timer_list instance
+ *	@param	tlist		pointer to the timers instance
  *	@param	timer_id	id of the timer to be found
  *	@param	item	pointer to where found data is to be copied !
  *	@return	0 on success, -1 if a pointer was NULL or other error
@@ -200,7 +201,7 @@ int remove_timer(AlarmTimer* item)
 {
 
     GList* result=NULL;
-    result=g_list_find(timer_list,item);
+    result=g_list_find(timers,item);
     if (result!=NULL)
      	return 0;
 
@@ -214,7 +215,7 @@ int remove_timer(AlarmTimer* item)
  *    saves the function pointer, updates the execution time (msecs milliseconds
  *      from now) and removes the item from the list. Then calls insert_item
  *      with the updated timer_item struct.
- *      @param  tlist           pointer to the timer_list instance
+ *      @param  tlist           pointer to the timers instance
  *      @param  id                      id of the timer to be updated
  *      @param  msecs           action to be executed msecs ms from _now_
  *      @return new timer_id, 0 if a pointer was NULL or other error
@@ -226,9 +227,9 @@ unsigned int update_item(unsigned int id, unsigned int msecs)
 
     event_logi(VERBOSE, "Update item : timer id %u called", id);
 
-    if (timer_list == NULL)  return 0;
+    if (timers == NULL)  return 0;
 
-    tmp = g_list_find_custom(timer_list, &id, idcompare);
+    tmp = g_list_find_custom(timers, &id, idcompare);
 
     if (tmp != NULL){
         event_logi(VERBOSE, "Update item : found timer id %u", ((AlarmTimer*)(tmp->data))->timer_id);
@@ -239,7 +240,7 @@ unsigned int update_item(unsigned int id, unsigned int msecs)
     if (tmp == NULL) return 0;
 
     tmp_item = (AlarmTimer*)tmp->data;
-    timer_list = g_list_remove(timer_list, tmp->data);
+    timers = g_list_remove(timers, tmp->data);
 
     /* update action time, and  write back to the list */
     get_time_now(&(tmp_item->action_time));
@@ -258,9 +259,9 @@ unsigned int micro_update_item(unsigned int id, unsigned int seconds, unsigned i
 
     event_logi(VERBOSE, "Micro-Update item : timer id %u called", id);
 
-    if (timer_list == NULL)  return 0;
+    if (timers == NULL)  return 0;
 
-    tmp = g_list_find_custom(timer_list, &id, idcompare);
+    tmp = g_list_find_custom(timers, &id, idcompare);
 
     if (tmp != NULL){
         event_logi(VERBOSE, "Micro-Update item : found timer id %u", ((AlarmTimer*)(tmp->data))->timer_id);
@@ -271,7 +272,7 @@ unsigned int micro_update_item(unsigned int id, unsigned int seconds, unsigned i
     if (tmp == NULL) return 0;
 
     tmp_item = (AlarmTimer*)tmp->data;
-    timer_list = g_list_remove(timer_list, tmp->data);
+    timers = g_list_remove(timers, tmp->data);
     delta.tv_sec = seconds;
     delta.tv_sec += (microseconds / 1000000); /* usually 0 */
     delta.tv_usec = (microseconds % 1000000); /* usually == microseconds */
@@ -320,19 +321,19 @@ void print_debug_list(short event_log_level)
 
     if (event_log_level <= Current_event_log_) {
         event_log(event_log_level,"-------------Entering print_debug_list() ------------------------");
-        if (timer_list == NULL) {
+        if (timers == NULL) {
             event_log(event_log_level, "tlist pointer == NULL");
             return;
         }
 
-        tmp=g_list_first(timer_list);
+        tmp=g_list_first(timers);
 
         if (tmp==NULL) {
             event_log(event_log_level, "Timer-List is empty !");
             return;
         }
         print_time(event_log_level);
-        j=g_list_length(timer_list);
+        j=g_list_length(timers);
         event_logi(event_log_level, "List Length : %u ", j);
 
         for (i=0; i < j; i++)
@@ -359,7 +360,7 @@ int get_msecs_to_nexttimer()
     AlarmTimer* next;
     struct timeval now;
 
-    result = g_list_first(timer_list);
+    result = g_list_first(timers);
 
     if (result == NULL) return -1;
 
@@ -388,8 +389,8 @@ int get_next_event(AlarmTimer ** dest)
     GList* result=NULL;
     *dest = NULL;
 
-    if (g_list_first(timer_list) == NULL) return -1;
-    result = g_list_first(timer_list);
+    if (g_list_first(timers) == NULL) return -1;
+    result = g_list_first(timers);
     *dest = (AlarmTimer*)result->data;
 
     return 0;
@@ -398,7 +399,7 @@ int get_next_event(AlarmTimer ** dest)
 
 int timer_list_empty()
 {
-    if (g_list_first(timer_list) == NULL)
+    if (g_list_first(timers) == NULL)
         return 1;
     else
         return 0;

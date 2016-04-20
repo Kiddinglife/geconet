@@ -95,8 +95,6 @@
   *  A singly linked list for timer events
   */
 
-
-
 typedef struct alarm_timer
 {
     unsigned int timer_id;

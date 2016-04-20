@@ -5,7 +5,7 @@
  *      Author: jakez
  */
 
-#include "globals.h"
+#include <globals.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -27,14 +27,14 @@ static int noOftracedModules;
 static char traced_modules[TRACE_MUDULE_SIZE][70];
 static int error_trace_levels[TRACE_MUDULE_SIZE];
 static int event_trace_levels[TRACE_MUDULE_SIZE];
-static char* error_loglvls_str[4] = 
+static const char* error_loglvls_str[4] =
 {
     "fatal_error_exit",
     "major_error_abort",
     "minor_error",
     "lwarnning_error"
 };
-static char* event_loglvls_str[6] =
+static const char* event_loglvls_str[6] =
 {
     "extevent_unexpected",
     "extevent",
@@ -43,10 +43,6 @@ static char* event_loglvls_str[6] =
     "verbose",
     "lvverbos"
 };
-static char* error_lvl_to_str(int lvl)
-{
-
-}
 
 void read_trace_levels(void)
 {
