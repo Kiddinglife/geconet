@@ -31,9 +31,54 @@
 			<locationURI>PARENT-1-PROJECT_LOC/sctp_src</locationURI>
 		</link>
 		<link>
-			<name>src/my_wheel_src</name>
-			<type>2</type>
-			<locationURI>PARENT-1-PROJECT_LOC/my_wheel_src</locationURI>
+			<name>src/basic-type.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/basic-type.h</locationURI>
+		</link>
+		<link>
+			<name>src/config.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/config.h</locationURI>
+		</link>
+		<link>
+			<name>src/gecotimer.cc</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/gecotimer.cc</locationURI>
+		</link>
+		<link>
+			<name>src/gecotimer.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/gecotimer.h</locationURI>
+		</link>
+		<link>
+			<name>src/globals.cc</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/globals.cc</locationURI>
+		</link>
+		<link>
+			<name>src/globals.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/globals.h</locationURI>
+		</link>
+		<link>
+			<name>src/main.cc</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/main.cc</locationURI>
+		</link>
+		<link>
+			<name>src/md5.cc</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/md5.cc</locationURI>
+		</link>
+		<link>
+			<name>src/md5.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/md5.h</locationURI>
+		</link>
+		<link>
+			<name>src/messages.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/messages.h</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

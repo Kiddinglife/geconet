@@ -51,7 +51,7 @@ static unsigned int tid = 1;
 static GList* timers = NULL;
 
 
-/**
+/** do not need
  *	function to initialize a list. Creates a timers structure
  *	@param	new_list 	pointer to newly alloc'ed list structure
  */
@@ -61,7 +61,6 @@ void init_timer_list()
         error_log(ERROR_FATAL, "init_timer_list() should not have been called -> fix program");
     timers = NULL;
 }
-
 
 
 gint timercompare(gconstpointer a, gconstpointer b)
@@ -79,7 +78,6 @@ gint timercompare(gconstpointer a, gconstpointer b)
     /* never reached   */
     return 0;
 }
-
 
 int idcompare(gconstpointer a, gconstpointer b)
 {
@@ -100,7 +98,7 @@ int idcompare(gconstpointer a, gconstpointer b)
 }
 
 
-/**
+/** do not need
  *	function to delete a list. Walks through the list and deallocates
  *	all timer_item structs. Finally destroys the timers struct
  *	@param	del_list	pointer to the timers struct to be deleted

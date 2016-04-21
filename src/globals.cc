@@ -5,7 +5,7 @@
  *      Author: jakez
  */
 
-#include <globals.h>
+#include "globals.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -101,7 +101,7 @@ void read_trace_levels(void)
 }
 
 // -1 not found, >0 = module index
-static inline int is_module_traced(const char* modulename)
+static  int is_module_traced(const char* modulename)
 {
     for (int i = 0; i < TRACE_MUDULE_SIZE; i++)
     {
@@ -113,7 +113,7 @@ static inline int is_module_traced(const char* modulename)
     return -1;
 }
 
-inline int gettimenow(struct timeval *tv)
+ int gettimenow(struct timeval *tv)
 {
 #ifdef WIN32
     struct timeb tb;
@@ -125,7 +125,7 @@ inline int gettimenow(struct timeval *tv)
     return (gettimeofday(tv, (struct timezone *) NULL));
 #endif
 }
-inline int gettimenow(struct timeval *tv, struct tm *the_time)
+ int gettimenow(struct timeval *tv, struct tm *the_time)
 {
     if (gettimenow(tv) > -1)
     {
@@ -138,7 +138,7 @@ inline int gettimenow(struct timeval *tv, struct tm *the_time)
         return -1;
     }
 }
-inline int gettimenow_ms(time_t* ret)
+ int gettimenow_ms(time_t* ret)
 {
     struct timeval now;
     if (gettimenow(&now) > -1)
@@ -153,7 +153,7 @@ inline int gettimenow_ms(time_t* ret)
         return -1;
     }
 }
-inline int gettimenow_us(time_t* ret)
+ int gettimenow_us(time_t* ret)
 {
     struct timeval now;
     if (gettimenow(&now) > -1)
@@ -169,7 +169,7 @@ inline int gettimenow_us(time_t* ret)
     }
 }
 
-inline void build_timeval(timeval* tv, time_t inteval)
+ void build_timeval(timeval* tv, time_t inteval)
 {
     *tv = { 0 };
     inteval *= 1000;
@@ -185,7 +185,7 @@ inline void build_timeval(timeval* tv, time_t inteval)
     }
 }
 
-inline void  sum_time(timeval* a, timeval* b, timeval* result)
+ void  sum_time(timeval* a, timeval* b, timeval* result)
 {
 
     result->tv_sec = (a)->tv_sec + (b)->tv_sec;
@@ -196,7 +196,7 @@ inline void  sum_time(timeval* a, timeval* b, timeval* result)
         result->tv_usec -= 1000000;
     }
 }
-inline void subtract_time(timeval* a, timeval* b, timeval* result)
+ void subtract_time(timeval* a, timeval* b, timeval* result)
 {
     result->tv_sec = (a)->tv_sec - (b)->tv_sec;
     result->tv_usec = (a)->tv_usec - (b)->tv_usec;
@@ -206,32 +206,32 @@ inline void subtract_time(timeval* a, timeval* b, timeval* result)
         result->tv_usec += 1000000;
     }
 }
-inline void  sum_time(timeval* a, time_t inteval, timeval* result)
+ void  sum_time(timeval* a, time_t inteval, timeval* result)
 {
     timeval tv;
     build_timeval(&tv, inteval);
     sum_time(a, &tv, result);
 }
-inline void subtract_time(timeval* a, time_t inteval, timeval* result)
+ void subtract_time(timeval* a, time_t inteval, timeval* result)
 {
     timeval tv;
     build_timeval(&tv, inteval);
     subtract_time(a, &tv, result);
 }
-inline void subtract_time(timeval* a, time_t* inteval, timeval* result);
-inline void print_time_now(ushort level)
+ void subtract_time(timeval* a, time_t* inteval, timeval* result);
+ void print_time_now(ushort level)
 {
     struct timeval now;
     gettimenow(&now);
     event_logii(level, "Time now: %ld sec, %ld usec \n", now.tv_sec,
         now.tv_usec);
 }
-inline void print_timeval(timeval* tv)
+ void print_timeval(timeval* tv)
 {
     event_logii(loglvl_intevent, "timeval {%ld, %ld}\n", tv->tv_sec, tv->tv_usec);
 }
 
-inline static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
+ static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
 {
     struct timeval tv; // this is used for get usec
     struct tm the_time; // only contains data infos, no ms and us
@@ -252,7 +252,7 @@ inline static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
         return -1;
     }
 }
-inline void debug_print(FILE * fd, const char *f, ...)
+ void debug_print(FILE * fd, const char *f, ...)
 {
     va_list va;
     va_start(va, f);
@@ -376,7 +376,7 @@ void error_log_sys1(short error_log_level, const char *module_name, int line_no,
     error_log1(error_log_level, module_name, line_no, strerror(errnumber));
 }
 
-inline void perr_exit(const char *infostring)
+ void perr_exit(const char *infostring)
 {
     perror(infostring);
     exit(1);
@@ -388,7 +388,7 @@ void perr_abort(const char *infostring)
     abort();
 }
 //++++++++++++++++++ helpers +++++++++++++++
-inline bool safe_before(uint seq1, uint seq2)
+ bool safe_before(uint seq1, uint seq2)
 {
     // INT32_MAX = (2147483647)
     // INT32_MIN = (-2147483647-1)
@@ -401,27 +401,27 @@ inline bool safe_before(uint seq1, uint seq2)
     // ����   return (uint64) (seq1 - seq2) < 0;
     return ((int)(seq1 - seq2)) < 0;
 }
-inline bool safe_after(uint seq1, uint seq2)
+ bool safe_after(uint seq1, uint seq2)
 {
     return ((int)(seq2 - seq1)) < 0;
 }
-inline bool safe_before(ushort seq1, ushort seq2)
+ bool safe_before(ushort seq1, ushort seq2)
 {
     return ((short)(seq1 - seq2)) < 0;
 }
-inline bool safe_after(ushort seq1, ushort seq2)
+ bool safe_after(ushort seq1, ushort seq2)
 {
     return ((short)(seq2 - seq1)) < 0;
 }
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
-inline bool safe_between(uint seq1, uint seq2, uint seq3)
+ bool safe_between(uint seq1, uint seq2, uint seq3)
 {
     return safe_before(seq1, seq3) ?
         seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
 }
 // @pre make sure seq1 <= seq3
-inline bool unsafe_between(uint seq1, uint seq2, uint seq3)
+ bool unsafe_between(uint seq1, uint seq2, uint seq3)
 {
     return seq3 - seq1 >= seq2 - seq1;
 }
@@ -431,7 +431,7 @@ inline bool unsafe_between(uint seq1, uint seq2, uint seq3)
  * @param  two pointer to other chunk data
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
-inline int sort_tsn(const internal_data_chunk_t& one,
+ int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two)
 {
     if (safe_before(one.chunk_tsn, two.chunk_tsn))
@@ -441,7 +441,7 @@ inline int sort_tsn(const internal_data_chunk_t& one,
     else
         return 0; /* one==two */
 }
-inline int sort_ssn(const internal_stream_data_t& one,
+ int sort_ssn(const internal_stream_data_t& one,
     const internal_stream_data_t& two)
 {
     if (one.stream_id < two.stream_id)

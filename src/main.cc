@@ -36,11 +36,26 @@ static void action(TimerID id, void*, void*)
 {
     event_log(loglvl_intevent, "timer triggered\n");
 }
+#include <vector>
 static void test_timer_mgr()
 {
     geco::ultils::timer_mgr tm;
-    uint id = tm.add_timer(TIMER_TYPE_INIT, 100, action);
-    tm.print(loglvl_intevent);
+    std::vector<geco::ultils::timer_mgr::timer_pointer_t> vec;
+    for (int i = 0; i < 100; i++)
+    {
+        geco::ultils::timer_mgr::timer_pointer_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 10, action);
+        geco::ultils::timer_mgr::timer_pointer_t ret2 = tm.add_timer(TIMER_TYPE_INIT, 1, action);
+        vec.push_back(ret1);
+        vec.push_back(ret2);
+//        print_timeval(&ret1->action_time);
+//        print_timeval(&ret2->action_time);
+        //tm.print(loglvl_intevent);
+    }
+    for (geco::ultils::timer_mgr::timer_pointer_t ptr : vec)
+    {
+        tm.delete_timer(ptr);
+    }
+
 }
 #include <algorithm>
 #include <iostream>
