@@ -150,16 +150,16 @@ void adl_add_msecs_totime(struct timeval *t, unsigned int msecs);
 
 int get_time_now(struct timeval *tv);
 
-int adl_extendedGetEvents(void (*lock)(void* data), void (*unlock)(void* data), void* data);
+int adl_extendedGetEvents(void(*lock)(void* data), void(*unlock)(void* data), void* data);
 
 int adl_registerUdpCallback(unsigned char me[],
-                             unsigned short my_port,
-                             sctp_socketCallback scf);
+    unsigned short my_port,
+    sctp_socketCallback scf);
 
 int adl_unregisterUdpCallback(int udp_sfd);
 
 int adl_sendUdpData(int sfd, unsigned char* buf, int length,
-                     unsigned char destination[], unsigned short dest_port);
+    unsigned char destination[], unsigned short dest_port);
 
 
 int adl_registerStdinCallback(sctp_StdinCallback sdf, char* buffer, int length);
@@ -170,10 +170,10 @@ int adl_registerUserCallback(int fd, sctp_userCallback sdf, void* userData, shor
 int adl_unregisterUserCallback(int fd);
 
 unsigned int adl_startMicroTimer(unsigned int seconds, unsigned int microseconds,
-                            sctp_timerCallback timer_cb, int ttype, void *param1, void *param2);
+    sctp_timerCallback timer_cb, int ttype, void *param1, void *param2);
 
 unsigned int adl_startTimer(unsigned int milliseconds, sctp_timerCallback timer_cb,
-                                 int ttype, void *param1, void *param2);
+    int ttype, void *param1, void *param2);
 
 int adl_stopTimer(unsigned int tid);
 
@@ -185,7 +185,7 @@ int adl_getEvents(void);
 
 int adl_eventLoop();
 
-int adl_extendedEventLoop(void (*lock)(void* data), void (*unlock)(void* data), void* data);
+int adl_extendedEventLoop(void(*lock)(void* data), void(*unlock)(void* data), void* data);
 
 gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_flag_t  flags);
 
@@ -197,11 +197,11 @@ gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_fla
  * returns TRUE is successful, else FALSE
  */
 gboolean adl_gatherLocalAddresses(union sockaddrunion **localAddresses,
-     int *numberOfNets,
-     int sctp_fd,
-     gboolean with_ipv6,
-     int *max_mtu,
-     const hide_address_flag_t  flags);
+    int *numberOfNets,
+    int sctp_fd,
+    gboolean with_ipv6,
+    int *max_mtu,
+    const hide_address_flag_t  flags);
 
 
 #endif

@@ -1,11 +1,16 @@
-﻿Build started 4/20/2016 9:52:30 PM.
+﻿Build started 4/21/2016 6:25:45 PM.
      1>Project "D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\project\project.vcxproj" on node 2 (Build target(s)).
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(364,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../src /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\src\gecotimer.cc
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../src /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\src\gecotimer.cc ..\..\..\src\main.cc
+         main.cc
+     1>D:\VS2013WorkSpace\wheel-of-sctp\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\wheel-of-sctp\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>..\..\..\src\main.cc(28): warning C4267: 'argument' : conversion from 'size_t' to 'unsigned int', possible loss of data
          gecotimer.cc
      1>d:\vs2013workspace\wheel-of-sctp\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\wheel-of-sctp\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+         Generating Code...
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\VS2013WorkSpace\wheel-of-sctp\mscv\project\\builds\mywheel.lib" /MACHINE:X64 x64\Debug\gecotimer.obj
          x64\Debug\globals.obj
@@ -16,4 +21,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:00.87
+Time Elapsed 00:00:01.61

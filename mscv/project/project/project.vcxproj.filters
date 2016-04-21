@@ -29,6 +29,9 @@
     <ClInclude Include="..\..\..\src\messages.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\poller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\gecotimer.cc">
@@ -41,6 +44,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\main.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\poller.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
