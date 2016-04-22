@@ -80,5 +80,15 @@
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/src/messages.h</locationURI>
 		</link>
+		<link>
+			<name>src/poller.cc</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/poller.cc</locationURI>
+		</link>
+		<link>
+			<name>src/poller.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/poller.h</locationURI>
+		</link>
 	</linkedResources>
 </projectDescription>

@@ -253,8 +253,10 @@ static void test_add_sub_time()
     assert(result.tv_sec == 0);
     assert(result.tv_usec == 0);
 }
+#include "poller.h"
 int main(int arg, char** args)
 {
+    get_random();
     //test_logging();
     //test_md5();
     //test_std_find();

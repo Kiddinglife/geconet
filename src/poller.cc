@@ -1,46 +1,41 @@
-
 #include "poller.h"
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
 
-#ifndef WIN32
-#include <sys/time.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <netdb.h>
-#include <arpa/inet.h>      /* for inet_ntoa() under both SOLARIS/LINUX */
-#include <sys/errno.h>
-#include <sys/uio.h>        /* for struct iovec */
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#include <netinet/tcp.h>
-#include <net/if.h>
 #ifdef SCTP_OVER_UDP
-#include <netinet/udp.h>
-#endif
-#include <asm/types.h>
-#include <linux/rtnetlink.h>
-#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
-#else
-#include <winsock2.h>
-#include <WS2tcpip.h>
-#include <sys/timeb.h>
-#define ADDRESS_LIST_BUFFER_SIZE        4096
-struct ip
+int dummy_sctp_udp;
+int dummy_sctpv6_udp;
+static uint inet_checksum(const void* ptr, size_t count)
 {
-    uchar version_length;
-    uchar typeofservice;        /* type of service */
-    ushort length;             /* total length */
-    ushort identification;              /* identification */
-    ushort  fragment_offset;             /* fragment offset field */
-    uchar ttl;       /* time to live */
-    uchar protocol;            /* protocol */
-    ushort checksum;             /* checksum */
-    struct in_addr src_addr; /* source and dest address */
-    struct in_addr dst_addr;
-};
+    ushort* addr = (ushort*) ptr;
+    uint sum = 0;
 
-#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
+    while (count > 1)
+    {
+        sum += *(ushort*) addr++;
+        count -= 2;
+    }
+
+    if (count > 0)
+        sum += *(uchar*) addr;
+
+    while (sum >> 16)
+        sum = (sum & 0xffff) + (sum >> 16);
+
+    return (~sum);
+}
 #endif
+
+#ifdef _WIN32
+struct input_data {
+    DWORD len;
+    char buffer[1024];
+    HANDLE event, eventback;
+};
+static int fds[NUM_FDS];
+static int fdnum;
+HANDLE            hEvent, handles[2];
+static HANDLE  stdin_thread_handle;
+WSAEVENT       stdinevent;
+static struct input_data   idata;
+#endif
+
+static long rstate[2];

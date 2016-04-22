@@ -67,7 +67,6 @@
 #else
 #include <winsock2.h>
 #include <WS2tcpip.h>
-
 #include <sys/timeb.h>
 #define ADDRESS_LIST_BUFFER_SIZE        4096
 struct ip
@@ -82,30 +81,29 @@ struct ip
     u_short checksum;             /* checksum */
     struct in_addr src_addr, dst_addr; /* source and dest address */
 };
-
 #define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
 #endif
 
 #ifdef HAVE_IPV6
-#if defined (LINUX)
+#if defined (__linux__)
 #include <netinet/ip6.h>
 #else
 /* include files for IPv6 header structs */
 #endif
 #endif
 
-#if defined (LINUX)
+#if defined (__linux__)
 #define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #else /* this may not be okay for SOLARIS !!! */
-#ifndef WIN32
+#ifndef _WIN32
 #define USES_BSD_4_4_SOCKET
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #include <net/route.h>
-#ifndef SOLARIS
+#ifndef __sun
 #include <net/if_var.h>
 #include <machine/param.h>
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
@@ -214,15 +212,12 @@ struct data {
 static long rstate[2];
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 struct input_data {
     DWORD len;
     char buffer[1024];
     HANDLE event, eventback;
 };
-
-
-
 static int fds[NUM_FDS];
 static int fdnum;
 HANDLE            hEvent, handles[2];

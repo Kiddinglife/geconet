@@ -7,7 +7,6 @@
 
 #ifndef MY_WHEEL_SRC_GECOTIMER_H_
 #define MY_WHEEL_SRC_GECOTIMER_H_
-
 #include "globals.h"
 #include <list>
 namespace geco

@@ -5,6 +5,20 @@
  *      Author: jakez
  */
 
+/**
+ * WHY WE NEED MEMORY ALIGNMENT?
+ * 1. Mips CPU 只能通过Load/Store两条指令访问内存
+ * RISC的指令一般比较整齐，单条指令的功能单一，执行时间比较快。只能对寄存器中的数据运算，存储器的寻址一般只能通过L/S(Load/Store)进行。一般为等长指令，更便于流水线。
+ * MIPS为RISC系统，等长指令，每条指令都有相同的长度：32位。其操作码固定为：6位。其余26位为若干个操作数。
+ * 2. 内存地址的对齐
+ * 对于一个32位的系统来说，CPU 一次只能从内存读32位长度的数据。如果CPU要读取一个int类型的变量并且该变量的起始位不在所读32位数据的首位，
+ * 那么CPU肯定无法一次性读完这个变量，这时就说这个变量的地址是不对齐的。相反，如果CPU可以一次性读完一个变量，则说该变量的地址是对齐的。
+ * 3. Mips CPU 要求内存地址（即Load/Store的操作地址）必须是对齐的
+ * 其实不管是Mips，还是X86，都希望所操作地址是对齐的，因为这样可以最快速地处理数据。
+ * 不过X86平台可以很容易很快速地处理不对齐的情况，而Mips一旦遇到地址不对齐的变量就会抛出exception,从而调用一大段后续处理代码，继而消耗大量的时间。
+ * 因此，不管工作在什么平台下，程序员都应该养成使内存地址对齐的好习惯。
+ */
+
 #ifndef MY_GLOBALS_H_
 #define MY_GLOBALS_H_
 
@@ -12,25 +26,50 @@
 #include <string.h>
 #include <stdlib.h>
 #include <climits>
-#ifdef WIN32
+
+#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <time.h>
 #include <sys/types.h>
 #endif
-#ifndef WIN32
+
+#ifdef __GNUC__
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+#else
+#define likely(x)       (x)
+#define unlikely(x)    (x)
+#endif
+
+#ifdef __linux__
+#include <endian.h>
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#endif
+#endif
+
+// for linux-kernal-systems
+#ifdef __linux__
 #include <sys/time.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
-#ifdef FreeBSD
+
+#ifdef __FreeBSD__
 #include <netinet/in_systm.h>
 #include <sys/types.h>
 #endif
-#ifdef SOLARIS
+
+#if defined(__sun)
+# if defined(__svr4__)
+/* Solaris */
 #include <netinet/in_systm.h>
 #include <stdarg.h>
+# else
+/* SunOS */
+// add more files needed
+# endif
 #endif
 
 #include "config.h"
@@ -123,7 +162,17 @@ if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y))
 #define IF_LOG(x, y)       \
 if (x <= current_error_loglvl) {y}
 
-
+#ifdef __DEBUG
+#define ENTER_TIMER_DISPATCHER printf("Entering timer dispatcher.\n"); fflush(stdout);
+#define LEAVE_TIMER_DISPATCHER printf("Leaving  timer dispatcher.\n"); fflush(stdout);
+#define ENTER_EVENT_DISPATCHER printf("Entering event dispatcher.\n"); fflush(stdout);
+#define LEAVE_EVENT_DISPATCHER printf("Leaving  event dispatcher.\n"); fflush(stdout);
+#else
+#define ENTER_TIMER_DISPATCHER
+#define LEAVE_TIMER_DISPATCHER
+#define ENTER_EVENT_DISPATCHER
+#define LEAVE_EVENT_DISPATCHER
+#endif
 /**
  *read_tracelevels reads from a file the tracelevels for errors and events for each module.
  *Modules that are not listed in the file will not be traced. if the file does not exist or
@@ -174,7 +223,7 @@ extern void perr_abort(const char *infostring);
  @author     H�zlwimmer
  */
 extern void event_log1(short event_loglvl, const char *module_name,
-    const char *log_info, ...);
+        const char *log_info, ...);
 
 /* This function logs errors.
  Parameters:
@@ -185,7 +234,7 @@ extern void event_log1(short event_loglvl, const char *module_name,
  @author     H�zlwimmer
  */
 extern void error_log1(short error_loglvl, const char *module_name, int line_no,
-    const char *log_info, ...);
+        const char *log_info, ...);
 
 /* This function logs system call errors.
  This function calls error_log.
@@ -198,7 +247,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
  @author     H�zlwimmer
  */
 extern void error_log_sys1(short error_loglvl, const char *module_name,
-    int line_no, short errnumber);
+        int line_no, short errnumber);
 
 //<---------------- time-------------------->
 typedef uint TimerID;
@@ -211,9 +260,9 @@ typedef uint TimerID;
 #define   TIMER_TYPE_USER       6
 
 extern void build_timeval(timeval* tv, time_t inteval/*ms*/);
-extern void  sum_time(timeval* a, timeval* b, timeval* result);
+extern void sum_time(timeval* a, timeval* b, timeval* result);
 extern void subtract_time(timeval* a, timeval* b, timeval* result);
-extern void  sum_time(timeval* a, time_t inteval/*ms*/, timeval* result);
+extern void sum_time(timeval* a, time_t inteval/*ms*/, timeval* result);
 extern void subtract_time(timeval* a, time_t inteval/*ms*/, timeval* result);
 //the_time reply on timeval and so for high efficicy, you will be always be given 
 // timeval when you need date calling second getitmenow
@@ -291,10 +340,10 @@ extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
  */
 extern ushort in_check(uchar *buf, int sz);
 int sort_ssn(const internal_stream_data_t& one,
-    const internal_stream_data_t& two);
+        const internal_stream_data_t& two);
 // function that correctly sorts TSN values, minding wrapround
 extern int sort_tsn(const internal_data_chunk_t& one,
-    const internal_data_chunk_t& two);
+        const internal_data_chunk_t& two);
 
 /*================ struct sockaddr =================*/
 #define s4addr(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
@@ -314,7 +363,7 @@ enum hide_address_flag_t
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-    | flag_HideSiteLocal,
+            | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
