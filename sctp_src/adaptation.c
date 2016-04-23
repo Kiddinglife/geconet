@@ -152,7 +152,7 @@ struct ip
 
 
 #define POLL_FD_UNUSED     -1
-#define NUM_FDS     20
+#define MAX_FD_SIZE     20
 
 #define    EVENTCB_TYPE_SCTP       1
 #define    EVENTCB_TYPE_UDP        2
@@ -218,7 +218,7 @@ struct input_data {
     char buffer[1024];
     HANDLE event, eventback;
 };
-static int fds[NUM_FDS];
+static int fds[MAX_FD_SIZE];
 static int fdnum;
 HANDLE            hEvent, handles[2];
 static HANDLE  stdin_thread_handle;
@@ -392,17 +392,17 @@ int extendedPoll(struct extendedpollfd* fdlist,
 
 
 /* a static counter - for stats we should have more counters !  */
-static unsigned int number_of_sendevents = 0;
+static unsigned int stat_send_event_size = 0;
 /* a static receive buffer  */
-static unsigned char rbuf[MAX_MTU_SIZE + 20];
+static unsigned char internal_receive_buffer[MAX_MTU_SIZE + 20];
 /* a static value that keeps currently treated timer id */
-static unsigned int current_tid = 0;
+static unsigned int curr_timer = 0;
 
 
-static struct extendedpollfd poll_fds[NUM_FDS];
+static struct extendedpollfd poll_fds[MAX_FD_SIZE];
 static int num_of_fds = 0;
 
-static int sctp_sfd = -1;       /* socket fd for standard SCTP port....      */
+static int socket_fd_port = -1;       /* socket fd for standard SCTP port....      */
 
 #ifdef HAVE_IPV6
 static int sctpv6_sfd = -1;
@@ -411,7 +411,7 @@ static int sctpv6_sfd = -1;
 /* will be added back later....
    static int icmp_sfd = -1;  */      /* socket fd for ICMP messages */
 
-static struct event_cb *event_callbacks[NUM_FDS];
+static struct event_cb *event_callbacks[MAX_FD_SIZE];
 
 /**
  *  converts address-string (hex for ipv6, dotted decimal for ipv4
@@ -656,7 +656,7 @@ gint adl_open_sctp_socket(int af, int* myRwnd)
 gint adl_get_sctpv4_socket(void)
 {
     /* this is a static variable ! */
-    return sctp_sfd;
+    return socket_fd_port;
 }
 
 
@@ -734,7 +734,7 @@ int adl_sendUdpData(int sfd, unsigned char* buf, int length,
         return -1;
     }
 
-    if ((sfd == sctp_sfd)
+    if ((sfd == socket_fd_port)
 #ifdef HAVE_IPV6
         || (sfd == sctpv6_sfd)
 #endif
@@ -806,7 +806,7 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
     switch (get_sockaddr_family(dest)) {
 
         case AF_INET:
-            number_of_sendevents++;
+            stat_send_event_size++;
             opt_len = sizeof(old_tos);
             tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, &opt_len);
             tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, &tos, sizeof(unsigned char));
@@ -814,7 +814,7 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
 
             event_logiiii(VERBOSE,
                 "AF_INET : adl_send_message : sfd : %d, len %d, destination : %s, send_events %u",
-                sfd, len, inet_ntoa(dest->sin.sin_addr), number_of_sendevents);
+                sfd, len, inet_ntoa(dest->sin.sin_addr), stat_send_event_size);
 
 #ifdef SCTP_OVER_UDP
             if(len + sizeof(udp_header) > sizeof(outBuffer)) {
@@ -844,12 +844,12 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
             break;
 #ifdef HAVE_IPV6
         case AF_INET6:
-            number_of_sendevents++;
+            stat_send_event_size++;
             inet_ntop(AF_INET6, s6addr(dest), (char *)hostname, MAX_MTU_SIZE);
 
             event_logiiii(VVERBOSE,
                 "AF_INET6: adl_send_message : sfd : %d, len %d, destination : %s, send_events: %u",
-                sfd, len, hostname, number_of_sendevents);
+                sfd, len, hostname, stat_send_event_size);
 
 #ifdef SCTP_OVER_UDP
             if(len + sizeof(udp_header) > sizeof(outBuffer)) {
@@ -887,8 +887,8 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
  */
 void assign_poll_fd(int fd_index, int sfd, int event_mask)
 {
-    if (fd_index > NUM_FDS)
-        error_log(ERROR_FATAL, "FD_Index bigger than NUM_FDS ! bye !\n");
+    if (fd_index > MAX_FD_SIZE)
+        error_log(ERROR_FATAL, "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
 
     poll_fds[fd_index].fd = sfd; /* file descriptor */
     poll_fds[fd_index].events = event_mask;
@@ -910,8 +910,8 @@ void assign_poll_fd(int fd_index, int sfd, int event_mask)
 int adl_remove_poll_fd(gint sfd)
 {
     int i, tmp, counter = 0;
-    for (i = 0, tmp = 0; i < NUM_FDS; i++, tmp++) {
-        if (tmp < NUM_FDS) {
+    for (i = 0, tmp = 0; i < MAX_FD_SIZE; i++, tmp++) {
+        if (tmp < MAX_FD_SIZE) {
             poll_fds[i].fd = poll_fds[tmp].fd;
             poll_fds[i].events = poll_fds[tmp].events;
             poll_fds[i].revents = poll_fds[tmp].revents;
@@ -927,7 +927,7 @@ int adl_remove_poll_fd(gint sfd)
         }
         if (poll_fds[i].fd == sfd) {
             tmp = i + 1;
-            if (tmp < NUM_FDS) {
+            if (tmp < MAX_FD_SIZE) {
                 poll_fds[i].fd = poll_fds[tmp].fd;
                 poll_fds[i].events = poll_fds[tmp].events;
                 poll_fds[i].revents = poll_fds[tmp].revents;
@@ -947,7 +947,7 @@ int adl_remove_poll_fd(gint sfd)
             num_of_fds -= 1;
         }
 #ifdef WIN32
-        for (i = 0; i < NUM_FDS; i++)
+        for (i = 0; i < MAX_FD_SIZE; i++)
         {
             if (fds[i] == sfd)
             {
@@ -984,7 +984,7 @@ void(*action) (void *, void *), void* userData)
             error_log(ERROR_FATAL, "WSAEventSelect() failed\n");
             return (-1);
         }
-        for (i = 0; i < NUM_FDS; i++)
+        for (i = 0; i < MAX_FD_SIZE; i++)
         {
             if (fds[i] == -1)
             {
@@ -996,7 +996,7 @@ void(*action) (void *, void *), void* userData)
     }
 #endif
 
-    if (num_of_fds < NUM_FDS && sfd >= 0) {
+    if (num_of_fds < MAX_FD_SIZE && sfd >= 0) {
         assign_poll_fd(num_of_fds, sfd, event_mask);
         event_callbacks[num_of_fds] = (struct event_cb*)malloc(sizeof(struct event_cb));
         if (!event_callbacks[num_of_fds])
@@ -1071,7 +1071,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
     len = -1;
     if ((dest == NULL) || (from == NULL) || (to == NULL)) return -1;
 
-    if (sfd == sctp_sfd) {
+    if (sfd == socket_fd_port) {
         len = recv(sfd, dest, maxlen, 0);
 #ifdef LINUX
         iph = (struct iphdr *)dest;
@@ -1276,7 +1276,7 @@ void dispatch_event(int num_of_events)
             }
             else if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_UDP) {
                 src_len = sizeof(src);
-                length = adl_get_message(poll_fds[i].fd, rbuf, MAX_MTU_SIZE, &src, &src_len);
+                length = adl_get_message(poll_fds[i].fd, internal_receive_buffer, MAX_MTU_SIZE, &src, &src_len);
                 event_logi(VERBOSE, "Message %d bytes - Activating UDP callback", length);
                 adl_sockunion2str(&src, src_address, SCTP_MAX_IP_LEN);
 
@@ -1293,11 +1293,11 @@ void dispatch_event(int num_of_events)
                         portnum = 0;
                         break;
                 }
-                ((sctp_socketCallback)*(event_callbacks[i]->action)) (poll_fds[i].fd, rbuf, length, src_address, portnum);
+                ((sctp_socketCallback)*(event_callbacks[i]->action)) (poll_fds[i].fd, internal_receive_buffer, length, src_address, portnum);
 
             }
             else if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_SCTP) {
-                length = adl_receive_message(poll_fds[i].fd, rbuf, MAX_MTU_SIZE, &src, &dest);
+                length = adl_receive_message(poll_fds[i].fd, internal_receive_buffer, MAX_MTU_SIZE, &src, &dest);
 
                 if (length < 0) break;
 
@@ -1310,13 +1310,13 @@ void dispatch_event(int num_of_events)
                         event_logi(VERBOSE, "IPv4/SCTP-Message from %s -> activating callback",
                             inet_ntoa(src_in->sin_addr));
 #if defined (LINUX)
-                        iph = (struct iphdr *) rbuf;
+                        iph = (struct iphdr *) internal_receive_buffer;
                         hlen = iph->ihl << 2;
 #elif defined (WIN32)
-                        iph = (struct ip *) rbuf;
+                        iph = (struct ip *) internal_receive_buffer;
                         hlen = (iph->version_length & 0x0F) << 2;
 #else
-                        iph = (struct ip *) rbuf;
+                        iph = (struct ip *) internal_receive_buffer;
                         hlen = iph->ip_hl << 2;
 #endif
                         if (length < hlen) {
@@ -1326,7 +1326,7 @@ void dispatch_event(int num_of_events)
                         }
                         else {
                             length -= hlen;
-                            mdi_receiveMessage(poll_fds[i].fd, &rbuf[hlen], length, &src, &dest);
+                            mdi_receiveMessage(poll_fds[i].fd, &internal_receive_buffer[hlen], length, &src, &dest);
                         }
                         break;
 #ifdef HAVE_IPV6
@@ -1336,7 +1336,7 @@ void dispatch_event(int num_of_events)
                         event_logii(VERBOSE, "IPv6/SCTP-Message from %s (%d bytes) -> activating callback",
                             src_address, length);
 
-                        mdi_receiveMessage(poll_fds[i].fd, &rbuf[hlen], length, &src, &dest);
+                        mdi_receiveMessage(poll_fds[i].fd, &internal_receive_buffer[hlen], length, &src, &dest);
                         break;
 
 #endif                          /* HAVE_IPV6 */
@@ -1373,10 +1373,10 @@ void dispatch_timer(void)
         result = get_next_event(&event);
 
         tid = event->timer_id;
-        current_tid = tid;
+        curr_timer = tid;
 
         (*(event->action)) (tid, event->arg1, event->arg2);
-        current_tid = 0;
+        curr_timer = 0;
 
         result = remove_timer(event);
         if (result) /* this can happen for a timeout that occurs on a deleted assoc ? */
@@ -1441,7 +1441,7 @@ int adl_timediff_to_msecs(struct timeval *a, struct timeval *b)
 int init_poll_fds(void)
 {
     int i;
-    for (i = 0; i < NUM_FDS; i++) {
+    for (i = 0; i < MAX_FD_SIZE; i++) {
         assign_poll_fd(i, POLL_FD_UNUSED, 0);
 #ifdef WIN32
         fds[i] = -1;
@@ -1548,7 +1548,7 @@ int adl_eventLoop()
     n = MsgWaitForMultipleObjects(2, handles, FALSE, msecs, QS_KEY);
     if (n == 1 && idata.len>0)
     {
-        for (i = 0; i < NUM_FDS; i++)
+        for (i = 0; i < MAX_FD_SIZE; i++)
         {
 
             if (event_callbacks[i]->sfd == 0)
@@ -1574,10 +1574,10 @@ int adl_eventLoop()
             }
             if (ne.lNetworkEvents & (FD_READ | FD_ACCEPT | FD_CLOSE))
             {
-                for (j = 0; j < NUM_FDS; j++)
+                for (j = 0; j < MAX_FD_SIZE; j++)
                     if (event_callbacks[i]->sfd == fds[i])
                     {
-                        length = adl_receive_message(fds[i], rbuf, MAX_MTU_SIZE, &src, &dest);
+                        length = adl_receive_message(fds[i], internal_receive_buffer, MAX_MTU_SIZE, &src, &dest);
                         portnum = ntohs(src.sin.sin_port);
                         if (length < 0) break;
                         event_logiiii(VERBOSE, "SCTP-Message on socket %u , len=%d, portnum=%d, sockaddrunion family %u",
@@ -1586,7 +1586,7 @@ int adl_eventLoop()
                         src_in = (struct sockaddr_in *) &src;
                         event_logi(VERBOSE, "IPv4/SCTP-Message from %s -> activating callback",
                             inet_ntoa(src_in->sin_addr));
-                        iph = (struct ip *) rbuf;
+                        iph = (struct ip *) internal_receive_buffer;
                         hlen = (iph->version_length & 0x0F) << 2;
                         if (length < hlen)
                         {
@@ -1597,7 +1597,7 @@ int adl_eventLoop()
                         else
                         {
                             length -= hlen;
-                            mdi_receiveMessage(fds[i], &rbuf[hlen], length, &src, &dest);
+                            mdi_receiveMessage(fds[i], &internal_receive_buffer[hlen], length, &src, &dest);
                         }
                         break;
                     }
@@ -1783,11 +1783,11 @@ int adl_init_adaptation_layer(int * myRwnd)
     init_poll_fds();
     init_timer_list();
     /*  print_debug_list(INTERNAL_EVENT_0); */
-    sctp_sfd = adl_open_sctp_socket(AF_INET, myRwnd);
+    socket_fd_port = adl_open_sctp_socket(AF_INET, myRwnd);
     /* set a safe default */
     if (*myRwnd == -1) *myRwnd = 8192;
 
-    if (sctp_sfd < 0) return sctp_sfd;
+    if (socket_fd_port < 0) return socket_fd_port;
 
 #ifdef SCTP_OVER_UDP
     dummy_sctp_udp = open_dummy_socket(AF_INET);
@@ -1892,7 +1892,7 @@ int adl_registerUdpCallback(unsigned char me[],
 int adl_unregisterUdpCallback(int udp_sfd)
 {
     if (udp_sfd <= 0) return -1;
-    if (udp_sfd == sctp_sfd) return -1;
+    if (udp_sfd == socket_fd_port) return -1;
 #ifdef HAVE_IPV6
     if (udp_sfd == sctpv6_sfd) return -1;
 #endif
@@ -2049,7 +2049,7 @@ void *param1, void *param2)
  */
 int adl_stopTimer(unsigned int tid)
 {
-    if (tid != current_tid)
+    if (tid != curr_timer)
         return (remove_item(tid));
     else
         return 0;

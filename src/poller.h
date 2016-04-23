@@ -26,7 +26,7 @@
 #include <string.h>
 #include <errno.h>
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/time.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
@@ -113,7 +113,7 @@ struct ip
 #endif
 
 #define POLL_FD_UNUSED     -1
-#define NUM_FDS     20
+#define MAX_FD_SIZE     20
 
 #define    EVENTCB_TYPE_SCTP       1
 #define    EVENTCB_TYPE_UDP        2
@@ -130,7 +130,7 @@ struct event_cb_t
     int sfd;
     int eventcb_type;
     /* pointer to possible arguments, associations etc. */
-    void (*action)();
+    void(*action)();
     void *arg1, *arg2, *userData;
 };
 struct data_with_cb_t
@@ -142,10 +142,12 @@ struct data_with_cb_t
 
 inline uint get_random()
 {
-    // create default engine as source of randomness
-    std::default_random_engine dre;
-    // use engine to generate integral numbers between 10 and 20 (both included)
-    std::uniform_int_distribution<int> di(10,std::num_get<limi>);
-    return 0;
+    //// create default engine as source of randomness
+    //std::default_random_engine dre;
+    //// use engine to generate integral numbers between 10 and 20 (both included)
+    //const  int maxx = std::numeric_limits<int>::max();
+    //std::uniform_int_distribution<int> di(10, 20);
+    //return 0;
+    return (unsigned int)rand();
 }
 #endif
