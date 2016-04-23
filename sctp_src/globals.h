@@ -338,7 +338,7 @@ union sockaddrunion
 
 #endif  /* SOCKUNION_DEFINE */
 
-#define get_sockaddr_family(X)  (X)->sa.sa_family
+#define saddr_family(X)  (X)->sa.sa_family
 
 #define SUPPORT_ADDRESS_TYPE_IPV4        0x00000001
 #define SUPPORT_ADDRESS_TYPE_IPV6        0x00000002

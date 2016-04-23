@@ -404,7 +404,7 @@ setIPAddresses(unsigned char *mstring, guint16 length, union sockaddrunion addre
         if (last_found == FALSE) {
             memcpy(&addresses[nAddresses], lastSource, sizeof(union sockaddrunion));
             event_log(VERBOSE, "Added also lastFromAddress to the addresslist !");
-            switch(get_sockaddr_family(lastSource)) {
+            switch(saddr_family(lastSource)) {
                 case AF_INET : (*peerTypes) |= SUPPORT_ADDRESS_TYPE_IPV4; break;
 #ifdef HAVE_IPV6
                 case AF_INET6 : (*peerTypes) |= SUPPORT_ADDRESS_TYPE_IPV6; break;
@@ -648,7 +648,7 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockaddrunion sock_addresses[], i
 
         address = (ip_address_t *) & mstring[length];
 
-        switch (get_sockaddr_family(&(sock_addresses[i]))) {
+        switch (saddr_family(&(sock_addresses[i]))) {
             case AF_INET:
                 address->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
                 address->vlparam_header.param_length = htons(8);
@@ -666,7 +666,7 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockaddrunion sock_addresses[], i
 #endif
             default:
                 error_logi(ERROR_MAJOR, "Unsupported Address Family %d",
-                           get_sockaddr_family(&(sock_addresses[i])));
+                           saddr_family(&(sock_addresses[i])));
                 break;
 
         }   /* switch */
@@ -879,7 +879,7 @@ ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
         cookie->ck.dest_port = mdi_readLastDestPort();
 
         for (count = 0; count <  num_local_Addresses; count++) {
-            switch(get_sockaddr_family(&(local_Addresses[count]))) {
+            switch(saddr_family(&(local_Addresses[count]))) {
                 case AF_INET :
                     no_local_ipv4_addresses++;
 
@@ -895,7 +895,7 @@ ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
             }
         }
         for (count = 0; count <  num_peer_Addresses; count++) {
-            switch(get_sockaddr_family(&(peer_Addresses[count]))) {
+            switch(saddr_family(&(peer_Addresses[count]))) {
                 case AF_INET :
                     no_remote_ipv4_addresses++;
 

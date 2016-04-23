@@ -33,7 +33,7 @@ private:
     std::list<timer> timers;
     uint tid;
 public:
-    typedef std::list<timer>::iterator timer_pointer_t;
+    typedef std::list<timer>::iterator timer_id_t;
     timer_mgr();
     ~timer_mgr();
 
@@ -47,7 +47,7 @@ public:
      *  @param  timeouts   ms time to trigger the action
      *  @return -1 fail, >0 is timer id successful
      */
-    timer_pointer_t add_timer(uint timer_type, time_t timeouts,
+    timer_id_t add_timer(uint timer_type, time_t timeouts,
             timer::Action action, void *arg1 = 0, void *arg2 = 0);
 
     /**
@@ -58,7 +58,7 @@ public:
      *  @param  item    pointer to where deleted data is to be copied !
      *  @return 0 on success, -1 if a pointer was NULL or other error, 1 if not found
      */
-    void delete_timer(timer_mgr::timer_pointer_t& timerptr);
+    void delete_timer(timer_mgr::timer_id_t& timerptr);
     /**
      *      function to be called, when a timer is reset. Basically calls get_item(),
      *    saves the function pointer, updates the execution time (msecs milliseconds
@@ -69,13 +69,13 @@ public:
      *      @param timouts
      *      @ret 0  successful, -1 for fail reason no timer stored
      */
-    int reset_timer(timer_mgr::timer_pointer_t& timerptr, uint timeouts);
+    int reset_timer(timer_mgr::timer_id_t& timerptr, uint timeouts);
     /**
      * @return -1 if no timer in list, 0 if timeout and action must be taken,
      * else interval before the timeouts
      */
     int timeouts();
-    timer_pointer_t get_front_timer()
+    timer_id_t get_front_timer()
     {
         return this->timers.begin();
     }

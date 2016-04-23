@@ -223,7 +223,7 @@ extern void perr_abort(const char *infostring);
  @author     H�zlwimmer
  */
 extern void event_log1(short event_loglvl, const char *module_name,
-        const char *log_info, ...);
+    const char *log_info, ...);
 
 /* This function logs errors.
  Parameters:
@@ -234,7 +234,7 @@ extern void event_log1(short event_loglvl, const char *module_name,
  @author     H�zlwimmer
  */
 extern void error_log1(short error_loglvl, const char *module_name, int line_no,
-        const char *log_info, ...);
+    const char *log_info, ...);
 
 /* This function logs system call errors.
  This function calls error_log.
@@ -247,7 +247,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
  @author     H�zlwimmer
  */
 extern void error_log_sys1(short error_loglvl, const char *module_name,
-        int line_no, short errnumber);
+    int line_no, short errnumber);
 
 //<---------------- time-------------------->
 typedef uint TimerID;
@@ -258,8 +258,11 @@ typedef uint TimerID;
 #define   TIMER_TYPE_CWND       4
 #define   TIMER_TYPE_HEARTBEAT  5
 #define   TIMER_TYPE_USER       6
+#define MAX(a,b) (a>b)?(a):(b)
+#define fills_timeval(timeval_ptr, time_t_inteval)\
+(timeval_ptr)->tv_sec = (time_t_inteval) / 1000;\
+(timeval_ptr)->tv_usec = ((time_t_inteval) % 1000) * 1000;
 
-extern void build_timeval(timeval* tv, time_t inteval/*ms*/);
 extern void sum_time(timeval* a, timeval* b, timeval* result);
 extern void subtract_time(timeval* a, timeval* b, timeval* result);
 extern void sum_time(timeval* a, time_t inteval/*ms*/, timeval* result);
@@ -340,16 +343,56 @@ extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
  */
 extern ushort in_check(uchar *buf, int sz);
 int sort_ssn(const internal_stream_data_t& one,
-        const internal_stream_data_t& two);
+    const internal_stream_data_t& two);
 // function that correctly sorts TSN values, minding wrapround
 extern int sort_tsn(const internal_data_chunk_t& one,
-        const internal_data_chunk_t& two);
+    const internal_data_chunk_t& two);
 
 /*================ struct sockaddr =================*/
+#ifndef _WIN32
+#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
+#else
+#define ADDRESS_LIST_BUFFER_SIZE        4096
+#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
+struct ip
+{
+    uchar version_length;
+    uchar typeofservice; /* type of service */
+    ushort length; /* total length */
+    ushort identification; /* identification */
+    ushort fragment_offset; /* fragment offset field */
+    uchar ttl; /* time to live */
+    uchar protocol; /* protocol */
+    ushort checksum; /* checksum */
+    struct in_addr src_addr; /* source and dest address */
+    struct in_addr dst_addr;
+};
+struct input_data {
+    DWORD len;
+    char buffer[1024];
+    HANDLE event, eventback;
+};
+#endif
+
+#ifndef _WIN32
+#define USES_BSD_4_4_SOCKET
+#ifndef __sun
+#define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
+#define NEXT_SA(ap) ap = (struct sockaddr *) \
+        ((caddr_t) ap + (ap->sa_len ? ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
+#else
+#define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
+#define RTAX_MAX RTA_NUMBITS
+#define RTAX_IFA 5
+#define _NO_SIOCGIFMTU_
+#endif
+#endif
+
 #define s4addr(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
 #define sin4addr(X)   (((struct sockaddr_in *)(X))->sin_addr)
 #define s6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
 #define sin6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
+#define saddr_family(X)  (X)->sa.sa_family
 
 #define SUPPORT_ADDRESS_TYPE_IPV4        0x00000001
 #define SUPPORT_ADDRESS_TYPE_IPV6        0x00000002
@@ -363,7 +406,7 @@ enum hide_address_flag_t
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-            | flag_HideSiteLocal,
+    | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
@@ -381,5 +424,16 @@ union sockaddrunion
     struct sockaddr_in sin;
     struct sockaddr_in6 sin6;
 };
+
+/**
+*  converts address-string (hex for ipv6, dotted decimal for ipv4
+*  to a sockaddrunion structure
+*  @return 0 for success, else -1.
+*/
+extern int str_to_sock(const char * str, sockaddrunion *su, bool ip4);
+extern int sockaddr_to_str(sockaddrunion *su, uchar * buf, size_t len);
+extern bool is_same_saddr(sockaddrunion *one, sockaddrunion *two);
+/*=========== help functions =================*/
+extern uint get_random();
 
 #endif /* MY_GLOBALS_H_ */

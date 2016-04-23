@@ -533,7 +533,7 @@ Association *retrieveAssociationByTransportAddress(union sockaddrunion * fromAdd
     tmpAssoc.noOfNetworks = 1;
     tmpAssoc.destinationAddresses = &tmpAddress;
 
-    switch (get_sockaddr_family(fromAddress)) {
+    switch (saddr_family(fromAddress)) {
     case AF_INET:
         event_logi(INTERNAL_EVENT_0,
                    "Looking for IPv4 Address %x (in NBO)", s4addr(fromAddress));
@@ -558,7 +558,7 @@ Association *retrieveAssociationByTransportAddress(union sockaddrunion * fromAdd
     default:
         error_logi(ERROR_FATAL,
                    "Unsupported Address Type %d in retrieveAssociationByTransportAddress()",
-                   get_sockaddr_family(fromAddress));
+                   saddr_family(fromAddress));
         break;
 
     }
@@ -764,7 +764,7 @@ bool mdi_destination_address_okay(union sockaddrunion * dest_addr)
         if (sctpInstance->has_INADDR_ANY_set == true) {
             any_set = true;
             /* if so, accept */
-            switch(get_sockaddr_family(dest_addr)) {
+            switch(saddr_family(dest_addr)) {
                 case AF_INET:
                     return true;
                     break;
@@ -781,7 +781,7 @@ bool mdi_destination_address_okay(union sockaddrunion * dest_addr)
         if (sctpInstance->has_IN6ADDR_ANY_set == true) {
             any_set = true;
             /* if so, accept */
-            switch(get_sockaddr_family(dest_addr)) {
+            switch(saddr_family(dest_addr)) {
                 case AF_INET:
                     return true;
                     break;
@@ -896,7 +896,7 @@ mdi_receiveMessage(gint socket_fd,
         return;
     }
 
-    if (get_sockaddr_family(dest_addr) == AF_INET) {
+    if (saddr_family(dest_addr) == AF_INET) {
         addressType = SUPPORT_ADDRESS_TYPE_IPV4;
         event_log(VERBOSE, "mdi_receiveMessage: checking for correct IPV4 addresses");
         if (IN_CLASSD(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = true;
@@ -917,7 +917,7 @@ mdi_receiveMessage(gint socket_fd,
 
     } else
 #ifdef HAVE_IPV6
-    if (get_sockaddr_family(dest_addr) == AF_INET6) {
+    if (saddr_family(dest_addr) == AF_INET6) {
         addressType = SUPPORT_ADDRESS_TYPE_IPV6;
         event_log(VERBOSE, "mdi_receiveMessage: checking for correct IPV6 addresses");
 #if defined (LINUX)
@@ -1530,7 +1530,7 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
     unsigned int counter;
     unsigned int ii;
     for (ii=0; ii< noOfAddresses; ii++) {
-        switch(get_sockaddr_family(&(addressList[ii]))) {
+        switch(saddr_family(&(addressList[ii]))) {
             case AF_INET:
                 if (ntohl(s4addr(&(addressList[ii]))) == INADDR_LOOPBACK) {
                     event_logi(VVERBOSE, "Found IPv4 loopback address ! Num: %u", noOfAddresses);
@@ -1560,7 +1560,7 @@ true;                }
             } else {
                 if (sctpInstance->has_INADDR_ANY_set) {
                     for (counter = 0; counter < myNumberOfAddresses; counter++) {
-                        if (get_sockaddr_family(&myAddressList[counter]) == AF_INET) {
+                        if (saddr_family(&myAddressList[counter]) == AF_INET) {
                             if (adl_equal_address(&(addressList[ii]), &(myAddressList[counter])) == true) result = true;
                         }
                     }
@@ -1584,7 +1584,7 @@ gboolean mdi_checkForCorrectAddress(union sockaddrunion* su)
     unsigned int counter;
 
     /* make sure, if IN(6)ADDR_ANY is specified, it is the only specified address */
-    switch(get_sockaddr_family(su)) {
+    switch(saddr_family(su)) {
         case AF_INET:
             if (s4addr(su) == INADDR_ANY) return FALSE;
             break;
@@ -1758,7 +1758,7 @@ sctp_registerInstance(unsigned short port,
 
     if (noOfLocalAddresses == 1) {
         adl_str2sockunion((localAddressList[0]), &su);
-        switch(get_sockaddr_family(&su)) {
+        switch(saddr_family(&su)) {
             case AF_INET:
                 if (s4addr(&su) == INADDR_ANY){
                     sctpInstance->has_INADDR_ANY_set = true;
@@ -3572,7 +3572,7 @@ int mdi_send_message(network_packet_t * message, unsigned int length, short dest
     /* calculate and insert checksum */
     aux_insert_checksum((unsigned char *) message, length);
 
-    switch (get_sockaddr_family(dest_ptr)) {
+    switch (saddr_family(dest_ptr)) {
     case AF_INET:
         txmit_len = adl_send_message(sctp_socket, message, length, dest_ptr, tos);
         break;
@@ -4464,7 +4464,7 @@ void mdi_readLocalAddresses(union sockaddrunion laddresses[MAX_NUM_ADDRESSES],
 
     if (sctpInstance->has_INADDR_ANY_set == true) {
         for (tmp = 0; tmp < myNumberOfAddresses; tmp++) {
-            switch(get_sockaddr_family( &(myAddressList[tmp]))) {
+            switch(saddr_family( &(myAddressList[tmp]))) {
                 case AF_INET :
                     if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0) {
                         if ( adl_filterInetAddress(&(myAddressList[tmp]), filterFlags) == true) {
@@ -4479,7 +4479,7 @@ void mdi_readLocalAddresses(union sockaddrunion laddresses[MAX_NUM_ADDRESSES],
         event_logii(VERBOSE, "mdi_readLocalAddresses: found %u local addresses from INADDR_ANY (from %u)",
 count,myNumberOfAddresses );    } else if (sctpInstance->has_IN6ADDR_ANY_set == true) {
         for (tmp = 0; tmp < myNumberOfAddresses; tmp++) {
-            switch(get_sockaddr_family( &(myAddressList[tmp]))) {
+            switch(saddr_family( &(myAddressList[tmp]))) {
                 case AF_INET :
                     if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0) {
                         if ( adl_filterInetAddress(&(myAddressList[tmp]), filterFlags) == true) {
@@ -4505,7 +4505,7 @@ count,myNumberOfAddresses );    } else if (sctpInstance->has_IN6ADDR_ANY_set == 
 myNumberOfAddresses);
     } else {
         for (tmp = 0; tmp < sctpInstance->noOfLocalAddresses; tmp++) {
-            switch(get_sockaddr_family( &(sctpInstance->localAddressList[tmp]))) {
+            switch(saddr_family( &(sctpInstance->localAddressList[tmp]))) {
                 case AF_INET :
                     if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0) {
                         if ( adl_filterInetAddress(&(sctpInstance->localAddressList[tmp]), filterFlags) == true) {
@@ -4803,7 +4803,7 @@ mdi_newAssociation(void*  sInstance,
         /* get all IPv4 addresses */
         currentAssociation->noOfLocalAddresses = 0;
         for (ii = 0; ii <  myNumberOfAddresses; ii++) {
-            if (get_sockaddr_family(&(myAddressList[ii])) == AF_INET) {
+            if (saddr_family(&(myAddressList[ii])) == AF_INET) {
                 currentAssociation->noOfLocalAddresses++;
             }
         }
@@ -4811,7 +4811,7 @@ mdi_newAssociation(void*  sInstance,
             (union sockaddrunion *) calloc(currentAssociation->noOfLocalAddresses, sizeof(union sockaddrunion));
         currentAssociation->noOfLocalAddresses = 0;
         for (ii = 0; ii <  myNumberOfAddresses; ii++) {
-            if (get_sockaddr_family(&(myAddressList[ii])) == AF_INET) {
+            if (saddr_family(&(myAddressList[ii])) == AF_INET) {
                 memcpy(&(currentAssociation->localAddresses[currentAssociation->noOfLocalAddresses]),
                        &(myAddressList[ii]),sizeof(union sockaddrunion));
                 currentAssociation->noOfLocalAddresses++;

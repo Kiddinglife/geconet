@@ -16,7 +16,7 @@ timer_mgr::timer_mgr()
 timer_mgr::~timer_mgr()
 {
 }
-timer_mgr::timer_pointer_t timer_mgr::add_timer(uint timer_type,
+timer_mgr::timer_id_t timer_mgr::add_timer(uint timer_type,
         time_t timeouts/*ms*/, timer::Action action, void *arg1, void *arg2)
 {
     timer item;
@@ -43,7 +43,7 @@ timer_mgr::timer_pointer_t timer_mgr::add_timer(uint timer_type,
     return insert_pos;
 }
 
-void timer_mgr::delete_timer(timer_mgr::timer_pointer_t& timerptr)
+void timer_mgr::delete_timer(timer_mgr::timer_id_t& timerptr)
 {
     if (this->timers.empty())
         return;
@@ -53,7 +53,7 @@ void timer_mgr::delete_timer(timer_mgr::timer_pointer_t& timerptr)
     event_logi(loglvl_verbose, "After delete List Length : %u ",
             this->timers.size());
 }
-int timer_mgr::reset_timer(timer_mgr::timer_pointer_t& timerptr, uint timeouts)
+int timer_mgr::reset_timer(timer_mgr::timer_id_t& timerptr, uint timeouts)
 {
     event_log(loglvl_verbose, "reset timer\n");
     if (this->timers.empty())
@@ -121,7 +121,7 @@ void timer_mgr::print_timer(short event_log_level, const timer& item)
         ttype = "CWND Timer";
         break;
     case TIMER_TYPE_HEARTBEAT:
-        ttype = "HB Timer";
+        ttype = "Heartbeat Timer";
         break;
     case TIMER_TYPE_USER:
         ttype = "User Timer";
@@ -144,7 +144,7 @@ void timer_mgr::print(short event_log_level)
         return;
     }
     print_time_now(event_log_level);
-    event_logi(event_log_level, "List Length : %z ", this->timers.size());
+    event_logi(event_log_level, "List Length : %ld ", this->timers.size());
     for (auto& timer : this->timers)
     {
         this->print_timer(event_log_level, timer);

@@ -113,7 +113,7 @@ static  int is_module_traced(const char* modulename)
     return -1;
 }
 
- int gettimenow(struct timeval *tv)
+int gettimenow(struct timeval *tv)
 {
 #ifdef WIN32
     struct timeb tb;
@@ -125,7 +125,7 @@ static  int is_module_traced(const char* modulename)
     return (gettimeofday(tv, (struct timezone *) NULL));
 #endif
 }
- int gettimenow(struct timeval *tv, struct tm *the_time)
+int gettimenow(struct timeval *tv, struct tm *the_time)
 {
     if (gettimenow(tv) > -1)
     {
@@ -138,7 +138,7 @@ static  int is_module_traced(const char* modulename)
         return -1;
     }
 }
- int gettimenow_ms(time_t* ret)
+int gettimenow_ms(time_t* ret)
 {
     struct timeval now;
     if (gettimenow(&now) > -1)
@@ -153,7 +153,7 @@ static  int is_module_traced(const char* modulename)
         return -1;
     }
 }
- int gettimenow_us(time_t* ret)
+int gettimenow_us(time_t* ret)
 {
     struct timeval now;
     if (gettimenow(&now) > -1)
@@ -169,23 +169,8 @@ static  int is_module_traced(const char* modulename)
     }
 }
 
- void build_timeval(timeval* tv, time_t inteval)
-{
-    *tv = { 0 };
-    inteval *= 1000;
-    if (inteval >= 1000000)
-    {
-        uint mod = inteval % 1000000;
-        tv->tv_sec += (inteval / 1000000);
-        tv->tv_usec += mod;
-    }
-    else
-    {
-        tv->tv_usec += inteval;
-    }
-}
 
- void  sum_time(timeval* a, timeval* b, timeval* result)
+void  sum_time(timeval* a, timeval* b, timeval* result)
 {
 
     result->tv_sec = (a)->tv_sec + (b)->tv_sec;
@@ -196,7 +181,7 @@ static  int is_module_traced(const char* modulename)
         result->tv_usec -= 1000000;
     }
 }
- void subtract_time(timeval* a, timeval* b, timeval* result)
+void subtract_time(timeval* a, timeval* b, timeval* result)
 {
     result->tv_sec = (a)->tv_sec - (b)->tv_sec;
     result->tv_usec = (a)->tv_usec - (b)->tv_usec;
@@ -206,32 +191,32 @@ static  int is_module_traced(const char* modulename)
         result->tv_usec += 1000000;
     }
 }
- void  sum_time(timeval* a, time_t inteval, timeval* result)
+void  sum_time(timeval* a, time_t inteval, timeval* result)
 {
     timeval tv;
-    build_timeval(&tv, inteval);
+    fills_timeval(&tv, inteval);
     sum_time(a, &tv, result);
 }
- void subtract_time(timeval* a, time_t inteval, timeval* result)
+void subtract_time(timeval* a, time_t inteval, timeval* result)
 {
     timeval tv;
-    build_timeval(&tv, inteval);
+    fills_timeval(&tv, inteval);
     subtract_time(a, &tv, result);
 }
- void subtract_time(timeval* a, time_t* inteval, timeval* result);
- void print_time_now(ushort level)
+void subtract_time(timeval* a, time_t* inteval, timeval* result);
+void print_time_now(ushort level)
 {
     struct timeval now;
     gettimenow(&now);
     event_logii(level, "Time now: %ld sec, %ld usec \n", now.tv_sec,
         now.tv_usec);
 }
- void print_timeval(timeval* tv)
+void print_timeval(timeval* tv)
 {
     event_logii(loglvl_intevent, "timeval {%ld, %ld}\n", tv->tv_sec, tv->tv_usec);
 }
 
- static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
+static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
 {
     struct timeval tv; // this is used for get usec
     struct tm the_time; // only contains data infos, no ms and us
@@ -252,7 +237,7 @@ static  int is_module_traced(const char* modulename)
         return -1;
     }
 }
- void debug_print(FILE * fd, const char *f, ...)
+void debug_print(FILE * fd, const char *f, ...)
 {
     va_list va;
     va_start(va, f);
@@ -376,7 +361,7 @@ void error_log_sys1(short error_log_level, const char *module_name, int line_no,
     error_log1(error_log_level, module_name, line_no, strerror(errnumber));
 }
 
- void perr_exit(const char *infostring)
+void perr_exit(const char *infostring)
 {
     perror(infostring);
     exit(1);
@@ -388,7 +373,7 @@ void perr_abort(const char *infostring)
     abort();
 }
 //++++++++++++++++++ helpers +++++++++++++++
- bool safe_before(uint seq1, uint seq2)
+bool safe_before(uint seq1, uint seq2)
 {
     // INT32_MAX = (2147483647)
     // INT32_MIN = (-2147483647-1)
@@ -401,27 +386,27 @@ void perr_abort(const char *infostring)
     // ����   return (uint64) (seq1 - seq2) < 0;
     return ((int)(seq1 - seq2)) < 0;
 }
- bool safe_after(uint seq1, uint seq2)
+bool safe_after(uint seq1, uint seq2)
 {
     return ((int)(seq2 - seq1)) < 0;
 }
- bool safe_before(ushort seq1, ushort seq2)
+bool safe_before(ushort seq1, ushort seq2)
 {
     return ((short)(seq1 - seq2)) < 0;
 }
- bool safe_after(ushort seq1, ushort seq2)
+bool safe_after(ushort seq1, ushort seq2)
 {
     return ((short)(seq2 - seq1)) < 0;
 }
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
- bool safe_between(uint seq1, uint seq2, uint seq3)
+bool safe_between(uint seq1, uint seq2, uint seq3)
 {
     return safe_before(seq1, seq3) ?
         seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
 }
 // @pre make sure seq1 <= seq3
- bool unsafe_between(uint seq1, uint seq2, uint seq3)
+bool unsafe_between(uint seq1, uint seq2, uint seq3)
 {
     return seq3 - seq1 >= seq2 - seq1;
 }
@@ -431,7 +416,7 @@ void perr_abort(const char *infostring)
  * @param  two pointer to other chunk data
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
- int sort_tsn(const internal_data_chunk_t& one,
+int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two)
 {
     if (safe_before(one.chunk_tsn, two.chunk_tsn))
@@ -441,7 +426,7 @@ void perr_abort(const char *infostring)
     else
         return 0; /* one==two */
 }
- int sort_ssn(const internal_stream_data_t& one,
+int sort_ssn(const internal_stream_data_t& one,
     const internal_stream_data_t& two)
 {
     if (one.stream_id < two.stream_id)
@@ -460,4 +445,15 @@ void perr_abort(const char *infostring)
             return 1;
     }
     return 0;
+}
+
+uint get_random()
+{
+    //// create default engine as source of randomness
+    //std::default_random_engine dre;
+    //// use engine to generate integral numbers between 10 and 20 (both included)
+    //const  int maxx = std::numeric_limits<int>::max();
+    //std::uniform_int_distribution<int> di(10, 20);
+    //return 0;
+    return (unsigned int)rand();
 }

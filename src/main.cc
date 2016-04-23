@@ -40,10 +40,12 @@ static void action(TimerID id, void*, void*)
 static void test_timer_mgr()
 {
     geco::ultils::timer_mgr tm;
-    geco::ultils::timer_mgr::timer_pointer_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 10, action);
-    geco::ultils::timer_mgr::timer_pointer_t ret2 = tm.add_timer(TIMER_TYPE_INIT, 1, action);
-    //print_timeval(&ret1->action_time);
-    //print_timeval(&ret2->action_time);
+    geco::ultils::timer_mgr::timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
+    geco::ultils::timer_mgr::timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
+    geco::ultils::timer_mgr::timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
+    tm.print(loglvl_intevent);
+    tm.delete_timer(ret1);
+    tm.delete_timer(ret2);
     tm.print(loglvl_intevent);
 
 }
@@ -229,7 +231,7 @@ void test_std_find()
 static void test_add_sub_time()
 {
     timeval tv;
-    build_timeval(&tv, 1000);
+    fills_timeval(&tv, 1000);
 
     timeval result;
     sum_time(&tv, 200, &result);

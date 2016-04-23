@@ -15,10 +15,13 @@
 /**
  * Created on 22 April 2016 by Jake Zhang
  */
+
 #ifndef __INCLUDE_POLLER_H
 #define __INCLUDE_POLLER_H
 
 #include "globals.h"
+#include "gecotimer.h"
+
 #include <random>
 #include <algorithm>
 
@@ -27,7 +30,7 @@
 #include <errno.h>
 
 #ifndef _WIN32
-#include <sys/time.h>
+#include <sys/timeout.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
@@ -44,35 +47,17 @@
 #endif
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
-#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
 #else
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #include <sys/timeb.h>
-#define ADDRESS_LIST_BUFFER_SIZE        4096
-#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
-struct ip
-{
-    uchar version_length;
-    uchar typeofservice; /* type of service */
-    ushort length; /* total length */
-    ushort identification; /* identification */
-    ushort fragment_offset; /* fragment offset field */
-    uchar ttl; /* time to live */
-    uchar protocol; /* protocol */
-    ushort checksum; /* checksum */
-    struct in_addr src_addr; /* source and dest address */
-    struct in_addr dst_addr;
-};
 #endif
 
 #if defined (__linux__)
-#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #else /* this may not be okay for SOLARIS !!! */
 #ifndef _WIN32
-#define USES_BSD_4_4_SOCKET
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
@@ -80,20 +65,11 @@ struct ip
 #ifndef __sun
 #include <net/if_var.h>
 #include <machine/param.h>
-#define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
-#define NEXT_SA(ap) ap = (struct sockaddr *) \
-        ((caddr_t) ap + (ap->sa_len ? ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
 #else
 #include <sys/sockio.h>
-#define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
-#define RTAX_MAX RTA_NUMBITS
-#define RTAX_IFA 5
-#define _NO_SIOCGIFMTU_
 #endif
 #endif
 #endif
-
-#define IFA_BUFFER_LENGTH   1024
 
 #ifndef IN_EXPERIMENTAL
 #define  IN_EXPERIMENTAL(a)   ((((int) (a)) & 0xf0000000) == 0xf0000000)
@@ -112,42 +88,137 @@ struct ip
 #define POLLERR    0x008
 #endif
 
+#define IFA_BUFFER_LENGTH   1024
 #define POLL_FD_UNUSED     -1
 #define MAX_FD_SIZE     20
-
 #define    EVENTCB_TYPE_SCTP       1
 #define    EVENTCB_TYPE_UDP        2
 #define    EVENTCB_TYPE_USER       3
 #define    EVENTCB_TYPE_ROUTING    4
 
-/*=====================cb event defs=====================*/
-/**
- *  Structure for callback events. The function "action" is called by the event-handler,
- *  when an event occurs on the file-descriptor.
- */
-struct event_cb_t
+namespace geco
 {
-    int sfd;
-    int eventcb_type;
-    /* pointer to possible arguments, associations etc. */
-    void(*action)();
-    void *arg1, *arg2, *userData;
-};
-struct data_with_cb_t
-{
-    char* dat;
-    int   len;
-    void(*cb)();
-};
+    namespace net
+    {
+        /*=====================cb event defs=====================*/
 
-inline uint get_random()
-{
-    //// create default engine as source of randomness
-    //std::default_random_engine dre;
-    //// use engine to generate integral numbers between 10 and 20 (both included)
-    //const  int maxx = std::numeric_limits<int>::max();
-    //std::uniform_int_distribution<int> di(10, 20);
-    //return 0;
-    return (unsigned int)rand();
+        //! Structure for callback events. The function "action" is called by the event-handler,
+        //! when an event occurs on the file-descriptor.
+        struct event_cb_t
+        {
+            int sfd;
+            int eventcb_type;
+            /* pointer to possible arguments, associations etc. */
+            void(*action)();
+            void *arg1, *arg2, *userData;
+        };
+
+        struct data_t
+        {
+            char* dat;
+            int   len;
+            void(*cb)();
+        };
+
+
+        struct socket_despt_t
+        {
+            int       fd;
+            int events;
+            int revents;
+            long      revision;
+        };
+
+        class poller_t
+        {
+            private:
+            long revision;
+
+            event_cb_t *event_callbacks[MAX_FD_SIZE];
+            /* a static counter - for stats we should have more counters !  */
+            unsigned int stat_send_event_size;
+            /* a static value that keeps currently treated timer id */
+            geco::ultils::timer_mgr::timer_id_t curr_timer;
+
+            /* a static receive buffer  */
+            uchar internal_receive_buffer[MAX_MTU_SIZE + 20];
+
+            socket_despt_t socket_despts[MAX_FD_SIZE];
+            int socket_despts_size;
+
+            int ip4_socket_despt;       /* socket fd for standard SCTP port....      */
+            int ip6_socket_despt;
+            int icmp_socket_despt;       /* socket fd for ICMP messages */
+
+            /*
+            * poll_socket_despts()
+            * An extended poll() implementation based on select()
+            *
+            * During the select() call, another thread may change the FD list,
+            * a revision number keeps track that results are only reported
+            * when the FD has already been registered before select() has
+            * been called. Otherwise, the event will be reported during the
+            * next select() call.
+            * This solves the following problem:
+            * - Thread #1 registers user callback for socket n
+            * - Thread #2 starts select()
+            * - A read event on socket n occurs
+            * - poll_socket_despts() returns
+            * - Thread #2 sends a notification (e.g. using pthread_condition) to thread #1
+            * - Thread #2 again starts select()
+            * - Since Thread #1 has not yet read the data, there is a read event again
+            * - Now, the thread scheduler selects the next thread
+            * - Thread #1 now gets CPU time, deregisters the callback for socket n
+            *      and completely reads the incoming data. There is no more data to read!
+            * - Thread #1 again registers user callback for socket n
+            * - Now, thread #2 gets the CPU again and can send a notification
+            *      about the assumed incoming data to thread #1
+            * - Thread #1 gets the read notification and tries to read. There is no
+            *      data, so the socket blocks (possibily forever!) or the read call
+            *      fails.
+
+            poll()函数：这个函数是某些Unix系统提供的用于执行与select()函数同等功能的函数，
+            下面是这个函数的声明：
+            #include <poll.h>
+            int poll(struct pollfd fds[], nfds_t nfds, int timeout)；
+            参数说明:
+            fds：是一个struct pollfd结构类型的数组，用于存放需要检测其状态的Socket描述符；
+            每当调用这个函数之后，系统不会清空这个数组，操作起来比较方便；特别是对于
+            socket连接比较多的情况下，在一定程度上可以提高处理的效率；这一点与select()函
+            数不同，调用select()函数之后，select()函数会清空它所检测的socket描述符集合，
+            导致每次调用select()之前都必须把socket描述符重新加入到待检测的集合中；
+            因此，select()函数适合于只检测一个socket描述符的情况，
+            而poll()函数适合于大量socket描述符的情况；
+            nfds：nfds_t类型的参数，用于标记数组fds中的结构体元素的总数量；
+            timeout：是poll函数调用阻塞的时间，单位：毫秒；
+            返回值:
+            >0：数组fds中准备好读、写或出错状态的那些socket描述符的总数量；
+            ==0：数组fds中没有任何socket描述符准备好读、写，或出错；此时poll超时，
+            超时时间是timeout毫秒；换句话说，如果所检测的socket描述符上没有任何事件发生
+            的话，那么poll()函数会阻塞timeout所指定的毫秒时间长度之后返回，如果
+            timeout==0，那么poll() 函数立即返回而不阻塞，如果timeout==INFTIM，那么poll()
+            函数会一直阻塞下去，直到所检测的socket描述符上的感兴趣的事件发生是才返回，
+            如果感兴趣的事件永远不发生，那么poll()就会永远阻塞下去；
+            -1： poll函数调用失败，同时会自动设置全局变量errno；
+            */
+            int poller_t::poll_socket_despts(socket_despt_t* despts,
+                int* count,
+                int timeout,
+                void(*lock)(void* data),
+                void(*unlock)(void* data),
+                void* data);
+
+            public:
+            poller_t()
+            {
+                revision = 0;
+                stat_send_event_size = 0;
+                socket_despts_size = 0;
+                ip4_socket_despt = -1;
+                ip6_socket_despt = -1;
+                icmp_socket_despt = -1;
+            }
+        };
+    }
 }
 #endif
