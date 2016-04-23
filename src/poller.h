@@ -133,7 +133,6 @@ namespace geco
         {
             private:
             long revision;
-
             event_cb_t *event_callbacks[MAX_FD_SIZE];
             /* a static counter - for stats we should have more counters !  */
             unsigned int stat_send_event_size;
@@ -208,6 +207,24 @@ namespace geco
                 void(*unlock)(void* data),
                 void* data);
 
+            //! function to set an event mask to a certain socket despt
+            void set_event_mask(int fd_index, int sfd, int event_mask)
+            {
+                if (fd_index > MAX_FD_SIZE)
+                    error_log(loglvl_fatal_error_exit, "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
+
+                socket_despts[fd_index].fd = sfd; /* file descriptor */
+                socket_despts[fd_index].events = event_mask;
+                /*
+                * Set the entry's revision to the current poll_socket_despts() revision.
+                * If another thread is currently inside poll_socket_despts(), poll_socket_despts()
+                * will notify that this entry is new and skip the possibly wrong results
+                * until the next invocation.
+                */
+                socket_despts[fd_index].revision = revision;
+                socket_despts[fd_index].revents = 0;
+            }
+
             public:
             poller_t()
             {
@@ -218,6 +235,9 @@ namespace geco
                 ip6_socket_despt = -1;
                 icmp_socket_despt = -1;
             }
+
+            int ip4_socket_despt(){ return this->ip4_socket_despt; }
+            int ip6_socket_despt(){ return this->ip6_socket_despt; }
         };
     }
 }

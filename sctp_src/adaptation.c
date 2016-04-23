@@ -582,9 +582,11 @@ gint adl_open_sctp_socket(int af, int* myRwnd)
 #endif
 
 #ifdef SCTP_OVER_UDP
-    if ((sfd = socket(af, SOCK_RAW, IPPROTO_UDP)) < 0) {
+    if ((sfd = socket(af, SOCK_RAW, IPPROTO_UDP)) < 0) 
+    {
 #else
-    if ((sfd = socket(af, SOCK_RAW, IPPROTO_SCTP)) < 0) {
+    if ((sfd = socket(af, SOCK_RAW, IPPROTO_SCTP)) < 0)
+    {
 #endif
         return sfd;
     }
@@ -621,7 +623,7 @@ gint adl_open_sctp_socket(int af, int* myRwnd)
             if (getsockopt (sfd, SOL_SOCKET, SO_RCVBUF, (void*)myRwnd, &opt_size) < 0) {
                 error_log(ERROR_FATAL, "getsockopt: SO_RCVBUF failed !");
                 *myRwnd = -1;
-            }
+    }
             event_logi(INTERNAL_EVENT_0, "receive buffer size finally is : %d", *myRwnd);
 #endif
             break;
@@ -841,7 +843,7 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
                 0, (struct sockaddr *) &(dest->sin), sizeof(struct sockaddr_in));
             if (txmt_len >= (int)sizeof(udp_header)) {
                 txmt_len -= (int)sizeof(udp_header);
-            }
+    }
 #else
             txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin), sizeof(struct sockaddr_in));
 #endif
@@ -887,14 +889,14 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
                 "adl_send_message : Adress Family %d not supported here",
                 saddr_family(dest));
             txmt_len = -1;
-    }
+}
     return txmt_len;
 }
 
 /**
  * function to assign an event mask to a certain poll
  */
-void assign_poll_fd(int fd_index, int sfd, int event_mask)
+void set_event_mask(int fd_index, int sfd, int event_mask)
 {
     if (fd_index > MAX_FD_SIZE)
         error_log(ERROR_FATAL, "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
@@ -1006,7 +1008,7 @@ void(*action) (void *, void *), void* userData)
 #endif
 
     if (socket_despts_size < MAX_FD_SIZE && sfd >= 0) {
-        assign_poll_fd(socket_despts_size, sfd, event_mask);
+        set_event_mask(socket_despts_size, sfd, event_mask);
         event_callbacks[socket_despts_size] = (struct event_cb*)malloc(sizeof(struct event_cb));
         if (!event_callbacks[socket_despts_size])
             error_log(ERROR_FATAL, "Could not allocate memory in  register_fd_cb \n");
@@ -1138,7 +1140,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
         len -= sizeof(struct udphdr);
 #endif
 #endif
-    }
+        }
 #ifdef HAVE_IPV6
     data_vec.iov_base = dest;
     data_vec.iov_len  = maxlen;
@@ -1353,13 +1355,13 @@ void dispatch_event(int num_of_events)
                         error_logi(ERROR_MAJOR, "Unsupported Address Family Type %u ", saddr_family(&src));
                         break;
 
+                        }
                 }
             }
-        }
         socket_despts[i].revents = 0;
-    }                       /*   for(i = 0; i < socket_despts_size; i++) */
+        }                       /*   for(i = 0; i < socket_despts_size; i++) */
     LEAVE_EVENT_DISPATCHER;
-}
+    }
 
 
 /**
@@ -1451,7 +1453,7 @@ int init_poll_fds(void)
 {
     int i;
     for (i = 0; i < MAX_FD_SIZE; i++) {
-        assign_poll_fd(i, POLL_FD_UNUSED, 0);
+        set_event_mask(i, POLL_FD_UNUSED, 0);
 #ifdef WIN32
         fds[i] = -1;
 #endif
@@ -1618,7 +1620,7 @@ int adl_eventLoop()
 #else
     return(adl_extendedEventLoop(NULL, NULL, NULL));
 #endif
-}
+    }
 
 
 int adl_extendedGetEvents(void(*lock)(void* data), void(*unlock)(void* data), void* data)
@@ -1802,7 +1804,7 @@ int adl_init_adaptation_layer(int * myRwnd)
     if (dummy_sctp_udp < 0) {
         error_log(ERROR_MAJOR, "Could not open UDP dummy socket !");
         return dummy_sctp_udp;
-    }
+}
 #endif
 
     /* we should - in a later revision - add back the a function that opens
@@ -2173,9 +2175,9 @@ gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_fla
             event_log(VERBOSE, "Default : Filtering Address");
             return FALSE;
             break;
-    }
+            }
     return true;
-}
+    }
 
 
 

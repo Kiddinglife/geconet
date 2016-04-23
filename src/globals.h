@@ -433,6 +433,8 @@ union sockaddrunion
 extern int str_to_sock(const char * str, sockaddrunion *su, bool ip4);
 extern int sockaddr_to_str(sockaddrunion *su, uchar * buf, size_t len);
 extern bool is_same_saddr(sockaddrunion *one, sockaddrunion *two);
+
+extern int set_sockdespt_recvbuffer_size(int sfd, int new_size);
 /*=========== help functions =================*/
 extern uint get_random();
 
