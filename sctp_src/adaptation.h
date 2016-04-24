@@ -82,7 +82,7 @@ int adl_sockunion2str(union sockaddrunion *su, guchar * buf, size_t len);
  * @return socket file descriptor for the newly opened and bound socket
  * @param address (local) port to bind to
  */
-gint adl_open_sctp_socket(int af, int* myRwnd);
+gint adl_open_ipproto_sctp__socket(int af, int* myRwnd);
 
 int adl_setReceiveBufferSize(int sfd, int new_size);
 
@@ -101,7 +101,7 @@ gint adl_get_sctpv6_socket(void);
  * @param	dest_len size of the address
  * @return returns number of bytes actually sent, or error
  */
-int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, unsigned char tos);
+int send_geco_msg(int sfd, void *buf, int len, union sockaddrunion *dest, unsigned char tos);
 
 
 /**
@@ -158,7 +158,7 @@ int adl_registerUdpCallback(unsigned char me[],
 
 int adl_unregisterUdpCallback(int udp_sfd);
 
-int adl_sendUdpData(int sfd, unsigned char* buf, int length,
+int send_udp_msg(int sfd, unsigned char* buf, int length,
     unsigned char destination[], unsigned short dest_port);
 
 

@@ -447,18 +447,6 @@ int sort_ssn(const internal_stream_data_t& one,
     return 0;
 }
 
-int set_sockdespt_recvbuffer_size(int sfd, int new_size)
-{
-    if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF,
-        (const char*)&new_size, sizeof(new_size)) < 0)
-    {
-        error_log(loglvl_major_error_abort, "setsockopt: Set SO_RCVBUF failed !");
-        return -1;
-    }
-    event_logi(loglvl_intevent, "set receive buffer size to : %d bytes", new_size);
-    return 0;
-}
-
 uint get_random()
 {
     //// create default engine as source of randomness

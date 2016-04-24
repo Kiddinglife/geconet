@@ -54,7 +54,7 @@
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netdb.h>
-#include <arpa/inet.h>      /* for inet_ntoa() under both SOLARIS/LINUX */
+#include <arpa/inet.h>      /* for inet_ntoa() under both SOLARIS/__linux__ */
 #include <sys/errno.h>
 #include <sys/uio.h>        /* for struct iovec */
 #include <sys/param.h>
@@ -573,22 +573,22 @@ int adl_setReceiveBufferSize(int sfd, int new_size)
 }
 
 
-gint adl_open_sctp_socket(int af, int* myRwnd)
+gint adl_open_ipproto_sctp__socket(int af, int* rwnd)
 {
-    int sfd, ch;
+    int sockdespt, ch;
     socklen_t opt_size;
 #ifdef WIN32
     struct sockaddr_in me;
 #endif
 
 #ifdef SCTP_OVER_UDP
-    if ((sfd = socket(af, SOCK_RAW, IPPROTO_UDP)) < 0) 
+    if ((sockdespt = socket(af, SOCK_RAW, IPPROTO_UDP)) < 0) 
     {
 #else
-    if ((sfd = socket(af, SOCK_RAW, IPPROTO_SCTP)) < 0)
+    if ((sockdespt = socket(af, SOCK_RAW, IPPROTO_GECO)) < 0)
     {
 #endif
-        return sfd;
+        return sockdespt;
     }
 
 #ifdef WIN32
@@ -599,43 +599,47 @@ gint adl_open_sctp_socket(int af, int* myRwnd)
     me.sin_len = sizeof(me);
 #endif
     me.sin_addr.s_addr = INADDR_ANY;
-    bind(sfd, (const struct sockaddr *)&me, sizeof(me));
+    bind(sockdespt, (const struct sockaddr *)&me, sizeof(me));
 #endif
 
-    switch (af) {
+    switch (af)
+    {
         case AF_INET:
-            *myRwnd = 0;
-            opt_size = sizeof(*myRwnd);
-            if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (void*)myRwnd, &opt_size) < 0) {
+            *rwnd = 0;
+            opt_size = sizeof(*rwnd);
+            if (getsockopt(sockdespt, SOL_SOCKET, SO_RCVBUF, (void*)rwnd, &opt_size) < 0)
+            {
                 error_log(ERROR_FATAL, "getsockopt: SO_RCVBUF failed !");
-                *myRwnd = -1;
+                *rwnd = -1;
             }
-            event_logi(INTERNAL_EVENT_0, "receive buffer size initially is : %d", *myRwnd);
+            event_logi(INTERNAL_EVENT_0, "receive buffer size initially is : %d", *rwnd);
 
-#if defined (LINUX)
-            adl_setReceiveBufferSize(sfd, 10*0xFFFF);
+#if defined (__linux__)
+            adl_setReceiveBufferSize(sockdespt, 10*0xFFFF);
+            opt_size=sizeof(*rwnd);
+            if (getsockopt (sockdespt, SOL_SOCKET, SO_RCVBUF, (void*)rwnd, &opt_size) < 0) 
+            {
+                error_log(ERROR_FATAL, "getsockopt: SO_RCVBUF failed !");
+                *rwnd = -1;
+            }
+            event_logi(INTERNAL_EVENT_0, "receive buffer size finally is : %d", *rwnd);
 
             ch = IP_PMTUDISC_DO;
-            if (setsockopt(sfd, IPPROTO_IP, IP_MTU_DISCOVER, (char *) &ch, sizeof(ch)) < 0) {
+            if (setsockopt(sockdespt, IPPROTO_IP, IP_MTU_DISCOVER, (char *) &ch, sizeof(ch)) < 0)
+            {
                 error_log(ERROR_FATAL, "setsockopt: IP_PMTU_DISCOVER failed !");
             }
-            opt_size=sizeof(*myRwnd);
-            if (getsockopt (sfd, SOL_SOCKET, SO_RCVBUF, (void*)myRwnd, &opt_size) < 0) {
-                error_log(ERROR_FATAL, "getsockopt: SO_RCVBUF failed !");
-                *myRwnd = -1;
-    }
-            event_logi(INTERNAL_EVENT_0, "receive buffer size finally is : %d", *myRwnd);
 #endif
             break;
-#ifdef HAVE_IPV6
         case AF_INET6:
-            *myRwnd = 0;
-            opt_size=sizeof(*myRwnd);
-            if (getsockopt (sfd, SOL_SOCKET, SO_RCVBUF, (void*)myRwnd, &opt_size) < 0) {
+            *rwnd = 0;
+            opt_size = sizeof(*rwnd);
+            if (getsockopt(sockdespt, SOL_SOCKET, SO_RCVBUF, (void*)rwnd, &opt_size) < 0)
+            {
                 error_log(ERROR_FATAL, "getsockopt: SO_RCVBUF failed !");
-                *myRwnd = -1;
+                *rwnd = -1;
             }
-            event_logi(INTERNAL_EVENT_0, "receive buffer size is : %d",*myRwnd);
+            event_logi(INTERNAL_EVENT_0, "receive buffer size is : %d", *rwnd);
             /* also receive packetinfo on IPv6 sockets, for getting dest address */
             ch = 1;
 #ifdef HAVE_IPV6_RECVPKTINFO
@@ -643,24 +647,25 @@ gint adl_open_sctp_socket(int af, int* myRwnd)
                The new option name is now IPV6_RECVPKTINFO!
                IPV6_PKTINFO expects an extended parameter structure now
                and had to be replaced to provide the original functionality! */
-            if (setsockopt(sfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &ch, sizeof(ch)) < 0) {
+            if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_RECVPKTINFO, &ch, sizeof(ch)) < 0)
+            {
                 error_log(ERROR_FATAL, "setsockopt: IPV6_RECVPKTINFO failed");
                 abort();
             }
 #else
-            if (setsockopt(sfd, IPPROTO_IPV6, IPV6_PKTINFO, &ch, sizeof(ch)) < 0) {
+            if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_PKTINFO, &ch, sizeof(ch)) < 0)
+            {
                 error_log(ERROR_FATAL, "setsockopt: IPV6_PKTINFO failed");
                 abort();
             }
 #endif
             break;
-#endif
         default:
             error_log(ERROR_MINOR, "Unknown address family.");
             break;
     }
-    event_logi(INTERNAL_EVENT_0, "Created raw socket %d with options\n", sfd);
-    return (sfd);
+    event_logi(INTERNAL_EVENT_0, "Created raw socket %d with options\n", sockdespt);
+    return (sockdespt);
 }
 
 
@@ -685,7 +690,7 @@ gint adl_get_sctpv6_socket(void)
  * interprocess communication with an Upper Layer process.
  * @return the socket file descriptor. Used to register a callback function
  */
-int adl_open_udp_socket(union sockaddrunion* me)
+int open_ipproto_udp_socket(union sockaddrunion* me)
 {
     guchar buf[1000];
     int ch, sfd;
@@ -698,12 +703,11 @@ int adl_open_udp_socket(union sockaddrunion* me)
             ch = bind(sfd, (struct sockaddr *)me, sizeof(struct sockaddr_in));
             adl_sockunion2str(me, buf, SCTP_MAX_IP_LEN);
             event_logiii(VERBOSE,
-                " adl_open_udp_socket : Create socket %u, binding to address %s, result %d", sfd, buf, ch);
+                " open_ipproto_udp_socket : Create socket %u, binding to address %s, result %d", sfd, buf, ch);
             if (ch == 0)
                 return (sfd);
             return -1;
             break;
-#ifdef HAVE_IPV6
         case AF_INET6:
             if ((sfd = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
                 error_log(ERROR_FATAL, "SCTP: socket creation failed for UDPv6 socket");
@@ -711,12 +715,11 @@ int adl_open_udp_socket(union sockaddrunion* me)
             ch = bind(sfd, (struct sockaddr *)me, sizeof(struct sockaddr_in6));
             adl_sockunion2str(me, buf, SCTP_MAX_IP_LEN);
             event_logiii(VERBOSE,
-                " adl_open_udp_socket : Create socket %u, binding to address %s, result %d",sfd, buf, ch);
+                " open_ipproto_udp_socket : Create socket %u, binding to address %s, result %d", sfd, buf, ch);
             if (ch == 0)
                 return (sfd);
             return -1;
             break;
-#endif
         default:
             return -1;
             break;
@@ -733,53 +736,53 @@ int adl_open_udp_socket(union sockaddrunion* me)
  * @param    dest_len size of the address
  * @return returns number of bytes actually sent, or error
  */
-int adl_sendUdpData(int sfd, unsigned char* buf, int length,
+int send_udp_msg(int sfd, unsigned char* buf, int length,
     unsigned char destination[], unsigned short dest_port)
 {
     union sockaddrunion dest_su;
     int dest_len;
     int result;
 
-    if (sfd < 0) {
+    if (sfd < 0)
+    {
         error_log(ERROR_MAJOR, "You are trying to send UDP data on an invalid fd");
         return -1;
     }
 
-    if ((sfd == ip4_socket_despt)
-#ifdef HAVE_IPV6
-        || (sfd == ip6_socket_despt)
-#endif
-        ) {
+    if ((sfd == ip4_socket_despt) || (sfd == ip6_socket_despt)
+        )
+    {
         error_log(ERROR_MAJOR, "You are trying to send UDP data on a SCTP socket");
         return -1;
     }
     result = adl_str2sockunion(destination, &dest_su);
 
-    if (result != 0) {
+    if (result != 0)
+    {
         error_logi(ERROR_MAJOR, "Invalid destination address in sctp_sendUdpData(%s)", destination);
         return -1;
     }
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         error_log(ERROR_MAJOR, "Invalid buffer sctp_sendUdpData()");
         return -1;
     }
-    if (dest_port == 0) {
+    if (dest_port == 0)
+    {
         error_log(ERROR_MAJOR, "Invalid port in sctp_sendUdpData()");
         return -1;
     }
-    switch (saddr_family(&dest_su)) {
+    switch (saddr_family(&dest_su))
+    {
         case AF_INET:
             dest_su.sin.sin_port = htons(dest_port);
             dest_len = sizeof(struct sockaddr_in);
             result = sendto(sfd, buf, length, 0, (struct sockaddr *) &(dest_su.sin), dest_len);
-            break;
-#ifdef HAVE_IPV6
         case AF_INET6:
             dest_su.sin6.sin6_port = htons(dest_port);
             dest_len = sizeof(struct sockaddr_in6);
             result = sendto(sfd, buf, length, 0, (struct sockaddr *) &(dest_su.sin6), dest_len);
             break;
-#endif
         default:
             error_logi(ERROR_MAJOR, "Invalid address family in sctp_sendUdpData(%s)", destination);
             result = -1;
@@ -799,51 +802,53 @@ int adl_sendUdpData(int sfd, unsigned char* buf, int length,
  * @param    dest_len size of the address
  * @return returns number of bytes actually sent, or error
  */
-int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, unsigned char tos)
+int send_geco_msg(int sfd, void *buf, int len, union sockaddrunion *dest, unsigned char tos)
 {
     int txmt_len = 0;
     unsigned char old_tos;
     socklen_t opt_len;
     int tmp;
-#ifdef SCTP_OVER_UDP
+
+#ifdef USE_UDP
     guchar      outBuffer[65536];
-    udp_header* udp;
+    network_packet_fixed_t* udp;
 #endif
 
-#ifdef HAVE_IPV6
     guchar hostname[MAX_MTU_SIZE];
-#endif
 
-    switch (saddr_family(dest)) {
+    switch (saddr_family(dest))
+    {
 
         case AF_INET:
             stat_send_event_size++;
             opt_len = sizeof(old_tos);
             tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, &opt_len);
             tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, &tos, sizeof(unsigned char));
-            event_logii(VVERBOSE, "adl_send_message: set IP_TOS %u, result=%d", tos, tmp);
+            event_logii(VVERBOSE, "send_geco_msg: set IP_TOS %u, result=%d", tos, tmp);
 
             event_logiiii(VERBOSE,
-                "AF_INET : adl_send_message : sfd : %d, len %d, destination : %s, send_events %u",
+                "AF_INET : send_geco_msg : sfd : %d, len %d, destination : %s, send_events %u",
                 sfd, len, inet_ntoa(dest->sin.sin_addr), stat_send_event_size);
 
-#ifdef SCTP_OVER_UDP
-            if(len + sizeof(udp_header) > sizeof(outBuffer)) {
+#ifdef USE_UDP
+            if (len + sizeof(network_packet_fixed_t) > sizeof(outBuffer))
+            {
                 error_log(ERROR_FATAL, "Data block too large ! bye !\n");
             }
-            memcpy(&outBuffer[sizeof(udp_header)], buf, len);
+            memcpy(&outBuffer[sizeof(network_packet_fixed_t)], buf, len);
 
-            udp = (udp_header*)&outBuffer;
+            udp = (network_packet_fixed_t*)&outBuffer;
             udp->src_port = htons(SCTP_OVER_UDP_UDPPORT);
             udp->dest_port = htons(SCTP_OVER_UDP_UDPPORT);
-            udp->length = htons(sizeof(udp_header) + len);
+            udp->length = htons(sizeof(network_packet_fixed_t) + len);
             udp->checksum = 0x0000;
 
-            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(udp_header) + len,
+            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(network_packet_fixed_t) + len,
                 0, (struct sockaddr *) &(dest->sin), sizeof(struct sockaddr_in));
-            if (txmt_len >= (int)sizeof(udp_header)) {
-                txmt_len -= (int)sizeof(udp_header);
-    }
+            if (txmt_len >= (int)sizeof(network_packet_fixed_t))
+            {
+                txmt_len -= (int)sizeof(network_packet_fixed_t);
+            }
 #else
             txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin), sizeof(struct sockaddr_in));
 #endif
@@ -853,43 +858,41 @@ int adl_send_message(int sfd, void *buf, int len, union sockaddrunion *dest, uns
             }
             tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, sizeof(unsigned char));
             break;
-#ifdef HAVE_IPV6
         case AF_INET6:
             stat_send_event_size++;
             inet_ntop(AF_INET6, s6addr(dest), (char *)hostname, MAX_MTU_SIZE);
 
             event_logiiii(VVERBOSE,
-                "AF_INET6: adl_send_message : sfd : %d, len %d, destination : %s, send_events: %u",
+                "AF_INET6: send_geco_msg : sfd : %d, len %d, destination : %s, send_events: %u",
                 sfd, len, hostname, stat_send_event_size);
 
 #ifdef SCTP_OVER_UDP
-            if(len + sizeof(udp_header) > sizeof(outBuffer)) {
+            if(len + sizeof(network_packet_fixed_t) > sizeof(outBuffer)) {
                 error_log(ERROR_FATAL, "Data block too large ! bye !\n");
             }
-            memcpy(&outBuffer[sizeof(udp_header)], buf, len);
+            memcpy(&outBuffer[sizeof(network_packet_fixed_t)], buf, len);
 
-            udp = (udp_header*)&outBuffer;
+            udp = (network_packet_fixed_t*)&outBuffer;
             udp->src_port = htons(SCTP_OVER_UDP_UDPPORT);
             udp->dest_port = htons(SCTP_OVER_UDP_UDPPORT);
-            udp->length = htons(sizeof(udp_header) + len);
+            udp->length = htons(sizeof(network_packet_fixed_t) + len);
             udp->checksum = 0x0000;
 
-            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(udp_header) + len,
+            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(network_packet_fixed_t) + len,
                 0, (struct sockaddr *) &(dest->sin6), sizeof(struct sockaddr_in6));
-            if(txmt_len >= (int)sizeof(udp_header)) {
-                txmt_len -= (int)sizeof(udp_header);
+            if (txmt_len >= (int)sizeof(network_packet_fixed_t)) {
+                txmt_len -= (int)sizeof(network_packet_fixed_t);
             }
 #else
             txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *)&(dest->sin6), sizeof(struct sockaddr_in6));
 #endif
             break;
-#endif
         default:
             error_logi(ERROR_MAJOR,
-                "adl_send_message : Adress Family %d not supported here",
+                "send_geco_msg : Adress Family %d not supported here",
                 saddr_family(dest));
             txmt_len = -1;
-}
+    }
     return txmt_len;
 }
 
@@ -1055,8 +1058,8 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
 {
     int len;
 #ifdef SCTP_OVER_UDP
-#ifdef LINUX
-    udp_header*    udp;
+#ifdef __linux__
+    network_packet_fixed_t*    udp;
 #else
     struct udphdr * udp;
 #endif
@@ -1068,7 +1071,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
     struct cmsghdr *rcmsgp;
     struct iovec  data_vec;
 #endif
-#ifdef LINUX
+#ifdef __linux__
     struct iphdr *iph;
 #else
     struct ip *iph;
@@ -1084,40 +1087,40 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
 
     if (sfd == ip4_socket_despt) {
         len = recv(sfd, dest, maxlen, 0);
-#ifdef LINUX
+#ifdef __linux__
         iph = (struct iphdr *)dest;
 #else
         iph = (struct ip *)dest;
 #endif
         to->sa.sa_family = AF_INET;
         to->sin.sin_port = htons(0);
-#ifdef LINUX
+#ifdef __linux__
         to->sin.sin_addr.s_addr = iph->daddr;
 #else
         to->sin.sin_addr.s_addr = iph->dst_addr.s_addr;
 #endif
         from->sa.sa_family = AF_INET;
         from->sin.sin_port = htons(0);
-#ifdef LINUX
+#ifdef __linux__
         from->sin.sin_addr.s_addr = iph->saddr;
 #else
         from->sin.sin_addr.s_addr = iph->src_addr.s_addr;
 #endif
 
 #ifdef SCTP_OVER_UDP
-#ifdef LINUX
-        if(len < (int)sizeof(struct iphdr) + (int)sizeof(udp_header)) {
+#ifdef __linux__
+        if(len < (int)sizeof(struct iphdr) + (int)sizeof(network_packet_fixed_t)) {
 #else
         if(len < (int)sizeof(struct ip) + (int)sizeof(struct udphdr)) {
 #endif
             return -1;
         }
-#ifdef LINUX
-        udp = (udp_header*)((long)dest + (long)sizeof(struct iphdr));
+#ifdef __linux__
+        udp = (network_packet_fixed_t*)((long)dest + (long)sizeof(struct iphdr));
 #else
         udp = (struct udphdr *)((long)dest + (long)sizeof(struct ip));
 #endif
-#ifdef LINUX
+#ifdef __linux__
         if(ntohs(udp->dest_port) != SCTP_OVER_UDP_UDPPORT) {
 #else
         if(ntohs(udp->uh_dport) != SCTP_OVER_UDP_UDPPORT) {
@@ -1125,22 +1128,22 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
             return -1;
         }
         ptr = (unsigned char*)udp;
-#ifdef LINUX
-        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(udp_header));i++) {
-            *ptr = ptr[sizeof(udp_header)];
+#ifdef __linux__
+        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(network_packet_fixed_t));i++) {
+            *ptr = ptr[sizeof(network_packet_fixed_t)];
 #else
         for(i = 0;i < len - (int)(sizeof(struct ip) + sizeof(struct udphdr));i++) {
             *ptr = ptr[sizeof(struct udphdr)];
 #endif
             ptr++;
         }
-#ifdef LINUX
-        len -= sizeof(udp_header);
+#ifdef __linux__
+        len -= sizeof(network_packet_fixed_t);
 #else
         len -= sizeof(struct udphdr);
 #endif
 #endif
-        }
+    }
 #ifdef HAVE_IPV6
     data_vec.iov_base = dest;
     data_vec.iov_len  = maxlen;
@@ -1175,19 +1178,19 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
         memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
 
 #ifdef SCTP_OVER_UDP
-#ifdef LINUX
-        if(len < (int)sizeof(udp_header)) {
+#ifdef __linux__
+        if(len < (int)sizeof(network_packet_fixed_t)) {
 #else
         if(len < (int)sizeof(struct udphdr)) {
 #endif
             return -1;
         }
-#ifdef LINUX
-        udp = (udp_header*)dest;
+#ifdef __linux__
+        udp = (network_packet_fixed_t*)dest;
 #else
         udp = (struct udphdr *)dest;
 #endif
-#ifdef LINUX
+#ifdef __linux__
         if(ntohs(udp->dest_port) != SCTP_OVER_UDP_UDPPORT) {
 #else
         if(ntohs(udp->uh_dport) != SCTP_OVER_UDP_UDPPORT) {
@@ -1195,17 +1198,17 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
             return -1;
         }
         ptr = (unsigned char*)udp;
-#ifdef LINUX
-        for(i = 0;i < len - (int)sizeof(udp_header);i++) {
-            *ptr = ptr[sizeof(udp_header)];
+#ifdef __linux__
+        for(i = 0;i < len - (int)sizeof(network_packet_fixed_t);i++) {
+            *ptr = ptr[sizeof(network_packet_fixed_t)];
 #else
         for(i = 0;i < len - (int)sizeof(struct udphdr);i++) {
             *ptr = ptr[sizeof(struct udphdr)];
 #endif
             ptr++;
         }
-#ifdef LINUX
-        len -= sizeof(udp_header);
+#ifdef __linux__
+        len -= sizeof(network_packet_fixed_t);
 #else
         len -= sizeof(struct udphdr);
 #endif
@@ -1255,7 +1258,7 @@ void dispatch_event(int num_of_events)
     guchar src_address[SCTP_MAX_IP_LEN];
     unsigned short portnum = 0;
 
-#if !defined (LINUX)
+#if !defined (__linux__)
     struct ip *iph;
 #else
     struct iphdr *iph;
@@ -1320,7 +1323,7 @@ void dispatch_event(int num_of_events)
                         src_in = (struct sockaddr_in *) &src;
                         event_logi(VERBOSE, "IPv4/SCTP-Message from %s -> activating callback",
                             inet_ntoa(src_in->sin_addr));
-#if defined (LINUX)
+#if defined (__linux__)
                         iph = (struct iphdr *) internal_receive_buffer;
                         hlen = iph->ihl << 2;
 #elif defined (WIN32)
@@ -1355,13 +1358,13 @@ void dispatch_event(int num_of_events)
                         error_logi(ERROR_MAJOR, "Unsupported Address Family Type %u ", saddr_family(&src));
                         break;
 
-                        }
                 }
             }
+        }
         socket_despts[i].revents = 0;
-        }                       /*   for(i = 0; i < socket_despts_size; i++) */
+    }                       /*   for(i = 0; i < socket_despts_size; i++) */
     LEAVE_EVENT_DISPATCHER;
-    }
+}
 
 
 /**
@@ -1620,7 +1623,7 @@ int adl_eventLoop()
 #else
     return(adl_extendedEventLoop(NULL, NULL, NULL));
 #endif
-    }
+}
 
 
 int adl_extendedGetEvents(void(*lock)(void* data), void(*unlock)(void* data), void* data)
@@ -1733,7 +1736,7 @@ int open_dummy_socket(int family)
         }
     }
     else {
-        if(bind(sd, (struct sockaddr*)&in, sizeof(in)) < 0) {
+        if (bind(sd, (struct sockaddr*)&in, sizeof(in)) < 0) {
             return -1;
         }
     }
@@ -1793,7 +1796,7 @@ int adl_init_adaptation_layer(int * myRwnd)
     init_poll_fds();
     init_timer_list();
     /*  print_debug_list(INTERNAL_EVENT_0); */
-    ip4_socket_despt = adl_open_sctp_socket(AF_INET, myRwnd);
+    ip4_socket_despt = adl_open_ipproto_sctp__socket(AF_INET, myRwnd);
     /* set a safe default */
     if (*myRwnd == -1) *myRwnd = 8192;
 
@@ -1804,7 +1807,7 @@ int adl_init_adaptation_layer(int * myRwnd)
     if (dummy_sctp_udp < 0) {
         error_log(ERROR_MAJOR, "Could not open UDP dummy socket !");
         return dummy_sctp_udp;
-}
+    }
 #endif
 
     /* we should - in a later revision - add back the a function that opens
@@ -1812,7 +1815,7 @@ int adl_init_adaptation_layer(int * myRwnd)
        callback functions that also set PATH MTU correctly */
 #ifdef HAVE_IPV6
     /* icmpv6_sfd = int adl_open_icmpv6_socket(); */
-    ip6_socket_despt = adl_open_sctp_socket(AF_INET6, &myRwnd6);
+    ip6_socket_despt = adl_open_ipproto_sctp__socket(AF_INET6, &myRwnd6);
     if (ip6_socket_despt < 0) {
         error_log(ERROR_MAJOR, "Could not open IPv6 socket - running IPv4 only !");
         ip6_socket_despt = -1;
@@ -1887,7 +1890,7 @@ int adl_registerUdpCallback(unsigned char me[],
             break;
     }
 
-    new_sfd = adl_open_udp_socket(&my_address);
+    new_sfd = open_ipproto_udp_socket(&my_address);
 
     if (new_sfd != -1) {
         result = adl_register_fd_cb(new_sfd, EVENTCB_TYPE_UDP, POLLIN | POLLPRI, (void(*)(void *, void *))scf, NULL);
@@ -1937,7 +1940,7 @@ void readCallback(int fd, short int revents, short int* events, void* userData)
 {
     int n;
 
-    struct data *udata=(struct data *)userData;
+    struct data *udata = (struct data *)userData;
 
     n = read(0, (char *)udata->dat, udata->len);
     ((sctp_StdinCallback)udata->cb)(udata->dat, n);
@@ -1963,7 +1966,7 @@ int adl_registerStdinCallback(sctp_StdinCallback sdf, char* buffer, int length)
     result = adl_register_fd_cb(0, EVENTCB_TYPE_USER, 0, (void(*) (void *, void *))sdf, NULL);
 #else
     struct data *userData;
-    userData = (struct data*)malloc(sizeof (struct data));
+    userData = (struct data*)malloc(sizeof(struct data));
     memset(userData, 0, sizeof(struct data));
     userData->dat = buffer;
     userData->len = length;
@@ -2140,7 +2143,7 @@ gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_fla
             break;
 #ifdef HAVE_IPV6
         case AF_INET6 :
-#if defined (LINUX)
+#if defined (__linux__)
             if (
                 (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptLoopback)) ||
                 (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideLoopback)) ||
@@ -2175,9 +2178,9 @@ gboolean adl_filterInetAddress(union sockaddrunion* newAddress, hide_address_fla
             event_log(VERBOSE, "Default : Filtering Address");
             return FALSE;
             break;
-            }
-    return true;
     }
+    return true;
+}
 
 
 
@@ -2321,7 +2324,7 @@ gboolean adl_gatherLocalAddresses(union sockaddrunion **addresses,
     *max_mtu = 1500;
     return true;
 #else
-#if defined (LINUX)
+#if defined (__linux__)
     int addedNets;
     char addrBuffer[256];
     FILE *v6list;
@@ -2384,7 +2387,7 @@ gboolean adl_gatherLocalAddresses(union sockaddrunion **addresses,
     /* ????????????  numAlocAddr++; */
     ifrequest = cf.ifc_req;
 #endif
-#if defined  (LINUX)
+#if defined  (__linux__)
     numAlocIPv4Addr = numAlocAddr;
     addedNets = 0;
     v6list = fopen(LINUX_PROC_IPV6_FILE,"r");
@@ -2408,7 +2411,7 @@ gboolean adl_gatherLocalAddresses(union sockaddrunion **addresses,
     pos = 0;
     /* Now we go through and pull each one */
 
-#if defined (LINUX)
+#if defined (__linux__)
     v6list = fopen(LINUX_PROC_IPV6_FILE,"r");
     if(v6list != NULL){
         memset((char *)&sin6,0,sizeof(sin6));
@@ -2461,7 +2464,7 @@ gboolean adl_gatherLocalAddresses(union sockaddrunion **addresses,
     /* set to the start, i.e. buffer[0] */
     ifrequest = (struct ifreq *)&buffer[pos];
 
-#if defined (LINUX)
+#if defined (__linux__)
     for(ii=0; ii < numAlocIPv4Addr; ii++,ifrequest=nextif){
 #else
     for(ii=0; ii < numAlocAddr; ii++,ifrequest=nextif){
@@ -2603,9 +2606,9 @@ gboolean adl_gatherLocalAddresses(union sockaddrunion **addresses,
     }
 
     event_logi(VERBOSE, "adl_gatherLocalAddresses: Found %d addresses", *numberOfNets);
-    for(ii = 0; ii < (*numberOfNets); ii++) {
+    for (ii = 0; ii < (*numberOfNets); ii++) {
         adl_sockunion2str(&(localAddresses[ii]), (guchar *)addrBuffer2, SCTP_MAX_IP_LEN);
-        event_logii(VERBOSE, "adl_gatherAddresses : Address %d: %s",ii, addrBuffer2);
+        event_logii(VERBOSE, "adl_gatherAddresses : Address %d: %s", ii, addrBuffer2);
 
     }
     *addresses = localAddresses;

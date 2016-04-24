@@ -39,10 +39,10 @@ static void action(TimerID id, void*, void*)
 #include <vector>
 static void test_timer_mgr()
 {
-    geco::ultils::timer_mgr tm;
-    geco::ultils::timer_mgr::timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
-    geco::ultils::timer_mgr::timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
-    geco::ultils::timer_mgr::timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
+    timer_mgr tm;
+    timer_mgr::timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
+    timer_mgr::timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
+    timer_mgr::timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
     tm.print(loglvl_intevent);
     tm.delete_timer(ret1);
     tm.delete_timer(ret2);
@@ -255,15 +255,122 @@ static void test_add_sub_time()
     assert(result.tv_sec == 0);
     assert(result.tv_usec == 0);
 }
+
 #include "poller.h"
+static void test_saddr_functions()
+{
+    sockaddrunion saddr;
+    str2saddr(&saddr, "192.168.1.107", 38000);
+
+    char ret[IF_NAMESIZE];
+    saddr2str(&saddr, ret, sizeof(ret));
+    event_logi(loglvl_intevent, "saddr {%s}\n", ret);
+    assert(strcmp(ret, "192.168.1.107") == 0);
+    assert(saddr.sa.sa_family == AF_INET);
+
+    sockaddrunion saddr1;
+    str2saddr(&saddr1, "192.168.1.107", 38000);
+    sockaddrunion saddr2;
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    bool flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == true);
+
+    str2saddr(&saddr1, "192.167.1.125", 38000);
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == false);
+
+    str2saddr(&saddr1, "192.168.1.107", 3800);
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == false);
+
+    str2saddr(&saddr1, "192.168.1.125", 3800);
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == false);
+}
+
+static void test_open_socket()
+{
+    int ret;
+    WSADATA winsockInfo;
+    WSAStartup(MAKEWORD(2, 2), &winsockInfo);
+
+    network_interface_t nit;
+    ret = nit.open_ipproto_geco_socket(AF_INET);
+    assert(ret > 0);
+    ret = nit.open_ipproto_geco_socket(AF_INET6);
+    assert(ret > 0);
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", 38000);
+    assert(saddr.sa.sa_family == AF_INET);
+    ret = nit.open_ipproto_udp_socket(&saddr);
+    assert(ret > 0);
+
+    WSACleanup();
+}
+
+static void test_send_udp_msg()
+{
+    WSADATA winsockInfo;
+    WSAStartup(MAKEWORD(2, 2), &winsockInfo);
+
+    network_interface_t nit;
+
+    int geco_sdespt = nit.open_ipproto_geco_socket(AF_INET);
+    assert(geco_sdespt > 0);
+    nit.ip4_socket_despt_ = geco_sdespt;
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", 38000,true);
+    int udpsdepst = nit.open_ipproto_udp_socket(&saddr);
+    assert(udpsdepst < 0);
+    int sampledata = 27;
+    int sentsize = nit.send_udp_msg(udpsdepst, (char*)&sampledata,
+        sizeof(int), &saddr);
+    assert(sentsize == sizeof(int));
+    // this will get error  to send udp data on geco sdespt
+    //sentsize = nit.send_udp_msg(geco_sdespt, (char*)&sampledata,
+    //    sizeof(int),
+    //    "127.0.0.1", 38000);
+    WSACleanup();
+}
+
+static void test_send_geco_msg()
+{
+    WSADATA winsockInfo;
+    WSAStartup(MAKEWORD(2, 2), &winsockInfo);
+
+    network_interface_t nit;
+
+    int geco_sdespt = nit.open_ipproto_geco_socket(AF_INET);
+    assert(geco_sdespt > 0);
+    nit.ip4_socket_despt_ = geco_sdespt;
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", 38000);
+
+    int sampledata = 27;
+    int sentsize = nit.send_geco_msg(geco_sdespt, (char*)&sampledata, 
+        sizeof(int), &saddr, 3);
+    assert(sentsize == sizeof(int));
+
+    WSACleanup();
+}
 int main(int arg, char** args)
 {
-    get_random();
+    // get_random();
     //test_logging();
     //test_md5();
     //test_std_find();
-    test_timer_mgr();
+    //test_timer_mgr();
     //test_add_sub_time();
+    //test_saddr_functions();
+   // test_open_socket();
+  //  test_send_udp_msg();
+   test_send_geco_msg();
     std::cin.get();
     return 0;
 }

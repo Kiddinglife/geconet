@@ -75,12 +75,21 @@
 #include "config.h"
 #include "messages.h"
 
-/* Define a protocol id to be used in the IP Header..... */
-#ifndef IPPROTO_SCTP
-#define IPPROTO_SCTP    132
+// if our impl is based on UDP, this is the well-known-port 
+// receiver and sender endpoints use 
+#ifndef USED_UDP_PORT
+#define USED_UDP_PORT 38000
 #endif
 
-/*this parameter specifies the maximum number of addresses that an endpoInt32 may have */
+/* Define a protocol id to be used in the IP Header..... */
+#ifndef IPPROTO_GECO
+#define IPPROTO_GECO    132
+#endif
+
+#define DEFAULT_RWND_SIZE  10*65536 // 655350 bytes = 
+
+/*this parameter specifies the maximum number of addresses
+that an endpoInt32 may have */
 #define MAX_NUM_ADDRESSES      32
 
 #define SECRET_KEYSIZE  4096
@@ -139,6 +148,8 @@ if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j))
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k))
 #define event_logiiiii(x,y,z,i,j,k,l)\
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l))
+#define event_logiiiiii(x,y,z,i,j,k,l,m)\
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m))
 #define event_logiiiiiiii(x,y,z,i,j,k,l,m,n,o)\
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n),(o))
 
@@ -152,6 +163,8 @@ if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i))
 if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j))
 #define error_logiiii(x,y,z,i,j,k)    \
 if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j),(k))
+#define error_logiiiii(x,y,z,i,j,k,m)    \
+if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y),(z),(i),(j),(k), (m))
 
 #define error_log_sys(x,y)    \
 error_log_sys1((x), __FILE__, __LINE__, (y))
@@ -276,6 +289,7 @@ extern int gettimenow_us(time_t* ret);
 // function to output the result of the get_time_now-call, i.e. the time now
 extern void print_time_now(ushort level);
 extern void print_timeval(timeval* tv);
+
 //<---------------------- helpers --------------------->
 struct internal_stream_data_t
 {
@@ -348,93 +362,6 @@ int sort_ssn(const internal_stream_data_t& one,
 extern int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two);
 
-/*================ struct sockaddr =================*/
-#ifndef _WIN32
-#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
-#else
-#define ADDRESS_LIST_BUFFER_SIZE        4096
-#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
-struct ip
-{
-    uchar version_length;
-    uchar typeofservice; /* type of service */
-    ushort length; /* total length */
-    ushort identification; /* identification */
-    ushort fragment_offset; /* fragment offset field */
-    uchar ttl; /* time to live */
-    uchar protocol; /* protocol */
-    ushort checksum; /* checksum */
-    struct in_addr src_addr; /* source and dest address */
-    struct in_addr dst_addr;
-};
-struct input_data {
-    DWORD len;
-    char buffer[1024];
-    HANDLE event, eventback;
-};
-#endif
-
-#ifndef _WIN32
-#define USES_BSD_4_4_SOCKET
-#ifndef __sun
-#define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
-#define NEXT_SA(ap) ap = (struct sockaddr *) \
-        ((caddr_t) ap + (ap->sa_len ? ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
-#else
-#define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
-#define RTAX_MAX RTA_NUMBITS
-#define RTAX_IFA 5
-#define _NO_SIOCGIFMTU_
-#endif
-#endif
-
-#define s4addr(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
-#define sin4addr(X)   (((struct sockaddr_in *)(X))->sin_addr)
-#define s6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr.s6_addr)
-#define sin6addr(X)  (((struct sockaddr_in6 *)(X))->sin6_addr)
-#define saddr_family(X)  (X)->sa.sa_family
-
-#define SUPPORT_ADDRESS_TYPE_IPV4        0x00000001
-#define SUPPORT_ADDRESS_TYPE_IPV6        0x00000002
-#define SUPPORT_ADDRESS_TYPE_DNS         0x00000004
-
-#define DEFAULT_MTU_CEILING     1500
-
-enum hide_address_flag_t
-{
-    flag_HideLoopback = (1 << 0),
-    flag_HideLinkLocal = (1 << 1),
-    flag_HideSiteLocal = (1 << 2),
-    flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-    | flag_HideSiteLocal,
-    flag_HideAnycast = (1 << 3),
-    flag_HideMulticast = (1 << 4),
-    flag_HideBroadcast = (1 << 5),
-    flag_HideReserved = (1 << 6),
-    flag_Default = flag_HideBroadcast | flag_HideMulticast | flag_HideAnycast,
-    flag_HideAllExceptLoopback = (1 << 7),
-    flag_HideAllExceptLinkLocal = (1 << 8),
-    flag_HideAllExceptSiteLocal = (1 << 9)
-};
-
-/* union for handling either type of addresses: ipv4 and ipv6 */
-union sockaddrunion
-{
-    struct sockaddr sa;
-    struct sockaddr_in sin;
-    struct sockaddr_in6 sin6;
-};
-
-/**
-*  converts address-string (hex for ipv6, dotted decimal for ipv4
-*  to a sockaddrunion structure
-*  @return 0 for success, else -1.
-*/
-extern int str_to_sock(const char * str, sockaddrunion *su, bool ip4);
-extern int sockaddr_to_str(sockaddrunion *su, uchar * buf, size_t len);
-extern bool is_same_saddr(sockaddrunion *one, sockaddrunion *two);
-
-extern int set_sockdespt_recvbuffer_size(int sfd, int new_size);
 /*=========== help functions =================*/
 extern uint get_random();
 

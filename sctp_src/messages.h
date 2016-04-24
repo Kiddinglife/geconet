@@ -72,7 +72,7 @@ typedef struct UDP_HEADER {
     gushort dest_port;
     gushort length;
     gushort checksum;
-} udp_header;
+} network_packet_fixed_t;
 #endif
 
 

@@ -9,16 +9,13 @@
 #define MY_WHEEL_SRC_GECOTIMER_H_
 #include "globals.h"
 #include <list>
-namespace geco
-{
-namespace ultils
-{
+
 /**
  *  A singly linked list for timer events
  */
 struct timer
 {
-    typedef void (*Action)(TimerID, void *, void *);
+    typedef void(*Action)(TimerID, void *, void *);
     uint timer_id;
     timeval action_time; /* the time when it is to go off*/
     int timer_type;
@@ -29,10 +26,10 @@ struct timer
 
 class timer_mgr
 {
-private:
+    private:
     std::list<timer> timers;
     uint tid;
-public:
+    public:
     typedef std::list<timer>::iterator timer_id_t;
     timer_mgr();
     ~timer_mgr();
@@ -48,7 +45,7 @@ public:
      *  @return -1 fail, >0 is timer id successful
      */
     timer_id_t add_timer(uint timer_type, time_t timeouts,
-            timer::Action action, void *arg1 = 0, void *arg2 = 0);
+        timer::Action action, void *arg1 = 0, void *arg2 = 0);
 
     /**
      *  a function to remove a certain action item, first checks current_item,
@@ -85,7 +82,7 @@ public:
     }
     void print(short event_log_level);
     void addition(const timer& t1, const timer& t2);
-private:
+    private:
     void print_timer(short event_log_level, const timer& item);
     static bool cmp_timer_action_time(const timer& t1, const timer& t2)
     {
@@ -105,6 +102,4 @@ private:
     }
 };
 
-}
-}
 #endif /* MY_WHEEL_SRC_GECOTIMER_H_ */

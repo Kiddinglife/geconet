@@ -120,8 +120,8 @@ typedef unsigned long long ulonglong;
 #define GRANULARITY		1
 
 /* Define a protocol id to be used in the IP Header..... */
-#ifndef IPPROTO_SCTP
-#define IPPROTO_SCTP    132
+#ifndef IPPROTO_GECO
+#define IPPROTO_GECO    132
 #endif
 
 /** this parameter specifies the maximum number of addresses that an endpoint may have */

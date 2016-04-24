@@ -7,7 +7,6 @@
 
 #include "gecotimer.h"
 #include <algorithm>
-using namespace geco::ultils;
 
 timer_mgr::timer_mgr()
 {
@@ -17,7 +16,7 @@ timer_mgr::~timer_mgr()
 {
 }
 timer_mgr::timer_id_t timer_mgr::add_timer(uint timer_type,
-        time_t timeouts/*ms*/, timer::Action action, void *arg1, void *arg2)
+    time_t timeouts/*ms*/, timer::Action action, void *arg1, void *arg2)
 {
     timer item;
     if (gettimenow(&item.action_time) < 0)
@@ -37,7 +36,7 @@ timer_mgr::timer_id_t timer_mgr::add_timer(uint timer_type,
     }
 
     auto insert_pos = upper_bound(this->timers.begin(), this->timers.end(),
-            item, timer_mgr::cmp_timer_action_time);
+        item, timer_mgr::cmp_timer_action_time);
     this->timers.insert(insert_pos, item);
     --insert_pos;
     return insert_pos;
@@ -48,10 +47,10 @@ void timer_mgr::delete_timer(timer_mgr::timer_id_t& timerptr)
     if (this->timers.empty())
         return;
     event_logi(loglvl_verbose, "Before delete List Length : %u ",
-            this->timers.size());
+        this->timers.size());
     this->timers.erase(timerptr);
     event_logi(loglvl_verbose, "After delete List Length : %u ",
-            this->timers.size());
+        this->timers.size());
 }
 int timer_mgr::reset_timer(timer_mgr::timer_id_t& timerptr, uint timeouts)
 {
@@ -95,7 +94,7 @@ int timer_mgr::timeouts()
         return 0; //secs timeouts
 
     // no type overflow because number is very small
-    return ((int) (secs * 1000 + usecs / 1000));
+    return ((int)(secs * 1000 + usecs / 1000));
 }
 
 
@@ -105,35 +104,35 @@ void timer_mgr::print_timer(short event_log_level, const timer& item)
 
     switch (item.timer_type)
     {
-    case TIMER_TYPE_INIT:
-        ttype = "Init Timer";
-        break;
-    case TIMER_TYPE_SACK:
-        ttype = "SACK Timer";
-        break;
-    case TIMER_TYPE_RTXM:
-        ttype = "T3 RTX Timer";
-        break;
-    case TIMER_TYPE_SHUTDOWN:
-        ttype = "Shutdown Timer";
-        break;
-    case TIMER_TYPE_CWND:
-        ttype = "CWND Timer";
-        break;
-    case TIMER_TYPE_HEARTBEAT:
-        ttype = "Heartbeat Timer";
-        break;
-    case TIMER_TYPE_USER:
-        ttype = "User Timer";
-        break;
-    default:
-        ttype = "Unknown Timer";
-        break;
+        case TIMER_TYPE_INIT:
+            ttype = "Init Timer";
+            break;
+        case TIMER_TYPE_SACK:
+            ttype = "SACK Timer";
+            break;
+        case TIMER_TYPE_RTXM:
+            ttype = "T3 RTX Timer";
+            break;
+        case TIMER_TYPE_SHUTDOWN:
+            ttype = "Shutdown Timer";
+            break;
+        case TIMER_TYPE_CWND:
+            ttype = "CWND Timer";
+            break;
+        case TIMER_TYPE_HEARTBEAT:
+            ttype = "Heartbeat Timer";
+            break;
+        case TIMER_TYPE_USER:
+            ttype = "User Timer";
+            break;
+        default:
+            ttype = "Unknown Timer";
+            break;
     }
     event_logiiii(event_log_level,
-            "TimerID: %u, Type : %s, action_time: {%ld sec, %ld us}\n",
-            item.timer_id, ttype, item.action_time.tv_sec,
-            item.action_time.tv_usec);
+        "TimerID: %u, Type : %s, action_time: {%ld sec, %ld us}\n",
+        item.timer_id, ttype, item.action_time.tv_sec,
+        item.action_time.tv_usec);
 }
 void timer_mgr::print(short event_log_level)
 {

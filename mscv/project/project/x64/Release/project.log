@@ -1,0 +1,61 @@
+﻿Build started 4/24/2016 3:19:23 PM.
+     1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\project\project.vcxproj" on node 2 (Build target(s)).
+     1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(364,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../src /Zi /nologo /W3 /WX- /O2 /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\src\main.cc ..\..\..\src\poller.cc
+         main.cc
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>..\..\..\src\main.cc(28): warning C4267: 'argument' : conversion from 'size_t' to 'unsigned int', possible loss of data
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(86): warning C4005: 'POLLIN' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(87): warning C4005: 'POLLPRI' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1618) : see previous definition of 'POLLPRI'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(88): warning C4005: 'POLLOUT' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1621) : see previous definition of 'POLLOUT'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(89): warning C4005: 'POLLERR' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
+         poller.cc
+     1>d:\vs2013workspace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(86): warning C4005: 'POLLIN' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(87): warning C4005: 'POLLPRI' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1618) : see previous definition of 'POLLPRI'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(88): warning C4005: 'POLLOUT' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1621) : see previous definition of 'POLLOUT'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\poller.h(89): warning C4005: 'POLLERR' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
+     1>..\..\..\src\poller.cc(37): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1850) : see declaration of 'inet_addr'
+     1>..\..\..\src\poller.cc(70): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(195) : see declaration of 'strncpy'
+     1>..\..\..\src\poller.cc(70): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1868) : see declaration of 'inet_ntoa'
+     1>..\..\..\src\poller.cc(96): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(118) : see declaration of 'strcat'
+     1>..\..\..\src\poller.cc(97): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(118) : see declaration of 'strcat'
+     1>..\..\..\src\poller.cc(310): warning C4244: '=' : conversion from 'SOCKET' to 'int', possible loss of data
+     1>..\..\..\src\poller.cc(295): warning C4101: 'opt_size' : unreferenced local variable
+     1>..\..\..\src\poller.cc(294): warning C4101: 'optval' : unreferenced local variable
+     1>..\..\..\src\poller.cc(456): warning C4244: '=' : conversion from 'SOCKET' to 'int', possible loss of data
+     1>..\..\..\src\poller.cc(599): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1868) : see declaration of 'inet_ntoa'
+     1>..\..\..\src\poller.cc(623): warning C4002: too many actual parameters for macro 'event_logii'
+     1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1193,5): warning MSB8012: TargetPath(D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\\builds\mywheel.exe) does not match the Linker's OutputFile property value (D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\builds\geco-sctp-cplus_mywheel_Releasex64.exe). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+     1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1195,5): warning MSB8012: TargetName(mywheel) does not match the Linker's OutputFile property value (geco-sctp-cplus_mywheel_Releasex64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\\builds\geco-sctp-cplus_mywheel_Releasex64.exe" /INCREMENTAL:NO /NOLOGO ws2_32.lib Iphlpapi.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\\builds\mywheel.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\\builds\mywheel.lib" /MACHINE:X64 x64\Release\gecotimer.obj
+         x64\Release\globals.obj
+         x64\Release\main.obj
+         x64\Release\md5.obj
+         x64\Release\poller.obj
+         Generating code
+         Finished generating code
+         project.vcxproj -> D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\\builds\mywheel.exe
+     1>Done Building Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\project\project.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:02.03

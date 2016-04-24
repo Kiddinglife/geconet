@@ -3288,7 +3288,7 @@ int sctp_sendUdpData(int sfd, unsigned char* buf, int length,
 
     ENTER_LIBRARY("sctp_sendUdpData");
     CHECK_LIBRARY;
-    result = adl_sendUdpData(sfd, buf, length, destination, dest_port);
+    result = send_udp_msg(sfd, buf, length, destination, dest_port);
     LEAVE_LIBRARY("sctp_sendUdpData");
     return result;
 }
@@ -3574,11 +3574,11 @@ int mdi_send_message(network_packet_t * message, unsigned int length, short dest
 
     switch (saddr_family(dest_ptr)) {
     case AF_INET:
-        txmit_len = adl_send_message(sctp_socket, message, length, dest_ptr, tos);
+        txmit_len = send_geco_msg(sctp_socket, message, length, dest_ptr, tos);
         break;
 #ifdef HAVE_IPV6
     case AF_INET6:
-        txmit_len = adl_send_message(ipv6_sctp_socket, message, length, dest_ptr, tos);
+        txmit_len = send_geco_msg(ipv6_sctp_socket, message, length, dest_ptr, tos);
         break;
 #endif
     default:
