@@ -184,6 +184,7 @@ union sockaddrunion
  */
 struct event_cb_t
 {
+    //int used;
     int sfd;
     int eventcb_type;
     /* pointer to possible arguments, associations etc. */
@@ -206,22 +207,36 @@ struct socket_despt_t
     long      revision;
 };
 
-/**
-*  converts address-string (hex for ipv6, dotted decimal for ipv4
-*  to a sockaddrunion structure
-*  @return 0 for success, else -1.
-*/
+/* converts address-string
+* (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
+*  str == NULL will bitzero saddr
+*  port number will be always >0
+*  default  is IPv4
+*  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0, bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 
-class poller_t
+struct poller_t
 {
-    private:
-    int revision;
-    event_cb_t *event_callbacks[MAX_FD_SIZE];
+    int revision_;
+
+    event_cb_t* event_callbacks[MAX_FD_SIZE];
+    //int avaiable_event_index;
+
     socket_despt_t socket_despts[MAX_FD_SIZE];
     int socket_despts_size_;
+
+#ifdef _WIN32
+    int fds[MAX_FD_SIZE];
+    int fdnum;
+    HANDLE            hEvent_, handles_[2];
+    HANDLE  stdin_thread_handle;
+    WSAEVENT       stdin_event_;
+    input_data   idata;
+#endif
+
+    timer_mgr timer_mgr_;
 
     /*
     * poll_socket_despts()
@@ -295,17 +310,26 @@ class poller_t
         * will notify that this entry is new and skip the possibly wrong results
         * until the next invocation.
         */
-        socket_despts[fd_index].revision = revision;
+        socket_despts[fd_index].revision = revision_;
         socket_despts[fd_index].revents = 0;
     }
 
-    public:
-    poller_t()
-    {
-        revision = 0;
-        socket_despts_size_ = 0;
-    }
-
+    /**
+    * remove a sfd from the poll_list, and shift that list to the left
+    * @return number of sfd's removed...
+    */
+    int remove_socket_despt(int sfd);
+    //event_cb_t* find_unsed_event_cb()
+    //{
+    //    for (int i = 0; i < MAX_FD_SIZE; i++)
+    //    {
+    //        if (event_callbacks[i].used == 0)
+    //        {
+    //            event_callbacks[i].used = 1;
+    //            return &event_callbacks[i];
+    //        }
+    //    }
+    //}
 };
 
 struct network_interface_t
@@ -316,9 +340,12 @@ struct network_interface_t
     bool is_ip4_socket_;
     /* a static receive buffer  */
     char internal_receive_buffer[MAX_MTU_SIZE + 20];
+
 #ifdef USE_UDP
     char      internal_udp_send__buffer_[65536];
     network_packet_fixed_t* udp_hdr_ptr_;
+    int dummy_ipv4_udp_despt_;
+    int dummy_ipv6_udp_despt_;
 #endif
 
     /* counter for stats we should have more counters !  */
@@ -327,8 +354,7 @@ struct network_interface_t
     uint stat_recv_bytes_;
     uint stat_send_bytes_;
 
-    /* value that keeps currently treated timer id */
-    timer_mgr::timer_id_t curr_timer;
+    poller_t poller_;
 
     network_interface_t()
     {
@@ -342,33 +368,36 @@ struct network_interface_t
         stat_send_bytes_ = 0;
     }
 
-    /**
-    * This function binds a local socket for incoming requests
-    * @return socket file descriptor for the newly opened and bound socket
-    * @param address (local) port to bind to
-    *  rwnd is in and out param the default value is 10*0xffff
-    *  will use this value to set recv buffer of socket,
-    */
+    /** This function binds a local socket for incoming requests
+      * @return socket file descriptor for the newly opened and bound socket
+      * @param address (local) port to bind to
+      *  rwnd is in and out param the default value is 10*0xffff
+      *  will use this value to set recv buffer of socket, */
     int open_ipproto_geco_socket(int af, int* rwnd = NULL);
+
     /**
-    * This function creates a UDP socket bound to localhost, for asynchronous
-    * interprocess communication with an Upper Layer process.
-    * @return the socket file descriptor. Used to register a callback function
-    */
+     * This function creates a UDP socket bound to localhost, for asynchronous
+     * interprocess communication with an Upper Layer process.
+     * @return the socket file descriptor. Used to register a callback function
+     */
     int open_ipproto_udp_socket(sockaddrunion* me, int* rwnd = NULL);
 
     /* @retval -1 error, >0 the settled new recv buffer size */
     int set_sockdespt_recvbuffer_size(int sfd, int new_size);
 
-    /**
-    * function to be called when we get a message from a peer sctp instance in the poll loop
+    /** this function initializes the data of this module.
+     * opens raw sockets for capturing geco packets,
+     * opens ICMP sockets, so we can get ICMP events,e.g.  for Path-MTU discovery !
+     * if USE_UDP defined, open udp socket with specified port on dummy sadress 0.0.0.0*/
+    int init_poller(int * myRwnd, bool ip4);
+
+    /** function to be called when we get a message from a peer sctp instance in the poll loop
     * @param  sfd the socket file descriptor where data can be read...
     * @param  buf pointer to a buffer, where we data is stored
     * @param  len number of bytes to be sent, including the ip header !
     * @param  address, where data goes from
     * @param    dest_len size of the address
-    * @return returns number of bytes actually sent, or error
-    */
+    * @return returns number of bytes actually sent, or error*/
     int send_udp_msg(int sfd, char* buf, int length, sockaddrunion* destsu);
 
     /**
@@ -380,6 +409,6 @@ struct network_interface_t
     * @param    dest_len size of the address
     * @return returns number of bytes actually sent, or error
     */
-    int send_geco_msg(int sfd, char *buf, int len,sockaddrunion *dest, char tos);
+    int send_geco_msg(int sfd, char *buf, int len, sockaddrunion *dest, char tos);
 };
 #endif

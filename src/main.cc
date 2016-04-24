@@ -324,7 +324,7 @@ static void test_send_udp_msg()
     nit.ip4_socket_despt_ = geco_sdespt;
 
     sockaddrunion saddr;
-    str2saddr(&saddr, "127.0.0.1", 38000,true);
+    str2saddr(&saddr, "127.0.0.1", 38000, true);
     int udpsdepst = nit.open_ipproto_udp_socket(&saddr);
     assert(udpsdepst < 0);
     int sampledata = 27;
@@ -353,11 +353,19 @@ static void test_send_geco_msg()
     str2saddr(&saddr, "127.0.0.1", 38000);
 
     int sampledata = 27;
-    int sentsize = nit.send_geco_msg(geco_sdespt, (char*)&sampledata, 
+    int sentsize = nit.send_geco_msg(geco_sdespt, (char*)&sampledata,
         sizeof(int), &saddr, 3);
     assert(sentsize == sizeof(int));
 
     WSACleanup();
+}
+
+static void test_init_poller()
+{
+    int rcwnd = 1234567;
+    network_interface_t nit;
+    nit.init_poller(&rcwnd, true);
+
 }
 int main(int arg, char** args)
 {
@@ -368,9 +376,10 @@ int main(int arg, char** args)
     //test_timer_mgr();
     //test_add_sub_time();
     //test_saddr_functions();
-   // test_open_socket();
-  //  test_send_udp_msg();
-   test_send_geco_msg();
+    // test_open_socket();
+    //  test_send_udp_msg();
+    //test_send_geco_msg();
+    test_init_poller();
     std::cin.get();
     return 0;
 }

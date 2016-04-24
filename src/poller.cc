@@ -1,8 +1,7 @@
 #include "poller.h"
+#include <stdlib.h>
 
 #ifdef USE_UDP
-static int dummy_sctp_udp;
-static int dummy_sctpv6_udp;
 static uint inet_checksum(const void* ptr, size_t count)
 {
     ushort* addr = (ushort*)ptr;
@@ -29,13 +28,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
     int ret;
     memset((void*)su, 0, sizeof(union sockaddrunion));
 
-    if (str == 0 || strlen(str) == 0)
-    {
-        error_log(loglvl_major_error_abort, "Invalid ip adress \n");
-        return -1;
-    }
-
-    if (hs_port == 0)
+    if (hs_port <= 0)
     {
         error_log(loglvl_major_error_abort, "Invalid port \n");
         return -1;
@@ -43,11 +36,19 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
 
     if (ip4)
     {
+        if (str != NULL && strlen(str) > 0)
+        {
 #ifndef WIN32
-        ret = inet_aton(str, &su->sin.sin_addr);
+            ret = inet_aton(str, &su->sin.sin_addr);
 #else
-        (su->sin.sin_addr.s_addr = inet_addr(str)) == INADDR_NONE ? ret = 0 : ret = 1;
+            (su->sin.sin_addr.s_addr = inet_addr(str)) == INADDR_NONE ? ret = 0 : ret = 1;
 #endif
+        }
+        else
+        {
+            event_log(loglvl_verbose, "no s_addr specified, set to all zeros\n");
+            ret = 1;
+        }
 
         if (ret > 0)  /* Valid IPv4 address format. */
         {
@@ -61,7 +62,16 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
     }
     else
     {
-        ret = inet_pton(AF_INET6, (const char *)str, &su->sin6.sin6_addr);
+        if (str != NULL && strlen(str) > 0)
+        {
+            ret = inet_pton(AF_INET6, (const char *)str, &su->sin6.sin6_addr);
+        }
+        else
+        {
+            event_log(loglvl_verbose, "no s_addr specified, set to all zeros\n");
+            ret = 1;
+        }
+
         if (ret > 0)     /* Valid IPv6 address format. */
         {
             su->sin6.sin6_family = AF_INET6;
@@ -139,8 +149,127 @@ bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
     }
 }
 
+int poller_t::remove_socket_despt(int sfd)
+{
+    int i, counter = 0;
+    for (i = 0; i < MAX_FD_SIZE; i++)
+    {
+        if (socket_despts[i].fd == sfd)
+        {
+            socket_despts[i].fd = POLL_FD_UNUSED;
+            socket_despts[i].events = 0;
+            socket_despts[i].revents = 0;
+            socket_despts[i].revision = 0;
+            event_callbacks[i] = NULL;
+        }
+    }
+    return 0;
+}
 
+int network_interface_t::init_poller(int * myRwnd, bool ip4)
+{
+    // create handles
+#ifdef WIN32
+    WSADATA        wsaData;
+    int Ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
+    if (Ret != 0)
+    {
+        error_log(loglvl_fatal_error_exit, "WSAStartup failed!\n");
+        return -1;
+    }
+
+    poller_.hEvent_ = WSACreateEvent();
+    if (poller_.hEvent_ == NULL)
+    {
+        error_log(loglvl_fatal_error_exit, "WSACreateEvent() of hEvent_ failed!\n");
+        return -1;
+    }
+
+    poller_.stdin_event_ = WSACreateEvent();
+    if (poller_.stdin_event_ == NULL)
+    {
+        error_log(loglvl_fatal_error_exit, "WSACreateEvent() of stdin_event_ failed!\n");
+        return -1;
+    }
+
+    poller_.handles_[0] = poller_.hEvent_;
+    poller_.handles_[1] = poller_.stdin_event_;
+#endif
+
+    struct timeval curTime;
+    if (gettimenow(&curTime) != 0)
+    {
+        error_log(loglvl_fatal_error_exit, "gettimenow() failed!\n");
+        return -1;
+    }
+
+    /* initialize random number generator */
+    /* FIXME: this may be too weak (better than nothing however) */
+    srand(curTime.tv_usec);
+
+    /*init members */
+    poller_.revision_ = 0;
+    poller_.socket_despts_size_ = 0;
+#ifdef WIN32
+    poller_.fdnum = 0;
+#endif
+
+    /*initializes the array of fds we want to use for listening to events
+    POLL_FD_UNUSED to differentiate between used/unused fds !*/
+    for (int i = 0; i < MAX_FD_SIZE; i++)
+    {
+        poller_.set_event_mask(i, POLL_FD_UNUSED, 0); // init geco socket despts 
+#ifdef WIN32
+        poller_.fds[i] = POLL_FD_UNUSED; // init windows fds
+#endif
+    }
+
+    //open geco socket depst
+    if (ip4)
+    {
+        ip4_socket_despt_ = open_ipproto_geco_socket(AF_INET, myRwnd);
+        if (ip4_socket_despt_ < 0) return -1;
+    }
+    else
+    {
+        ip6_socket_despt_ = open_ipproto_geco_socket(AF_INET6, myRwnd);
+        if (ip6_socket_despt_ < 0) return -1;
+    }
+    if (*myRwnd == -1) *myRwnd = DEFAULT_RWND_SIZE;     /* set a safe default */
+
+    //open udp socket despt binf to dummy sadress 0.0.0.0 to recv all datagrams
+    // destinated to any adress with matched port
+#ifdef USE_UDP
+    sockaddrunion su;
+    str2saddr(&su, NULL, USED_UDP_PORT, ip4);
+    if (ip4)
+    {
+        dummy_ipv4_udp_despt_ = open_ipproto_udp_socket(&su, myRwnd);
+        if (dummy_ipv4_udp_despt_ < 0)
+        {
+            error_log(loglvl_major_error_abort, "Could not open UDP dummy socket !\n");
+            return dummy_ipv4_udp_despt_;
+        }
+        event_logi(loglvl_verbose,
+            "init_poller()::dummy_ipv4_udp_despt_(%u)", 
+            dummy_ipv4_udp_despt_);
+    }
+    else
+    {
+        dummy_ipv6_udp_despt_ = open_ipproto_udp_socket(&su, myRwnd);
+        if (dummy_ipv6_udp_despt_ < 0)
+        {
+            error_log(loglvl_major_error_abort, "Could not open UDP dummy socket !\n");
+            return dummy_ipv6_udp_despt_;
+        }
+        event_logi(loglvl_verbose,
+            "init_poller()::dummy_ipv6_udp_despt_(%u)",
+            dummy_ipv6_udp_despt_);
+    }
+#endif
+    return 0;
+}
 int poller_t::poll_socket_despts(socket_despt_t* despts,
     int* count,
     int timeout,
@@ -206,14 +335,14 @@ int poller_t::poll_socket_despts(socket_despt_t* despts,
         //Set the revision number of all entries to the current revision.
         for (i = 0; i < *count; i++)
         {
-            despts[i].revision = this->revision;
+            despts[i].revision = this->revision_;
         }
 
         /*
-        * Increment the revision number by one -> New entries made by
-        * another thread during select() call will get this new revision number.
+        * Increment the revision_ number by one -> New entries made by
+        * another thread during select() call will get this new revision_ number.
         */
-        ++this->revision;
+        ++this->revision_;
 
         if (unlock)
         {
@@ -234,7 +363,7 @@ int poller_t::poll_socket_despts(socket_despt_t* despts,
             * has been added by another thread during the poll() call.
             * If this is the case, clr all fdsets to skip the event results
             * (they will be reported again when select() is called the next timeout).*/
-            if (despts[i].revision >= this->revision)
+            if (despts[i].revision >= this->revision_)
             {
                 FD_CLR(despts[i].fd, &rd_fdset);
                 FD_CLR(despts[i].fd, &wt_fdset);
@@ -248,7 +377,7 @@ int poller_t::poll_socket_despts(socket_despt_t* despts,
             for (i = 0; i < *count; i++)
             {
                 despts[i].revents = 0;
-                if (despts[i].revision < revision)
+                if (despts[i].revision < revision_)
                 {
                     if ((despts[i].events & POLLIN) && FD_ISSET(despts[i].fd, &rd_fdset))
                     {
@@ -487,6 +616,13 @@ int network_interface_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
             *rwnd);
     }
 
+    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&ch, sizeof(ch)) < 0)
+    {
+        //close(sd);
+        error_log(loglvl_major_error_abort, "setsockopt: Try to set SO_REUSEADDR but failed !");
+        return -1;
+    }
+
     /* we only recv theudp datagrams destinated to this ip address */
     ch = bind(sfd, &me->sa, sizeof(struct sockaddr_in));
     if (ch < 0)
@@ -502,7 +638,6 @@ int network_interface_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
         sfd, *rwnd, buf);
     return (sfd);
 }
-
 int network_interface_t::send_udp_msg(int sfd, char* buf, int length, sockaddrunion* destsu)
 {
     if (sfd <= 0)

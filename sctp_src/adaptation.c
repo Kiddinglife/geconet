@@ -916,7 +916,6 @@ void set_event_mask(int fd_index, int sfd, int event_mask)
     socket_despts[fd_index].revents = 0;
 }
 
-
 /**
  * remove a sfd from the poll_list, and shift that list to the left
  * @return number of sfd's removed...
@@ -924,24 +923,30 @@ void set_event_mask(int fd_index, int sfd, int event_mask)
 int adl_remove_poll_fd(gint sfd)
 {
     int i, tmp, counter = 0;
-    for (i = 0, tmp = 0; i < MAX_FD_SIZE; i++, tmp++) {
-        if (tmp < MAX_FD_SIZE) {
+    for (i = 0, tmp = 0; i < MAX_FD_SIZE; i++, tmp++)
+    {
+        if (tmp < MAX_FD_SIZE)
+        {
             socket_despts[i].fd = socket_despts[tmp].fd;
             socket_despts[i].events = socket_despts[tmp].events;
             socket_despts[i].revents = socket_despts[tmp].revents;
             socket_despts[i].revision = socket_despts[tmp].revision;
             event_callbacks[i] = event_callbacks[tmp];
         }
-        else {
+        else
+        {
             socket_despts[i].fd = POLL_FD_UNUSED;
             socket_despts[i].events = 0;
             socket_despts[i].revents = 0;
             socket_despts[i].revision = 0;
             event_callbacks[i] = NULL;
         }
-        if (socket_despts[i].fd == sfd) {
+
+        if (socket_despts[i].fd == sfd)
+        {
             tmp = i + 1;
-            if (tmp < MAX_FD_SIZE) {
+            if (tmp < MAX_FD_SIZE)
+            {
                 socket_despts[i].fd = socket_despts[tmp].fd;
                 socket_despts[i].events = socket_despts[tmp].events;
                 socket_despts[i].revents = socket_despts[tmp].revents;
@@ -949,7 +954,8 @@ int adl_remove_poll_fd(gint sfd)
                 free(event_callbacks[i]);
                 event_callbacks[i] = event_callbacks[tmp];
             }
-            else {
+            else
+            {
                 socket_despts[i].fd = POLL_FD_UNUSED;
                 socket_despts[i].events = 0;
                 socket_despts[i].revents = 0;
@@ -1010,7 +1016,8 @@ void(*action) (void *, void *), void* userData)
     }
 #endif
 
-    if (socket_despts_size < MAX_FD_SIZE && sfd >= 0) {
+    if (socket_despts_size < MAX_FD_SIZE && sfd >= 0)
+    {
         set_event_mask(socket_despts_size, sfd, event_mask);
         event_callbacks[socket_despts_size] = (struct event_cb*)malloc(sizeof(struct event_cb));
         if (!event_callbacks[socket_despts_size])
@@ -1455,7 +1462,8 @@ int adl_timediff_to_msecs(struct timeval *a, struct timeval *b)
 int init_poll_fds(void)
 {
     int i;
-    for (i = 0; i < MAX_FD_SIZE; i++) {
+    for (i = 0; i < MAX_FD_SIZE; i++)
+    {
         set_event_mask(i, POLL_FD_UNUSED, 0);
 #ifdef WIN32
         fds[i] = -1;
@@ -1749,13 +1757,13 @@ int open_dummy_socket(int family)
 int adl_init_adaptation_layer(int * myRwnd)
 {
     struct timeval curTime;
+
 #ifdef WIN32
     WSADATA        wsaData;
     int            Ret;
 #endif
-#ifdef HAVE_IPV6
+
     int myRwnd6 = 32767;
-#endif
 
 #ifdef WIN32
     if ((Ret = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0)
@@ -1796,7 +1804,9 @@ int adl_init_adaptation_layer(int * myRwnd)
     init_poll_fds();
     init_timer_list();
     /*  print_debug_list(INTERNAL_EVENT_0); */
+
     ip4_socket_despt = adl_open_ipproto_sctp__socket(AF_INET, myRwnd);
+
     /* set a safe default */
     if (*myRwnd == -1) *myRwnd = 8192;
 
@@ -1807,7 +1817,7 @@ int adl_init_adaptation_layer(int * myRwnd)
     if (dummy_sctp_udp < 0) {
         error_log(ERROR_MAJOR, "Could not open UDP dummy socket !");
         return dummy_sctp_udp;
-    }
+}
 #endif
 
     /* we should - in a later revision - add back the a function that opens
