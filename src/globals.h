@@ -277,8 +277,9 @@ typedef uint TimerID;
 (timeval_ptr)->tv_usec = ((time_t_inteval) % 1000) * 1000;
 
 extern void sum_time(timeval* a, timeval* b, timeval* result);
-extern void subtract_time(timeval* a, timeval* b, timeval* result);
 extern void sum_time(timeval* a, time_t inteval/*ms*/, timeval* result);
+extern void subtract_time(timeval* a, timeval* b, timeval* result);
+extern int subtract_time(timeval* a, timeval* b); //return time different as ms
 extern void subtract_time(timeval* a, time_t inteval/*ms*/, timeval* result);
 //the_time reply on timeval and so for high efficicy, you will be always be given 
 // timeval when you need date calling second getitmenow

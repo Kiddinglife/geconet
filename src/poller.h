@@ -32,7 +32,7 @@
 #ifndef _WIN32
 #include <sys/timeout.h>
 #include <netinet/in_systm.h>
-#include <netinet/ip.h>
+#include <netinet/iphdr.h>
 #include <netinet/ip6.h>
 #include <netdb.h>
 #include <arpa/inet.h>      /* for inet_ntoa() under both SOLARIS/LINUX */
@@ -51,6 +51,12 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #include <Netioapi.h>
+#include <ws2def.h>
+#include <ws2ipdef.h>
+#include <ws2tcpip.h>
+#include <mstcpip.h>
+#include <mswsock.h>
+#include <iphlpapi.h>
 #include <sys/timeb.h>
 #endif
 
@@ -97,6 +103,13 @@
 #define    EVENTCB_TYPE_USER       3
 #define    EVENTCB_TYPE_ROUTING    4
 
+#define GECO_CMSG_ALIGN(len) ( ((len)+sizeof(long)-1) & ~(sizeof(long)-1) )
+#define GECO_CMSG_SPACE(len) \
+(GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + GECO_CMSG_ALIGN(len))
+#define GECO_CMSG_LEN(len) (GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
+#define GECO_CMSG_DATA(cmsg) \
+((unsigned char*)(cmsg)+GECO_CMSG_ALIGN(sizeof(struct cmsghdr)))
+
 /*================ struct sockaddr =================*/
 #ifndef _WIN32
 #define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
@@ -104,7 +117,7 @@
 #define ADDRESS_LIST_BUFFER_SIZE        4096
 //#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
 #define IFNAMSIZ IF_NAMESIZE
-struct ip
+struct iphdr
 {
     uchar version_length;
     uchar typeofservice; /* type of service */
@@ -117,6 +130,7 @@ struct ip
     struct in_addr src_addr; /* source and dest address */
     struct in_addr dst_addr;
 };
+
 struct input_data
 {
     unsigned long len;
@@ -124,6 +138,9 @@ struct input_data
     void* event;
     void* eventback;
 };
+
+#define msghdr _WSAMSG
+#define iovec _WSABUF 
 #endif
 
 #ifndef _WIN32
@@ -182,7 +199,7 @@ union sockaddrunion
  * Structure for callback events. The function "action" is called by the event-handler,
  * when an event occurs on the file-descriptor.
  */
-struct event_cb_t
+struct event_handler_t
 {
     //int used;
     int sfd;
@@ -201,6 +218,7 @@ struct data_t
 
 struct socket_despt_t
 {
+    int event_handler_index;
     int       fd;
     int events;
     int revents;
@@ -216,24 +234,50 @@ struct socket_despt_t
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0, bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
+static void safe_cloe_soket(int sfd)
+{
+    if (sfd <= 0)
+    {
+        error_log(loglvl_major_error_abort, "invalid sfd!\n");
+        return;
+    }
+
+#ifdef WIN32
+    if (closesocket(sfd) < 0)
+    {
+#else
+    if (close(sfd) < 0)
+    {
+#endif
+#ifdef _WIN32
+        error_logi(loglvl_major_error_abort,
+            "safe_cloe_soket()::close socket failed! {%d} !\n",
+            WSAGetLastError());
+#else
+        error_logi(loglvl_major_error_abort,
+            "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
+#endif
+    }
+}
 
 struct poller_t
 {
     int revision_;
 
-    event_cb_t* event_callbacks[MAX_FD_SIZE];
+    event_handler_t event_callbacks[MAX_FD_SIZE];
     //int avaiable_event_index;
 
     socket_despt_t socket_despts[MAX_FD_SIZE];
     int socket_despts_size_;
 
 #ifdef _WIN32
-    int fds[MAX_FD_SIZE];
-    int fdnum;
-    HANDLE            hEvent_, handles_[2];
-    HANDLE  stdin_thread_handle;
-    WSAEVENT       stdin_event_;
-    input_data   idata;
+    int win32_fds_[MAX_FD_SIZE];
+    int win32_fdnum_;
+    HANDLE            win32_handler_;
+    HANDLE            win32_handlers_[2];
+    HANDLE  win32_stdin_handler;
+    HANDLE       win32_stdin_handler_;
+    input_data   win32_input_data_;
 #endif
 
     timer_mgr timer_mgr_;
@@ -268,7 +312,7 @@ struct poller_t
     poll()函数：这个函数是某些Unix系统提供的用于执行与select()函数同等功能的函数，
     下面是这个函数的声明：
     #include <poll.h>
-    int poll(struct pollfd fds[], nfds_t nfds, int timeout)；
+    int poll(struct pollfd win32_fds_[], nfds_t nfds, int timeout)；
     参数说明:
     fds：是一个struct pollfd结构类型的数组，用于存放需要检测其状态的Socket描述符；
     每当调用这个函数之后，系统不会清空这个数组，操作起来比较方便；特别是对于
@@ -297,39 +341,35 @@ struct poller_t
         void* data);
 
     //! function to set an event mask to a certain socket despt
-    void set_event_mask(int fd_index, int sfd, int event_mask)
-    {
-        if (fd_index > MAX_FD_SIZE)
-            error_log(loglvl_fatal_error_exit, "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
+    void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
+    void set_event_on_win32_sdespt(int fd_index, int sfd);
 
-        socket_despts[fd_index].fd = sfd; /* file descriptor */
-        socket_despts[fd_index].events = event_mask;
-        /*
-        * Set the entry's revision to the current poll_socket_despts() revision.
-        * If another thread is currently inside poll_socket_despts(), poll_socket_despts()
-        * will notify that this entry is new and skip the possibly wrong results
-        * until the next invocation.
-        */
-        socket_despts[fd_index].revision = revision_;
-        socket_despts[fd_index].revents = 0;
-    }
+    /**
+    * function to register a file descriptor, that gets activated for certain read/write events
+    * when these occur, the specified callback funtion is activated and passed the parameters
+    * that are pointed to by the event_callback struct
+    * when this method failed, will exit() directly
+    * no no need to check ret val so no ret value given
+    */
+    void add_event_handler(
+        int sfd,
+        int eventcb_type,
+        int event_mask,
+        void(*action) (),
+        void* userData);
+
+    /**
+    *    function to close a bound socket from our list of socket descriptors
+    *    @return  >= 0 number of closed fds or eh , if close socket error will abort program
+    */
+    int remove_event_handler(event_handler_t* eh);
 
     /**
     * remove a sfd from the poll_list, and shift that list to the left
     * @return number of sfd's removed...
+    * use socket_despt_size as insert index
     */
     int remove_socket_despt(int sfd);
-    //event_cb_t* find_unsed_event_cb()
-    //{
-    //    for (int i = 0; i < MAX_FD_SIZE; i++)
-    //    {
-    //        if (event_callbacks[i].used == 0)
-    //        {
-    //            event_callbacks[i].used = 1;
-    //            return &event_callbacks[i];
-    //        }
-    //    }
-    //}
 };
 
 struct network_interface_t
@@ -394,7 +434,7 @@ struct network_interface_t
     /** function to be called when we get a message from a peer sctp instance in the poll loop
     * @param  sfd the socket file descriptor where data can be read...
     * @param  buf pointer to a buffer, where we data is stored
-    * @param  len number of bytes to be sent, including the ip header !
+    * @param  len number of bytes to be sent, including the iphdr header !
     * @param  address, where data goes from
     * @param    dest_len size of the address
     * @return returns number of bytes actually sent, or error*/
@@ -410,5 +450,31 @@ struct network_interface_t
     * @return returns number of bytes actually sent, or error
     */
     int send_geco_msg(int sfd, char *buf, int len, sockaddrunion *dest, char tos);
+
+    /**
+    * function to be called when we get an sctp message. This function gives also
+    * the source and destination addresses.
+    *
+    * @param  sfd      the socket file descriptor where data can be read...
+    * @param  dest     pointer to a buffer, where we can store the received data
+    * @param  maxlen   maximum number of bytes that can be received with call
+    * @param  from     address, where we got the data from
+    * @param  to       destination address of that message
+    * @return returns number of bytes received with this call
+    */
+    int recv_geco_msg(int sfd, char *dest, int maxlen,
+        sockaddrunion *from, sockaddrunion *to);
+
+    /**
+    * function to be called when we get a message from a peer sctp instance in the poll loop
+    * @param  sfd the socket file descriptor where data can be read...
+    * @param  dest pointer to a buffer, where we can store the received data
+    * @param  maxlen maximum number of bytes that can be received with call
+    * @param  address, where we got the data from
+    * @param    from_len size of the address
+    * @return returns number of bytes received with this call
+    */
+    int recv_udp_msg(int sfd, char *dest, int maxlen,
+        sockaddrunion *from, socklen_t *from_len);
 };
 #endif

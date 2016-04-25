@@ -191,6 +191,17 @@ void subtract_time(timeval* a, timeval* b, timeval* result)
         result->tv_usec += 1000000;
     }
 }
+
+int subtract_time(timeval* a, timeval* b)
+{
+    struct timeval result;
+    /* result = a-b */
+    subtract_time(a, b, &result);
+    int retval = result.tv_sec * 1000 + result.tv_usec / 1000;
+    event_logi(loglvl_verbose, "Computed Time Difference : %d msecs\n", retval);
+    return ((retval < 0) ? -1 : retval);
+}
+
 void  sum_time(timeval* a, time_t inteval, timeval* result)
 {
     timeval tv;

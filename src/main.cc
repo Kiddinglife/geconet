@@ -367,6 +367,55 @@ static void test_init_poller()
     nit.init_poller(&rcwnd, true);
 
 }
+
+static void test_recv_geco_msg()
+{
+    int rcwnd = 1234567;
+    network_interface_t nit;
+    nit.init_poller(&rcwnd, true);
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "192.168.2.6", USED_UDP_PORT);
+    int sampledata = 27;
+    int sentsize = nit.send_geco_msg(nit.ip4_socket_despt_, (char*)&sampledata,
+        sizeof(int), &saddr, 0);
+    //assert(sentsize == sizeof(int));
+    u_long iMode = 1;
+    ioctlsocket(nit.ip4_socket_despt_, FIONBIO, &iMode);
+
+    //recv
+    sockaddrunion from;
+    sockaddrunion to;
+    char buffer[65535];
+    int recvsize = 0;
+    recvsize = nit.recv_geco_msg(nit.ip4_socket_despt_, buffer, sizeof(buffer), &from, &to);
+    assert(recvsize == IP_HDR_SIZE + sizeof(int));
+    assert(*(int*)(buffer + IP_HDR_SIZE) == 27);
+}
+
+static void test_send_recv_udp_msg()
+{
+    int rcwnd = 1234567;
+    network_interface_t nit;
+    nit.init_poller(&rcwnd, true);
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", 38000, true);
+    int udpsdepst = nit.open_ipproto_udp_socket(&saddr);
+    assert(udpsdepst > 0);
+
+    int sampledata = 27;
+    int sentsize = nit.send_udp_msg(udpsdepst, (char*)&sampledata,
+        sizeof(int), &saddr);
+    assert(sentsize == sizeof(int));
+
+    char dest[128];
+    sockaddrunion saddr1;
+    int length = sizeof(saddr1);
+    sentsize = nit.recv_udp_msg(udpsdepst, dest, 128, &saddr1, &length);
+    assert(sentsize == sizeof(int));
+    assert(*(int*)dest == 27);
+}
 int main(int arg, char** args)
 {
     // get_random();
@@ -379,7 +428,9 @@ int main(int arg, char** args)
     // test_open_socket();
     //  test_send_udp_msg();
     //test_send_geco_msg();
-    test_init_poller();
+    // test_init_poller();
+    test_recv_geco_msg();
+    //test_send_recv_udp_msg();
     std::cin.get();
     return 0;
 }
