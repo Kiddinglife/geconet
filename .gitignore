@@ -29,3 +29,5 @@
 
 *.sdf
 *.ilk
+*.suo
+*.pdb
