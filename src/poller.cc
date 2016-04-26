@@ -304,7 +304,7 @@ int poller_t::remove_socket_despt(int sfd)
             {
                 if (socket_despts[j].fd == sfd)
                 {
-                    if(j == i)
+                    if (j == i)
                         counter--;
                     counter++;
                     socket_despts[j].fd = POLL_FD_UNUSED;
@@ -345,8 +345,7 @@ int poller_t::remove_event_handler(int sfd)
     //safe_close_soket(sfd);
     return remove_socket_despt(sfd);
 }
-void poller_t::add_event_handler(int sfd, int eventcb_type,
-        int event_mask,
+void poller_t::add_event_handler(int sfd, int eventcb_type, int event_mask,
         void (*action)(), void* userData)
 {
 
@@ -362,7 +361,8 @@ void poller_t::add_event_handler(int sfd, int eventcb_type,
 #endif
     )
     {
-        error_log(loglvl_major_error_abort,"FD_Index bigger than MAX_FD_SIZE ! bye !\n");
+        error_log(loglvl_major_error_abort,
+                "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
         return;
     }
 
@@ -370,7 +370,7 @@ void poller_t::add_event_handler(int sfd, int eventcb_type,
     set_event_on_win32_sdespt(win32_fdnum_, sfd);
 #else
     set_event_on_geco_sdespt(socket_despts_size_, sfd, event_mask);
-    int index = socket_despts[socket_despts_size_-1].event_handler_index;
+    int index = socket_despts[socket_despts_size_ - 1].event_handler_index;
     event_callbacks[index].sfd = sfd;
     event_callbacks[index].eventcb_type = eventcb_type;
     event_callbacks[index].action = action;
@@ -1221,4 +1221,43 @@ int network_interface_t::recv_udp_msg(int sfd, char *dest, int maxlen,
         error_log(loglvl_major_error_abort,
                 "recvfrom  failed in get_message(), aborting !\n");
     return len;
+}
+int network_interface_t::register_udpsock_ulpcb(const char* addr,
+        ushort my_port, socket_cb_t scb)
+{
+#ifdef _WIN32
+    error_log(loglvl_major_error_abort,
+            "WIN32: Registering ULP-Callbacks for UDP not installed !\n");
+    return -1;
+#endif
+
+    sockaddrunion my_address;
+    str2saddr(&my_address, addr, my_port, ip4_socket_despt_ > 0);
+    if (ip4_socket_despt_ > 0)
+    {
+        event_logii(loglvl_verbose,
+                "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
+                my_port);
+        str2saddr(&my_address, addr, my_port, true);
+    }
+    else if (ip6_socket_despt_ > 0)
+    {
+        event_logii(loglvl_verbose,
+                "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
+                my_port);
+        str2saddr(&my_address, addr, my_port, false);
+    }
+    else
+    {
+        error_log(loglvl_major_error_abort,
+                "UNKNOWN ADDRESS TYPE - CHECK YOUR PROGRAM !\n");
+        return -1;
+    }
+    new_sfd = open_ipproto_udp_socket(&my_address);
+    poller_.add_event_handler(new_sfd, EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
+            (void (*)())scb, NULL);
+    event_logi(loglvl_verbose,
+            "Registered ULP-Callback: now %d registered callbacks !!!\n",
+            new_sfd);
+    return new_sfd;
 }

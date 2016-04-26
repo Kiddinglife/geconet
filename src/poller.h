@@ -225,9 +225,31 @@ struct socket_despt_t
     long revision;
 };
 
+/* Defines the callback function that is called when an event occurs
+ on an internal GECO or UDP socket
+ Params: 1. file-descriptor of the socket
+ 2. pointer to the datagram data, if any was received
+ 3. length of datagram data, if any was received
+ 4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
+ 5. source port number for UDP sockets, 0 for SCTP raw sockets
+ */
+typedef void (*socket_cb_t)(int sfd, char* data, int datalen, const char* addr,
+        ushort port);
+
+/* Defines the callback function that is called when an event occurs
+ on a user file-descriptor
+ Params: 1. file-descriptor
+ Params: 2. received events mask
+ Params: 3. pointer to registered events mask.
+ It may be changed by the callback function.
+ Params: 4. user data
+ */
+typedef void (*ulp_cb_t)(int, short int revents, short int* settled_events,
+        void* usrdata);
+
 /* converts address-string
  * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
- *  str == NULL will bitzero saddr
+ *  str == NULL will bitzero saddr used as 'ANY ADRESS 0.0.0.0'
  *  port number will be always >0
  *  default  is IPv4
  *  @return 0 for success, else -1.*/
@@ -439,6 +461,16 @@ struct network_interface_t
     {
 
     }
+
+    /**
+     * this function is supposed to open and bind a UDP socket listening on a port
+     * to incoming udp_packet_fixed pakets on a local interface (a local union sockaddrunion address)
+     * @param  me   pointer to a local address, that will trigger callback, if it receives UDP data
+     * @param  scf  callback funtion that is called when data has arrived
+     * @return new UDP socket file descriptor, or -1 if error ocurred
+     */
+    int register_udpsock_ulpcb(const char* addr,
+            ushort my_port, socket_cb_t scb);
     /**
      * This function binds a local socket for incoming requests
      * @return socket file descriptor for the newly opened and bound socket
@@ -449,9 +481,15 @@ struct network_interface_t
     int open_ipproto_geco_socket(int af, int* rwnd = NULL);
 
     /**
+     * if used in registerudpcb()
      * This function creates a UDP socket bound to localhost, for asynchronous
      * interprocess communication with an Upper Layer process.
+     * wILL be binded to specific adrress and port
      * @return the socket file descriptor. Used to register a callback function
+     *
+     * if used in init_poller(), it is dummy udp socketbinding on anyadress with
+     * USED_UDP_PORT,
+     * return sfd
      */
     int open_ipproto_udp_socket(sockaddrunion* me, int* rwnd = NULL);
 
