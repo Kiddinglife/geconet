@@ -128,7 +128,7 @@ int adl_register_socket_cb(gint sfd, sctp_socketCallback scf);
  *	@return  0 on success, -1 for error, 1 if socket was not bound
  *    @author  ajung
  */
-int adl_remove_cb(gint sfd);
+int remove_event_handler(gint sfd);
 
 /**
  * remove a sfd from the poll_list, and shift that list to the left

@@ -988,7 +988,7 @@ int adl_remove_poll_fd(gint sfd)
  * that are pointed to by the event_callback struct
  */
 int
-adl_register_fd_cb(int sfd, int eventcb_type, int event_mask,
+add_event_handler(int sfd, int eventcb_type, int event_mask,
 void(*action) (void *, void *), void* userData)
 {
 #ifdef WIN32
@@ -1912,7 +1912,7 @@ int adl_registerUdpCallback(unsigned char me[],
 
     if (new_sfd != -1)
     {
-        result = adl_register_fd_cb(new_sfd, EVENTCB_TYPE_UDP, POLLIN | POLLPRI, (void(*)(void *, void *))scf, NULL);
+        result = add_event_handler(new_sfd, EVENTCB_TYPE_UDP, POLLIN | POLLPRI, (void(*)(void *, void *))scf, NULL);
         event_logi(INTERNAL_EVENT_0, "Registered ULP-Callback: now %d registered callbacks !!!", result);
         return  new_sfd;
     }
@@ -1928,7 +1928,7 @@ int adl_unregisterUdpCallback(int udp_sfd)
 #ifdef HAVE_IPV6
     if (udp_sfd == ip6_socket_despt) return -1;
 #endif
-    return adl_remove_cb(udp_sfd);
+    return remove_event_handler(udp_sfd);
 }
 
 
@@ -1947,8 +1947,9 @@ int adl_registerUserCallback(int fd, sctp_userCallback sdf, void* userData, shor
     return -1;
 #endif
     /* 0 is the standard input ! */
-    result = adl_register_fd_cb(fd, EVENTCB_TYPE_USER, eventMask, (void(*) (void *, void *))sdf, userData);
-    if (result != -1) {
+    result = add_event_handler(fd, EVENTCB_TYPE_USER, eventMask, (void(*) (void *, void *))sdf, userData);
+    if (result != -1)
+    {
         event_logii(EXTERNAL_EVENT, "----------> Registered User Callback: fd=%d result=%d -------\n", fd, result);
     }
     return result;
@@ -1982,7 +1983,7 @@ int adl_registerStdinCallback(sctp_StdinCallback sdf, char* buffer, int length)
         return -1;
     }
 
-    result = adl_register_fd_cb(0, EVENTCB_TYPE_USER, 0, (void(*) (void *, void *))sdf, NULL);
+    result = add_event_handler(0, EVENTCB_TYPE_USER, 0, (void(*) (void *, void *))sdf, NULL);
 #else
     struct data *userData;
     userData = (struct data*)malloc(sizeof(struct data));
@@ -1990,7 +1991,7 @@ int adl_registerStdinCallback(sctp_StdinCallback sdf, char* buffer, int length)
     userData->dat = buffer;
     userData->len = length;
     userData->cb = (void(*) (void))sdf;
-    result = adl_register_fd_cb(0, EVENTCB_TYPE_USER, POLLIN | POLLPRI, (void(*) (void *, void *))readCallback, userData);
+    result = add_event_handler(0, EVENTCB_TYPE_USER, POLLIN | POLLPRI, (void(*) (void *, void *))readCallback, userData);
 #endif
     if (result != -1) {
         event_logii(EXTERNAL_EVENT, "----------> Registered Stdin Callback: fd=%d result=%d -------\n", 0, result);
@@ -2020,7 +2021,7 @@ int adl_unregisterUserCallback(int fd)
 int
 adl_register_socket_cb(gint sfd, sctp_socketCallback scf)
 {
-    return (adl_register_fd_cb(sfd, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, (void(*)(void *, void *))scf, NULL));
+    return (add_event_handler(sfd, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, (void(*)(void *, void *))scf, NULL));
 }
 
 
@@ -2122,7 +2123,7 @@ unsigned int adl_restartMicroTimer(unsigned int timer_id, unsigned int seconds, 
  *    @return  0 on success, -1 for error, 1 if socket was not bound
  *    @author  ajung
  */
-int adl_remove_cb(int sfd)
+int remove_event_handler(int sfd)
 {
     int result;
 #ifdef WIN32

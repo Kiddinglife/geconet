@@ -198,7 +198,7 @@ int subtract_time(timeval* a, timeval* b)
     /* result = a-b */
     subtract_time(a, b, &result);
     int retval = result.tv_sec * 1000 + result.tv_usec / 1000;
-    event_logi(loglvl_verbose, "Computed Time Difference : %d msecs\n", retval);
+    event_logi(verbose, "Computed Time Difference : %d msecs\n", retval);
     return ((retval < 0) ? -1 : retval);
 }
 
@@ -272,7 +272,7 @@ extern void event_log1(short event_log_level, const char *module_name,
         && event_log_level <= event_trace_levels[moduleindex];
     if (f1 || f2)
     {
-        if (event_log_level < loglvl_verbose)
+        if (event_log_level < verbose)
         {
             if (fileTrace == true)
             {
@@ -359,11 +359,11 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
         sprintf(str, "%s exits at line %d", module_name, line_no);
         perr_exit(str);
     }
-    if (error_loglvl == loglvl_major_error_abort)
+    if (error_loglvl == major_error_abort)
     {
         char str[32];
         sprintf(str, "%s aborts at line %d", module_name, line_no);
-        perr_abort(str);
+        //perr_abort(str);
     }
 }
 void error_log_sys1(short error_log_level, const char *module_name, int line_no,

@@ -169,14 +169,16 @@ ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
 #define SUPPORT_ADDRESS_TYPE_DNS         0x00000004
 
 #define DEFAULT_MTU_CEILING     1500
-
+// SEE http://book.51cto.com/art/201012/236880.htm
+// USE MINIMUM_DELAY AS TOS
+#define IPTOS_DEFAULT 0xe0|0x1000 // Precedence 111 + TOS 1000 + MBZ 0
 enum hide_address_flag_t
 {
     flag_HideLoopback = (1 << 0),
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-            | flag_HideSiteLocal,
+    | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
@@ -205,7 +207,7 @@ struct event_handler_t
     int sfd;
     int eventcb_type;
     /* pointer to possible arguments, associations etc. */
-    void (*action)();
+    void(*action)();
     void *arg1, *arg2, *userData;
 };
 
@@ -213,7 +215,7 @@ struct data_t
 {
     char* dat;
     int len;
-    void (*cb)();
+    void(*cb)();
 };
 
 struct socket_despt_t
@@ -233,8 +235,8 @@ struct socket_despt_t
  4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
  5. source port number for UDP sockets, 0 for SCTP raw sockets
  */
-typedef void (*socket_cb_t)(int sfd, char* data, int datalen, const char* addr,
-        ushort port);
+typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen, const char* addr,
+    ushort port);
 
 /* Defines the callback function that is called when an event occurs
  on a user file-descriptor
@@ -244,8 +246,8 @@ typedef void (*socket_cb_t)(int sfd, char* data, int datalen, const char* addr,
  It may be changed by the callback function.
  Params: 4. user data
  */
-typedef void (*ulp_cb_t)(int, short int revents, short int* settled_events,
-        void* usrdata);
+typedef void(*user_cb_fun_t)(int, short int revents, short int* settled_events,
+    void* usrdata);
 
 /* converts address-string
  * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
@@ -254,14 +256,14 @@ typedef void (*ulp_cb_t)(int, short int revents, short int* settled_events,
  *  default  is IPv4
  *  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
-        bool ip4 = true);
+    bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 static void safe_close_soket(int sfd)
 {
     if (sfd <= 0)
     {
-        error_log(loglvl_major_error_abort, "invalid sfd!\n");
+        error_log(major_error_abort, "invalid sfd!\n");
         return;
     }
 
@@ -273,12 +275,12 @@ static void safe_close_soket(int sfd)
     {
 #endif
 #ifdef _WIN32
-        error_logi(loglvl_major_error_abort,
-                "safe_cloe_soket()::close socket failed! {%d} !\n",
-                WSAGetLastError());
+        error_logi(major_error_abort,
+            "safe_cloe_soket()::close socket failed! {%d} !\n",
+            WSAGetLastError());
 #else
-        error_logi(loglvl_major_error_abort,
-                "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
+        error_logi(major_error_abort,
+            "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
 #endif
     }
 }
@@ -295,7 +297,6 @@ struct poller_t
     int win32_fdnum_;
     HANDLE win32_handler_;
     HANDLE win32_handlers_[2];
-    HANDLE win32_stdin_handler;
     HANDLE win32_stdin_handler_;
     input_data win32_input_data_;
 #endif
@@ -304,15 +305,10 @@ struct poller_t
 
     poller_t()
     {
-        socket_despts_size_ = 0;
-        revision_ = 0;
-        for (int i = 0; i < MAX_FD_SIZE; i++)
-        {
-            event_callbacks[i].sfd = -1;
-            socket_despts[i].fd = -1;
-            socket_despts[i].event_handler_index = i;
-        }
+        init();
     }
+
+    void init();
     /*
      * poll_socket_despts()
      * An extended poll() implementation based on select()
@@ -339,33 +335,9 @@ struct poller_t
      * - Thread #1 gets the read notification and tries to read. There is no
      *      data, so the socket blocks (possibily forever!) or the read call
      *      fails.
-
-     poll()���������������ĳЩUnixϵͳ�ṩ������ִ����select()����ͬ�ȹ��ܵĺ�����
-     ���������������������
-     #include <poll.h>
-     int poll(struct pollfd win32_fds_[], nfds_t nfds, int timeout)��
-     ����˵��:
-     fds����һ��struct pollfd�ṹ���͵����飬���ڴ����Ҫ�����״̬��Socket��������
-     ÿ�������������֮��ϵͳ�������������飬���������ȽϷ��㣻�ر��Ƕ���
-     socket���ӱȽ϶������£���һ���̶��Ͽ�����ߴ����Ч�ʣ���һ����select()��
-     ����ͬ������select()����֮��select()�����������������socket���������ϣ�
-     ����ÿ�ε���select()֮ǰ�������socket���������¼��뵽�����ļ����У�
-     ��ˣ�select()�����ʺ���ֻ���һ��socket�������������
-     ��poll()�����ʺ��ڴ���socket�������������
-     nfds��nfds_t���͵Ĳ��������ڱ������fds�еĽṹ��Ԫ�ص���������
-     timeout����poll��������������ʱ�䣬��λ�����룻
-     ����ֵ:
-     >0������fds��׼���ö���д�����״̬����Щsocket����������������
-     ==0������fds��û���κ�socket������׼���ö���д���������ʱpoll��ʱ��
-     ��ʱʱ����timeout���룻���仰˵�����������socket��������û���κ��¼�����
-     �Ļ�����ôpoll()����������timeout��ָ���ĺ���ʱ�䳤��֮�󷵻أ����
-     timeout==0����ôpoll() �����������ض������������timeout==INFTIM����ôpoll()
-     ������һֱ������ȥ��ֱ��������socket�������ϵĸ���Ȥ���¼������ǲŷ��أ�
-     �������Ȥ���¼���Զ����������ôpoll()�ͻ���Զ������ȥ��
-     -1�� poll��������ʧ�ܣ�ͬʱ���Զ�����ȫ�ֱ���errno��
      */
     int poll_socket_despts(socket_despt_t* despts, int* count, int timeout,
-            void (*lock)(void* data), void (*unlock)(void* data), void* data);
+        void(*lock)(void* data), void(*unlock)(void* data), void* data);
 
     //! function to set an event mask to a certain socket despt
     void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
@@ -380,7 +352,7 @@ struct poller_t
      * no no need to check ret val so no ret value given
      */
     void add_event_handler(int sfd, int eventcb_type, int event_mask,
-            void (*action)(), void* userData);
+        void(*action)(), void* userData);
 
     /**
      *    function to close a bound socket from our list of socket descriptors
@@ -402,16 +374,14 @@ struct poller_t
             if (socket_despts[i].fd > 0)
             {
 
-                event_logiiiiiii(loglvl_verbose,
-                        "{event_handler_index:%d {sfd:%d, etype:%d}\n \
-            socket_despts[i].events : %d\n \
-            socket_despts[i].fd%d\nsocket_despts[i].revents%d\n \
-            socket_despts[i].revision: %d\n}",
-                        socket_despts[i].event_handler_index,
-                        event_callbacks[socket_despts[i].event_handler_index].sfd,
-                        event_callbacks[socket_despts[i].event_handler_index].eventcb_type,
-                        socket_despts[i].events, socket_despts[i].fd,
-                        socket_despts[i].revents, socket_despts[i].revision);
+                event_logiiiiiii(verbose,
+                    "{event_handler_index:%d {sfd:%d, etype:%d}\n \
+                                                                                 socket_despts[i].events : %d\n \
+                                                                                                                                                                                                             socket_despts[i].fd%d\nsocket_despts[i].revents%d\n \                                                       socket_despts[i].revision: %d\n}",
+                                                                                                                                                                                                             socket_despts[i].event_handler_index,
+                                                                                                                                                                                                             event_callbacks[socket_despts[i].event_handler_index].sfd,
+                                                                                                                                                                                                             event_callbacks[socket_despts[i].event_handler_index].eventcb_type,
+                                                                                                                                                                                                             socket_despts[i].events, socket_despts[i].fd, socket_despts[i].revents, socket_despts[i].revision);
             }
         }
     }
@@ -463,14 +433,51 @@ struct network_interface_t
     }
 
     /**
+    * this function is supposed to register a callback function for catching
+    * input from the Unix STDIN file descriptor. We expect this to be useful
+    * in test programs mainly, so it is provided here for convenience.
+    * @param  scf  callback funtion that is called (when return is hit)
+    */
+    void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask)
+    {
+#ifdef _WIN32
+        error_log(major_error_abort,
+            "WIN32: Registering User Callbacks not installed !\n");
+#endif
+        /* 0 is the standard input ! */
+        poller_.add_event_handler(fd, EVENTCB_TYPE_USER, eventMask,
+            (void(*) ())cbfun, userData);
+        event_logii(verbose,
+            "Registered User Callback: fd=%d eventMask=%d\n",
+            fd, eventMask);
+    }
+    /**
+    * @return return the number of fds removed
+    */
+    int remove_user_cb(int fd)
+    {
+        return poller_.remove_event_handler(fd);
+    }
+    /**
      * this function is supposed to open and bind a UDP socket listening on a port
      * to incoming udp_packet_fixed pakets on a local interface (a local union sockaddrunion address)
      * @param  me   pointer to a local address, that will trigger callback, if it receives UDP data
      * @param  scf  callback funtion that is called when data has arrived
      * @return new UDP socket file descriptor, or -1 if error ocurred
      */
-    int register_udpsock_ulpcb(const char* addr,
-            ushort my_port, socket_cb_t scb);
+    int add_udpsock_ulpcb(const char* addr,
+        ushort my_port, socket_cb_fun_t scb);
+
+    /**
+     * @return return the number of fds removed
+     */
+    int remove_udpsock_ulpcb(int udp_sfd)
+    {
+        if (udp_sfd <= 0) return -1;
+        if (udp_sfd == ip4_socket_despt_) return -1;
+        if (udp_sfd == ip6_socket_despt_) return -1;
+        return poller_.remove_event_handler(udp_sfd);
+    }
     /**
      * This function binds a local socket for incoming requests
      * @return socket file descriptor for the newly opened and bound socket
@@ -487,7 +494,7 @@ struct network_interface_t
      * wILL be binded to specific adrress and port
      * @return the socket file descriptor. Used to register a callback function
      *
-     * if used in init_poller(), it is dummy udp socketbinding on anyadress with
+     * if used in init(), it is dummy udp socketbinding on anyadress with
      * USED_UDP_PORT,
      * return sfd
      */
@@ -503,7 +510,8 @@ struct network_interface_t
      * if USE_UDP defined, open udp socket with specified port
      * on dummy sadress 0.0.0.0
      */
-    int init_poller(int * myRwnd, bool ip4);
+    // ???????????????  // do we really need this USE_USP in the init() at line 696
+    int init(int * myRwnd, bool ip4);
 
     /**
      * function to be called when we get a message from a peer sctp instance in the poll loop
@@ -526,7 +534,7 @@ struct network_interface_t
      * @return returns number of bytes actually sent, or error
      */
     int send_geco_msg(int sfd, char *buf, int len, sockaddrunion *dest,
-            char tos);
+        char tos);
 
     /**
      * function to be called when we get an sctp message. This function gives also
@@ -540,7 +548,7 @@ struct network_interface_t
      * @return returns number of bytes received with this call
      */
     int recv_geco_msg(int sfd, char *dest, int maxlen, sockaddrunion *from,
-            sockaddrunion *to);
+        sockaddrunion *to);
 
     /**
      * function to be called when we get a message from a peer sctp instance in the poll loop
@@ -552,6 +560,6 @@ struct network_interface_t
      * @return returns number of bytes received with this call
      */
     int recv_udp_msg(int sfd, char *dest, int maxlen, sockaddrunion *from,
-            socklen_t *from_len);
+        socklen_t *from_len);
 };
 #endif

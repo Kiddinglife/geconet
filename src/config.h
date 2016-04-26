@@ -10,5 +10,6 @@
 
 //#define USED_UDP_PORT 9899
 //#define HAVE_SIN_LEN
-#define USE_UDP
+//#define HAVE_IPV6_RECVPKTINFO
+//#define USE_UDP
 #endif /* MY_CONFIG_H_ */
