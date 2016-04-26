@@ -78,7 +78,7 @@
 // if our impl is based on UDP, this is the well-known-port 
 // receiver and sender endpoints use 
 #ifndef USED_UDP_PORT
-#define USED_UDP_PORT 38000
+#define USED_UDP_PORT 9899 //inna defined port
 #endif
 
 /* Define a protocol id to be used in the IP Header..... */
@@ -86,7 +86,7 @@
 #define IPPROTO_GECO    132
 #endif
 
-#define DEFAULT_RWND_SIZE  10*65536 // 655350 bytes = 
+#define DEFAULT_RWND_SIZE  10*65536 // 655350 bytes =
 
 /*this parameter specifies the maximum number of addresses
 that an endpoInt32 may have */
@@ -150,6 +150,8 @@ if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k))
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l))
 #define event_logiiiiii(x,y,z,i,j,k,l,m)\
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m))
+#define event_logiiiiiii(x,y,z,i,j,k,l,m,n)\
+if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n))
 #define event_logiiiiiiii(x,y,z,i,j,k,l,m,n,o)\
 if (current_event_loglvl >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n),(o))
 

@@ -30,9 +30,9 @@
 #include <errno.h>
 
 #ifndef _WIN32
-#include <sys/timeout.h>
+#include <sys/time.h>
 #include <netinet/in_systm.h>
-#include <netinet/iphdr.h>
+#include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netdb.h>
 #include <arpa/inet.h>      /* for inet_ntoa() under both SOLARIS/LINUX */
@@ -97,7 +97,7 @@
 
 #define IFA_BUFFER_LENGTH   1024
 #define POLL_FD_UNUSED     -1
-#define MAX_FD_SIZE     20
+#define MAX_FD_SIZE     5
 #define    EVENTCB_TYPE_SCTP       1
 #define    EVENTCB_TYPE_UDP        2
 #define    EVENTCB_TYPE_USER       3
@@ -176,7 +176,7 @@ enum hide_address_flag_t
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-    | flag_HideSiteLocal,
+            | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
@@ -205,36 +205,37 @@ struct event_handler_t
     int sfd;
     int eventcb_type;
     /* pointer to possible arguments, associations etc. */
-    void(*action)();
+    void (*action)();
     void *arg1, *arg2, *userData;
 };
 
 struct data_t
 {
     char* dat;
-    int   len;
-    void(*cb)();
+    int len;
+    void (*cb)();
 };
 
 struct socket_despt_t
 {
     int event_handler_index;
-    int       fd;
+    int fd;
     int events;
     int revents;
-    long      revision;
+    long revision;
 };
 
 /* converts address-string
-* (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
-*  str == NULL will bitzero saddr
-*  port number will be always >0
-*  default  is IPv4
-*  @return 0 for success, else -1.*/
-extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0, bool ip4 = true);
+ * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
+ *  str == NULL will bitzero saddr
+ *  port number will be always >0
+ *  default  is IPv4
+ *  @return 0 for success, else -1.*/
+extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
+        bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
-static void safe_cloe_soket(int sfd)
+static void safe_close_soket(int sfd)
 {
     if (sfd <= 0)
     {
@@ -251,142 +252,163 @@ static void safe_cloe_soket(int sfd)
 #endif
 #ifdef _WIN32
         error_logi(loglvl_major_error_abort,
-            "safe_cloe_soket()::close socket failed! {%d} !\n",
-            WSAGetLastError());
+                "safe_cloe_soket()::close socket failed! {%d} !\n",
+                WSAGetLastError());
 #else
         error_logi(loglvl_major_error_abort,
-            "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
+                "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
 #endif
     }
 }
 
 struct poller_t
 {
-    int revision_;
-
     event_handler_t event_callbacks[MAX_FD_SIZE];
-    //int avaiable_event_index;
-
     socket_despt_t socket_despts[MAX_FD_SIZE];
     int socket_despts_size_;
+    int revision_;
 
 #ifdef _WIN32
     int win32_fds_[MAX_FD_SIZE];
     int win32_fdnum_;
-    HANDLE            win32_handler_;
-    HANDLE            win32_handlers_[2];
-    HANDLE  win32_stdin_handler;
-    HANDLE       win32_stdin_handler_;
-    input_data   win32_input_data_;
+    HANDLE win32_handler_;
+    HANDLE win32_handlers_[2];
+    HANDLE win32_stdin_handler;
+    HANDLE win32_stdin_handler_;
+    input_data win32_input_data_;
 #endif
 
     timer_mgr timer_mgr_;
 
+    poller_t()
+    {
+        socket_despts_size_ = 0;
+        revision_ = 0;
+        for (int i = 0; i < MAX_FD_SIZE; i++)
+        {
+            event_callbacks[i].sfd = -1;
+            socket_despts[i].fd = -1;
+            socket_despts[i].event_handler_index = i;
+        }
+    }
     /*
-    * poll_socket_despts()
-    * An extended poll() implementation based on select()
-    *
-    * During the select() call, another thread may change the FD list,
-    * a revision number keeps track that results are only reported
-    * when the FD has already been registered before select() has
-    * been called. Otherwise, the event will be reported during the
-    * next select() call.
-    * This solves the following problem:
-    * - Thread #1 registers user callback for socket n
-    * - Thread #2 starts select()
-    * - A read event on socket n occurs
-    * - poll_socket_despts() returns
-    * - Thread #2 sends a notification (e.g. using pthread_condition) to thread #1
-    * - Thread #2 again starts select()
-    * - Since Thread #1 has not yet read the data, there is a read event again
-    * - Now, the thread scheduler selects the next thread
-    * - Thread #1 now gets CPU time, deregisters the callback for socket n
-    *      and completely reads the incoming data. There is no more data to read!
-    * - Thread #1 again registers user callback for socket n
-    * - Now, thread #2 gets the CPU again and can send a notification
-    *      about the assumed incoming data to thread #1
-    * - Thread #1 gets the read notification and tries to read. There is no
-    *      data, so the socket blocks (possibily forever!) or the read call
-    *      fails.
+     * poll_socket_despts()
+     * An extended poll() implementation based on select()
+     *
+     * During the select() call, another thread may change the FD list,
+     * a revision number keeps track that results are only reported
+     * when the FD has already been registered before select() has
+     * been called. Otherwise, the event will be reported during the
+     * next select() call.
+     * This solves the following problem:
+     * - Thread #1 registers user callback for socket n
+     * - Thread #2 starts select()
+     * - A read event on socket n occurs
+     * - poll_socket_despts() returns
+     * - Thread #2 sends a notification (e.g. using pthread_condition) to thread #1
+     * - Thread #2 again starts select()
+     * - Since Thread #1 has not yet read the data, there is a read event again
+     * - Now, the thread scheduler selects the next thread
+     * - Thread #1 now gets CPU time, deregisters the callback for socket n
+     *      and completely reads the incoming data. There is no more data to read!
+     * - Thread #1 again registers user callback for socket n
+     * - Now, thread #2 gets the CPU again and can send a notification
+     *      about the assumed incoming data to thread #1
+     * - Thread #1 gets the read notification and tries to read. There is no
+     *      data, so the socket blocks (possibily forever!) or the read call
+     *      fails.
 
-    poll()º¯Êı£ºÕâ¸öº¯ÊıÊÇÄ³Ğ©UnixÏµÍ³Ìá¹©µÄÓÃÓÚÖ´ĞĞÓëselect()º¯ÊıÍ¬µÈ¹¦ÄÜµÄº¯Êı£¬
-    ÏÂÃæÊÇÕâ¸öº¯ÊıµÄÉùÃ÷£º
-    #include <poll.h>
-    int poll(struct pollfd win32_fds_[], nfds_t nfds, int timeout)£»
-    ²ÎÊıËµÃ÷:
-    fds£ºÊÇÒ»¸östruct pollfd½á¹¹ÀàĞÍµÄÊı×é£¬ÓÃÓÚ´æ·ÅĞèÒª¼ì²âÆä×´Ì¬µÄSocketÃèÊö·û£»
-    Ã¿µ±µ÷ÓÃÕâ¸öº¯ÊıÖ®ºó£¬ÏµÍ³²»»áÇå¿ÕÕâ¸öÊı×é£¬²Ù×÷ÆğÀ´±È½Ï·½±ã£»ÌØ±ğÊÇ¶ÔÓÚ
-    socketÁ¬½Ó±È½Ï¶àµÄÇé¿öÏÂ£¬ÔÚÒ»¶¨³Ì¶ÈÉÏ¿ÉÒÔÌá¸ß´¦ÀíµÄĞ§ÂÊ£»ÕâÒ»µãÓëselect()º¯
-    Êı²»Í¬£¬µ÷ÓÃselect()º¯ÊıÖ®ºó£¬select()º¯Êı»áÇå¿ÕËüËù¼ì²âµÄsocketÃèÊö·û¼¯ºÏ£¬
-    µ¼ÖÂÃ¿´Îµ÷ÓÃselect()Ö®Ç°¶¼±ØĞë°ÑsocketÃèÊö·ûÖØĞÂ¼ÓÈëµ½´ı¼ì²âµÄ¼¯ºÏÖĞ£»
-    Òò´Ë£¬select()º¯ÊıÊÊºÏÓÚÖ»¼ì²âÒ»¸ösocketÃèÊö·ûµÄÇé¿ö£¬
-    ¶øpoll()º¯ÊıÊÊºÏÓÚ´óÁ¿socketÃèÊö·ûµÄÇé¿ö£»
-    nfds£ºnfds_tÀàĞÍµÄ²ÎÊı£¬ÓÃÓÚ±ê¼ÇÊı×éfdsÖĞµÄ½á¹¹ÌåÔªËØµÄ×ÜÊıÁ¿£»
-    timeout£ºÊÇpollº¯Êıµ÷ÓÃ×èÈûµÄÊ±¼ä£¬µ¥Î»£ººÁÃë£»
-    ·µ»ØÖµ:
-    >0£ºÊı×éfdsÖĞ×¼±¸ºÃ¶Á¡¢Ğ´»ò³ö´í×´Ì¬µÄÄÇĞ©socketÃèÊö·ûµÄ×ÜÊıÁ¿£»
-    ==0£ºÊı×éfdsÖĞÃ»ÓĞÈÎºÎsocketÃèÊö·û×¼±¸ºÃ¶Á¡¢Ğ´£¬»ò³ö´í£»´ËÊ±poll³¬Ê±£¬
-    ³¬Ê±Ê±¼äÊÇtimeoutºÁÃë£»»»¾ä»°Ëµ£¬Èç¹ûËù¼ì²âµÄsocketÃèÊö·ûÉÏÃ»ÓĞÈÎºÎÊÂ¼ş·¢Éú
-    µÄ»°£¬ÄÇÃ´poll()º¯Êı»á×èÈûtimeoutËùÖ¸¶¨µÄºÁÃëÊ±¼ä³¤¶ÈÖ®ºó·µ»Ø£¬Èç¹û
-    timeout==0£¬ÄÇÃ´poll() º¯ÊıÁ¢¼´·µ»Ø¶ø²»×èÈû£¬Èç¹ûtimeout==INFTIM£¬ÄÇÃ´poll()
-    º¯Êı»áÒ»Ö±×èÈûÏÂÈ¥£¬Ö±µ½Ëù¼ì²âµÄsocketÃèÊö·ûÉÏµÄ¸ĞĞËÈ¤µÄÊÂ¼ş·¢ÉúÊÇ²Å·µ»Ø£¬
-    Èç¹û¸ĞĞËÈ¤µÄÊÂ¼şÓÀÔ¶²»·¢Éú£¬ÄÇÃ´poll()¾Í»áÓÀÔ¶×èÈûÏÂÈ¥£»
-    -1£º pollº¯Êıµ÷ÓÃÊ§°Ü£¬Í¬Ê±»á×Ô¶¯ÉèÖÃÈ«¾Ö±äÁ¿errno£»
-    */
-    int poller_t::poll_socket_despts(socket_despt_t* despts,
-        int* count,
-        int timeout,
-        void(*lock)(void* data),
-        void(*unlock)(void* data),
-        void* data);
+     poll()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³Ğ©UnixÏµÍ³ï¿½á¹©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½select()ï¿½ï¿½ï¿½ï¿½Í¬ï¿½È¹ï¿½ï¿½ÜµÄºï¿½ï¿½ï¿½ï¿½ï¿½
+     ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     #include <poll.h>
+     int poll(struct pollfd win32_fds_[], nfds_t nfds, int timeout)ï¿½ï¿½
+     ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½:
+     fdsï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½struct pollfdï¿½á¹¹ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ï¿½é£¬ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È½Ï·ï¿½ï¿½ã£»ï¿½Ø±ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½
+     socketï¿½ï¿½ï¿½Ó±È½Ï¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½Ï¿ï¿½ï¿½ï¿½ï¿½ï¿½ß´ï¿½ï¿½ï¿½ï¿½Ğ§ï¿½Ê£ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½select()ï¿½ï¿½
+     ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½select()ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½select()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï£ï¿½
+     ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½Îµï¿½ï¿½ï¿½select()Ö®Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ëµ½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ğ£ï¿½
+     ï¿½ï¿½Ë£ï¿½select()ï¿½ï¿½ï¿½ï¿½ï¿½Êºï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ò»ï¿½ï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     ï¿½ï¿½poll()ï¿½ï¿½ï¿½ï¿½ï¿½Êºï¿½ï¿½Ú´ï¿½ï¿½ï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     nfdsï¿½ï¿½nfds_tï¿½ï¿½ï¿½ÍµÄ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fdsï¿½ĞµÄ½á¹¹ï¿½ï¿½Ôªï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     timeoutï¿½ï¿½ï¿½ï¿½pollï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä£¬ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ë£»
+     ï¿½ï¿½ï¿½ï¿½Öµ:
+     >0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fdsï¿½ï¿½×¼ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½Ğ©socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     ==0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fdsï¿½ï¿½Ã»ï¿½ï¿½ï¿½Îºï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±pollï¿½ï¿½Ê±ï¿½ï¿½
+     ï¿½ï¿½Ê±Ê±ï¿½ï¿½ï¿½ï¿½timeoutï¿½ï¿½ï¿½ë£»ï¿½ï¿½ï¿½ä»°Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½Îºï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½
+     ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½Ã´poll()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½timeoutï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Äºï¿½ï¿½ï¿½Ê±ï¿½ä³¤ï¿½ï¿½Ö®ï¿½ó·µ»Ø£ï¿½ï¿½ï¿½ï¿½
+     timeout==0ï¿½ï¿½ï¿½ï¿½Ã´poll() ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½timeout==INFTIMï¿½ï¿½ï¿½ï¿½Ã´poll()
+     ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½socketï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÄ¸ï¿½ï¿½ï¿½È¤ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç²Å·ï¿½ï¿½Ø£ï¿½
+     ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¤ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´poll()ï¿½Í»ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½
+     -1ï¿½ï¿½ pollï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½Í¬Ê±ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö±ï¿½ï¿½ï¿½errnoï¿½ï¿½
+     */
+    int poll_socket_despts(socket_despt_t* despts, int* count, int timeout,
+            void (*lock)(void* data), void (*unlock)(void* data), void* data);
 
     //! function to set an event mask to a certain socket despt
     void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
+#ifdef _WIN32
     void set_event_on_win32_sdespt(int fd_index, int sfd);
+#endif
+    /**
+     * function to register a file descriptor, that gets activated for certain read/write events
+     * when these occur, the specified callback funtion is activated and passed the parameters
+     * that are pointed to by the event_callback struct
+     * when this method failed, will exit() directly
+     * no no need to check ret val so no ret value given
+     */
+    void add_event_handler(int sfd, int eventcb_type, int event_mask,
+            void (*action)(), void* userData);
 
     /**
-    * function to register a file descriptor, that gets activated for certain read/write events
-    * when these occur, the specified callback funtion is activated and passed the parameters
-    * that are pointed to by the event_callback struct
-    * when this method failed, will exit() directly
-    * no no need to check ret val so no ret value given
-    */
-    void add_event_handler(
-        int sfd,
-        int eventcb_type,
-        int event_mask,
-        void(*action) (),
-        void* userData);
+     *    function to close a bound socket from our list of socket descriptors
+     *    @return  >= 0 number of closed fds or eh , if close socket error will abort program
+     */
+    int remove_event_handler(int sfd);
 
     /**
-    *    function to close a bound socket from our list of socket descriptors
-    *    @return  >= 0 number of closed fds or eh , if close socket error will abort program
-    */
-    int remove_event_handler(event_handler_t* eh);
-
-    /**
-    * remove a sfd from the poll_list, and shift that list to the left
-    * @return number of sfd's removed...
-    * use socket_despt_size as insert index
-    */
+     * remove a sfd from the poll_list, and shift that list to the left
+     * @return number of sfd's removed...
+     * use socket_despt_size as insert index
+     */
     int remove_socket_despt(int sfd);
+
+    void debug_print_events()
+    {
+        for (int i = 0; i < MAX_FD_SIZE; i++)
+        {
+            if (socket_despts[i].fd > 0)
+            {
+
+                event_logiiiiiii(loglvl_verbose,
+                        "{event_handler_index:%d {sfd:%d, etype:%d}\n \
+            socket_despts[i].events : %d\n \
+            socket_despts[i].fd%d\nsocket_despts[i].revents%d\n \
+            socket_despts[i].revision: %d\n}",
+                        socket_despts[i].event_handler_index,
+                        event_callbacks[socket_despts[i].event_handler_index].sfd,
+                        event_callbacks[socket_despts[i].event_handler_index].eventcb_type,
+                        socket_despts[i].events, socket_despts[i].fd,
+                        socket_despts[i].revents, socket_despts[i].revision);
+            }
+        }
+    }
 };
 
 struct network_interface_t
 {
-    int ip4_socket_despt_;       /* socket fd for standard SCTP port....      */
-    int ip6_socket_despt_;       /* socket fd for standard SCTP port....      */
-    int icmp_socket_despt_;       /* socket fd for ICMP messages */
-    bool is_ip4_socket_;
+    int ip4_socket_despt_; /* socket fd for standard SCTP port....      */
+    int ip6_socket_despt_; /* socket fd for standard SCTP port....      */
+    int icmp_socket_despt_; /* socket fd for ICMP messages */
+
     /* a static receive buffer  */
     char internal_receive_buffer[MAX_MTU_SIZE + 20];
 
-#ifdef USE_UDP
-    char      internal_udp_send__buffer_[65536];
+    bool use_udp_; /* enable udp-based-impl */
+    char internal_udp_send__buffer_[65536];
     network_packet_fixed_t* udp_hdr_ptr_;
     int dummy_ipv4_udp_despt_;
     int dummy_ipv6_udp_despt_;
-#endif
 
     /* counter for stats we should have more counters !  */
     uint stat_send_event_size_;
@@ -402,17 +424,28 @@ struct network_interface_t
         ip6_socket_despt_ = -1;
         icmp_socket_despt_ = -1;
 
+        use_udp_ = false;
+        dummy_ipv4_udp_despt_ = -1;
+        dummy_ipv6_udp_despt_ = -1;
+        udp_hdr_ptr_ = 0;
+
         stat_send_event_size_ = 0;
         stat_recv_event_size_ = 0;
         stat_recv_bytes_ = 0;
         stat_send_bytes_ = 0;
     }
 
-    /** This function binds a local socket for incoming requests
-      * @return socket file descriptor for the newly opened and bound socket
-      * @param address (local) port to bind to
-      *  rwnd is in and out param the default value is 10*0xffff
-      *  will use this value to set recv buffer of socket, */
+    void use_udp()
+    {
+
+    }
+    /**
+     * This function binds a local socket for incoming requests
+     * @return socket file descriptor for the newly opened and bound socket
+     * @param address (local) port to bind to
+     *  rwnd is in and out param the default value is 10*0xffff
+     *  will use this value to set recv buffer of socket,
+     */
     int open_ipproto_geco_socket(int af, int* rwnd = NULL);
 
     /**
@@ -425,56 +458,62 @@ struct network_interface_t
     /* @retval -1 error, >0 the settled new recv buffer size */
     int set_sockdespt_recvbuffer_size(int sfd, int new_size);
 
-    /** this function initializes the data of this module.
+    /**
+     * this function initializes the data of this module.
      * opens raw sockets for capturing geco packets,
      * opens ICMP sockets, so we can get ICMP events,e.g.  for Path-MTU discovery !
-     * if USE_UDP defined, open udp socket with specified port on dummy sadress 0.0.0.0*/
+     * if USE_UDP defined, open udp socket with specified port
+     * on dummy sadress 0.0.0.0
+     */
     int init_poller(int * myRwnd, bool ip4);
 
-    /** function to be called when we get a message from a peer sctp instance in the poll loop
-    * @param  sfd the socket file descriptor where data can be read...
-    * @param  buf pointer to a buffer, where we data is stored
-    * @param  len number of bytes to be sent, including the iphdr header !
-    * @param  address, where data goes from
-    * @param    dest_len size of the address
-    * @return returns number of bytes actually sent, or error*/
+    /**
+     * function to be called when we get a message from a peer sctp instance in the poll loop
+     * @param  sfd the socket file descriptor where data can be read...
+     * @param  buf pointer to a buffer, where we data is stored
+     * @param  len number of bytes to be sent, including the iphdr header !
+     * @param  address, where data goes from
+     * @param    dest_len size of the address
+     * @return returns number of bytes actually sent, or error
+     */
     int send_udp_msg(int sfd, char* buf, int length, sockaddrunion* destsu);
 
     /**
-    * function to be called when library sends a message on an SCTP socket
-    * @param  sfd the socket file descriptor where data will be sent
-    * @param  buf pointer to a buffer, where data to be sent is stored
-    * @param  len number of bytes to be sent
-    * @param  destination address, where data is to be sent
-    * @param    dest_len size of the address
-    * @return returns number of bytes actually sent, or error
-    */
-    int send_geco_msg(int sfd, char *buf, int len, sockaddrunion *dest, char tos);
+     * function to be called when library sends a message on an SCTP socket
+     * @param  sfd the socket file descriptor where data will be sent
+     * @param  buf pointer to a buffer, where data to be sent is stored
+     * @param  len number of bytes to be sent
+     * @param  destination address, where data is to be sent
+     * @param    dest_len size of the address
+     * @return returns number of bytes actually sent, or error
+     */
+    int send_geco_msg(int sfd, char *buf, int len, sockaddrunion *dest,
+            char tos);
 
     /**
-    * function to be called when we get an sctp message. This function gives also
-    * the source and destination addresses.
-    *
-    * @param  sfd      the socket file descriptor where data can be read...
-    * @param  dest     pointer to a buffer, where we can store the received data
-    * @param  maxlen   maximum number of bytes that can be received with call
-    * @param  from     address, where we got the data from
-    * @param  to       destination address of that message
-    * @return returns number of bytes received with this call
-    */
-    int recv_geco_msg(int sfd, char *dest, int maxlen,
-        sockaddrunion *from, sockaddrunion *to);
+     * function to be called when we get an sctp message. This function gives also
+     * the source and destination addresses.
+     *
+     * @param  sfd      the socket file descriptor where data can be read...
+     * @param  dest     pointer to a buffer, where we can store the received data
+     * @param  maxlen   maximum number of bytes that can be received with call
+     * @param  from     address, where we got the data from
+     * @param  to       destination address of that message
+     * @return returns number of bytes received with this call
+     */
+    int recv_geco_msg(int sfd, char *dest, int maxlen, sockaddrunion *from,
+            sockaddrunion *to);
 
     /**
-    * function to be called when we get a message from a peer sctp instance in the poll loop
-    * @param  sfd the socket file descriptor where data can be read...
-    * @param  dest pointer to a buffer, where we can store the received data
-    * @param  maxlen maximum number of bytes that can be received with call
-    * @param  address, where we got the data from
-    * @param    from_len size of the address
-    * @return returns number of bytes received with this call
-    */
-    int recv_udp_msg(int sfd, char *dest, int maxlen,
-        sockaddrunion *from, socklen_t *from_len);
+     * function to be called when we get a message from a peer sctp instance in the poll loop
+     * @param  sfd the socket file descriptor where data can be read...
+     * @param  dest pointer to a buffer, where we can store the received data
+     * @param  maxlen maximum number of bytes that can be received with call
+     * @param  address, where we got the data from
+     * @param    from_len size of the address
+     * @return returns number of bytes received with this call
+     */
+    int recv_udp_msg(int sfd, char *dest, int maxlen, sockaddrunion *from,
+            socklen_t *from_len);
 };
 #endif
