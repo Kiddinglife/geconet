@@ -1050,7 +1050,7 @@ void(*action) (void *, void *), void* userData)
 #define CMSG_LEN(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
 #endif
 
-/** done
+/** done recv_geco_msg
  * function to be called when we get an sctp message. This function gives also
  * the source and destination addresses.
  *
@@ -1237,7 +1237,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
 }
 
 
-/** done
+/** done recv_udp_msg
  * function to be called when we get a message from a peer sctp instance in the poll loop
  * @param  sfd the socket file descriptor where data can be read...
  * @param  dest pointer to a buffer, where we can store the received data
@@ -1257,7 +1257,7 @@ int adl_get_message(int sfd, void *dest, int maxlen, union sockaddrunion *from, 
     return len;
 }
 
-/**
+/** process_event();
  * this function is responsible for calling the callback functions belonging
  * to all of the file descriptors that have indicated an event !
  * TODO : check handling of POLLERR situation
@@ -1382,7 +1382,7 @@ void dispatch_event(int num_of_events)
 }
 
 
-/**
+/** done poll
  * function calls the respective callback funtion, that is to be executed as a timer
  * event, passing it two arguments
  */
@@ -1399,7 +1399,7 @@ void dispatch_timer(void)
     result = get_msecs_to_nexttimer();
 
     if (result == 0) {  /* i.e. a timer expired */
-        result = get_next_event(&event);
+        result = get_next_event(&event); // get front timer
 
         tid = event->timer_id;
         curr_timer = tid;
@@ -1486,7 +1486,7 @@ int init_poll_fds(void)
 
 
 
-/**
+/** done poll_one_shot
  *  function to check for events on all poll fds (i.e. open sockets), or else
  *  execute the next timer event. Executed timer events are removed from the list.
  *  Wrapper to poll() -- returns after timeout or read event

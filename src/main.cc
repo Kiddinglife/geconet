@@ -25,7 +25,7 @@ static void test_md5()
     const char* testdata = "HelloJake";
     MD5_CTX ctx;
     MD5Init(&ctx);
-    MD5Update(&ctx, (uchar*)testdata, strlen(testdata));
+    MD5Update(&ctx, (uchar*) testdata, strlen(testdata));
     MD5Final(dest, &ctx);
     //event_log1(loglvl_extevent, "test_md5", "digest of 'HelloJake' {%x}\n",dest);
     event_logi(loglvl_extevent, "test_md5, digest of HelloJake {%x}\n", dest);
@@ -186,13 +186,13 @@ void test_std_find()
     /*  binary_search */
     cout << "binary_search function value = 3: " << endl;
     cout << "3 is " << (binary_search(v.begin(), v.end(), 3) ? "" : "not ")
-        << " in array" << endl;
+            << " in array" << endl;
     cout << endl;
 
     /*  binary_search */
     cout << "binary_search function value = : " << endl;
     cout << "6 is " << (binary_search(v.begin(), v.end(), 6) ? "" : "not ")
-        << " in array" << endl;
+            << " in array" << endl;
     cout << endl;
 
     /**
@@ -321,8 +321,8 @@ static void test_send_udp_msg()
     int udpsdepst = nit.open_ipproto_udp_socket(&saddr);
     assert(udpsdepst < 0);
     int sampledata = 27;
-    int sentsize = nit.send_udp_msg(udpsdepst, (char*)&sampledata, sizeof(int),
-        &saddr);
+    int sentsize = nit.send_udp_msg(udpsdepst, (char*) &sampledata, sizeof(int),
+            &saddr);
     assert(sentsize == sizeof(int));
     // this will get error  to send udp data on geco sdespt
     //sentsize = nit.send_udp_msg(geco_sdespt, (char*)&sampledata,
@@ -342,8 +342,8 @@ static void test_send_geco_msg()
     str2saddr(&saddr, "127.0.0.1", 38000);
 
     int sampledata = 27;
-    int sentsize = nit.send_geco_msg(geco_sdespt, (char*)&sampledata,
-        sizeof(int), &saddr, 3);
+    int sentsize = nit.send_geco_msg(geco_sdespt, (char*) &sampledata,
+            sizeof(int), &saddr, 3);
     assert(sentsize == sizeof(int));
 }
 
@@ -365,8 +365,8 @@ static void test_recv_geco_msg()
     str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
     int sampledata = 27;
     uchar tos = IPTOS_DEFAULT;
-    int sentsize = nit.send_geco_msg(nit.ip4_socket_despt_, (char*)&sampledata,
-        sizeof(int), &saddr, tos);
+    int sentsize = nit.send_geco_msg(nit.ip4_socket_despt_, (char*) &sampledata,
+            sizeof(int), &saddr, tos);
     assert(sentsize == sizeof(int));
     u_long iMode = 1;
     //#ifdef _WIN32
@@ -380,7 +380,7 @@ static void test_recv_geco_msg()
     char buffer[65535];
     int recvsize = 0;
     recvsize = nit.recv_geco_msg(nit.ip4_socket_despt_, buffer, sizeof(buffer),
-        &from, &to);
+            &from, &to);
     assert(recvsize == IP_HDR_SIZE + sizeof(int));
     assert(*(int*)(buffer + IP_HDR_SIZE) == 27);
 }
@@ -397,32 +397,38 @@ static void test_send_recv_udp_msg()
     assert(udpsdepst > 0);
 
     int sampledata = 27;
-    int sentsize = nit.send_udp_msg(udpsdepst, (char*)&sampledata, sizeof(int),
-        &saddr);
+    int sentsize = nit.send_udp_msg(udpsdepst, (char*) &sampledata, sizeof(int),
+            &saddr);
     assert(sentsize == sizeof(int));
 
     char dest[128];
     sockaddrunion saddr1;
     socklen_t length = sizeof(saddr1);
-    sentsize = (int)nit.recv_udp_msg(udpsdepst, dest, 128, &saddr1, &length);
+    sentsize = (int) nit.recv_udp_msg(udpsdepst, dest, 128, &saddr1, &length);
     assert(sentsize == sizeof(int));
-    assert(*(int*)dest == 27);
+    assert(*(int* )dest == 27);
 }
 
-static void fd_action_sctp(){}
-static void fd_action_udp(){}
-static void fd_action_rounting(){}
+static void fd_action_sctp()
+{
+}
+static void fd_action_udp()
+{
+}
+static void fd_action_rounting()
+{
+}
 static void test_add_remove_fd()
 {
     // !!! comment wsaselect() in poller::set_event_on_win32_sdespt() 
     // if you run this unit test
     poller_t poller;
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, fd_action_sctp,
-        (void*)1);
+            (void*) 1);
     poller.add_event_handler(2, EVENTCB_TYPE_UDP, POLLIN, fd_action_udp,
-        (void*)2);
+            (void*) 2);
     poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN,
-        fd_action_rounting, (void*)1);
+            fd_action_rounting, (void*) 1);
     int size = poller.remove_event_handler(1);
     assert(size == 2);
     size = poller.remove_event_handler(200);
@@ -437,19 +443,18 @@ static void test_add_remove_fd()
     assert(poller.socket_despts_size_ == 0);
 #endif
     poller.add_event_handler(3, EVENTCB_TYPE_ROUTING, POLLIN,
-        fd_action_rounting, (void*)1);
+            fd_action_rounting, (void*) 1);
 #ifdef WIN32
     assert(poller.win32_fdnum_ == 1);
 #else
     assert(poller.socket_despts_size_ == 1);
     assert(
-        poller.socket_despts[poller.socket_despts_size_].event_handler_index
-        == 0);
+            poller.socket_despts[poller.socket_despts_size_].event_handler_index
+                    == 0);
     assert(
-        poller.event_callbacks[poller.socket_despts[poller.socket_despts_size_].event_handler_index].action
-        == fd_action_rounting);
+            poller.event_callbacks[poller.socket_despts[poller.socket_despts_size_].event_handler_index].action
+                    == fd_action_rounting);
 #endif
-
 
     size = poller.remove_event_handler(3);
     assert(size == 1);
@@ -471,11 +476,11 @@ static void test_add_remove_fd()
         assert(poller.socket_despts[i].fd == -1);
     }
 
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_UDP, POLLIN, 0, (void*)2);
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, 0, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, 0, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, 0, (void*)1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_UDP, POLLIN, 0, (void*) 2);
+    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, 0, (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, 0, (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, 0, (void*) 1);
     size = poller.remove_event_handler(1);
     assert(size == 5);
 #ifdef WIN32
@@ -484,7 +489,7 @@ static void test_add_remove_fd()
     assert(poller.socket_despts_size_ == 0);
 #endif
 
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
     size = poller.remove_event_handler(1);
     assert(size == 1);
 #ifdef WIN32
@@ -493,8 +498,8 @@ static void test_add_remove_fd()
     assert(poller.socket_despts_size_ == 0);
 #endif
 
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
 #ifdef WIN32
@@ -504,9 +509,9 @@ static void test_add_remove_fd()
 #endif
 
     poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, fd_action_sctp,
-        (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
+            (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
 #ifdef WIN32
@@ -514,20 +519,19 @@ static void test_add_remove_fd()
 #else
     assert(poller.socket_despts_size_ == 1);
     assert(
-        poller.event_callbacks[poller.socket_despts[0].event_handler_index].action
-        == fd_action_sctp);
+            poller.event_callbacks[poller.socket_despts[0].event_handler_index].action
+                    == fd_action_sctp);
     assert(
-        poller.event_callbacks[poller.socket_despts[0].event_handler_index].sfd
-        == 2);
+            poller.event_callbacks[poller.socket_despts[0].event_handler_index].sfd
+                    == 2);
 #endif
 
-
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
     poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, fd_action_sctp,
-        (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*)1);
+            (void*) 1);
+    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, 0, (void*) 1);
     poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, fd_action_sctp,
-        (void*)1);
+            (void*) 1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
 #ifdef WIN32
@@ -535,11 +539,11 @@ static void test_add_remove_fd()
 #else
     assert(poller.socket_despts_size_ == 3);
     assert(
-        poller.event_callbacks[poller.socket_despts[0].event_handler_index].action
-        == fd_action_sctp);
+            poller.event_callbacks[poller.socket_despts[0].event_handler_index].action
+                    == fd_action_sctp);
     assert(
-        poller.event_callbacks[poller.socket_despts[1].event_handler_index].action
-        == fd_action_sctp);
+            poller.event_callbacks[poller.socket_despts[1].event_handler_index].action
+                    == fd_action_sctp);
 #endif
     printf("ALl Done\n");
 }
@@ -560,8 +564,8 @@ int main(int arg, char** args)
     //  test_send_udp_msg();
     //test_send_geco_msg();
     // test_init_poller();
-    test_recv_geco_msg();
-   // test_send_recv_udp_msg();
+    //test_recv_geco_msg();
+    // test_send_recv_udp_msg();
     //test_add_remove_fd();
     //std::cin.get();
 
