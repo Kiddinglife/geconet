@@ -161,7 +161,6 @@ extern "C" {
 
 #define SCTP_SEND_QUEUE                         1
 
-
 /******************** Structure Definitions *******************************************************/
 
 

@@ -21,6 +21,7 @@
 
 #include "globals.h"
 #include "gecotimer.h"
+#include "dispatch_layer.h"
 
 #include <random>
 #include <algorithm>
@@ -249,6 +250,8 @@ typedef void (*socket_cb_fun_t)(int sfd, char* data, int datalen,
 typedef void (*user_cb_fun_t)(int, short int revents, short int* settled_events,
         void* usrdata);
 
+typedef void (*win32stdin_cb_t)(char*, int);
+
 /* converts address-string
  * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
  *  str == NULL will bitzero saddr used as 'ANY ADRESS 0.0.0.0'
@@ -257,7 +260,7 @@ typedef void (*user_cb_fun_t)(int, short int revents, short int* settled_events,
  *  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
         bool ip4 = true);
-extern int saddr2str(sockaddrunion *su, char * buf, size_t len);
+extern int saddr2str(sockaddrunion *su, char * ipaddr, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 
 struct poller_t
@@ -279,6 +282,20 @@ struct poller_t
 
     timer_mgr timer_mgr_;
     timer_mgr::timer_id_t curr_timer_id_;
+
+    transport_layer_t* nit_ptr_;
+    char internal_udp_buffer_[1024 * 1024];
+    char internal_dctp_buffer[MAX_MTU_SIZE + 20];
+
+    sockaddrunion src, dest;
+    socklen_t src_len;
+    int recvlen;
+    ushort portnum;
+    char src_address[MAX_IPADDR_STR_LEN];
+    iphdr* iph;
+    int iphdrlen;
+
+    dispatch_layer_t dispatch_layer_;
 
     /**
      * initializes the array of win32_fds_ we want to use for listening to events
@@ -323,7 +340,6 @@ struct poller_t
      */
     int poll_timers();
 
-
     /**
      * this function is responsible for calling the callback functions belonging
      * to all of the file descriptors that have indicated an event !
@@ -340,8 +356,7 @@ struct poller_t
      *  @return  number of events that where seen on the socket fds,
      *  0 for timer event, -1 for error
      */
-    int poll(void (*lock)(void* data), void (*unlock)(void* data),
-            void* data);
+    int poll(void (*lock)(void* data), void (*unlock)(void* data), void* data);
 
     //! function to set an event mask to a certain socket despt
     void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
@@ -372,6 +387,11 @@ struct poller_t
      */
     int remove_socket_despt(int sfd);
 
+#ifdef _WIN32
+    int add_win32stdin_cb(win32stdin_cb_t stdincb, char* buffer, int length);
+    int remove_win32stdin_cb();
+#endif
+
     void debug_print_events()
     {
         for (int i = 0; i < MAX_FD_SIZE; i++)
@@ -391,17 +411,13 @@ struct poller_t
     }
 };
 
-struct network_interface_t
+struct transport_layer_t
 {
     int ip4_socket_despt_; /* socket fd for standard SCTP port....      */
     int ip6_socket_despt_; /* socket fd for standard SCTP port....      */
     int icmp_socket_despt_; /* socket fd for ICMP messages */
 
-    /* a static receive buffer  */
-    char internal_receive_buffer[MAX_MTU_SIZE + 20];
-
     bool use_udp_; /* enable udp-based-impl */
-    char internal_udp_send__buffer_[65536];
     network_packet_fixed_t* udp_hdr_ptr_;
     int dummy_ipv4_udp_despt_;
     int dummy_ipv6_udp_despt_;
@@ -414,7 +430,7 @@ struct network_interface_t
 
     poller_t poller_;
 
-    network_interface_t()
+    transport_layer_t()
     {
         ip4_socket_despt_ = -1;
         ip6_socket_despt_ = -1;
@@ -429,6 +445,8 @@ struct network_interface_t
         stat_recv_event_size_ = 0;
         stat_recv_bytes_ = 0;
         stat_send_bytes_ = 0;
+
+        poller_.nit_ptr_ = this;
     }
 
     void use_udp()
@@ -518,7 +536,7 @@ struct network_interface_t
      * @param    dest_len size of the address
      * @return returns number of bytes actually sent, or error
      */
-    int send_udp_msg(int sfd, char* buf, int length, sockaddrunion* destsu);
+    int send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu);
 
     /**
      * function to be called when library sends a message on an SCTP socket
@@ -529,7 +547,7 @@ struct network_interface_t
      * @param    dest_len size of the address
      * @return returns number of bytes actually sent, or error
      */
-    int send_geco_msg(int sfd, char *buf, int len, sockaddrunion *dest,
+    int send_ip_packet(int sfd, char *buf, int len, sockaddrunion *dest,
             char tos);
 
     /**
@@ -543,7 +561,7 @@ struct network_interface_t
      * @param  to       destination address of that message
      * @return returns number of bytes received with this call
      */
-    int recv_geco_msg(int sfd, char *dest, int maxlen, sockaddrunion *from,
+    int recv_ip_packet(int sfd, char *dest, int maxlen, sockaddrunion *from,
             sockaddrunion *to);
 
     /**
@@ -555,7 +573,7 @@ struct network_interface_t
      * @param    from_len size of the address
      * @return returns number of bytes received with this call
      */
-    int recv_udp_msg(int sfd, char *dest, int maxlen, sockaddrunion *from,
+    int recv_udp_packet(int sfd, char *dest, int maxlen, sockaddrunion *from,
             socklen_t *from_len);
 
 };

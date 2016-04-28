@@ -78,6 +78,10 @@
 
 #define GRANULARITY 1//ms
 
+/* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
+/* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
+#define MAX_IPADDR_STR_LEN           46        /* ==  INET6_ADDRSTRLEN      */
+
 // if our impl is based on UDP, this is the well-known-port 
 // receiver and sender endpoints use 
 #ifndef USED_UDP_PORT

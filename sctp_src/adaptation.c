@@ -506,7 +506,7 @@ bool adl_equal_address(union sockaddrunion * a, union sockaddrunion * b)
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
-    if(a->sa.sa_family == AF_INET) 
+    if(a->sa.sa_family == AF_INET)
     {
         my_a.sin6.sin6_family = AF_INET6;
         my_a.sin6.sin6_port   = a->sin.sin_port;
@@ -583,7 +583,7 @@ gint adl_open_ipproto_sctp__socket(int af, int* rwnd)
 #endif
 
 #ifdef SCTP_OVER_UDP
-    if ((sockdespt = socket(af, SOCK_RAW, IPPROTO_UDP)) < 0) 
+    if ((sockdespt = socket(af, SOCK_RAW, IPPROTO_UDP)) < 0)
     {
 #else
     if ((sockdespt = socket(af, SOCK_RAW, IPPROTO_GECO)) < 0)
@@ -618,7 +618,7 @@ gint adl_open_ipproto_sctp__socket(int af, int* rwnd)
 #if defined (__linux__)
             adl_setReceiveBufferSize(sockdespt, 10*0xFFFF);
             opt_size=sizeof(*rwnd);
-            if (getsockopt (sockdespt, SOL_SOCKET, SO_RCVBUF, (void*)rwnd, &opt_size) < 0) 
+            if (getsockopt (sockdespt, SOL_SOCKET, SO_RCVBUF, (void*)rwnd, &opt_size) < 0)
             {
                 error_log(ERROR_FATAL, "getsockopt: SO_RCVBUF failed !");
                 *rwnd = -1;
@@ -1110,10 +1110,10 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
 
 #ifdef SCTP_OVER_UDP
 #ifdef __linux__
-        if(len < (int)sizeof(struct iphdr) + (int)sizeof(network_packet_fixed_t)) 
+        if(len < (int)sizeof(struct iphdr) + (int)sizeof(network_packet_fixed_t))
         {
 #else
-        if(len < (int)sizeof(struct iphdr) + (int)sizeof(struct udphdr)) 
+        if(len < (int)sizeof(struct iphdr) + (int)sizeof(struct udphdr))
         {
 #endif
             return -1;
@@ -1124,7 +1124,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
         udp_packet_fixed = (struct udphdr *)((long)dest + (long)sizeof(struct iphdr));
 #endif
 #ifdef __linux__
-        if(ntohs(udp_packet_fixed->dest_port) != SCTP_OVER_UDP_UDPPORT) 
+        if(ntohs(udp_packet_fixed->dest_port) != SCTP_OVER_UDP_UDPPORT)
         {
 #else
         if(ntohs(udp_packet_fixed->uh_dport) != SCTP_OVER_UDP_UDPPORT)
@@ -1134,11 +1134,11 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
         }
         ptr = (unsigned char*)udp_packet_fixed;
 #ifdef __linux__
-        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(network_packet_fixed_t));i++) 
+        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(network_packet_fixed_t));i++)
         {
             *ptr = ptr[sizeof(network_packet_fixed_t)];
 #else
-        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(struct udphdr));i++) 
+        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(struct udphdr));i++)
         {
             *ptr = ptr[sizeof(struct udphdr)];
 #endif
@@ -1280,36 +1280,47 @@ void dispatch_event(int num_of_events)
 #endif
     int hlen = 0;
     ENTER_EVENT_DISPATCHER;
-    for (i = 0; i < socket_despts_size; i++) {
+    for (i = 0; i < socket_despts_size; i++)
+    {
 
         if (!socket_despts[i].revents)
             continue;
 
-        if (socket_despts[i].revents & POLLERR) {
+        if (socket_despts[i].revents & POLLERR)
+        {
             /* We must have specified this callback funtion for treating/logging the error */
             if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_USER) {
                 event_logi(VERBOSE, "Poll Error Condition on user fd %d", socket_despts[i].fd);
                 ((sctp_userCallback)*(event_callbacks[i]->action)) (socket_despts[i].fd, socket_despts[i].revents, &socket_despts[i].events, event_callbacks[i]->userData);
             }
-            else {
+            else
+            {
                 error_logi(ERROR_MINOR, "Poll Error Condition on fd %d", socket_despts[i].fd);
                 ((sctp_socketCallback)*(event_callbacks[i]->action)) (socket_despts[i].fd, NULL, 0, NULL, 0);
             }
         }
 
-        if ((socket_despts[i].revents & POLLPRI) || (socket_despts[i].revents & POLLIN) || (socket_despts[i].revents & POLLOUT)) {
-            if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_USER) {
+        if ((socket_despts[i].revents & POLLPRI) || (socket_despts[i].revents & POLLIN) || (socket_despts[i].revents & POLLOUT))
+        {
+            if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_USER)
+            {
                 event_logi(VERBOSE, "Activity on user fd %d - Activating USER callback", socket_despts[i].fd);
-                ((sctp_userCallback)*(event_callbacks[i]->action)) (socket_despts[i].fd, socket_despts[i].revents, &socket_despts[i].events, event_callbacks[i]->userData);
+                ((sctp_userCallback)*(event_callbacks[i]->action)) (socket_despts[i].fd,
+                        socket_despts[i].revents, &socket_despts[i].events,
+                        event_callbacks[i]->userData);
 
             }
-            else if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_UDP) {
+            else if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_UDP)
+            {
                 src_len = sizeof(src);
-                length = adl_get_message(socket_despts[i].fd, internal_receive_buffer, MAX_MTU_SIZE, &src, &src_len);
-                event_logi(VERBOSE, "Message %d bytes - Activating UDP callback", length);
+                length = adl_get_message(socket_despts[i].fd,
+                        internal_receive_buffer, MAX_MTU_SIZE, &src, &src_len);
+                event_logi(VERBOSE,
+                        "Message %d bytes - Activating UDP callback", length);
                 adl_sockunion2str(&src, src_address, SCTP_MAX_IP_LEN);
 
-                switch (saddr_family(&src)) {
+                switch (saddr_family(&src))
+                {
                     case AF_INET:
                         portnum = ntohs(src.sin.sin_port);
                         break;
@@ -1322,21 +1333,27 @@ void dispatch_event(int num_of_events)
                         portnum = 0;
                         break;
                 }
-                ((sctp_socketCallback)*(event_callbacks[i]->action)) (socket_despts[i].fd, internal_receive_buffer, length, src_address, portnum);
+                ((sctp_socketCallback)*(event_callbacks[i]->action)) (socket_despts[i].fd,
+                        internal_receive_buffer, length, src_address, portnum);
 
             }
-            else if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_SCTP) {
-                length = adl_receive_message(socket_despts[i].fd, internal_receive_buffer, MAX_MTU_SIZE, &src, &dest);
+            else if (event_callbacks[i]->eventcb_type == EVENTCB_TYPE_SCTP)
+            {
+                length = adl_receive_message(socket_despts[i].fd,
+                        internal_receive_buffer, MAX_MTU_SIZE, &src, &dest);
 
                 if (length < 0) break;
 
-                event_logiiii(VERBOSE, "SCTP-Message on socket %u , len=%d, portnum=%d, sockaddrunion family %u",
+                event_logiiii(VERBOSE,
+         "SCTP-Message on socket %u , len=%d, portnum=%d, sockaddrunion family %u",
                     socket_despts[i].fd, length, portnum, saddr_family(&src));
 
-                switch (saddr_family(&src)) {
+                switch (saddr_family(&src))
+                {
                     case AF_INET:
                         src_in = (struct sockaddr_in *) &src;
-                        event_logi(VERBOSE, "IPv4/SCTP-Message from %s -> activating callback",
+                        event_logi(VERBOSE,
+                                "IPv4/SCTP-Message from %s -> activating callback",
                             inet_ntoa(src_in->sin_addr));
 #if defined (__linux__)
                         iph = (struct iphdr *) internal_receive_buffer;
@@ -1348,7 +1365,8 @@ void dispatch_event(int num_of_events)
                         iph = (struct iphdr *) internal_receive_buffer;
                         hlen = iph->ip_hl << 2;
 #endif
-                        if (length < hlen) {
+                        if (length < hlen)
+                        {
                             error_logii(ERROR_MINOR,
                                 "dispatch_event : packet too short (%d bytes) from %s",
                                 length, inet_ntoa(src_in->sin_addr));

@@ -12,4 +12,5 @@
 //#define HAVE_SIN_LEN
 //#define HAVE_IPV6_RECVPKTINFO
 //#define USE_UDP
+#define _DEBUG
 #endif /* MY_CONFIG_H_ */

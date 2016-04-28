@@ -144,7 +144,8 @@ struct chunk_fixed_t
 #define DCHUNK_FLAG_UNRELIABLE 0x08
 // unreliable data chunk     10base: 8    2base : 1000
 
-#define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+3*sizeof(ushort))
+#define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
+//#define DATA_CHUNK_FIXED_SIZE (2*sizeof(uint)+2*sizeof(ushort))
 #define DATA_CHUNK_FIXED_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
 #define MAX_DATA_CHUNK_VALUE_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
@@ -152,10 +153,9 @@ struct chunk_fixed_t
 /* when chunk_id == CHUNK_DATA */
 struct data_chunk_fixed_t
 {
-    uint trans_seq_num;
+    uint trans_seq_num; // unrealiable msg has NO this field
     ushort stream_identity;
-    ushort stream_seq_num;
-    ushort protocol_id;
+    ushort stream_seq_num; // unordered msg has NO this field
 };
 struct data_chunk_t
 {
