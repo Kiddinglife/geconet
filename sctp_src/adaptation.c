@@ -1543,7 +1543,7 @@ int adl_extendedEventLoop(void(*lock)(void* data), void(*unlock)(void* data), vo
     return (result);
 }
 
-/**
+/** fire(null,null,null)
  *  function to check for events on all poll fds (i.e. open sockets), or else
  *  execute the next timer event. Executed timer events are removed from the list.
  *  Wrapper to poll() -- returns after timeout or read event

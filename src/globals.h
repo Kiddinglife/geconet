@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <climits>
+#include <assert.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -74,6 +75,8 @@
 
 #include "config.h"
 #include "messages.h"
+
+#define GRANULARITY 1//ms
 
 // if our impl is based on UDP, this is the well-known-port 
 // receiver and sender endpoints use 

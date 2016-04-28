@@ -1,6 +1,32 @@
 #include "poller.h"
 #include <stdlib.h>
 
+static void safe_close_soket(int sfd)
+{
+    if (sfd <= 0)
+    {
+        error_log(major_error_abort, "invalid sfd!\n");
+        return;
+    }
+
+#ifdef WIN32
+    if (closesocket(sfd) < 0)
+    {
+#else
+    if (close(sfd) < 0)
+    {
+#endif
+#ifdef _WIN32
+        error_logi(major_error_abort,
+                "safe_cloe_soket()::close socket failed! {%d} !\n",
+                WSAGetLastError());
+#else
+        error_logi(major_error_abort,
+                "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
+#endif
+    }
+}
+
 #ifdef _WIN32
 static inline int writev(int sock, const struct iovec *iov, int nvecs)
 {
@@ -201,7 +227,6 @@ void poller_t::init()
 {
     socket_despts_size_ = 0;
     revision_ = 0;
-    num_of_triggered_events = 0;
 
 #ifdef _WIN32
     win32_fdnum_ = 0;
@@ -394,7 +419,7 @@ void poller_t::add_event_handler(int sfd, int eventcb_type, int event_mask,
     event_callbacks[index].userData = userData;
 #endif
 }
-int poller_t::poll_timer()
+int poller_t::poll_timers()
 {
     if (this->timer_mgr_.empty())
         return -1;
@@ -408,29 +433,36 @@ int poller_t::poll_timer()
     }
     return result;
 }
-
-static int GRANULARITY = 10;
-int poller_t::poll_one_shot(void (*lock)(void* data),
-        void (*unlock)(void* data), void* data)
+//TODO
+void poller_t::fire_event(int num_of_events)
 {
+
+}
+
+int poller_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
+        void* data)
+{
+#ifdef WIN32
+//TODO
+#else
     if (lock != NULL)
-        lock(data);
-    int msecs = poll_timer();
-    if (unlock != NULL)
-        unlock(data);
+           lock(data);
 
-    // timer timeouts
-    if (msecs == 0)
-        return msecs;
+       int msecs = poll_timers();
+       if (unlock != NULL)
+           unlock(data);
 
-    // no timers, we use a default timeout for select
-    if (msecs < 0)
-        msecs = GRANULARITY;
+       // timer timeouts
+       if (msecs == 0)
+           return msecs;
 
-    int ret = poll_socket_despts(socket_despts, &socket_despts_size_, msecs,
-            lock, unlock, data);
+       // no timers, we use a default timeout for select
+       if (msecs < 0)
+           msecs = GRANULARITY;
 
-    return ret;
+       return poll_fds(socket_despts, &socket_despts_size_, msecs, lock,
+               unlock, data);
+#endif
 }
 int network_interface_t::init(int * myRwnd, bool ip4)
 {
@@ -534,7 +566,7 @@ int network_interface_t::init(int * myRwnd, bool ip4)
     }
 #endif
 
-// FIXME
+    // FIXME
     /* we should - in a later revision - add back the a function that opens
      appropriate ICMP sockets (IPv4 and/or IPv6) and registers these with
      callback functions that also set PATH MTU correctly */
@@ -548,26 +580,15 @@ int network_interface_t::init(int * myRwnd, bool ip4)
     return 0;
 }
 
-int poller_t::poll_socket_despts(socket_despt_t* despts, int* count,
+int poller_t::poll_fds(socket_despt_t* despts, int* count,
         int timeout, void (*lock)(void* data), void (*unlock)(void* data),
         void* data)
 {
     struct timeval tv;
     struct timeval* to;
-
-    fd_set rd_fdset;
-    ;
-    fd_set wt_fdset;
-    fd_set except_fdset;
-    int fdcount;
-    int n;
-    int ret;
-    int i;
-
-// fill timeval
-    if (timeout < 0)
+    if (timeout < 0) // -1 means no timers added
     {
-        to = nullptr;
+        to = NULL;
     }
     else
     {
@@ -575,9 +596,13 @@ int poller_t::poll_socket_despts(socket_despt_t* despts, int* count,
         fills_timeval(to, timeout);
     }
 
-// Initialize structures for select()
-    fdcount = 0;
-    n = 0;
+    int ret;
+    int i;
+    int fdcount = 0;
+    int nfd = 0;
+    fd_set rd_fdset;
+    fd_set wt_fdset;
+    fd_set except_fdset;
     FD_ZERO(&rd_fdset);
     FD_ZERO(&wt_fdset);
     FD_ZERO(&except_fdset);
@@ -589,12 +614,7 @@ int poller_t::poll_socket_despts(socket_despt_t* despts, int* count,
 
     for (i = 0; i < (*count); i++)
     {
-        // only filter out the illegal fd less than zero,
-        // if it is a no-evevent-specified-fd,
-        // we  treats it as correct fd as select() will detect what event happened on it.
-        if (despts[i].fd < 0)
-            continue;
-        n = MAX(n, despts[i].fd);
+        nfd = MAX(nfd, despts[i].fd);
         if (despts[i].events & (POLLIN | POLLPRI))
         {
             FD_SET(despts[i].fd, &rd_fdset);
@@ -643,7 +663,8 @@ int poller_t::poll_socket_despts(socket_despt_t* despts, int* count,
             unlock(data);
         }
 
-        ret = select(n + 1, &rd_fdset, &wt_fdset, &except_fdset, to);
+        //  nfd is the max fd number plus one
+        ret = select(nfd + 1, &rd_fdset, &wt_fdset, &except_fdset, to);
 
         if (lock)
         {
@@ -669,9 +690,7 @@ int poller_t::poll_socket_despts(socket_despt_t* despts, int* count,
         if (ret > 0)
         {
             event_logi(verbose,
-                    "############### \
-                           event %d occurred, dispatch it\
-                           #############",
+                    "############### event %d occurred, dispatch it#############",
                     (unsigned int )ret);
 
             for (i = 0; i < *count; i++)
@@ -696,11 +715,11 @@ int poller_t::poll_socket_despts(socket_despt_t* despts, int* count,
                     }
                 }
             }
-            process_event(ret);
+            this->fire_event(ret);
         }
         else if (ret == 0) //timeouts
         {
-            poll_timer();
+            poll_timers();
         }
         else // -1 error
         {

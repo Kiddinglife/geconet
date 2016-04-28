@@ -259,31 +259,6 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
         bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
-static void safe_close_soket(int sfd)
-{
-    if (sfd <= 0)
-    {
-        error_log(major_error_abort, "invalid sfd!\n");
-        return;
-    }
-
-#ifdef WIN32
-    if (closesocket(sfd) < 0)
-    {
-#else
-    if (close(sfd) < 0)
-    {
-#endif
-#ifdef _WIN32
-        error_logi(major_error_abort,
-                "safe_cloe_soket()::close socket failed! {%d} !\n",
-                WSAGetLastError());
-#else
-        error_logi(major_error_abort,
-                "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
-#endif
-    }
-}
 
 struct poller_t
 {
@@ -339,8 +314,34 @@ struct poller_t
      *      fails.
      *      0 timer timeouts >0 event number
      */
-    int poll_socket_despts(socket_despt_t* despts, int* count, int timeout,
+    int poll_fds(socket_despt_t* despts, int* count, int timeout,
             void (*lock)(void* data), void (*unlock)(void* data), void* data);
+    /**
+     * function calls the respective callback funtion, that is to be executed as a timer
+     * event, passing it two arguments
+     * -1 no timers, 0 timeouts, >0 interval before next timeouts
+     */
+    int poll_timers();
+
+
+    /**
+     * this function is responsible for calling the callback functions belonging
+     * to all of the file descriptors that have indicated an event !
+     * todo : check handling of POLLERR situation
+     * @param num_of_events  number of events indicated by poll()
+     */
+    void fire_event(int num_of_events);
+
+    /**
+     *  function to check for events on all poll fds (i.e. open sockets),
+     *  or else execute the next timer event.
+     *  Executed timer events are removed from the list.
+     *  Wrapper to poll() -- returns after timeout or read event
+     *  @return  number of events that where seen on the socket fds,
+     *  0 for timer event, -1 for error
+     */
+    int poll(void (*lock)(void* data), void (*unlock)(void* data),
+            void* data);
 
     //! function to set an event mask to a certain socket despt
     void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
@@ -371,31 +372,6 @@ struct poller_t
      */
     int remove_socket_despt(int sfd);
 
-    /**
-     * function calls the respective callback funtion, that is to be executed as a timer
-     * event, passing it two arguments
-     * -1 no timers, 0 timeouts, >0 interval before next timeouts
-     */
-    int poll_timer();
-
-    /**
-     * this function is responsible for calling the callback functions belonging
-     * to all of the file descriptors that have indicated an event !
-     * TODO : check handling of POLLERR situation
-     * @param num_of_events  number of events indicated by poll()
-     */
-    void process_event(int num_of_events);
-
-    /**
-     *  function to check for events on all poll fds (i.e. open sockets),
-     *  or else execute the next timer event.
-     *  Executed timer events are removed from the list.
-     *  Wrapper to poll() -- returns after timeout or read event
-     *  @return  number of events that where seen on the socket fds,
-     *  0 for timer event, -1 for error
-     */
-    int poll_one_shot(void (*lock)(void* data), void (*unlock)(void* data), void* data);
-
     void debug_print_events()
     {
         for (int i = 0; i < MAX_FD_SIZE; i++)
@@ -404,9 +380,7 @@ struct poller_t
             {
 
                 event_logiiiiiii(verbose,
-                        "{event_handler_index:%d {sfd:%d, etype:%d}\n \
-                                                                                 socket_despts[i].events : %d\n \
-                                                                                                                                                                                                             socket_despts[i].fd%d\nsocket_despts[i].revents%d\n \                                                       socket_despts[i].revision: %d\n}",
+                        "{event_handler_index:%d {sfd:%d, etype:%d}\nsocket_despts[i].events : %d\nsocket_despts[i].fd, %d\nsocket_despts[i].revents %d\nsocket_despts[i].revision: %d\n}",
                         socket_despts[i].event_handler_index,
                         event_callbacks[socket_despts[i].event_handler_index].sfd,
                         event_callbacks[socket_despts[i].event_handler_index].eventcb_type,
