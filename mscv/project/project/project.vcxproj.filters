@@ -1,53 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
+    <ClInclude Include="..\..\..\src\basic-type.h" />
+    <ClInclude Include="..\..\..\src\config.h" />
+    <ClInclude Include="..\..\..\src\dispatch_layer.h" />
+    <ClInclude Include="..\..\..\src\gecotimer.h" />
+    <ClInclude Include="..\..\..\src\globals.h" />
+    <ClInclude Include="..\..\..\src\md5.h" />
+    <ClInclude Include="..\..\..\src\messages.h" />
+    <ClInclude Include="..\..\..\src\poller.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\basic-type.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\gecotimer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\globals.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\md5.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\messages.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\poller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\src\gecotimer.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\globals.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\md5.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\main.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\poller.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClCompile Include="..\..\..\src\dispatch_layer.cc" />
+    <ClCompile Include="..\..\..\src\gecotimer.cc" />
+    <ClCompile Include="..\..\..\src\globals.cc" />
+    <ClCompile Include="..\..\..\src\main.cc" />
+    <ClCompile Include="..\..\..\src\md5.cc" />
+    <ClCompile Include="..\..\..\src\poller.cc" />
   </ItemGroup>
 </Project>

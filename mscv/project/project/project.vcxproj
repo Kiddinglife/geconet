@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\src\basic-type.h" />
     <ClInclude Include="..\..\..\src\config.h" />
+    <ClInclude Include="..\..\..\src\dispatch_layer.h" />
     <ClInclude Include="..\..\..\src\gecotimer.h" />
     <ClInclude Include="..\..\..\src\globals.h" />
     <ClInclude Include="..\..\..\src\md5.h" />
@@ -28,6 +29,7 @@
     <ClInclude Include="..\..\..\src\poller.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\src\dispatch_layer.cc" />
     <ClCompile Include="..\..\..\src\gecotimer.cc" />
     <ClCompile Include="..\..\..\src\globals.cc" />
     <ClCompile Include="..\..\..\src\main.cc" />

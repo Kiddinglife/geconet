@@ -103,6 +103,7 @@
 #define    EVENTCB_TYPE_UDP        2
 #define    EVENTCB_TYPE_USER       3
 #define    EVENTCB_TYPE_ROUTING    4
+#define    EVENTCB_TYPE_STDIN          5
 
 #define GECO_CMSG_ALIGN(len) ( ((len)+sizeof(long)-1) & ~(sizeof(long)-1) )
 #define GECO_CMSG_SPACE(len) \
@@ -130,14 +131,6 @@ struct iphdr
     ushort checksum; /* checksum */
     struct in_addr src_addr; /* source and dest address */
     struct in_addr dst_addr;
-};
-
-struct input_data
-{
-    unsigned long len;
-    char buffer[1024];
-    void* event;
-    void* eventback;
 };
 
 #define msghdr _WSAMSG
@@ -179,7 +172,7 @@ enum hide_address_flag_t
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-            | flag_HideSiteLocal,
+    | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
@@ -198,6 +191,42 @@ union sockaddrunion
     struct sockaddr_in6 sin6;
 };
 
+/* Defines the callback function that is called when an event occurs
+on an internal GECO or UDP socket
+Params: 1. file-descriptor of the socket
+2. pointer to the datagram data, if any was received
+3. length of datagram data, if any was received
+4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
+5. source port number for UDP sockets, 0 for SCTP raw sockets
+*/
+typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen,
+    const char* addr, ushort port);
+
+/* Defines the callback function that is called when an event occurs
+on a user file-descriptor
+Params: 1. file-descriptor
+Params: 2. received events mask
+Params: 3. pointer to registered events mask.
+It may be changed by the callback function.
+Params: 4. user data
+*/
+typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events,
+    void* usrdata);
+
+//fixme this  can be replaced by user_cb_t
+typedef unsigned long(
+#ifdef _WIN32
+    WINAPI
+#endif 
+    *stdin_cb_t)(void* params);
+
+union cbunion_t
+{
+    socket_cb_fun_t socket_cb_fun;
+    user_cb_fun_t user_cb_fun;
+    stdin_cb_t stdin_cb_func;
+};
+
 /**
  * Structure for callback events. The function "action" is called by the event-handler,
  * when an event occurs on the file-descriptor.
@@ -208,15 +237,17 @@ struct event_handler_t
     int sfd;
     int eventcb_type;
     /* pointer to possible arguments, associations etc. */
-    void (*action)();
-    void *arg1, *arg2, *userData;
+    cbunion_t action;
+    void* arg1, *arg2, *userData;
 };
 
-struct data_t
+struct stdin_data_t
 {
-    char* dat;
-    int len;
-    void (*cb)();
+    unsigned long len;
+    char buffer[1024];
+    HANDLE event;
+    HANDLE eventback;
+    stdin_cb_t user_cb_fun;
 };
 
 struct socket_despt_t
@@ -228,29 +259,7 @@ struct socket_despt_t
     long revision;
 };
 
-/* Defines the callback function that is called when an event occurs
- on an internal GECO or UDP socket
- Params: 1. file-descriptor of the socket
- 2. pointer to the datagram data, if any was received
- 3. length of datagram data, if any was received
- 4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
- 5. source port number for UDP sockets, 0 for SCTP raw sockets
- */
-typedef void (*socket_cb_fun_t)(int sfd, char* data, int datalen,
-        const char* addr, ushort port);
-
-/* Defines the callback function that is called when an event occurs
- on a user file-descriptor
- Params: 1. file-descriptor
- Params: 2. received events mask
- Params: 3. pointer to registered events mask.
- It may be changed by the callback function.
- Params: 4. user data
- */
-typedef void (*user_cb_fun_t)(int, short int revents, short int* settled_events,
-        void* usrdata);
-
-typedef void (*win32stdin_cb_t)(char*, int);
+struct transport_layer_t;
 
 /* converts address-string
  * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
@@ -259,7 +268,7 @@ typedef void (*win32stdin_cb_t)(char*, int);
  *  default  is IPv4
  *  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
-        bool ip4 = true);
+    bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * ipaddr, size_t len);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 
@@ -277,8 +286,9 @@ struct poller_t
     HANDLE win32_handler_;
     HANDLE win32_handlers_[2];
     HANDLE win32_stdin_handler_;
-    input_data win32_input_data_;
+    WSAEVENT win32_stdin_event_;
 #endif
+    stdin_data_t stdin_input_data_;
 
     timer_mgr timer_mgr_;
     timer_mgr::timer_id_t curr_timer_id_;
@@ -296,6 +306,7 @@ struct poller_t
     int iphdrlen;
 
     dispatch_layer_t dispatch_layer_;
+    cbunion_t cbunion_;
 
     /**
      * initializes the array of win32_fds_ we want to use for listening to events
@@ -332,7 +343,8 @@ struct poller_t
      *      0 timer timeouts >0 event number
      */
     int poll_fds(socket_despt_t* despts, int* count, int timeout,
-            void (*lock)(void* data), void (*unlock)(void* data), void* data);
+        void(*lock)(void* data), void(*unlock)(void* data), void* data);
+
     /**
      * function calls the respective callback funtion, that is to be executed as a timer
      * event, passing it two arguments
@@ -356,7 +368,7 @@ struct poller_t
      *  @return  number of events that where seen on the socket fds,
      *  0 for timer event, -1 for error
      */
-    int poll(void (*lock)(void* data), void (*unlock)(void* data), void* data);
+    int poll(void(*lock)(void* data), void(*unlock)(void* data), void* data);
 
     //! function to set an event mask to a certain socket despt
     void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
@@ -372,7 +384,7 @@ struct poller_t
      * no no need to check ret val so no ret value given
      */
     void add_event_handler(int sfd, int eventcb_type, int event_mask,
-            void (*action)(), void* userData);
+        cbunion_t action, void* userData);
 
     /**
      *    function to close a bound socket from our list of socket descriptors
@@ -387,10 +399,8 @@ struct poller_t
      */
     int remove_socket_despt(int sfd);
 
-#ifdef _WIN32
-    int add_win32stdin_cb(win32stdin_cb_t stdincb, char* buffer, int length);
-    int remove_win32stdin_cb();
-#endif
+    void add_stdin_cb(stdin_cb_t stdincb);
+    int remove_stdin_cb();
 
     void debug_print_events()
     {
@@ -400,12 +410,12 @@ struct poller_t
             {
 
                 event_logiiiiiii(verbose,
-                        "{event_handler_index:%d {sfd:%d, etype:%d}\nsocket_despts[i].events : %d\nsocket_despts[i].fd, %d\nsocket_despts[i].revents %d\nsocket_despts[i].revision: %d\n}",
-                        socket_despts[i].event_handler_index,
-                        event_callbacks[socket_despts[i].event_handler_index].sfd,
-                        event_callbacks[socket_despts[i].event_handler_index].eventcb_type,
-                        socket_despts[i].events, socket_despts[i].fd,
-                        socket_despts[i].revents, socket_despts[i].revision);
+                    "{event_handler_index:%d {sfd:%d, etype:%d}\nsocket_despts[i].events : %d\nsocket_despts[i].fd, %d\nsocket_despts[i].revents %d\nsocket_despts[i].revision: %d\n}",
+                    socket_despts[i].event_handler_index,
+                    event_callbacks[socket_despts[i].event_handler_index].sfd,
+                    event_callbacks[socket_despts[i].event_handler_index].eventcb_type,
+                    socket_despts[i].events, socket_despts[i].fd,
+                    socket_despts[i].revents, socket_despts[i].revision);
             }
         }
     }
@@ -429,6 +439,7 @@ struct transport_layer_t
     uint stat_send_bytes_;
 
     poller_t poller_;
+    cbunion_t cbunion_;
 
     transport_layer_t()
     {
@@ -445,7 +456,6 @@ struct transport_layer_t
         stat_recv_event_size_ = 0;
         stat_recv_bytes_ = 0;
         stat_send_bytes_ = 0;
-
         poller_.nit_ptr_ = this;
     }
 
@@ -461,7 +471,7 @@ struct transport_layer_t
      * @param  scf  callback funtion that is called (when return is hit)
      */
     void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
-            short int eventMask);
+        short int eventMask);
     /**
      * @return return the number of fds removed
      */
@@ -477,7 +487,7 @@ struct transport_layer_t
      * @return new UDP socket file descriptor, or -1 if error ocurred
      */
     int add_udpsock_ulpcb(const char* addr, ushort my_port,
-            socket_cb_fun_t scb);
+        socket_cb_fun_t scb);
 
     /**
      * @return return the number of fds removed
@@ -548,7 +558,7 @@ struct transport_layer_t
      * @return returns number of bytes actually sent, or error
      */
     int send_ip_packet(int sfd, char *buf, int len, sockaddrunion *dest,
-            char tos);
+        char tos);
 
     /**
      * function to be called when we get an sctp message. This function gives also
@@ -562,7 +572,7 @@ struct transport_layer_t
      * @return returns number of bytes received with this call
      */
     int recv_ip_packet(int sfd, char *dest, int maxlen, sockaddrunion *from,
-            sockaddrunion *to);
+        sockaddrunion *to);
 
     /**
      * function to be called when we get a message from a peer sctp instance in the poll loop
@@ -574,7 +584,7 @@ struct transport_layer_t
      * @return returns number of bytes received with this call
      */
     int recv_udp_packet(int sfd, char *dest, int maxlen, sockaddrunion *from,
-            socklen_t *from_len);
+        socklen_t *from_len);
 
 };
 #endif

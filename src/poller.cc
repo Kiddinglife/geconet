@@ -1,5 +1,6 @@
 #include "poller.h"
 #include <stdlib.h>
+#define STD_INPUT_FD 0
 
 static void safe_close_soket(int sfd)
 {
@@ -18,11 +19,11 @@ static void safe_close_soket(int sfd)
 #endif
 #ifdef _WIN32
         error_logi(major_error_abort,
-                "safe_cloe_soket()::close socket failed! {%d} !\n",
-                WSAGetLastError());
+            "safe_cloe_soket()::close socket failed! {%d} !\n",
+            WSAGetLastError());
 #else
         error_logi(major_error_abort,
-                "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
+            "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
 #endif
     }
 }
@@ -56,18 +57,18 @@ static LPFN_WSARECVMSG getwsarecvmsg()
     DWORD dwBytes = 0;
     sock = socket(AF_INET6, SOCK_DGRAM, 0);
     if (SOCKET_ERROR == WSAIoctl(sock,
-                    SIO_GET_EXTENSION_FUNCTION_POINTER,
-                    &guidWSARecvMsg,
-                    sizeof(guidWSARecvMsg),
-                    &lpfnWSARecvMsg,
-                    sizeof(lpfnWSARecvMsg),
-                    &dwBytes,
-                    NULL,
-                    NULL
-            ))
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &guidWSARecvMsg,
+        sizeof(guidWSARecvMsg),
+        &lpfnWSARecvMsg,
+        sizeof(lpfnWSARecvMsg),
+        &dwBytes,
+        NULL,
+        NULL
+        ))
     {
         error_log(major_error_abort,
-                "WSAIoctl SIO_GET_EXTENSION_FUNCTION_POINTER\n");
+            "WSAIoctl SIO_GET_EXTENSION_FUNCTION_POINTER\n");
         return NULL;
     }
     safe_close_soket(sock);
@@ -77,17 +78,17 @@ static LPFN_WSARECVMSG getwsarecvmsg()
 
 static uint udp_checksum(const void* ptr, size_t count)
 {
-    ushort* addr = (ushort*) ptr;
+    ushort* addr = (ushort*)ptr;
     uint sum = 0;
 
     while (count > 1)
     {
-        sum += *(ushort*) addr++;
+        sum += *(ushort*)addr++;
         count -= 2;
     }
 
     if (count > 0)
-        sum += *(uchar*) addr;
+        sum += *(uchar*)addr;
 
     while (sum >> 16)
         sum = (sum & 0xffff) + (sum >> 16);
@@ -98,7 +99,7 @@ static uint udp_checksum(const void* ptr, size_t count)
 int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
 {
     int ret;
-    memset((void*) su, 0, sizeof(union sockaddrunion));
+    memset((void*)su, 0, sizeof(union sockaddrunion));
 
     if (hs_port <= 0)
     {
@@ -136,7 +137,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
     {
         if (str != NULL && strlen(str) > 0)
         {
-            ret = inet_pton(AF_INET6, (const char *) str, &su->sin6.sin6_addr);
+            ret = inet_pton(AF_INET6, (const char *)str, &su->sin6.sin6_addr);
         }
         else
         {
@@ -162,40 +163,45 @@ int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum)
 
     if (su->sa.sa_family == AF_INET)
     {
-        if (len > 16)
-            len = 16;
-        strncpy(buf, inet_ntoa(su->sin.sin_addr), len);
-        *portnum = ntohs(su->sin.sin_port);
+        if (buf != NULL)
+            strncpy(buf, inet_ntoa(su->sin.sin_addr), 16);
+        if (portnum != NULL)
+            *portnum = ntohs(su->sin.sin_port);
         return (1);
     }
     else if (su->sa.sa_family == AF_INET6)
     {
-        char ifnamebuffer[IFNAMSIZ];
-        const char* ifname = 0;
-
-        if (inet_ntop(AF_INET6, &su->sin6.sin6_addr, buf, len) == NULL)
-            return 0;
-        if (IN6_IS_ADDR_LINKLOCAL(&su->sin6.sin6_addr))
+        if (buf != NULL)
         {
+            char ifnamebuffer[IFNAMSIZ];
+            const char* ifname = 0;
+
+            if (inet_ntop(AF_INET6, &su->sin6.sin6_addr, buf, len) == NULL)
+                return 0;
+            if (IN6_IS_ADDR_LINKLOCAL(&su->sin6.sin6_addr))
+            {
 #ifdef _WIN32
-            NET_LUID luid;
-            ConvertInterfaceIndexToLuid(su->sin6.sin6_scope_id, &luid);
-            ifname = (char*)ConvertInterfaceLuidToNameA(&luid, (char*)&ifnamebuffer, IFNAMSIZ);
+                NET_LUID luid;
+                ConvertInterfaceIndexToLuid(su->sin6.sin6_scope_id, &luid);
+                ifname = (char*)ConvertInterfaceLuidToNameA(&luid, (char*)&ifnamebuffer, IFNAMSIZ);
 #else
-            ifname = if_indextoname(su->sin6.sin6_scope_id,
-                    (char*) &ifnamebuffer);
+                ifname = if_indextoname(su->sin6.sin6_scope_id,
+                    (char*)&ifnamebuffer);
 #endif
-            if (ifname == NULL)
-            {
-                return (0); /* Bad scope ID! */
+                if (ifname == NULL)
+                {
+                    return (0); /* Bad scope ID! */
+                }
+                if (strlen(buf) + strlen(ifname) + 2 >= len)
+                {
+                    return (0); /* Not enough space! */
+                }
+                strcat(buf, "%");
+                strcat(buf, ifname);
             }
-            if (strlen(buf) + strlen(ifname) + 2 >= len)
-            {
-                return (0); /* Not enough space! */
-            }
-            strcat(buf, "%");
-            strcat(buf, ifname);
-            *portnum = ntohs(su->sin6.sin6_port);
+
+            if (portnum != NULL)
+                *portnum = ntohs(su->sin6.sin6_port);
         }
         return (1);
     }
@@ -205,23 +211,23 @@ bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
 {
     switch (saddr_family(a))
     {
-    case AF_INET:
-        return
-        saddr_family(b) == AF_INET &&
-        s4addr(&a->sin) == s4addr(&b->sin)
+        case AF_INET:
+            return
+                saddr_family(b) == AF_INET &&
+                s4addr(&a->sin) == s4addr(&b->sin)
                 && a->sin.sin_port == b->sin.sin_port;
-        break;
-    case AF_INET6:
-        return saddr_family(b) == AF_INET6
+            break;
+        case AF_INET6:
+            return saddr_family(b) == AF_INET6
                 && a->sin6.sin6_port == b->sin6.sin6_port
                 && memcmp(s6addr(&a->sin6), s6addr(&b->sin6),
-                        sizeof(s6addr(&a->sin6)) == 0);
-        break;
-    default:
-        error_logi(major_error_abort, "Address family %d not supported",
+                sizeof(s6addr(&a->sin6)) == 0);
+            break;
+        default:
+            error_logi(major_error_abort, "Address family %d not supported",
                 saddr_family(a));
-        return false;
-        break;
+            return false;
+            break;
     }
 }
 
@@ -245,7 +251,7 @@ void poller_t::init()
     {
         set_event_on_geco_sdespt(i, POLL_FD_UNUSED, 0); // init geco socket despts 
 #ifdef WIN32
-                win32_fds_[i] = POLL_FD_UNUSED; // init windows win32_fds_
+        win32_fds_[i] = POLL_FD_UNUSED; // init windows win32_fds_
 #endif
     }
 }
@@ -254,10 +260,10 @@ void poller_t::init()
 void poller_t::set_event_on_win32_sdespt(int fd_index, int sfd)
 {
     if ((WSAEventSelect(sfd,
-                            win32_handler_,
-                            FD_READ | FD_WRITE |
-                            FD_ACCEPT | FD_CLOSE | FD_CONNECT))
-            == SOCKET_ERROR)
+        win32_handler_,
+        FD_READ | FD_WRITE |
+        FD_ACCEPT | FD_CLOSE | FD_CONNECT))
+        == SOCKET_ERROR)
     {
         error_logi(loglvl_fatal_error_exit, "WSAEventSelect(%d) failed\n", WSAGetLastError());
     }
@@ -270,7 +276,7 @@ void poller_t::set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask)
 {
     if (fd_index > MAX_FD_SIZE)
         error_log(loglvl_fatal_error_exit,
-                "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
+        "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
 
     socket_despts[fd_index].event_handler_index = fd_index;
     socket_despts[fd_index].fd = sfd; /* file descriptor */
@@ -311,7 +317,7 @@ int poller_t::remove_socket_despt(int sfd)
                 if (win32_fds_[j] == sfd)
                 {
                     if (j == i)
-                    counter--;
+                        counter--;
                     counter++;
                     win32_fds_[j] = POLL_FD_UNUSED;
                     win32_fdnum_--;
@@ -367,7 +373,7 @@ int poller_t::remove_socket_despt(int sfd)
                     socket_despts[i].revision = socket_despts[j].revision;
                     int temp = socket_despts[i].event_handler_index;
                     socket_despts[i].event_handler_index =
-                            socket_despts[j].event_handler_index;
+                        socket_despts[j].event_handler_index;
 
                     socket_despts[j].event_handler_index = temp;
                     socket_despts[j].fd = POLL_FD_UNUSED;
@@ -391,7 +397,7 @@ int poller_t::remove_event_handler(int sfd)
     return remove_socket_despt(sfd);
 }
 void poller_t::add_event_handler(int sfd, int eventcb_type, int event_mask,
-        void (*action)(), void* userData)
+    cbunion_t action, void* userData)
 {
 
     if (sfd <= 0)
@@ -402,19 +408,19 @@ void poller_t::add_event_handler(int sfd, int eventcb_type, int event_mask,
 
     if (socket_despts_size_ >= MAX_FD_SIZE
 #ifdef WIN32
-    || win32_fdnum_ >= MAX_FD_SIZE
+        || win32_fdnum_ >= MAX_FD_SIZE
 #endif
-    )
+        )
     {
         error_log(major_error_abort,
-                "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
+            "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
         return;
     }
 
 #ifdef WIN32
     set_event_on_win32_sdespt(win32_fdnum_, sfd);
     win32_fdnum_++;
-#else
+    //#else
     set_event_on_geco_sdespt(socket_despts_size_, sfd, event_mask);
     socket_despts_size_++;
     int index = socket_despts[socket_despts_size_ - 1].event_handler_index;
@@ -438,7 +444,7 @@ int poller_t::poll_timers()
     }
     return result;
 }
-//TODO
+
 void poller_t::fire_event(int num_of_events)
 {
     int i;
@@ -447,7 +453,7 @@ void poller_t::fire_event(int num_of_events)
         if (socket_despts[i].revents != 0)
             continue;
 
-        // 1. handle error event
+        // handle error event
         if (socket_despts[i].revents & POLLERR)
         {
             /* Assumed this callback funtion has been setup by ulp user
@@ -456,112 +462,187 @@ void poller_t::fire_event(int num_of_events)
             if (event_callbacks[i].eventcb_type == EVENTCB_TYPE_USER)
             {
                 event_logi(verbose, "Poll Error Condition on user fd %d\n",
-                        socket_despts[i].fd);
-                ((socket_cb_fun_t) *(event_callbacks[i].action))(
-                        socket_despts[i].fd, socket_despts[i].revents,
-                        &socket_despts[i].events, event_callbacks[i].userData);
+                    socket_despts[i].fd);
+                event_callbacks[i].action.user_cb_fun(
+                    socket_despts[i].fd, socket_despts[i].revents,
+                    &socket_despts[i].events, event_callbacks[i].userData);
             }
             else
             {
                 error_logi(loglvl_minor_error,
-                        "Poll Error Condition on fd %d\n", socket_despts[i].fd);
-                ((socket_cb_fun_t) *(event_callbacks[i].action))(
-                        socket_despts[i].fd, NULL, 0, NULL, 0);
+                    "Poll Error Condition on fd %d\n", socket_despts[i].fd);
+                event_callbacks[i].action.socket_cb_fun(
+                    socket_despts[i].fd, NULL, 0, NULL, 0);
             }
         }
 
-        //2. handle other events
-        if (socket_despts[i].revents > (short int) POLLERR)
+        // handle other events
+        if (socket_despts[i].revents > (short int)POLLERR)
         {
             switch (event_callbacks[i].eventcb_type)
             {
-            case EVENTCB_TYPE_USER:
-                event_logi(verbose,
-                        "Activity on user fd %d - Activating USER callback\n",
+                case EVENTCB_TYPE_STDIN:
+                    event_logi(verbose,
+                        "Activity on stdin fd %d - Activating stdin callback\n",
                         socket_despts[i].fd);
-                ((socket_cb_fun_t) *(event_callbacks[i].action))(
-                        socket_despts[i].fd, socket_despts[i].revents,
-                        &socket_despts[i].events, event_callbacks[i].userData);
-                break;
-            case EVENTCB_TYPE_UDP:
-                int recvlen = nit_ptr_->recv_udp_packet(socket_despts[i].fd,
-                        internal_udp_buffer_, MAX_MTU_SIZE, &src, &src_len);
-                saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum);
-                ((socket_cb_fun_t) *(event_callbacks[i].action))(
-                        socket_despts[i].fd, socket_despts[i].revents,
-                        &socket_despts[i].events, event_callbacks[i].userData);
-                event_logiiii(verbose,
-                        "EVENTCB_TYPE_UDP\n,UDP-Messag,\
-                        \n on socket %u , recvlen %d, %s:%d\n",
-                        socket_despts[i].fd, recvlen, src_address, portnum);
-                break;
-            case EVENTCB_TYPE_SCTP:
-                int recvlen = nit_ptr_->recv_ip_packet(socket_despts[i].fd,
-                        internal_dctp_buffer, MAX_MTU_SIZE, &src, &dest);
-
-                // if <0, mus be something thing wrong with UDP length or
-                // port number is not USED_UDP_PORT, if so, just skip this msg
-                // as if we never receive it
-                if (recvlen < 0)
+                    event_callbacks[i].action.stdin_cb_func(&stdin_input_data_);
                     break;
 
-                saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum);
-                event_logiiii(verbose,
-                        "EVENTCB_TYPE_SCTP\n,DCTP-Messag,\
-                        \n on socket %u , recvlen %d bytes data from %s:%d\n",
-                        socket_despts[i].fd, recvlen, src_address, portnum);
+                case EVENTCB_TYPE_USER:
+                    event_logi(verbose,
+                        "Activity on user fd %d - Activating USER callback\n",
+                        socket_despts[i].fd);
+                    event_callbacks[i].action.user_cb_fun(
+                        socket_despts[i].fd, socket_despts[i].revents,
+                        &socket_despts[i].events, event_callbacks[i].userData);
+                    break;
 
-                iph = (struct iphdr *) internal_dctp_buffer;
-#if defined (__linux__)
-                // 首部长度(4位):IP层头部包含多少个4字节 -- 32位
-                // <<2 to get the byte size
-                iphdrlen = iph->ihl << 2;
-#elif defined (_WIN32)
-                iphdrlen = (iph->version_length & 0x0F) << 2;
-#else
-                iphdrlen = iph->ip_hl << 2;
+                case EVENTCB_TYPE_UDP:
+                    recvlen = nit_ptr_->recv_udp_packet(socket_despts[i].fd,
+                        internal_udp_buffer_, MAX_MTU_SIZE, &src, &src_len);
+                    saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum);
+                    event_callbacks[i].action.socket_cb_fun(
+                        socket_despts[i].fd, internal_udp_buffer_, recvlen, src_address, portnum);
+                    event_logiiii(verbose,
+                        "EVENTCB_TYPE_UDP\n,UDP-Messag,\n on socket %u , recvlen %d, %s:%d\n",
+                        socket_despts[i].fd, recvlen, src_address, portnum);
+                    break;
+
+                case EVENTCB_TYPE_SCTP:
+                    recvlen = nit_ptr_->recv_ip_packet(socket_despts[i].fd,
+                        internal_dctp_buffer, MAX_MTU_SIZE, &src, &dest);
+
+                    // if <0, mus be something thing wrong with UDP length or
+                    // port number is not USED_UDP_PORT, if so, just skip this msg
+                    // as if we never receive it
+                    if (recvlen < 0)
+                        break;
+
+#ifdef _DEBUG
+                    saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum);
 #endif
-                if (recvlen < iphdrlen)
-                {
-                    error_logi(loglvl_warnning_error,
-                            "fire_event() : packet too short, less than a ip header (%d bytes)",
-                            recvlen);
-                }
-                else // now we have at lest a enpty ip packet
-                {
-                    // calculate ip payload size, which is DCTP packet size
-                    recvlen -= iphdrlen;
+
+                    if (saddr_family(&src) == AF_INET)
+                    {
+                        event_logiiii(verbose,
+                            "EVENTCB_TYPE_SCTP\n, recv a IPV4/DCTP-Messag,\nsocket %u , recvlen %d, bytes data from %s:%d\n",
+                            socket_despts[i].fd, recvlen, src_address, portnum);
+
+                        iph = (struct iphdr *) internal_dctp_buffer;
+#if defined (__linux__)
+                        // 首部长度(4位):IP层头部包含多少个4字节 -- 32位
+                        // <<2 to get the byte size
+                        iphdrlen = iph->ihl << 2;
+#elif defined (_WIN32)
+                        iphdrlen = (iph->version_length & 0x0F) << 2;
+#else
+                        iphdrlen = iph->ip_hl << 2;
+#endif
+                        if (recvlen < iphdrlen)
+                        {
+                            error_logi(loglvl_warnning_error,
+                                "fire_event() : packet too short, less than a ip header (%d bytes)",
+                                recvlen);
+                        }
+                        else // now we have at lest a enpty ip packet
+                        {
+                            // calculate ip payload size, which is DCTP packet size
+                            recvlen -= iphdrlen;
+                        }
+                    }
+                    else
+                    {
+                        event_logiiii(verbose,
+                            "EVENTCB_TYPE_SCTP\n, recv a IPV6/DCTP-Messag,\nsocket %u , recvlen %d, bytes data from %s:%d\n",
+                            socket_despts[i].fd, recvlen, src_address, portnum);
+                        iphdrlen = 0; // for ip6, we pass the whole ip packet to dispath layer
+                    }
+
                     dispatch_layer_.recv_dctp_packet(socket_despts[i].fd,
-                            &internal_dctp_buffer[iphdrlen], recvlen, &src,
-                            &dest);
-                }
-                break;
-            default:
-                error_logi(major_error_abort, "No such  eventcb_type %d",
+                        &internal_dctp_buffer[iphdrlen], recvlen, &src,
+                        &dest);
+                    break;
+
+                default:
+                    error_logi(major_error_abort, "No such  eventcb_type %d",
                         event_callbacks[i].eventcb_type);
-                break;
+                    break;
             }
         }
         socket_despts[i].revents = 0;
     }
 }
 
+static unsigned long
 #ifdef _WIN32
-int poller_t::add_win32stdin_cb(win32stdin_cb_t stdincb, char* buffer, int length)
-{
-
-}
-int poller_t::remove_win32stdin_cb()
-{
-
-}
+WINAPI
 #endif
+read_stdin(void *param)
+{
+    stdin_data_t* indata = (stdin_data_t*)param;
+#ifdef _WIN32
+    HANDLE inhandle;
+    inhandle = GetStdHandle(STD_INPUT_HANDLE);
+    while (ReadFile(inhandle, indata->buffer, sizeof(indata->buffer),
+        &indata->len, NULL) && indata->len > 0)
+    {
+        indata->user_cb_fun(&indata);
+        SetEvent(indata->event);
+        WaitForSingleObject(indata->eventback, INFINITE);
+        memset(indata->buffer, 0, sizeof(indata->buffer));
+    }
+    indata->len = 0;
+    memset(indata->buffer, 0, sizeof(indata->buffer));
+    SetEvent(indata->event);
+    return 0;
+#else
+    indata->len = read(STD_INPUT_FD, indata->buffer, sizeof(indata->buffer));
+    indata->user_cb_fun(&indata);
+    memset(indata->buffer, 0, sizeof(indata->buffer));
+    indata->len = 0;
+#endif
+}
 
-int poller_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
-        void* data)
+void poller_t::add_stdin_cb(stdin_cb_t user_cb_fun)
+{
+    stdin_input_data_.user_cb_fun = user_cb_fun;
+#ifdef _WIN32
+    // create a thread to read from stdin
+    unsigned long in_threadid;
+    stdin_input_data_.event = win32_stdin_event_;
+    stdin_input_data_.eventback = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (!(win32_stdin_handler_ = CreateThread(NULL, 0, read_stdin,
+        &stdin_input_data_, 0, &in_threadid)))
+    {
+        error_log(major_error_abort, "Unable to create input thread\n");
+    }
+#else
+    cbunion_.stdin_cb_func = read_stdin;
+    add_event_handler(0, EVENTCB_TYPE_USER, POLLIN | POLLPRI, cbunion_, &stdin_input_data_);
+#endif
+}
+
+int poller_t::remove_stdin_cb()
 {
 #ifdef WIN32
-//TODO
+    if (TerminateThread(win32_stdin_handler_, 0))
+    {
+        return 0;
+    }
+    else
+    {
+        error_log(major_error_abort, "TerminateThread for stdin fd failed !\n");
+    }
+#endif
+    return remove_event_handler(0);
+}
+
+int poller_t::poll(void(*lock)(void* data), void(*unlock)(void* data),
+    void* data)
+{
+#ifdef WIN32
+    //TODO
+    return 0;
 #else
     if (lock != NULL)
         lock(data);
@@ -570,16 +651,16 @@ int poller_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
     if (unlock != NULL)
         unlock(data);
 
-// timer timeouts
+    // timer timeouts
     if (msecs == 0)
         return msecs;
 
-// no timers, we use a default timeout for select
+    // no timers, we use a default timeout for select
     if (msecs < 0)
         msecs = GRANULARITY;
 
     return poll_fds(socket_despts, &socket_despts_size_, msecs, lock, unlock,
-            data);
+        data);
 #endif
 }
 int transport_layer_t::init(int * myRwnd, bool ip4)
@@ -588,7 +669,7 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
      POLL_FD_UNUSED to differentiate between used/unused win32_fds_ !*/
     poller_.init();
 
-// create handles for stdin fd and socket fd
+    // create handles for stdin fd and socket fd
 #ifdef WIN32
     WSADATA wsaData;
     int Ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -623,7 +704,7 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
 
 #endif
 
-// generate random number
+    // generate random number
     struct timeval curTime;
     if (gettimenow(&curTime) != 0)
     {
@@ -653,8 +734,8 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
     if (*myRwnd == -1)
         *myRwnd = DEFAULT_RWND_SIZE; /* set a safe default */
 
-//open udp socket despt binf to dummy sadress 0.0.0.0 to recv all datagrams
-// destinated to any adress with matched port
+    //open udp socket despt binf to dummy sadress 0.0.0.0 to recv all datagrams
+    // destinated to any adress with matched port
 #ifdef USE_UDP
     sockaddrunion su;
     str2saddr(&su, NULL, USED_UDP_PORT, ip4);
@@ -664,11 +745,11 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
         if (dummy_ipv4_udp_despt_ < 0)
         {
             error_log(major_error_abort,
-                    "Could not open UDP dummy socket !\n");
+                "Could not open UDP dummy socket !\n");
             return dummy_ipv4_udp_despt_;
         }
         event_logi(verbose, "init()::dummy_ipv4_udp_despt_(%u)",
-                dummy_ipv4_udp_despt_);
+            dummy_ipv4_udp_despt_);
     }
     else
     {
@@ -676,15 +757,15 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
         if (dummy_ipv6_udp_despt_ < 0)
         {
             error_log(major_error_abort,
-                    "Could not open UDP dummy socket !\n");
+                "Could not open UDP dummy socket !\n");
             return dummy_ipv6_udp_despt_;
         }
         event_logi(verbose, "init()::dummy_ipv6_udp_despt_(%u)",
-                dummy_ipv6_udp_despt_);
+            dummy_ipv6_udp_despt_);
     }
 #endif
 
-// FIXME
+    // FIXME
     /* we should - in a later revision - add back the a function that opens
      appropriate ICMP sockets (IPv4 and/or IPv6) and registers these with
      callback functions that also set PATH MTU correctly */
@@ -699,7 +780,7 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
 }
 
 int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
-        void (*lock)(void* data), void (*unlock)(void* data), void* data)
+    void(*lock)(void* data), void(*unlock)(void* data), void* data)
 {
     struct timeval tv;
     struct timeval* to;
@@ -807,8 +888,8 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
         if (ret > 0)
         {
             event_logi(verbose,
-                    "############### event %d occurred, dispatch it#############",
-                    (unsigned int )ret);
+                "############### event %d occurred, dispatch it#############",
+                (unsigned int)ret);
 
             for (i = 0; i < *count; i++)
             {
@@ -816,17 +897,17 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
                 if (despts[i].revision < revision_)
                 {
                     if ((despts[i].events & POLLIN)
-                            && FD_ISSET(despts[i].fd, &rd_fdset))
+                        && FD_ISSET(despts[i].fd, &rd_fdset))
                     {
                         despts[i].revents |= POLLIN;
                     }
                     if ((despts[i].events & POLLOUT)
-                            && FD_ISSET(despts[i].fd, &wt_fdset))
+                        && FD_ISSET(despts[i].fd, &wt_fdset))
                     {
                         despts[i].revents |= POLLOUT;
                     }
                     if ((despts[i].events & (POLLIN | POLLOUT))
-                            && FD_ISSET(despts[i].fd, &except_fdset))
+                        && FD_ISSET(despts[i].fd, &except_fdset))
                     {
                         despts[i].revents |= POLLERR;
                     }
@@ -845,7 +926,7 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
                 unlock(data);
             }
             error_logi(major_error_abort, "select()  return -1 , errorno %d!\n",
-                    errno);
+                errno);
         }
 
         if (unlock)
@@ -860,29 +941,29 @@ int transport_layer_t::set_sockdespt_recvbuffer_size(int sfd, int new_size)
 {
     int new_sizee = 0;
     socklen_t opt_size = sizeof(int);
-    if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*) &new_sizee, &opt_size)
-            < 0)
+    if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*)&new_sizee, &opt_size)
+        < 0)
     {
         return -1;
     }
     event_logi(verbose, "init receive buffer size is : %d bytes", new_sizee);
 
-    if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*) &new_size,
-            sizeof(new_size)) < 0)
+    if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*)&new_size,
+        sizeof(new_size)) < 0)
     {
         return -1;
     }
 
-// then test if we set it correctly
-    if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*) &new_sizee, &opt_size)
-            < 0)
+    // then test if we set it correctly
+    if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*)&new_sizee, &opt_size)
+        < 0)
     {
         return -1;
     }
 
     event_logii(verbose,
-            "line 648 expected buffersize %d, actual buffersize %d", new_size,
-            new_sizee);
+        "line 648 expected buffersize %d, actual buffersize %d", new_size,
+        new_sizee);
     return new_sizee;
 }
 
@@ -911,12 +992,12 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     if (sockdespt < 0)
     {
         error_logii(major_error_abort, "socket()  return  %d, errorno %d!\n",
-                sockdespt, errno);
+            sockdespt, errno);
         return sockdespt;
     }
 
     sockaddrunion me;
-    memset((void *) &me, 0, sizeof(me));
+    memset((void *)&me, 0, sizeof(me));
     if (af == AF_INET)
     {
         /* binding to INADDR_ANY to make Windows happy... */
@@ -946,44 +1027,44 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     }
     bind(sockdespt, (const struct sockaddr *) &me.sa, sizeof(struct sockaddr));
 
-//setup recv buffer option
+    //setup recv buffer option
     *rwnd = set_sockdespt_recvbuffer_size(sockdespt, *rwnd); // 655360 bytes
     if (*rwnd < 0)
     {
         safe_close_soket(sockdespt);
         error_logii(major_error_abort,
-                "setsockopt: Try to set SO_RCVBUF {%d} but failed errno %d\n!",
-                *rwnd, errno);
+            "setsockopt: Try to set SO_RCVBUF {%d} but failed errno %d\n!",
+            *rwnd, errno);
     }
 
-    if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (char*) &optval,
-            opt_size) < 0)
+    if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (char*)&optval,
+        opt_size) < 0)
     {
         safe_close_soket(sockdespt);
 #ifdef _WIN32
         error_logi(major_error_abort,
-                "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
-                WSAGetLastError());
+            "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
+            WSAGetLastError());
 #else
         error_logi(major_error_abort,
-                "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
+            "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
 #endif
         return -1;
     }
 
-//setup mtu discover option
+    //setup mtu discover option
 #if defined (__linux__)
     optval = IP_PMTUDISC_DO;
     if (setsockopt(sockdespt, IPPROTO_IP, IP_MTU_DISCOVER,
-            (const char *) &optval, optval) < 0)
+        (const char *) &optval, optval) < 0)
     {
         safe_close_soket(sockdespt);
         error_log(major_error_abort, "setsockopt: IP_PMTU_DISCOVER failed !");
     }
 
-// test to make sure we set it correctly
+    // test to make sure we set it correctly
     if (getsockopt(sockdespt, SOL_SOCKET, IP_MTU_DISCOVER, (char*) &optval,
-            &opt_size) < 0)
+        &opt_size) < 0)
     {
         safe_close_soket(sockdespt);
         error_log(major_error_abort, "getsockopt: SO_RCVBUF failed !");
@@ -991,7 +1072,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     else
     {
         event_logi(loglvl_intevent, "setsockopt: IP_PMTU_DISCOVER succeed!",
-                optval);
+            optval);
     }
 #endif
 
@@ -1005,14 +1086,14 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
          IPV6_PKTINFO expects an extended parameter structure now
          and had to be replaced to provide the original functionality! */
         if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_RECVPKTINFO,
-                        (const char*)&optval, sizeof(optval)) < 0)
+            (const char*)&optval, sizeof(optval)) < 0)
         {
             safe_close_soket(sockdespt);
             return -1;
         }
 #else
         if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_PKTINFO,
-                (const char*) &optval, optval) < 0)
+            (const char*)&optval, optval) < 0)
         {
             safe_close_soket(sockdespt);
             return -1;
@@ -1021,7 +1102,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     }
 
     event_logii(verbose, "Created raw socket %d, recv buffer %d with options\n",
-            sockdespt, *rwnd);
+        sockdespt, *rwnd);
     return (sockdespt);
 }
 int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
@@ -1043,15 +1124,15 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
 
     switch (saddr_family(me))
     {
-    case AF_INET:
-        af = AF_INET;
-        break;
-    case AF_INET6:
-        af = AF_INET6;
-        break;
-    default:
-        error_log(major_error_abort, "upd ip4 socket() failed!\n");
-        break;
+        case AF_INET:
+            af = AF_INET;
+            break;
+        case AF_INET6:
+            af = AF_INET6;
+            break;
+        default:
+            error_log(major_error_abort, "upd ip4 socket() failed!\n");
+            break;
     }
 
     /*If IPPROTO_IP(0) is specified, the caller does not wish to specify a protocol
@@ -1060,43 +1141,43 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     {
 #ifdef _WIN32
         error_logi(major_error_abort,
-                "upd ip4 socket() failed error code (%d)!\n",
-                WSAGetLastError());
+            "upd ip4 socket() failed error code (%d)!\n",
+            WSAGetLastError());
 #else
         error_logi(major_error_abort,
-                "upd ip4 socket() failed error code (%d)!\n", errno);
+            "upd ip4 socket() failed error code (%d)!\n", errno);
 #endif
     }
 
     if (*rwnd < DEFAULT_RWND_SIZE) //default recv size is 1mb
         *rwnd = DEFAULT_RWND_SIZE;
 
-//setup recv buffer option
+    //setup recv buffer option
     *rwnd = set_sockdespt_recvbuffer_size(sfd, *rwnd); // 650KB
     if (*rwnd < 0)
     {
 #ifdef _WIN32
         error_logi(major_error_abort,
-                "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
-                *rwnd, WSAGetLastError());
+            "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
+            *rwnd, WSAGetLastError());
 #else
         error_logii(major_error_abort,
-                "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
-                *rwnd, errno);
+            "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
+            *rwnd, errno);
 #endif
     }
 
-    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const char*) &ch, sizeof(ch))
-            < 0)
+    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&ch, sizeof(ch))
+        < 0)
     {
         safe_close_soket(sfd);
 #ifdef _WIN32
         error_logi(major_error_abort,
-                "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
-                WSAGetLastError());
+            "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
+            WSAGetLastError());
 #else
         error_logi(major_error_abort,
-                "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
+            "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
 #endif
         return -1;
     }
@@ -1107,20 +1188,20 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     {
         safe_close_soket(sfd);
         error_log(major_error_abort,
-                "bind() failed, please check if adress exits !\n");
+            "bind() failed, please check if adress exits !\n");
         return -1;
     }
     ushort portnum = 0;
     saddr2str(me, buf, MAX_IPADDR_STR_LEN, &portnum);
     event_logiiii(verbose,
-            "open_ipproto_udp_socket : Create socket %d, \
-             recvbuf %d, binding to address %s:%u\n",
-            sfd, *rwnd, buf, portnum);
+        "open_ipproto_udp_socket : Create socket %d, \
+                                                                                                                                                                     recvbuf %d, binding to address %s:%u\n",
+                                                                                                                                                                     sfd, *rwnd, buf, portnum);
     return (sfd);
 }
 
 int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
-        sockaddrunion* destsu)
+    sockaddrunion* destsu)
 {
     if (sfd <= 0)
     {
@@ -1146,32 +1227,32 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
         return -1;
     }
 
-//int destlen;
+    //int destlen;
     int result;
     switch (saddr_family(destsu))
     {
-    case AF_INET:
-        //destsu.sin.sin_port = htons(dest_port);
-        result = sendto(sfd, buf, length, 0, (struct sockaddr *) &(destsu->sin),
+        case AF_INET:
+            //destsu.sin.sin_port = htons(dest_port);
+            result = sendto(sfd, buf, length, 0, (struct sockaddr *) &(destsu->sin),
                 sizeof(struct sockaddr_in));
-        break;
-    case AF_INET6:
-        //destsu.sin6.sin6_port = htons(dest_port);
-        result = sendto(sfd, buf, length, 0,
+            break;
+        case AF_INET6:
+            //destsu.sin6.sin6_port = htons(dest_port);
+            result = sendto(sfd, buf, length, 0,
                 (struct sockaddr *) &(destsu->sin6),
                 sizeof(struct sockaddr_in6));
-        break;
-    default:
-        error_log(major_error_abort,
+            break;
+        default:
+            error_log(major_error_abort,
                 "Invalid AF address family in send_udp_msg()\n");
-        result = -1;
-        break;
+            result = -1;
+            break;
     }
     event_logi(verbose, "send_udp_msg(%d bytes data)", result);
     return result;
 }
 int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
-        sockaddrunion *dest, char tos)
+    sockaddrunion *dest, char tos)
 {
     printf("%d\n", ntohs(dest->sin.sin_port));
     int txmt_len = 0;
@@ -1180,9 +1261,9 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     int tmp;
 
 #ifdef USE_UDP
-// len is the length of chunks ,
-// len+NETWORK_PACKET_FIXED_SIZE is the length of the total packet
-// here we test if the default udp send buffer cannot hold this packet
+    // len is the length of chunks ,
+    // len+NETWORK_PACKET_FIXED_SIZE is the length of the total packet
+    // here we test if the default udp send buffer cannot hold this packet
     size_t packet_total_length = len + NETWORK_PACKET_FIXED_SIZE;
     if (sizeof(internal_udp_send__buffer_) < packet_total_length)
     {
@@ -1200,82 +1281,82 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
 
     switch (saddr_family(dest))
     {
-    case AF_INET:
-        opt_len = sizeof(old_tos);
-        tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, &opt_len);
-        if (tmp < 0)
-        {
-            error_log(major_error_abort, "getsockopt(IP_TOS) failed!\n");
-            return -1;
-        }
-        tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, &tos, sizeof(char));
-        if (tmp < 0)
-        {
-            error_log(major_error_abort, "setsockopt(tos) failed!\n");
-            return -1;
-        }
-        event_logiiiiii(verbose,
+        case AF_INET:
+            opt_len = sizeof(old_tos);
+            tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, &opt_len);
+            if (tmp < 0)
+            {
+                error_log(major_error_abort, "getsockopt(IP_TOS) failed!\n");
+                return -1;
+            }
+            tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, &tos, sizeof(char));
+            if (tmp < 0)
+            {
+                error_log(major_error_abort, "setsockopt(tos) failed!\n");
+                return -1;
+            }
+            event_logiiiiii(verbose,
                 "AF_INET :: send_geco_msg : set IP_TOS %u, result=%d, sfd : %d, len %d, destination : %s::%u\n",
                 tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr),
                 ntohs(dest->sin.sin_port));
 
 #ifdef USE_UDP
-        txmt_len = sendto(sfd, internal_udp_send__buffer_, packet_total_length,
+            txmt_len = sendto(sfd, internal_udp_send__buffer_, packet_total_length,
                 0, (struct sockaddr *) &(dest->sin),
                 sizeof(struct sockaddr_in));
-        if (txmt_len >= (int)NETWORK_PACKET_FIXED_SIZE)
-        {
-            txmt_len -= (int)NETWORK_PACKET_FIXED_SIZE;
-        }
+            if (txmt_len >= (int)NETWORK_PACKET_FIXED_SIZE)
+            {
+                txmt_len -= (int)NETWORK_PACKET_FIXED_SIZE;
+            }
 #else
-        txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin),
+            txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin),
                 sizeof(struct sockaddr_in));
 #endif
-        break;
+            break;
 
-    case AF_INET6:
-        char hostname[IFNAMSIZ];
-        if (inet_ntop(AF_INET6, s6addr(dest), (char *) hostname,
-        IFNAMSIZ) == NULL)
-        {
-            error_log(major_error_abort,
+        case AF_INET6:
+            char hostname[IFNAMSIZ];
+            if (inet_ntop(AF_INET6, s6addr(dest), (char *)hostname,
+                IFNAMSIZ) == NULL)
+            {
+                error_log(major_error_abort,
                     "inet_ntop()  buffer is too small !\n");
-            return -1;
-        }
-        event_logiiii(verbose,
+                return -1;
+            }
+            event_logiiii(verbose,
                 "AF_INET6 :: send_geco_msg :sfd : %d, len %d, destination : %s::%u\n",
                 sfd, len, hostname, ntohs(dest->sin6.sin6_port));
 
 #ifdef USE_UDP
-        txmt_len = sendto(sfd, (char*)&internal_udp_send__buffer_,
+            txmt_len = sendto(sfd, (char*)&internal_udp_send__buffer_,
                 packet_total_length, 0, (struct sockaddr *) &(dest->sin6),
                 sizeof(struct sockaddr_in6));
-        if (txmt_len >= (int)NETWORK_PACKET_FIXED_SIZE)
-        {
-            txmt_len -= (int)NETWORK_PACKET_FIXED_SIZE;
-        }
+            if (txmt_len >= (int)NETWORK_PACKET_FIXED_SIZE)
+            {
+                txmt_len -= (int)NETWORK_PACKET_FIXED_SIZE;
+            }
 #else
-        txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin6),
+            txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin6),
                 sizeof(struct sockaddr_in6));
 #endif
-        break;
-    default:
-        error_logi(major_error_abort, "no such Adress Family %u !\n",
+            break;
+        default:
+            error_logi(major_error_abort, "no such Adress Family %u !\n",
                 saddr_family(dest));
-        return -1;
-        break;
+            return -1;
+            break;
     }
 
     stat_send_event_size_++;
     stat_send_bytes_ += len;
     event_logii(verbose, "stat_send_event_size_ %u, stat_send_bytes_ %u\n",
-            stat_send_event_size_, stat_send_bytes_);
+        stat_send_event_size_, stat_send_bytes_);
 
     return txmt_len;
 }
 
 int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
-        sockaddrunion *from, sockaddrunion *to)
+    sockaddrunion *from, sockaddrunion *to)
 {
     if ((dest == NULL) || (from == NULL) || (to == NULL))
     {
@@ -1344,9 +1425,9 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
         rmsghdr.msg_flags = 0;
         rmsghdr.msg_iov = &data_vec;
         rmsghdr.msg_iovlen = 1;
-        rmsghdr.msg_name = (void*) &(from->sin6);
+        rmsghdr.msg_name = (void*)&(from->sin6);
         rmsghdr.msg_namelen = sizeof(struct sockaddr_in6);
-        rmsghdr.msg_control = (void*) m6buf;
+        rmsghdr.msg_control = (void*)m6buf;
         rmsghdr.msg_controllen = sizeof(m6buf);
         len = recvmsg(sfd, &rmsghdr, 0);
 #endif
@@ -1359,7 +1440,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
         to->sin6.sin6_port = 0;
         to->sin6.sin6_flowinfo = 0;
         memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr),
-                sizeof(struct in6_addr));
+            sizeof(struct in6_addr));
     }
     else
     {
@@ -1369,25 +1450,25 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
 
 #ifdef USE_UDP
     int ip_pk_hdr_len = (int) sizeof(struct iphdr)
-    + (int)NETWORK_PACKET_FIXED_SIZE;
+        + (int)NETWORK_PACKET_FIXED_SIZE;
     if (len < ip_pk_hdr_len)
     {
         error_log(loglvl_warnning_error, "recv_geco_msg():: ip_pk_hdr_len illegal!\n");
         return -1;
     }
 
-// check dest_port legal
+    // check dest_port legal
     network_packet_fixed_t* udp_packet_fixed =
-    (network_packet_fixed_t*)((char*)dest + sizeof(struct iphdr));
+        (network_packet_fixed_t*)((char*)dest + sizeof(struct iphdr));
     if (ntohs(udp_packet_fixed->dest_port) != USED_UDP_PORT)
     {
         error_log(loglvl_warnning_error, "recv_geco_msg()::dest_port illegal !\n");
         return -1;
     }
 
-// currently it is [iphdr] + [udphdr] + [data]
-// now we need move the data to the next of iphdr, skipping all bytes in updhdr
-// as if udphdr never exists
+    // currently it is [iphdr] + [udphdr] + [data]
+    // now we need move the data to the next of iphdr, skipping all bytes in updhdr
+    // as if udphdr never exists
     char* ptr = (char*)udp_packet_fixed;
     memmove(ptr, &ptr[NETWORK_PACKET_FIXED_SIZE], (len - ip_pk_hdr_len));
     len -= (int)NETWORK_PACKET_FIXED_SIZE;
@@ -1399,21 +1480,21 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
     return len;
 }
 int transport_layer_t::recv_udp_packet(int sfd, char *dest, int maxlen,
-        sockaddrunion *from, socklen_t *from_len)
+    sockaddrunion *from, socklen_t *from_len)
 {
     int len;
     if ((len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from,
-            from_len)) < 0)
+        from_len)) < 0)
         error_log(major_error_abort,
-                "recvfrom  failed in get_message(), aborting !\n");
+        "recvfrom  failed in get_message(), aborting !\n");
     return len;
 }
 int transport_layer_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
-        socket_cb_fun_t scb)
+    socket_cb_fun_t scb)
 {
 #ifdef _WIN32
     error_log(major_error_abort,
-            "WIN32: Registering ULP-Callbacks for UDP not installed !\n");
+        "WIN32: Registering ULP-Callbacks for UDP not installed !\n");
     return -1;
 #endif
 
@@ -1422,43 +1503,44 @@ int transport_layer_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
     if (ip4_socket_despt_ > 0)
     {
         event_logii(verbose,
-                "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
-                my_port);
+            "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
+            my_port);
         str2saddr(&my_address, addr, my_port, true);
     }
     else if (ip6_socket_despt_ > 0)
     {
         event_logii(verbose,
-                "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
-                my_port);
+            "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
+            my_port);
         str2saddr(&my_address, addr, my_port, false);
     }
     else
     {
         error_log(major_error_abort,
-                "UNKNOWN ADDRESS TYPE - CHECK YOUR PROGRAM !\n");
+            "UNKNOWN ADDRESS TYPE - CHECK YOUR PROGRAM !\n");
         return -1;
     }
     int new_sfd = open_ipproto_udp_socket(&my_address);
+    cbunion_.socket_cb_fun = scb;
     poller_.add_event_handler(new_sfd,
-    EVENTCB_TYPE_UDP, POLLIN | POLLPRI, (void (*)())scb, NULL);
+        EVENTCB_TYPE_UDP, POLLIN | POLLPRI, cbunion_, NULL);
     event_logi(verbose,
-            "Registered ULP-Callback: now %d registered callbacks !!!\n",
-            new_sfd);
+        "Registered ULP-Callback: now %d registered callbacks !!!\n",
+        new_sfd);
     return new_sfd;
 }
 void transport_layer_t::add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
-        short int eventMask)
+    short int eventMask)
 {
 #ifdef _WIN32
     error_log(major_error_abort,
-            "WIN32: Registering User Callbacks not installed !\n");
+        "WIN32: Registering User Callbacks not installed !\n");
 #endif
+    cbunion_.user_cb_fun = cbfun;
     /* 0 is the standard input ! */
-    poller_.add_event_handler(fd, EVENTCB_TYPE_USER, eventMask,
-            (void (*)())cbfun, userData);
-            event_logii(verbose,
-            "Registered User Callback: fd=%d eventMask=%d\n",
-            fd, eventMask);
-        }
+    poller_.add_event_handler(fd, EVENTCB_TYPE_USER, eventMask, cbunion_, userData);
+    event_logii(verbose,
+        "Registered User Callback: fd=%d eventMask=%d\n",
+        fd, eventMask);
+}
 
