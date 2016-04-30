@@ -352,7 +352,6 @@ static void test_init_poller()
     int rcwnd = 1234567;
     transport_layer_t nit;
     nit.init(&rcwnd, true);
-
 }
 
 static void test_recv_geco_msg()
@@ -369,12 +368,6 @@ static void test_recv_geco_msg()
         sizeof(int), &saddr, tos);
     assert(sentsize == sizeof(int));
     u_long iMode = 1;
-    //#ifdef _WIN32
-    //    ioctlsocket(nit.ip4_socket_despt_, FIONBIO, &iMode);
-    //#else
-    //    ioctl(nit.ip4_socket_despt_, FIONBIO, &iMode);
-    //#endif
-    //recv
     sockaddrunion from;
     sockaddrunion to;
     char buffer[65535];
@@ -444,17 +437,10 @@ static void test_add_remove_fd()
     assert(size == 0);
     size = poller.remove_event_handler(2);
     assert(size == 1);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 0);
-#else
     assert(poller.socket_despts_size_ == 0);
-#endif
     poller.cbunion_.socket_cb_fun = fd_action_rounting;
     poller.add_event_handler(3, EVENTCB_TYPE_ROUTING, POLLIN,
         poller.cbunion_, (void*)1);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 1);
-#else
     assert(poller.socket_despts_size_ == 1);
     assert(
         poller.socket_despts[poller.socket_despts_size_].event_handler_index
@@ -462,23 +448,14 @@ static void test_add_remove_fd()
     assert(
         poller.event_callbacks[poller.socket_despts[poller.socket_despts_size_].event_handler_index].action.socket_cb_fun
         == fd_action_rounting);
-#endif
 
     size = poller.remove_event_handler(3);
     assert(size == 1);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 0);
-#else
     assert(poller.socket_despts_size_ == 0);
-#endif
 
     size = poller.remove_event_handler(200);
     assert(size == 0);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 0);
-#else
     assert(poller.socket_despts_size_ == 0);
-#endif
     for (int i = 0; i < MAX_FD_SIZE; i++)
     {
         assert(poller.socket_despts[i].fd == -1);
@@ -492,39 +469,24 @@ static void test_add_remove_fd()
     poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 5);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 0);
-#else
     assert(poller.socket_despts_size_ == 0);
-#endif
 
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 1);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 0);
-#else
     assert(poller.socket_despts_size_ == 0);
-#endif
 
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 0);
-#else
     assert(poller.socket_despts_size_ == 0);
-#endif
 
     poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 1);
-#else
     assert(poller.socket_despts_size_ == 1);
     assert(
         poller.event_callbacks[poller.socket_despts[0].event_handler_index].action.socket_cb_fun
@@ -532,7 +494,6 @@ static void test_add_remove_fd()
     assert(
         poller.event_callbacks[poller.socket_despts[0].event_handler_index].sfd
         == 2);
-#endif
 
     poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
@@ -542,9 +503,6 @@ static void test_add_remove_fd()
         (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
-#ifdef WIN32
-    assert(poller.win32_fdnum_ == 3);
-#else
     assert(poller.socket_despts_size_ == 3);
     assert(
         poller.event_callbacks[poller.socket_despts[0].event_handler_index].action.socket_cb_fun
@@ -552,15 +510,44 @@ static void test_add_remove_fd()
     assert(
         poller.event_callbacks[poller.socket_despts[1].event_handler_index].action.socket_cb_fun
         == fd_action_sctp);
-#endif
     printf("ALl Done\n");
 }
+
+static bool flag = true;
+static void process_stdin(char* data, size_t datalen)
+{
+    event_logii(verbose, "process_stdin()::recvied %d bytes of data %x from stdin\n", datalen, data);
+}
+static void socket_cb(int sfd, char* data, int datalen,
+    const char* addr, ushort port)
+{
+    event_logii(verbose, "socket_cb()::recvied  data %d from dctp fd %d\n",
+        *(int*)data, sfd);
+    flag = false;
+}
+static void test_pollsss()
+{
+    int rcwnd = 512;
+    transport_layer_t nit;
+    nit.init(&rcwnd, true);
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", 38900);
+    int sampledata = 27;
+    uchar tos = IPTOS_DEFAULT;
+    int sentsize = nit.send_ip_packet(nit.ip4_socket_despt_, (char*)&sampledata,
+        sizeof(int), &saddr, tos);
+    assert(sentsize == sizeof(int));
+
+    //nit.poller_.add_stdin_cb(process_stdin);
+    nit.cbunion_.socket_cb_fun = socket_cb;
+    nit.poller_.add_event_handler(nit.ip4_socket_despt_, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, nit.cbunion_, 0);
+    while (flag)
+    nit.poller_.poll();
+}
+
 int main(int arg, char** args)
 {
-#ifdef _WIN32
-    WSADATA winsockInfo;
-    WSAStartup(MAKEWORD(2, 2), &winsockInfo);
-#endif
     // get_random();
     //test_logging();
     //test_md5();
@@ -572,13 +559,10 @@ int main(int arg, char** args)
     //  test_send_udp_msg();
     //test_send_geco_msg();
     // test_init_poller();
-    //test_recv_geco_msg();
+    // test_recv_geco_msg();
     // test_send_recv_udp_msg();
-    test_add_remove_fd();
+    // test_add_remove_fd();
     //std::cin.get();
-
-#ifdef _WIN32
-    WSACleanup();
-#endif
+    test_pollsss();
     return 0;
 }

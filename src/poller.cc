@@ -231,46 +231,6 @@ bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
     }
 }
 
-void poller_t::init()
-{
-    socket_despts_size_ = 0;
-    revision_ = 0;
-    src_len = sizeof(src);
-    recvlen = 0;
-    portnum = 0;
-
-#ifdef _WIN32
-    win32_fdnum_ = 0;
-    win32_handler_ = win32_stdin_handler_ = 0;
-    memset(win32_handlers_, 0, sizeof(win32_handlers_));
-#endif
-
-    /*initializes the array of win32_fds_ we want to use for listening to events
-     POLL_FD_UNUSED to differentiate between used/unused win32_fds_ !*/
-    for (int i = 0; i < MAX_FD_SIZE; i++)
-    {
-        set_event_on_geco_sdespt(i, POLL_FD_UNUSED, 0); // init geco socket despts 
-#ifdef WIN32
-        win32_fds_[i] = POLL_FD_UNUSED; // init windows win32_fds_
-#endif
-    }
-}
-
-#ifdef _WIN32
-void poller_t::set_event_on_win32_sdespt(int fd_index, int sfd)
-{
-    if ((WSAEventSelect(sfd,
-        win32_handler_,
-        FD_READ | FD_WRITE |
-        FD_ACCEPT | FD_CLOSE | FD_CONNECT))
-        == SOCKET_ERROR)
-    {
-        error_logi(loglvl_fatal_error_exit, "WSAEventSelect(%d) failed\n", WSAGetLastError());
-    }
-
-    win32_fds_[fd_index] = sfd;
-}
-#endif
 
 void poller_t::set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask)
 {
@@ -296,44 +256,6 @@ int poller_t::remove_socket_despt(int sfd)
     int counter = 0;
     int i, j;
 
-#ifdef _WIN32
-    for (i = 0; i < win32_fdnum_; i++)
-    {
-
-        if (win32_fds_[i] == sfd)
-        {
-            counter++;
-            if (i == socket_despts_size_ - 1)
-            {
-                win32_fds_[i] = POLL_FD_UNUSED;
-                win32_fdnum_--;
-                break;
-            }
-
-            // counter a same fd, we start scan from end
-            // replace it with a different valid sfd
-            for (j = win32_fdnum_ - 1; j >= i; j--)
-            {
-                if (win32_fds_[j] == sfd)
-                {
-                    if (j == i)
-                        counter--;
-                    counter++;
-                    win32_fds_[j] = POLL_FD_UNUSED;
-                    win32_fdnum_--;
-                }
-                else
-                {
-                    // swap it
-                    win32_fds_[i] = win32_fds_[j];
-                    win32_fds_[j] = POLL_FD_UNUSED;
-                    win32_fdnum_--;
-                    break;
-                }
-            }
-        }
-    }
-#else
     for (i = 0; i < socket_despts_size_; i++)
     {
         if (socket_despts[i].fd == sfd)
@@ -387,8 +309,7 @@ int poller_t::remove_socket_despt(int sfd)
             }
         }
     }
-#endif
-    event_logii(major_error_abort, "remove %d sfd(%d)\n", counter, sfd);
+    event_logii(verbose, "remove %d sfd(%d)\n", counter, sfd);
     return counter;
 }
 int poller_t::remove_event_handler(int sfd)
@@ -400,27 +321,19 @@ void poller_t::add_event_handler(int sfd, int eventcb_type, int event_mask,
     cbunion_t action, void* userData)
 {
 
-    if (sfd <= 0)
+    if (sfd < 0)
     {
         error_log(loglvl_fatal_error_exit, "invlaid sfd ! \n");
         return;
     }
 
-    if (socket_despts_size_ >= MAX_FD_SIZE
-#ifdef WIN32
-        || win32_fdnum_ >= MAX_FD_SIZE
-#endif
-        )
+    if (socket_despts_size_ >= MAX_FD_SIZE)
     {
         error_log(major_error_abort,
             "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
         return;
     }
 
-#ifdef WIN32
-    set_event_on_win32_sdespt(win32_fdnum_, sfd);
-    win32_fdnum_++;
-    //#else
     set_event_on_geco_sdespt(socket_despts_size_, sfd, event_mask);
     socket_despts_size_++;
     int index = socket_despts[socket_despts_size_ - 1].event_handler_index;
@@ -428,7 +341,6 @@ void poller_t::add_event_handler(int sfd, int eventcb_type, int event_mask,
     event_callbacks[index].eventcb_type = eventcb_type;
     event_callbacks[index].action = action;
     event_callbacks[index].userData = userData;
-#endif
 }
 int poller_t::poll_timers()
 {
@@ -450,8 +362,12 @@ void poller_t::fire_event(int num_of_events)
     int i;
     for (i = 0; i < socket_despts_size_; i++)
     {
-        if (socket_despts[i].revents != 0)
+        if (socket_despts[i].revents == 0)
             continue;
+
+        //socket_despts[i].revents = 0;
+        //socket_despts[i].revents |= POLLERR;
+        //socket_despts[i].revents |= POLLERR;
 
         // handle error event
         if (socket_despts[i].revents & POLLERR)
@@ -474,119 +390,116 @@ void poller_t::fire_event(int num_of_events)
                 event_callbacks[i].action.socket_cb_fun(
                     socket_despts[i].fd, NULL, 0, NULL, 0);
             }
+
+            // we only have pollerr
+            if (socket_despts[i].revents == POLLERR)
+                return;
         }
 
-        // handle other events
-        if (socket_despts[i].revents > (short int)POLLERR)
+        switch (event_callbacks[i].eventcb_type)
         {
-            switch (event_callbacks[i].eventcb_type)
-            {
-                case EVENTCB_TYPE_STDIN:
-                    event_logi(verbose,
-                        "Activity on stdin fd %d - Activating stdin callback\n",
-                        socket_despts[i].fd);
-                    event_callbacks[i].action.stdin_cb_func(&stdin_input_data_);
-                    break;
-
-                case EVENTCB_TYPE_USER:
-                    event_logi(verbose,
-                        "Activity on user fd %d - Activating USER callback\n",
-                        socket_despts[i].fd);
+            case EVENTCB_TYPE_USER:
+                event_logi(verbose,
+                    "Activity on user fd %d - Activating USER callback\n",
+                    socket_despts[i].fd);
+                if (event_callbacks[i].action.user_cb_fun != NULL)
                     event_callbacks[i].action.user_cb_fun(
-                        socket_despts[i].fd, socket_despts[i].revents,
-                        &socket_despts[i].events, event_callbacks[i].userData);
-                    break;
+                    socket_despts[i].fd, socket_despts[i].revents,
+                    &socket_despts[i].events, event_callbacks[i].userData);
+                break;
 
-                case EVENTCB_TYPE_UDP:
-                    recvlen = nit_ptr_->recv_udp_packet(socket_despts[i].fd,
-                        internal_udp_buffer_, MAX_MTU_SIZE, &src, &src_len);
-                    saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum);
+            case EVENTCB_TYPE_UDP:
+                recvlen_ = nit_ptr_->recv_udp_packet(socket_despts[i].fd,
+                    internal_udp_buffer_, MAX_MTU_SIZE, &src, &src_addr_len_);
+                saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum_);
+                if (event_callbacks[i].action.socket_cb_fun != NULL)
                     event_callbacks[i].action.socket_cb_fun(
-                        socket_despts[i].fd, internal_udp_buffer_, recvlen, src_address, portnum);
-                    event_logiiii(verbose,
-                        "EVENTCB_TYPE_UDP\n,UDP-Messag,\n on socket %u , recvlen %d, %s:%d\n",
-                        socket_despts[i].fd, recvlen, src_address, portnum);
+                    socket_despts[i].fd, internal_udp_buffer_, recvlen_, src_address, portnum_);
+                event_logiiii(verbose,
+                    "EVENTCB_TYPE_UDP\n,UDP-Messag,\n on socket %u , recvlen_ %d, %s:%d\n",
+                    socket_despts[i].fd, recvlen_, src_address, portnum_);
+                break;
+
+            case EVENTCB_TYPE_SCTP:
+                recvlen_ = nit_ptr_->recv_ip_packet(socket_despts[i].fd,
+                    internal_dctp_buffer, MAX_MTU_SIZE, &src, &dest);
+                // if <0, mus be something thing wrong with UDP length or
+                // port number is not USED_UDP_PORT, if so, just skip this msg
+                // as if we never receive it
+                if (recvlen_ < 0)
                     break;
-
-                case EVENTCB_TYPE_SCTP:
-                    recvlen = nit_ptr_->recv_ip_packet(socket_despts[i].fd,
-                        internal_dctp_buffer, MAX_MTU_SIZE, &src, &dest);
-
-                    // if <0, mus be something thing wrong with UDP length or
-                    // port number is not USED_UDP_PORT, if so, just skip this msg
-                    // as if we never receive it
-                    if (recvlen < 0)
-                        break;
 
 #ifdef _DEBUG
-                    saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum);
+                saddr2str(&src, src_address, MAX_IPADDR_STR_LEN, &portnum_);
 #endif
 
-                    if (saddr_family(&src) == AF_INET)
-                    {
-                        event_logiiii(verbose,
-                            "EVENTCB_TYPE_SCTP\n, recv a IPV4/DCTP-Messag,\nsocket %u , recvlen %d, bytes data from %s:%d\n",
-                            socket_despts[i].fd, recvlen, src_address, portnum);
+                if (saddr_family(&src) == AF_INET)
+                {
+                    event_logiiii(verbose,
+                        "EVENTCB_TYPE_SCTP\n, recv a IPV4/DCTP-Messag from raw socket %u  %d bytes of data from %s:%d, port is zero as this is raw socket\n",
+                        socket_despts[i].fd, recvlen_, src_address, portnum_);
 
-                        iph = (struct iphdr *) internal_dctp_buffer;
+                    iph = (struct iphdr *) internal_dctp_buffer;
 #if defined (__linux__)
-                        // 首部长度(4位):IP层头部包含多少个4字节 -- 32位
-                        // <<2 to get the byte size
-                        iphdrlen = iph->ihl << 2;
+                    // 首部长度(4位):IP层头部包含多少个4字节 -- 32位
+                    // <<2 to get the byte size
+                    iphdrlen = iph->ihl << 2;
 #elif defined (_WIN32)
-                        iphdrlen = (iph->version_length & 0x0F) << 2;
+                    iphdrlen = (iph->version_length & 0x0F) << 2;
 #else
-                        iphdrlen = iph->ip_hl << 2;
+                    iphdrlen = iph->ip_hl << 2;
 #endif
-                        if (recvlen < iphdrlen)
-                        {
-                            error_logi(loglvl_warnning_error,
-                                "fire_event() : packet too short, less than a ip header (%d bytes)",
-                                recvlen);
-                        }
-                        else // now we have at lest a enpty ip packet
-                        {
-                            // calculate ip payload size, which is DCTP packet size
-                            recvlen -= iphdrlen;
-                        }
-                    }
-                    else
+                    if (recvlen_ < iphdrlen)
                     {
-                        event_logiiii(verbose,
-                            "EVENTCB_TYPE_SCTP\n, recv a IPV6/DCTP-Messag,\nsocket %u , recvlen %d, bytes data from %s:%d\n",
-                            socket_despts[i].fd, recvlen, src_address, portnum);
-                        iphdrlen = 0; // for ip6, we pass the whole ip packet to dispath layer
+                        error_logi(loglvl_warnning_error,
+                            "fire_event() : packet too short, less than a ip header (%d bytes)",
+                            recvlen_);
                     }
+                    else // now we have at lest a enpty ip packet
+                    {
+                        // calculate ip payload size, which is DCTP packet size
+                        recvlen_ -= iphdrlen;
+                    }
+                }
+                else
+                {
+                    event_logiiii(verbose,
+                        "EVENTCB_TYPE_SCTP\n, recv a IPV6/DCTP-Messag,\nsocket %u , recvlen_ %d, bytes data from %s:%d\n",
+                        socket_despts[i].fd, recvlen_, src_address, portnum_);
+                    iphdrlen = 0; // for ip6, we pass the whole ip packet to dispath layer
+                }
 
-                    dispatch_layer_.recv_dctp_packet(socket_despts[i].fd,
-                        &internal_dctp_buffer[iphdrlen], recvlen, &src,
-                        &dest);
-                    break;
+                if (event_callbacks[i].action.socket_cb_fun != NULL)
+                    event_callbacks[i].action.socket_cb_fun(
+                    socket_despts[i].fd, &internal_dctp_buffer[iphdrlen], recvlen_, src_address, portnum_);
 
-                default:
-                    error_logi(major_error_abort, "No such  eventcb_type %d",
-                        event_callbacks[i].eventcb_type);
-                    break;
-            }
+                dispatch_layer_.recv_dctp_packet(socket_despts[i].fd,
+                    &internal_dctp_buffer[iphdrlen], recvlen_, &src,
+                    &dest);
+                break;
+
+            default:
+                error_logi(major_error_abort, "No such  eventcb_type %d",
+                    event_callbacks[i].eventcb_type);
+                break;
         }
         socket_despts[i].revents = 0;
     }
 }
 
-static unsigned long
-#ifdef _WIN32
-WINAPI
-#endif
-read_stdin(void *param)
+#ifdef WIN32
+
+static DWORD WINAPI stdin_read_thread(void *param)
 {
-    stdin_data_t* indata = (stdin_data_t*)param;
-#ifdef _WIN32
+    stdin_data_t *indata = (struct stdin_data_t *) param;
+
     HANDLE inhandle;
+
     inhandle = GetStdHandle(STD_INPUT_HANDLE);
+
     while (ReadFile(inhandle, indata->buffer, sizeof(indata->buffer),
         &indata->len, NULL) && indata->len > 0)
     {
-        indata->user_cb_fun(&indata);
         SetEvent(indata->event);
         WaitForSingleObject(indata->eventback, INFINITE);
         memset(indata->buffer, 0, sizeof(indata->buffer));
@@ -595,55 +508,56 @@ read_stdin(void *param)
     memset(indata->buffer, 0, sizeof(indata->buffer));
     SetEvent(indata->event);
     return 0;
+}
+#endif
+
+static void read_stdin(int fd, short int revents, int* settled_events, void* usrdata)
+{
+    stdin_data_t* indata = (stdin_data_t*)usrdata;
+
+#ifdef _WIN32
+    //static HANDLE  inhandle = GetStdHandle(STD_INPUT_HANDLE);
+    //ReadFile(inhandle, indata->buffer, sizeof(indata->buffer), &indata->len, NULL);
 #else
     indata->len = read(STD_INPUT_FD, indata->buffer, sizeof(indata->buffer));
-    indata->user_cb_fun(&indata);
-    memset(indata->buffer, 0, sizeof(indata->buffer));
-    indata->len = 0;
 #endif
+
+    printf("indata-<lem %d\n", indata->len);
+    if (indata->len > 0)
+    {
+        indata->stdin_cb_(indata->buffer, indata->len);
+        memset(indata->buffer, 0, sizeof(indata->buffer));
+        indata->len = 0;
+    }
 }
 
-void poller_t::add_stdin_cb(stdin_cb_t user_cb_fun)
+
+void poller_t::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 {
-    stdin_input_data_.user_cb_fun = user_cb_fun;
 #ifdef _WIN32
-    // create a thread to read from stdin
     unsigned long in_threadid;
-    stdin_input_data_.event = win32_stdin_event_;
+    stdin_input_data_.event = CreateEvent(NULL, FALSE, FALSE, NULL);
     stdin_input_data_.eventback = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (!(win32_stdin_handler_ = CreateThread(NULL, 0, read_stdin,
-        &stdin_input_data_, 0, &in_threadid)))
+
+    if (!(CreateThread(NULL, 0, stdin_read_thread, &stdin_input_data_, 0, &in_threadid)))
     {
-        error_log(major_error_abort, "Unable to create input thread\n");
+        fprintf(stderr, "Unable to create input thread\n");
     }
-#else
-    cbunion_.stdin_cb_func = read_stdin;
-    add_event_handler(0, EVENTCB_TYPE_USER, POLLIN | POLLPRI, cbunion_, &stdin_input_data_);
 #endif
+
+    stdin_input_data_.stdin_cb_ = stdincb;
+    cbunion_.user_cb_fun = read_stdin;
+    add_event_handler(STD_INPUT_FD, EVENTCB_TYPE_USER, POLLIN | POLLPRI, cbunion_, &stdin_input_data_);
 }
 
 int poller_t::remove_stdin_cb()
 {
-#ifdef WIN32
-    if (TerminateThread(win32_stdin_handler_, 0))
-    {
-        return 0;
-    }
-    else
-    {
-        error_log(major_error_abort, "TerminateThread for stdin fd failed !\n");
-    }
-#endif
-    return remove_event_handler(0);
+    return remove_event_handler(STD_INPUT_FD);
 }
 
 int poller_t::poll(void(*lock)(void* data), void(*unlock)(void* data),
     void* data)
 {
-#ifdef WIN32
-    //TODO
-    return 0;
-#else
     if (lock != NULL)
         lock(data);
 
@@ -661,14 +575,9 @@ int poller_t::poll(void(*lock)(void* data), void(*unlock)(void* data),
 
     return poll_fds(socket_despts, &socket_despts_size_, msecs, lock, unlock,
         data);
-#endif
 }
 int transport_layer_t::init(int * myRwnd, bool ip4)
 {
-    /*initializes the array of win32_fds_ we want to use for listening to events
-     POLL_FD_UNUSED to differentiate between used/unused win32_fds_ !*/
-    poller_.init();
-
     // create handles for stdin fd and socket fd
 #ifdef WIN32
     WSADATA wsaData;
@@ -680,28 +589,10 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
         return -1;
     }
 
-    poller_.win32_handler_ = WSACreateEvent();
-    if (poller_.win32_handler_ == NULL)
-    {
-        error_log(loglvl_fatal_error_exit, "WSACreateEvent() of win32_handler_ failed!\n");
-        return -1;
-    }
-
-    poller_.win32_stdin_handler_ = WSACreateEvent();
-    if (poller_.win32_stdin_handler_ == NULL)
-    {
-        error_log(loglvl_fatal_error_exit, "WSACreateEvent() of win32_stdin_handler_ failed!\n");
-        return -1;
-    }
-
-    poller_.win32_handlers_[0] = poller_.win32_handler_;
-    poller_.win32_handlers_[1] = poller_.win32_stdin_handler_;
-
     if (recvmsg == NULL)
     {
         recvmsg = getwsarecvmsg();
     }
-
 #endif
 
     // generate random number
@@ -759,10 +650,10 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
             error_log(major_error_abort,
                 "Could not open UDP dummy socket !\n");
             return dummy_ipv6_udp_despt_;
-        }
+    }
         event_logi(verbose, "init()::dummy_ipv6_udp_despt_(%u)",
             dummy_ipv6_udp_despt_);
-    }
+}
 #endif
 
     // FIXME
@@ -812,7 +703,10 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
 
     for (i = 0; i < (*count); i++)
     {
+        // max fd to feed to select()
         nfd = MAX(nfd, despts[i].fd);
+
+        // link fd with expected events
         if (despts[i].events & (POLLIN | POLLPRI))
         {
             FD_SET(despts[i].fd, &rd_fdset);
@@ -863,7 +757,6 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
 
         //  nfd is the max fd number plus one
         ret = select(nfd + 1, &rd_fdset, &wt_fdset, &except_fdset, to);
-
         if (lock)
         {
             lock(data);
@@ -925,8 +818,15 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
             {
                 unlock(data);
             }
-            error_logi(major_error_abort, "select()  return -1 , errorno %d!\n",
+#ifdef _WIN32
+            error_logi(major_error_abort,
+                "select():: failed! {%d} !\n",
+                WSAGetLastError());
+#else
+            error_logi(major_error_abort,
+                "select():: failed! {%d} !\n",
                 errno);
+#endif
         }
 
         if (unlock)
@@ -1056,14 +956,14 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
 #if defined (__linux__)
     optval = IP_PMTUDISC_DO;
     if (setsockopt(sockdespt, IPPROTO_IP, IP_MTU_DISCOVER,
-        (const char *) &optval, optval) < 0)
+        (const char *)&optval, optval) < 0)
     {
         safe_close_soket(sockdespt);
         error_log(major_error_abort, "setsockopt: IP_PMTU_DISCOVER failed !");
     }
 
     // test to make sure we set it correctly
-    if (getsockopt(sockdespt, SOL_SOCKET, IP_MTU_DISCOVER, (char*) &optval,
+    if (getsockopt(sockdespt, SOL_SOCKET, IP_MTU_DISCOVER, (char*)&optval,
         &opt_size) < 0)
     {
         safe_close_soket(sockdespt);
@@ -1104,7 +1004,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     event_logii(verbose, "Created raw socket %d, recv buffer %d with options\n",
         sockdespt, *rwnd);
     return (sockdespt);
-}
+    }
 int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
 {
     char buf[MAX_IPADDR_STR_LEN];
@@ -1147,7 +1047,7 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
         error_logi(major_error_abort,
             "upd ip4 socket() failed error code (%d)!\n", errno);
 #endif
-    }
+}
 
     if (*rwnd < DEFAULT_RWND_SIZE) //default recv size is 1mb
         *rwnd = DEFAULT_RWND_SIZE;
@@ -1165,7 +1065,7 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
             "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
             *rwnd, errno);
 #endif
-    }
+}
 
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&ch, sizeof(ch))
         < 0)
@@ -1195,8 +1095,8 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     saddr2str(me, buf, MAX_IPADDR_STR_LEN, &portnum);
     event_logiiii(verbose,
         "open_ipproto_udp_socket : Create socket %d, \
-                                                                                                                                                                     recvbuf %d, binding to address %s:%u\n",
-                                                                                                                                                                     sfd, *rwnd, buf, portnum);
+                                                                                                                                                                                                                                                                                                                     recvbuf %d, binding to address %s:%u\n",
+                                                                                                                                                                                                                                                                                                                     sfd, *rwnd, buf, portnum);
     return (sfd);
 }
 
@@ -1345,7 +1245,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
                 saddr_family(dest));
             return -1;
             break;
-    }
+            }
 
     stat_send_event_size_++;
     stat_send_bytes_ += len;
@@ -1353,7 +1253,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
         stat_send_event_size_, stat_send_bytes_);
 
     return txmt_len;
-}
+            }
 
 int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
     sockaddrunion *from, sockaddrunion *to)
@@ -1478,7 +1378,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
         error_log(major_error_abort, "recv()  failed () !");
     event_logi(verbose, "recv_geco_msg():: recv %u bytes od data\n", len);
     return len;
-}
+    }
 int transport_layer_t::recv_udp_packet(int sfd, char *dest, int maxlen,
     sockaddrunion *from, socklen_t *from_len)
 {

@@ -90,10 +90,10 @@
 #if defined( __linux__) || defined(__unix__)
 #include <sys/poll.h>
 #else
-#define POLLIN     0x001
-#define POLLPRI    0x002
-#define POLLOUT    0x004
-#define POLLERR    0x008
+#define POLLIN     0x001 //2base    0001
+#define POLLPRI    0x002 //2base    0010
+#define POLLOUT    0x004 //2base  0100
+#define POLLERR    0x008//2base    1000
 #endif
 
 #define IFA_BUFFER_LENGTH   1024
@@ -210,21 +210,12 @@ Params: 3. pointer to registered events mask.
 It may be changed by the callback function.
 Params: 4. user data
 */
-typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events,
-    void* usrdata);
-
-//fixme this  can be replaced by user_cb_t
-typedef unsigned long(
-#ifdef _WIN32
-    WINAPI
-#endif 
-    *stdin_cb_t)(void* params);
+typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
 
 union cbunion_t
 {
     socket_cb_fun_t socket_cb_fun;
     user_cb_fun_t user_cb_fun;
-    stdin_cb_t stdin_cb_func;
 };
 
 /**
@@ -240,14 +231,13 @@ struct event_handler_t
     cbunion_t action;
     void* arg1, *arg2, *userData;
 };
-
 struct stdin_data_t
 {
+    typedef void(*stdin_cb_func_t)(char* in, size_t datalen);
     unsigned long len;
     char buffer[1024];
-    HANDLE event;
-    HANDLE eventback;
-    stdin_cb_t user_cb_fun;
+    stdin_cb_func_t stdin_cb_;
+    HANDLE event, eventback;
 };
 
 struct socket_despt_t
@@ -280,27 +270,19 @@ struct poller_t
     int socket_despts_size_;
     int revision_;
 
-#ifdef _WIN32
-    int win32_fds_[MAX_FD_SIZE];
-    int win32_fdnum_;
-    HANDLE win32_handler_;
-    HANDLE win32_handlers_[2];
-    HANDLE win32_stdin_handler_;
-    WSAEVENT win32_stdin_event_;
-#endif
     stdin_data_t stdin_input_data_;
 
     timer_mgr timer_mgr_;
     timer_mgr::timer_id_t curr_timer_id_;
 
     transport_layer_t* nit_ptr_;
-    char internal_udp_buffer_[1024 * 1024];
-    char internal_dctp_buffer[MAX_MTU_SIZE + 20];
+    char* internal_udp_buffer_;
+    char* internal_dctp_buffer;
 
     sockaddrunion src, dest;
-    socklen_t src_len;
-    int recvlen;
-    ushort portnum;
+    socklen_t src_addr_len_;
+    int recvlen_;
+    ushort portnum_;
     char src_address[MAX_IPADDR_STR_LEN];
     iphdr* iph;
     int iphdrlen;
@@ -308,12 +290,29 @@ struct poller_t
     dispatch_layer_t dispatch_layer_;
     cbunion_t cbunion_;
 
-    /**
-     * initializes the array of win32_fds_ we want to use for listening to events
-     * POLL_FD_UNUSED to differentiate between used/unused win32_fds_ !
-     */
-    void init();
+    poller_t()
+    {
+        internal_udp_buffer_ = (char*)malloc(65536);
+        internal_dctp_buffer = (char*)malloc(MAX_MTU_SIZE + 20);
+        socket_despts_size_ = 0;
+        revision_ = 0;
+        src_addr_len_ = sizeof(src);
+        recvlen_ = 0;
+        portnum_ = 0;
 
+        /*initializes the array of win32_fds_ we want to use for listening to events
+        POLL_FD_UNUSED to differentiate between used/unused win32_fds_ !*/
+        for (int i = 0; i < MAX_FD_SIZE; i++)
+        {
+            set_event_on_geco_sdespt(i, POLL_FD_UNUSED, 0); // init geco socket despts 
+        }
+    }
+
+    ~poller_t()
+    {
+        free(internal_udp_buffer_);
+        free(internal_dctp_buffer);
+    }
     /**
      * poll_socket_despts()
      * An extended poll() implementation based on select()
@@ -368,13 +367,10 @@ struct poller_t
      *  @return  number of events that where seen on the socket fds,
      *  0 for timer event, -1 for error
      */
-    int poll(void(*lock)(void* data), void(*unlock)(void* data), void* data);
+    int poll(void(*lock)(void* data) = 0, void(*unlock)(void* data)=0, void* data=0);
 
     //! function to set an event mask to a certain socket despt
     void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
-#ifdef _WIN32
-    void set_event_on_win32_sdespt(int fd_index, int sfd);
-#endif
 
     /**
      * function to register a file descriptor, that gets activated for certain read/write events
@@ -399,7 +395,7 @@ struct poller_t
      */
     int remove_socket_despt(int sfd);
 
-    void add_stdin_cb(stdin_cb_t stdincb);
+    void add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb);
     int remove_stdin_cb();
 
     void debug_print_events()
