@@ -93,7 +93,8 @@
 #define IPPROTO_GECO    132
 #endif
 
-#define DEFAULT_RWND_SIZE  10*65536 // 655350 bytes =
+#define USE_UDP_BUFSZ 65536 //RECV BUFFER IN POLLER
+#define DEFAULT_RWND_SIZE  10*USE_UDP_BUFSZ // 655350 bytes =
 
 /*this parameter specifies the maximum number of addresses
 that an endpoInt32 may have */

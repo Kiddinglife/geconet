@@ -1720,7 +1720,6 @@ static DWORD WINAPI stdin_read_thread(void *param)
         &indata->len, NULL) && indata->len > 0)
     {
         SetEvent(indata->event);
-
         WaitForSingleObject(indata->eventback, INFINITE);
         memset(indata->buffer, 0, sizeof(indata->buffer));
     }

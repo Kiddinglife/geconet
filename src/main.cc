@@ -32,17 +32,18 @@ static void test_md5()
 }
 
 #include "gecotimer.h"
-static void action(TimerID id, void*, void*)
+static bool action(timer_id_t& id, void*, void*)
 {
     event_log(loglvl_intevent, "timer triggered\n");
+    return NOT_RESET_TIMER_FROM_CB;
 }
 #include <vector>
 static void test_timer_mgr()
 {
     timer_mgr tm;
-    timer_mgr::timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
-    timer_mgr::timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
-    timer_mgr::timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
+    timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
+    timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
+    timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
     tm.print(loglvl_intevent);
     tm.delete_timer(ret1);
     tm.delete_timer(ret2);
@@ -420,13 +421,13 @@ static void test_add_remove_fd()
     // if you run this unit test
     poller_t poller;
     poller.cbunion_.socket_cb_fun = fd_action_sctp;
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
         (void*)1);
     poller.cbunion_.socket_cb_fun = fd_action_udp;
-    poller.add_event_handler(2, EVENTCB_TYPE_UDP, POLLIN, poller.cbunion_,
+    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_UDP, POLLIN, poller.cbunion_,
         (void*)2);
     poller.cbunion_.socket_cb_fun = fd_action_rounting;
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN,
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN,
         poller.cbunion_, (void*)1);
 
     int size = poller.remove_event_handler(1);
@@ -439,7 +440,7 @@ static void test_add_remove_fd()
     assert(size == 1);
     assert(poller.socket_despts_size_ == 0);
     poller.cbunion_.socket_cb_fun = fd_action_rounting;
-    poller.add_event_handler(3, EVENTCB_TYPE_ROUTING, POLLIN,
+    poller.set_expected_event_on_fd(3, EVENTCB_TYPE_ROUTING, POLLIN,
         poller.cbunion_, (void*)1);
     assert(poller.socket_despts_size_ == 1);
     assert(
@@ -462,29 +463,29 @@ static void test_add_remove_fd()
     }
 
     memset(&poller.cbunion_, 0, sizeof(cbunion_t));
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_UDP, POLLIN, poller.cbunion_, (void*)2);
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_UDP, POLLIN, poller.cbunion_, (void*)2);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 5);
     assert(poller.socket_despts_size_ == 0);
 
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 1);
     assert(poller.socket_despts_size_ == 0);
 
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
     assert(poller.socket_despts_size_ == 0);
 
-    poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
     assert(poller.socket_despts_size_ == 1);
@@ -495,11 +496,11 @@ static void test_add_remove_fd()
         poller.event_callbacks[poller.socket_despts[0].event_handler_index].sfd
         == 2);
 
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
         (void*)1);
-    poller.add_event_handler(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
-    poller.add_event_handler(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
+    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_, (void*)1);
+    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
         (void*)1);
     size = poller.remove_event_handler(1);
     assert(size == 2);
@@ -512,38 +513,53 @@ static void test_add_remove_fd()
         == fd_action_sctp);
     printf("ALl Done\n");
 }
-
+static transport_layer_t nit;
 static bool flag = true;
 static void process_stdin(char* data, size_t datalen)
 {
-    event_logii(verbose, "process_stdin()::recvied %d bytes of data %x from stdin\n", datalen, data);
+    event_logii(verbose, "process_stdin()::recvied %d bytes of %s data  from stdin", datalen, data);
+
+    if (strcmp(data, "q") == 0)
+    {
+        flag = false;
+        return;
+    }
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
+    int sampledata = 27;
+    uchar tos = IPTOS_DEFAULT;
+    int sentsize = nit.send_ip_packet(nit.ip4_socket_despt_, data,
+        datalen, &saddr, tos);
+    assert(sentsize == datalen);
 }
 static void socket_cb(int sfd, char* data, int datalen,
     const char* addr, ushort port)
 {
-    event_logii(verbose, "socket_cb()::recvied  data %d from dctp fd %d\n",
-        *(int*)data, sfd);
-    flag = false;
+    event_logiii(verbose, "socket_cb()::recvied  %d bytes of data %s from dctp fd %d\n",
+        datalen, data, sfd);
+}
+static bool timer_cb(timer_id_t& tid, void* a1, void* a2)
+{
+    event_logii(verbose, "timer_cb(id %d, type->%d)::\n", tid->timer_id, tid->timer_type); 
+    nit.restart_timer(tid, 1000);
+    return true;
 }
 static void test_pollsss()
 {
     int rcwnd = 512;
-    transport_layer_t nit;
     nit.init(&rcwnd, true);
 
-    sockaddrunion saddr;
-    str2saddr(&saddr, "127.0.0.1", 38900);
-    int sampledata = 27;
-    uchar tos = IPTOS_DEFAULT;
-    int sentsize = nit.send_ip_packet(nit.ip4_socket_despt_, (char*)&sampledata,
-        sizeof(int), &saddr, tos);
-    assert(sentsize == sizeof(int));
-
-    //nit.poller_.add_stdin_cb(process_stdin);
     nit.cbunion_.socket_cb_fun = socket_cb;
-    nit.poller_.add_event_handler(nit.ip4_socket_despt_, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, nit.cbunion_, 0);
+    nit.poller_.set_expected_event_on_fd(nit.ip4_socket_despt_, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, nit.cbunion_, 0);
+    // you have to put stdin as last because we test it 
+    nit.poller_.add_stdin_cb(process_stdin);
+    nit.start_timer(1000, timer_cb, TIMER_TYPE_INIT, 0, 0);
     while (flag)
-    nit.poller_.poll();
+        nit.poller_.poll();
+    nit.poller_.timer_mgr_.timers.clear();
+    nit.poller_.remove_stdin_cb();
+    nit.poller_.remove_event_handler(nit.ip4_socket_despt_);
 }
 
 int main(int arg, char** args)

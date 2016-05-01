@@ -363,7 +363,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
     {
         char str[32];
         sprintf(str, "%s aborts at line %d", module_name, line_no);
-        //perr_abort(str);
+        perr_abort(str);
     }
 }
 void error_log_sys1(short error_log_level, const char *module_name, int line_no,

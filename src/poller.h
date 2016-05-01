@@ -98,7 +98,7 @@
 
 #define IFA_BUFFER_LENGTH   1024
 #define POLL_FD_UNUSED     -1
-#define MAX_FD_SIZE     5
+#define MAX_FD_SIZE     32
 #define    EVENTCB_TYPE_SCTP       1
 #define    EVENTCB_TYPE_UDP        2
 #define    EVENTCB_TYPE_USER       3
@@ -163,9 +163,11 @@ ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
 #define SUPPORT_ADDRESS_TYPE_DNS         0x00000004
 
 #define DEFAULT_MTU_CEILING     1500
+
 // SEE http://book.51cto.com/art/201012/236880.htm
 // USE MINIMUM_DELAY AS TOS
 #define IPTOS_DEFAULT 0xe0|0x1000 // Precedence 111 + TOS 1000 + MBZ 0
+
 enum hide_address_flag_t
 {
     flag_HideLoopback = (1 << 0),
@@ -212,6 +214,7 @@ Params: 4. user data
 */
 typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
 
+
 union cbunion_t
 {
     socket_cb_fun_t socket_cb_fun;
@@ -237,7 +240,9 @@ struct stdin_data_t
     unsigned long len;
     char buffer[1024];
     stdin_cb_func_t stdin_cb_;
-    HANDLE event, eventback;
+#ifdef _WIN32
+    HANDLE event, eventback; // only used on win32 plateform
+#endif
 };
 
 struct socket_despt_t
@@ -247,6 +252,10 @@ struct socket_despt_t
     int events;
     int revents;
     long revision;
+#ifdef _WIN32
+    HANDLE event; // only used on win32 plateform
+    WSANETWORKEVENTS trigger_event;
+#endif
 };
 
 struct transport_layer_t;
@@ -264,6 +273,9 @@ extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 
 struct poller_t
 {
+#ifdef _WIN32
+    HANDLE win32events_[MAX_FD_SIZE];
+#endif
     event_handler_t event_callbacks[MAX_FD_SIZE];
     //int num_of_triggered_events;
     socket_despt_t socket_despts[MAX_FD_SIZE];
@@ -273,7 +285,7 @@ struct poller_t
     stdin_data_t stdin_input_data_;
 
     timer_mgr timer_mgr_;
-    timer_mgr::timer_id_t curr_timer_id_;
+    timer_id_t curr_timer_id_;
 
     transport_layer_t* nit_ptr_;
     char* internal_udp_buffer_;
@@ -292,7 +304,7 @@ struct poller_t
 
     poller_t()
     {
-        internal_udp_buffer_ = (char*)malloc(65536);
+        internal_udp_buffer_ = (char*)malloc(USE_UDP_BUFSZ);
         internal_dctp_buffer = (char*)malloc(MAX_MTU_SIZE + 20);
         socket_despts_size_ = 0;
         revision_ = 0;
@@ -304,7 +316,7 @@ struct poller_t
         POLL_FD_UNUSED to differentiate between used/unused win32_fds_ !*/
         for (int i = 0; i < MAX_FD_SIZE; i++)
         {
-            set_event_on_geco_sdespt(i, POLL_FD_UNUSED, 0); // init geco socket despts 
+            set_expected_event_on_fd_(i, POLL_FD_UNUSED, 0); // init geco socket despts 
         }
     }
 
@@ -367,10 +379,10 @@ struct poller_t
      *  @return  number of events that where seen on the socket fds,
      *  0 for timer event, -1 for error
      */
-    int poll(void(*lock)(void* data) = 0, void(*unlock)(void* data)=0, void* data=0);
+    int poll(void(*lock)(void* data) = 0, void(*unlock)(void* data) = 0, void* data = 0);
 
     //! function to set an event mask to a certain socket despt
-    void set_event_on_geco_sdespt(int fd_index, int sfd, int event_mask);
+    void set_expected_event_on_fd_(int fd_index, int sfd, int event_mask);
 
     /**
      * function to register a file descriptor, that gets activated for certain read/write events
@@ -379,7 +391,7 @@ struct poller_t
      * when this method failed, will exit() directly
      * no no need to check ret val so no ret value given
      */
-    void add_event_handler(int sfd, int eventcb_type, int event_mask,
+    void set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask,
         cbunion_t action, void* userData);
 
     /**
@@ -582,5 +594,108 @@ struct transport_layer_t
     int recv_udp_packet(int sfd, char *dest, int maxlen, sockaddrunion *from,
         socklen_t *from_len);
 
+    timer_id_t start_timer(uint milliseconds, timer::Action timercb, int ttype,
+        void *param1, void *param2)
+    {
+        return this->poller_.timer_mgr_.add_timer(ttype, milliseconds, timercb, param1, param2);
+    }
+
+    /**
+    *      This function adds a callback that is to be called some time from now. It realizes
+    *      the timer (in an ordered list).
+    *      @param      tid        timer-id of timer to be removed
+    *      @return     returns 0 on success, 1 if tid not in the list, -1 on error
+    *      @author     ajung
+    */
+    void stop_timer(timer_id_t& tid)
+    {
+        if (tid != poller_.curr_timer_id_)
+            this->poller_.timer_mgr_.delete_timer(tid);
+    }
+
+    /**
+    *      Restarts a timer currently running
+    *      @param      timer_id   the value returned by set_timer for a certain timer
+    *      @param      milliseconds  action is to be started in milliseconds ms from now
+    *      @return     new timer id , -1 when there is an error (i.e. no timer) 0 success
+    */
+    int restart_timer(timer_id_t& tid, unsigned int milliseconds)
+    {
+        return this->poller_.timer_mgr_.reset_timer(tid, milliseconds);
+    }
+
+    bool get_local_addresses(union sockaddrunion **addresses,
+        int *numberOfNets,
+        int sctp_fd,
+        bool with_ipv6,
+        int *max_mtu,
+        const hide_address_flag_t  flags);
+
+    /**
+    * An address filtering function
+    * @param newAddress  a pointer to a sockaddrunion address
+    * @param flags       bit mask hiding (i.e. filtering) address classes
+    * returns true if address is not filtered, else FALSE if address is filtered by mask
+    */
+    bool filter_address(union sockaddrunion* newAddress, hide_address_flag_t  flags)
+    {
+        switch (saddr_family(newAddress))
+        {
+            case AF_INET:
+                event_log(verbose, "Trying IPV4 address\n");
+                if (
+                    (IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideMulticast)) ||
+                    (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideReserved)) ||
+                    (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideReserved)) ||
+                    ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideBroadcast)) ||
+                    ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideLoopback)) ||
+                    ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideAllExceptLoopback)) ||
+                    (ntohl(newAddress->sin.sin_addr.s_addr) == INADDR_ANY)
+                    )
+                {
+                    event_log(verbose, "Filtering IPV4 address\n");
+                    return FALSE;
+                }
+                break;
+            case AF_INET6:
+#if defined (__linux__)
+                if (
+                    (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptLoopback)) ||
+                    (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideLoopback)) ||
+                    (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideLinkLocal)) ||
+                    (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptLinkLocal)) ||
+                    (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptSiteLocal)) ||
+                    (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideSiteLocal)) ||
+                    (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideMulticast)) ||
+                    IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr.s6_addr))
+                    ) 
+                {
+                    event_log(VERBOSE, "Filtering IPV6 address");
+                    return FALSE;
+                }
+#else
+                if (
+                    (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptLoopback)) ||
+                    (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideLoopback)) ||
+                    (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptLinkLocal)) ||
+                    (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptSiteLocal)) ||
+                    (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideLinkLocal)) ||
+                    (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideSiteLocal)) ||
+                    (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideMulticast)) ||
+                    IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr))
+                    )
+                {
+                    event_log(verbose, "Filtering IPV6 address");
+                    return FALSE;
+                }
+#endif
+                break;
+            default:
+                event_log(verbose, "Default : Filtering Address");
+                return FALSE;
+                break;
+        }
+        return true;
+    }
 };
 #endif

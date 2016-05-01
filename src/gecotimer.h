@@ -13,10 +13,16 @@
 /**
  *  A singly linked list for timer events
  */
+#define RESET_TIMER_FROM_CB true
+#define NOT_RESET_TIMER_FROM_CB false
 
+struct timer;
+typedef std::list<timer>::iterator timer_id_t;
 struct timer
 {
-    typedef void(*Action)(TimerID, void *, void *);
+    // ifyou resettimer 0 in side the cb, return true
+    // therwise, return false
+    typedef bool (*Action)(timer_id_t& tid, void *, void *);
     uint timer_id;
     timeval action_time; /* the time when it is to go off*/
     int timer_type;
@@ -25,13 +31,10 @@ struct timer
     Action action;/*the callback function, arranged in a sorted, linked listuser specify*/
 };
 
-class timer_mgr
+struct timer_mgr
 {
-    private:
     std::list<timer> timers;
     uint tid;
-    public:
-    typedef std::list<timer>::iterator timer_id_t;
     timer_mgr();
     ~timer_mgr();
 
@@ -56,7 +59,7 @@ class timer_mgr
      *  @param  item    pointer to where deleted data is to be copied !
      *  @return 0 on success, -1 if a pointer was NULL or other error, 1 if not found
      */
-    void delete_timer(timer_mgr::timer_id_t& timerptr);
+    void delete_timer(timer_id_t& timerptr);
     /**
      *      function to be called, when a timer is reset. Basically calls get_item(),
      *    saves the function pointer, updates the execution time (msecs milliseconds
@@ -67,7 +70,7 @@ class timer_mgr
      *      @param timouts
      *      @ret 0  successful, -1 for fail reason no timer stored
      */
-    int reset_timer(timer_mgr::timer_id_t& timerptr, uint timeouts);
+    int reset_timer(timer_id_t& timerptr, uint timeouts);
     /**
      * @return -1 if no timer in list, 0 if timeout and action must be taken,
      * else interval before the timeouts

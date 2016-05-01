@@ -15,7 +15,7 @@ timer_mgr::timer_mgr()
 timer_mgr::~timer_mgr()
 {
 }
-timer_mgr::timer_id_t timer_mgr::add_timer(uint timer_type,
+timer_id_t timer_mgr::add_timer(uint timer_type,
     time_t timeouts/*ms*/, timer::Action action, void *arg1, void *arg2)
 {
     timer item;
@@ -42,7 +42,7 @@ timer_mgr::timer_id_t timer_mgr::add_timer(uint timer_type,
     return insert_pos;
 }
 
-void timer_mgr::delete_timer(timer_mgr::timer_id_t& timerptr)
+void timer_mgr::delete_timer(timer_id_t& timerptr)
 {
     if (this->timers.empty())
         return;
@@ -52,7 +52,7 @@ void timer_mgr::delete_timer(timer_mgr::timer_id_t& timerptr)
     event_logi(verbose, "After delete List Length : %u ",
         this->timers.size());
 }
-int timer_mgr::reset_timer(timer_mgr::timer_id_t& timerptr, uint timeouts)
+int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 {
     event_log(verbose, "reset timer\n");
     if (this->timers.empty())
