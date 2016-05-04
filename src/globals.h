@@ -76,6 +76,8 @@
 #include "config.h"
 #include "messages.h"
 
+#define MAX_COUNT_LOCAL_IP_ADDR 8
+
 #define GRANULARITY 1//ms
 
 /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */

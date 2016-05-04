@@ -264,7 +264,8 @@ static void test_saddr_functions()
     str2saddr(&saddr, "192.168.1.107", 38000);
 
     char ret[IF_NAMESIZE];
-    saddr2str(&saddr, ret, sizeof(ret));
+    ushort port = 0;
+    saddr2str(&saddr, ret, sizeof(ret), &port);
     event_logi(loglvl_intevent, "saddr {%s}\n", ret);
     assert(strcmp(ret, "192.168.1.107") == 0);
     assert(saddr.sa.sa_family == AF_INET);
@@ -541,7 +542,7 @@ static void socket_cb(int sfd, char* data, int datalen,
 }
 static bool timer_cb(timer_id_t& tid, void* a1, void* a2)
 {
-    event_logii(verbose, "timer_cb(id %d, type->%d)::\n", tid->timer_id, tid->timer_type); 
+    event_logii(verbose, "timer_cb(id %d, type->%d)::\n", tid->timer_id, tid->timer_type);
     nit.restart_timer(tid, 1000);
     return true;
 }
@@ -562,6 +563,36 @@ static void test_pollsss()
     nit.poller_.remove_event_handler(nit.ip4_socket_despt_);
 }
 
+static void test_getlocaladdr()
+{
+    int rcwnd = 512;
+    nit.init(&rcwnd, true);
+
+    sockaddrunion* saddr = 0;
+    int num=0;
+    int maxmtu=0;
+    ushort port = 0;
+    char addr[MAX_IPADDR_STR_LEN];
+
+    nit.get_local_addresses(&saddr, &num, nit.ip4_socket_despt_, true, &maxmtu, flag_HideReserved);
+
+    event_logi(verbose, "max mtu  %d\n", maxmtu);
+
+    if (saddr != NULL)
+        for (int i = 0; i < num; i++)
+        {
+            saddr2str(saddr + i, addr, MAX_IPADDR_STR_LEN, &port);
+            event_logii(verbose, "ip address %s port %d\n", addr, port);
+        }
+
+    sockaddrunion addrs[MAX_COUNT_LOCAL_IP_ADDR];
+    num = nit.get_local_ip_addresses(addrs);
+    for (int i = 0; i < num; i++)
+    {
+        saddr2str(addrs + i, addr, MAX_IPADDR_STR_LEN, &port);
+        event_logii(verbose, "ip address %s port %d\n", addr, port);
+    }
+}
 int main(int arg, char** args)
 {
     // get_random();
@@ -579,6 +610,7 @@ int main(int arg, char** args)
     // test_send_recv_udp_msg();
     // test_add_remove_fd();
     //std::cin.get();
-    test_pollsss();
+    //test_pollsss();
+    test_getlocaladdr();
     return 0;
 }

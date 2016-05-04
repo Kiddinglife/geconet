@@ -69,15 +69,15 @@
 #define RTO_MAX                 60000
 
 
-/******************** Function Definitions ********************************************************/
+/******************** Function Definitions *******************************/
 
-/*------------------- Functions called by the ULP ------------------------------------------------*/
+/*------------------- Functions called by the ULP -----------------------*/
 
 /* This functions are defined in a seperate header file sctp.h in order to seperate the interface to
    the ULP and the interface to other modules within SCTP.
    */
 
-/*------------------- Functions called by the Unix-Interface -------------------------------------*/
+/*------------------- Functions called by the Unix-Interface --------------*/
 
 /**
  * \fn mdi_receiveMessage
@@ -97,7 +97,7 @@ void mdi_receiveMessage(int socket_fd, unsigned char *buffer,
     int bufferLength, union sockaddrunion * source_addr,
 union sockaddrunion * dest_addr);
 
-/*------------------- Functions called by the SCTP bundling --------------------------------------*/
+/*------------------- Functions called by the SCTP bundling -----------------------*/
 
 /* Used by bundling to send a SCTP-daatagramm.
    Before calling send_message at the adaption-layer, this function does:
@@ -115,7 +115,7 @@ int mdi_send_message(network_packet_t * message, unsigned int length, short dest
 
 
 
-/*------------------- Functions called by the SCTP to forward primitives to ULP ------------------*/
+/*----------- Functions called by the SCTP to forward primitives to ULP ------*/
 
 
 /**
