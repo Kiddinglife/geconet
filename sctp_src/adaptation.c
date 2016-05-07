@@ -812,7 +812,7 @@ int send_geco_msg(int sfd, void *buf, int len, union sockaddrunion *dest, unsign
 
 #ifdef USE_UDP
     guchar      outBuffer[65536];
-    network_packet_fixed_t* udp;
+    dctp_packet_fixed_t* udp;
 #endif
 
     guchar hostname[MAX_MTU_SIZE];
@@ -832,23 +832,23 @@ int send_geco_msg(int sfd, void *buf, int len, union sockaddrunion *dest, unsign
                 sfd, len, inet_ntoa(dest->sin.sin_addr), stat_send_event_size);
 
 #ifdef USE_UDP
-            if (len + sizeof(network_packet_fixed_t) > sizeof(outBuffer))
+            if (len + sizeof(dctp_packet_fixed_t) > sizeof(outBuffer))
             {
                 error_log(ERROR_FATAL, "Data block too large ! bye !\n");
             }
-            memcpy(&outBuffer[sizeof(network_packet_fixed_t)], buf, len);
+            memcpy(&outBuffer[sizeof(dctp_packet_fixed_t)], buf, len);
 
-            udp = (network_packet_fixed_t*)&outBuffer;
+            udp = (dctp_packet_fixed_t*)&outBuffer;
             udp->src_port = htons(SCTP_OVER_UDP_UDPPORT);
             udp->dest_port = htons(SCTP_OVER_UDP_UDPPORT);
-            udp->length = htons(sizeof(network_packet_fixed_t) + len);
+            udp->length = htons(sizeof(dctp_packet_fixed_t) + len);
             udp->checksum = 0x0000;
 
-            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(network_packet_fixed_t) + len,
+            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(dctp_packet_fixed_t) + len,
                 0, (struct sockaddr *) &(dest->sin), sizeof(struct sockaddr_in));
-            if (txmt_len >= (int)sizeof(network_packet_fixed_t))
+            if (txmt_len >= (int)sizeof(dctp_packet_fixed_t))
             {
-                txmt_len -= (int)sizeof(network_packet_fixed_t);
+                txmt_len -= (int)sizeof(dctp_packet_fixed_t);
             }
 #else
             txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin), sizeof(struct sockaddr_in));
@@ -868,21 +868,21 @@ int send_geco_msg(int sfd, void *buf, int len, union sockaddrunion *dest, unsign
                 sfd, len, hostname, stat_send_event_size);
 
 #ifdef SCTP_OVER_UDP
-            if(len + sizeof(network_packet_fixed_t) > sizeof(outBuffer)) {
+            if(len + sizeof(dctp_packet_fixed_t) > sizeof(outBuffer)) {
                 error_log(ERROR_FATAL, "Data block too large ! bye !\n");
             }
-            memcpy(&outBuffer[sizeof(network_packet_fixed_t)], buf, len);
+            memcpy(&outBuffer[sizeof(dctp_packet_fixed_t)], buf, len);
 
-            udp = (network_packet_fixed_t*)&outBuffer;
+            udp = (dctp_packet_fixed_t*)&outBuffer;
             udp->src_port = htons(SCTP_OVER_UDP_UDPPORT);
             udp->dest_port = htons(SCTP_OVER_UDP_UDPPORT);
-            udp->length = htons(sizeof(network_packet_fixed_t) + len);
+            udp->length = htons(sizeof(dctp_packet_fixed_t) + len);
             udp->checksum = 0x0000;
 
-            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(network_packet_fixed_t) + len,
+            txmt_len = sendto(sfd, (char*)&outBuffer, sizeof(dctp_packet_fixed_t) + len,
                 0, (struct sockaddr *) &(dest->sin6), sizeof(struct sockaddr_in6));
-            if (txmt_len >= (int)sizeof(network_packet_fixed_t)) {
-                txmt_len -= (int)sizeof(network_packet_fixed_t);
+            if (txmt_len >= (int)sizeof(dctp_packet_fixed_t)) {
+                txmt_len -= (int)sizeof(dctp_packet_fixed_t);
             }
 #else
             txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *)&(dest->sin6), sizeof(struct sockaddr_in6));
@@ -1066,7 +1066,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
     int len;
 #ifdef SCTP_OVER_UDP
 #ifdef __linux__
-    network_packet_fixed_t*    udp_packet_fixed;
+    dctp_packet_fixed_t*    udp_packet_fixed;
 #else
     struct udphdr * udp_packet_fixed;
 #endif
@@ -1110,7 +1110,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
 
 #ifdef SCTP_OVER_UDP
 #ifdef __linux__
-        if(len < (int)sizeof(struct iphdr) + (int)sizeof(network_packet_fixed_t))
+        if(len < (int)sizeof(struct iphdr) + (int)sizeof(dctp_packet_fixed_t))
         {
 #else
         if(len < (int)sizeof(struct iphdr) + (int)sizeof(struct udphdr))
@@ -1119,7 +1119,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
             return -1;
         }
 #ifdef __linux__
-        udp_packet_fixed = (network_packet_fixed_t*)((long)dest + (long)sizeof(struct iphdr));
+        udp_packet_fixed = (dctp_packet_fixed_t*)((long)dest + (long)sizeof(struct iphdr));
 #else
         udp_packet_fixed = (struct udphdr *)((long)dest + (long)sizeof(struct iphdr));
 #endif
@@ -1134,9 +1134,9 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
         }
         ptr = (unsigned char*)udp_packet_fixed;
 #ifdef __linux__
-        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(network_packet_fixed_t));i++)
+        for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(dctp_packet_fixed_t));i++)
         {
-            *ptr = ptr[sizeof(network_packet_fixed_t)];
+            *ptr = ptr[sizeof(dctp_packet_fixed_t)];
 #else
         for(i = 0;i < len - (int)(sizeof(struct iphdr) + sizeof(struct udphdr));i++)
         {
@@ -1145,7 +1145,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
             ptr++;
         }
 #ifdef __linux__
-        len -= sizeof(network_packet_fixed_t);
+        len -= sizeof(dctp_packet_fixed_t);
 #else
         len -= sizeof(struct udphdr);
 #endif
@@ -1195,14 +1195,14 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
 
 #ifdef SCTP_OVER_UDP
 #ifdef __linux__
-        if (len < (int)sizeof(network_packet_fixed_t)) {
+        if (len < (int)sizeof(dctp_packet_fixed_t)) {
 #else
         if (len < (int)sizeof(struct udphdr)) {
 #endif
             return -1;
         }
 #ifdef __linux__
-        udp_packet_fixed = (network_packet_fixed_t*)dest;
+        udp_packet_fixed = (dctp_packet_fixed_t*)dest;
 #else
         udp_packet_fixed = (struct udphdr *)dest;
 #endif
@@ -1215,8 +1215,8 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
         }
         ptr = (unsigned char*)udp_packet_fixed;
 #ifdef __linux__
-        for (i = 0; i < len - (int)sizeof(network_packet_fixed_t); i++) {
-            *ptr = ptr[sizeof(network_packet_fixed_t)];
+        for (i = 0; i < len - (int)sizeof(dctp_packet_fixed_t); i++) {
+            *ptr = ptr[sizeof(dctp_packet_fixed_t)];
 #else
         for (i = 0; i < len - (int)sizeof(struct udphdr); i++) {
             *ptr = ptr[sizeof(struct udphdr)];
@@ -1224,7 +1224,7 @@ int adl_receive_message(int sfd, void *dest, int maxlen, union sockaddrunion *fr
             ptr++;
         }
 #ifdef __linux__
-        len -= sizeof(network_packet_fixed_t);
+        len -= sizeof(dctp_packet_fixed_t);
 #else
         len -= sizeof(struct udphdr);
 #endif
@@ -1373,7 +1373,7 @@ void dispatch_event(int num_of_events)
                         }
                         else {
                             length -= hlen;
-                            mdi_receiveMessage(socket_despts[i].fd, &internal_receive_buffer[hlen], length, &src, &dest);
+                            recv_dctp_packet(socket_despts[i].fd, &internal_receive_buffer[hlen], length, &src, &dest);
                         }
                         break;
 #ifdef HAVE_IPV6
@@ -1383,7 +1383,7 @@ void dispatch_event(int num_of_events)
                         event_logii(VERBOSE, "IPv6/SCTP-Message from %s (%d bytes) -> activating callback",
                             src_address, length);
 
-                        mdi_receiveMessage(socket_despts[i].fd, &internal_receive_buffer[hlen], length, &src, &dest);
+                        recv_dctp_packet(socket_despts[i].fd, &internal_receive_buffer[hlen], length, &src, &dest);
                         break;
 
 #endif                          /* HAVE_IPV6 */
@@ -1644,7 +1644,7 @@ int adl_eventLoop()
                         else
                         {
                             length -= hlen;
-                            mdi_receiveMessage(fds[i], &internal_receive_buffer[hlen], length, &src, &dest);
+                            recv_dctp_packet(fds[i], &internal_receive_buffer[hlen], length, &src, &dest);
                         }
                         break;
                     }

@@ -50,8 +50,8 @@
 #include "reltransfer.h"
 #include "errorhandler.h"
 
-#define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(network_packet_fixed_t))
-#define SACK_SIZE(buf)		((buf)->ctrl_position+(buf)->data_position- sizeof(network_packet_fixed_t))
+#define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(dctp_packet_fixed_t))
+#define SACK_SIZE(buf)		((buf)->ctrl_position+(buf)->data_position- sizeof(dctp_packet_fixed_t))
 /**
  * this struct contains all data belonging to a bundling module
  */
@@ -118,9 +118,9 @@ gpointer bu_new(void)
         error_log(ERROR_MAJOR, "Malloc failed");
         return 0;
     }
-    ptr->ctrl_position = sizeof(network_packet_fixed_t); /* start adding data after that header ! */
-    ptr->data_position = sizeof(network_packet_fixed_t); /* start adding data after that header ! */
-    ptr->sack_position = sizeof(network_packet_fixed_t); /* start adding data after that header ! */
+    ptr->ctrl_position = sizeof(dctp_packet_fixed_t); /* start adding data after that header ! */
+    ptr->data_position = sizeof(dctp_packet_fixed_t); /* start adding data after that header ! */
+    ptr->sack_position = sizeof(dctp_packet_fixed_t); /* start adding data after that header ! */
 
     ptr->data_in_buffer = FALSE;
     ptr->ctrl_chunk_in_buffer = FALSE;
@@ -220,7 +220,7 @@ gint bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int * dest_index)
     if (bu_ptr->sack_in_buffer == true) { /* multiple calls in between */
         event_log(INTERNAL_EVENT_0,
                   "bu_put_SACK_Chunk was called a second time, deleting first chunk");
-        bu_ptr->sack_position = sizeof(network_packet_fixed_t);
+        bu_ptr->sack_position = sizeof(dctp_packet_fixed_t);
     }
 
     memcpy(&(bu_ptr->sack_buf[bu_ptr->sack_position]), chunk,
@@ -422,21 +422,21 @@ gint bu_sendAllChunks(guint * ad_idx)
     if (bu_ptr->sack_in_buffer) {
         rxc_stop_sack_timer();
         /* SACKs by default go to the last active address, from which data arrived */
-        send_len = bu_ptr->sack_position; /* at least sizeof(network_packet_fixed_t) */
+        send_len = bu_ptr->sack_position; /* at least sizeof(dctp_packet_fixed_t) */
         /* at most pointing to the end of SACK chunk */
         event_logi(VVERBOSE, "bu_sendAllChunks(sack) : send_len == %d ", send_len);
         if (bu_ptr->ctrl_chunk_in_buffer) {
             memcpy(&send_buffer[send_len],
-                   &(bu_ptr->ctrl_buf[sizeof(network_packet_fixed_t)]),
-                   (bu_ptr->ctrl_position - sizeof(network_packet_fixed_t)));
-            send_len += bu_ptr->ctrl_position - sizeof(network_packet_fixed_t);
+                   &(bu_ptr->ctrl_buf[sizeof(dctp_packet_fixed_t)]),
+                   (bu_ptr->ctrl_position - sizeof(dctp_packet_fixed_t)));
+            send_len += bu_ptr->ctrl_position - sizeof(dctp_packet_fixed_t);
             event_logi(VVERBOSE, "bu_sendAllChunks(sack+ctrl) : send_len == %d ", send_len);
         }
         if (bu_ptr->data_in_buffer) {
             memcpy(&send_buffer[send_len],
-                   &(bu_ptr->data_buf[sizeof(network_packet_fixed_t)]),
-                   (bu_ptr->data_position - sizeof(network_packet_fixed_t)));
-            send_len += bu_ptr->data_position - sizeof(network_packet_fixed_t);
+                   &(bu_ptr->data_buf[sizeof(dctp_packet_fixed_t)]),
+                   (bu_ptr->data_position - sizeof(dctp_packet_fixed_t)));
+            send_len += bu_ptr->data_position - sizeof(dctp_packet_fixed_t);
             event_logi(VVERBOSE, "bu_sendAllChunks(sack+data) : send_len == %d ", send_len);
         }
     } else if (bu_ptr->ctrl_chunk_in_buffer) {
@@ -444,9 +444,9 @@ gint bu_sendAllChunks(guint * ad_idx)
         event_logi(VVERBOSE, "bu_sendAllChunks(ctrl) : send_len == %d ", send_len);
         if (bu_ptr->data_in_buffer) {
             memcpy(&send_buffer[send_len],
-                   &(bu_ptr->data_buf[sizeof(network_packet_fixed_t)]),
-                   (bu_ptr->data_position - sizeof(network_packet_fixed_t)));
-            send_len += bu_ptr->data_position - sizeof(network_packet_fixed_t);
+                   &(bu_ptr->data_buf[sizeof(dctp_packet_fixed_t)]),
+                   (bu_ptr->data_position - sizeof(dctp_packet_fixed_t)));
+            send_len += bu_ptr->data_position - sizeof(dctp_packet_fixed_t);
             event_logi(VVERBOSE, "bu_sendAllChunks(ctrl+data) : send_len == %d ", send_len);
         }
 
@@ -465,7 +465,7 @@ gint bu_sendAllChunks(guint * ad_idx)
 
     event_logii(VERBOSE, "bu_sendAllChunks() : sending message len==%u to adress idx=%d", send_len, idx);
 
-    result = mdi_send_message((network_packet_t *) send_buffer, send_len, idx);
+    result = mdi_send_message((dctp_packet_t *) send_buffer, send_len, idx);
 
     event_logi(VVERBOSE, "bu_sendAllChunks(): result == %s ", (result==0)?"OKAY":"ERROR");
 
@@ -476,9 +476,9 @@ gint bu_sendAllChunks(guint * ad_idx)
     bu_ptr->got_send_request = FALSE;
     bu_ptr->got_send_address = FALSE;
 
-    bu_ptr->data_position = sizeof(network_packet_fixed_t);
-    bu_ptr->ctrl_position = sizeof(network_packet_fixed_t);
-    bu_ptr->sack_position = sizeof(network_packet_fixed_t);
+    bu_ptr->data_position = sizeof(dctp_packet_fixed_t);
+    bu_ptr->ctrl_position = sizeof(dctp_packet_fixed_t);
+    bu_ptr->sack_position = sizeof(dctp_packet_fixed_t);
 
     return result;
 }

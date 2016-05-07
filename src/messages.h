@@ -55,12 +55,12 @@
 #define IP_HDR_SIZE 20
 
 #ifdef USE_UDP
-#define NETWORK_PACKET_FIXED_SIZE  (4*sizeof(ushort))
+#define DCTP_PACKET_FIXED_SIZE  (4*sizeof(ushort))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE - NETWORK_PACKET_FIXED_SIZE)
+(MAX_MTU_SIZE - IP_HDR_SIZE - DCTP_PACKET_FIXED_SIZE)
 /* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
-struct network_packet_fixed_t
+struct dctp_packet_fixed_t
 {
     ushort src_port;
     ushort dest_port;
@@ -68,10 +68,10 @@ struct network_packet_fixed_t
     ushort checksum;
 };
 #else
-#define NETWORK_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
+#define DCTP_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE- NETWORK_PACKET_FIXED_SIZE)
-struct network_packet_fixed_t
+(MAX_MTU_SIZE - IP_HDR_SIZE- DCTP_PACKET_FIXED_SIZE)
+struct dctp_packet_fixed_t
 {
     ushort src_port;
     ushort dest_port;
@@ -80,9 +80,9 @@ struct network_packet_fixed_t
 };
 #endif
 // A general struct for an SCTP-message
-struct network_packet_t
+struct dctp_packet_t
 {
-    network_packet_fixed_t pk_comm_hdr;
+    dctp_packet_fixed_t pk_comm_hdr;
     uchar chunk[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 

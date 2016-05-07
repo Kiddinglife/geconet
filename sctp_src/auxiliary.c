@@ -133,12 +133,12 @@ uint crc_c[256] =
 };
 
 static int insert_adler32(unsigned char *buffer, int length);
-static int insert_crc32(unsigned char *buffer, int length);
+static int set_crc32_checksum(unsigned char *buffer, int length);
 static int validate_adler32(unsigned char *header_start, int length);
 static int validate_crc32(unsigned char *buffer, int length);
 
 
-static int (*insert_checksum) (unsigned char* buffer, int length) = insert_crc32;
+static int (*insert_checksum) (unsigned char* buffer, int length) = set_crc32_checksum;
 static int (*validate_checksum) (unsigned char* buffer, int length) = validate_crc32;
 
 
@@ -146,11 +146,13 @@ static uint sctp_adler32(uint adler, const unsigned char *buf, unsigned int len)
 
 
 int set_checksum_algorithm(int algorithm){
-    if (algorithm == SCTP_CHECKSUM_ALGORITHM_CRC32C) {
-        insert_checksum =  &insert_crc32;
+    if (algorithm == SCTP_CHECKSUM_ALGORITHM_CRC32C) 
+    {
+        insert_checksum =  &set_crc32_checksum;
         validate_checksum =  &validate_crc32;
         return SCTP_SUCCESS;
-    } else if (algorithm == SCTP_CHECKSUM_ALGORITHM_ADLER32) {
+    } else if (algorithm == SCTP_CHECKSUM_ALGORITHM_ADLER32)
+    {
         insert_checksum =  &insert_adler32;
         validate_checksum =  &validate_adler32;
         return SCTP_SUCCESS;
@@ -165,19 +167,22 @@ unsigned char* key_operation(int operation_code)
     uint              count = 0, tmp;
 
     if (operation_code == KEY_READ) return secret_key;
-    else if (operation_code == KEY_INIT) {
+    else if (operation_code == KEY_INIT) 
+    {
         if (secret_key != NULL) {
             error_log(ERROR_MAJOR, "tried to init secret key, but key already created !");
             return secret_key;
         }
         secret_key = (unsigned char*)malloc(SECRET_KEYSIZE);
-        while (count < SECRET_KEYSIZE){
+        while (count < SECRET_KEYSIZE)
+        {
             /* if you care for security, you need to use a cryptographically secure PRNG */
             tmp = adl_random();
             memcpy(&secret_key[count], &tmp, sizeof(uint));
             count += sizeof(uint);
         }
-    } else {
+    } else
+    {
         error_log(ERROR_MAJOR, "unknown key operation code !");
         return NULL;
     }
@@ -192,12 +197,12 @@ int aux_insert_checksum(unsigned char *buffer, int length)
 
 static int insert_adler32(unsigned char *buffer, int length)
 {
-    network_packet_t *message;
+    dctp_packet_t *message;
     uint      a32;
     /* save crc value from PDU */
     if (length > NMAX || length < NMIN)
         return -1;
-    message = (network_packet_t *) buffer;
+    message = (dctp_packet_t *) buffer;
     message->common_header.checksum = htonl(0L);
 
     /* now compute the thingie */
@@ -236,16 +241,16 @@ static uint generate_crc32c(unsigned char *buffer, int length)
 
 }
 
-static int insert_crc32(unsigned char *buffer, int length)
+static int set_crc32_checksum(unsigned char *buffer, int length)
 {
-    network_packet_t *message;
+    dctp_packet_t *message;
     uint      crc32c;
 
     /* check packet length */
     if (length > NMAX  || length < NMIN)
       return -1;
 
-    message = (network_packet_t *) buffer;
+    message = (dctp_packet_t *) buffer;
     message->common_header.checksum = 0L;
     crc32c =  generate_crc32c(buffer, length);
     /* and insert it into the message */
@@ -268,12 +273,12 @@ int validate_size(unsigned char *header_start, int length)
 
 static int validate_adler32(unsigned char *header_start, int length)
 {
-    network_packet_t *message;
+    dctp_packet_t *message;
     uint      old_crc32;
     uint      a32;
 
     /* save crc value from PDU */
-    message = (network_packet_t *) header_start;
+    message = (dctp_packet_t *) header_start;
     old_crc32 = ntohl(message->common_header.checksum);
 
     event_logi(VVERBOSE, "DEBUG Validation : old adler == %x", old_crc32);
@@ -290,14 +295,14 @@ static int validate_adler32(unsigned char *header_start, int length)
 
 static int validate_crc32(unsigned char *buffer, int length)
 {
-    network_packet_t *message;
+    dctp_packet_t *message;
     uint      original_crc32;
     uint      crc32 = ~0;
 
     /* check packet length */
 
     /* save and zero checksum */
-    message = (network_packet_t *) buffer;
+    message = (dctp_packet_t *) buffer;
     original_crc32 = ntohl(message->common_header.checksum);
     event_logi(VVERBOSE, "DEBUG Validation : old crc32c == %x", original_crc32);
     message->common_header.checksum = 0;
@@ -309,7 +314,7 @@ static int validate_crc32(unsigned char *buffer, int length)
 
 
 
-int validate_datagram(unsigned char *buffer, int length)
+int validate_dctp_packet(unsigned char *buffer, int length)
 {
     /* sanity check for size (min,max, multiple of 32 bits) */
     if (!validate_size(buffer, length))

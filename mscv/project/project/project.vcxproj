@@ -36,6 +36,9 @@
     <ClCompile Include="..\..\..\src\md5.cc" />
     <ClCompile Include="..\..\..\src\poller.cc" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\..\src\rfc4960.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BC88D1E1-2A21-4165-A5C2-9FBC87AFE852}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

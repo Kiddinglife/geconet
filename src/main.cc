@@ -569,8 +569,8 @@ static void test_getlocaladdr()
     nit.init(&rcwnd, true);
 
     sockaddrunion* saddr = 0;
-    int num=0;
-    int maxmtu=0;
+    int num = 0;
+    int maxmtu = 0;
     ushort port = 0;
     char addr[MAX_IPADDR_STR_LEN];
 

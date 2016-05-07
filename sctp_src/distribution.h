@@ -52,9 +52,9 @@
 #include  "messages.h"
 
 /* define some important constants */
-#define ASSOCIATION_MAX_RETRANS 10
-#define MAX_INIT_RETRANSMITS    8
-#define MAX_PATH_RETRANSMITS    5
+#define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
+#define MAX_INIT_RETRANS_ATTEMPTS    8
+#define MAX_PATH_RETRANS_TIMES    5
 #define VALID_COOKIE_LIFE_TIME  10000
 /*
 #define RWND_CONST              64000
@@ -80,8 +80,8 @@
 /*------------------- Functions called by the Unix-Interface --------------*/
 
 /**
- * \fn mdi_receiveMessage
- *  mdi_receiveMessage is the callback function of the SCTP-message distribution.
+ * \fn recv_dctp_packet
+ *  recv_dctp_packet is the callback function of the SCTP-message distribution.
  *  It is called by the Unix-interface module when a new datagramm is received.
  *  This function also performs OOTB handling, tag verification etc.
  *  (see also RFC 4960, section 8.5.1.B)  and sends data to the bundling module of
@@ -93,7 +93,7 @@
  *  @param fromAddress        source address of DG
  *  @param portnum            bogus port number
  */
-void mdi_receiveMessage(int socket_fd, unsigned char *buffer,
+void recv_dctp_packet(int socket_fd, unsigned char *buffer,
     int bufferLength, union sockaddrunion * source_addr,
 union sockaddrunion * dest_addr);
 
@@ -105,13 +105,13 @@ union sockaddrunion * dest_addr);
    - convert the SCTP message to a byte string
    - retrieve the socket-file descriptor of the SCTP-instance
    - retrieve the destination address
-   @param network_packet_t     SCTP message (UDP-datapart) as a struct
+   @param dctp_packet_t     SCTP message (UDP-datapart) as a struct
    @param length           length of SCTP message.
    @param destAddresIndex  Index of address in the destination address list.
    @return                 Errorcode.
    */
 
-int mdi_send_message(network_packet_t * message, unsigned int length, short destAddressIndex);
+int mdi_send_message(dctp_packet_t * message, unsigned int length, short destAddressIndex);
 
 
 

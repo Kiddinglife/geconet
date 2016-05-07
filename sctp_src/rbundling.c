@@ -51,7 +51,7 @@
 
 #include <stdio.h>
 
-#define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(network_packet_fixed_t))
+#define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(dctp_packet_fixed_t))
 
 
 

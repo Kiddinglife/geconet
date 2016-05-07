@@ -55,7 +55,7 @@ unsigned char* key_operation(int operation_code);
  * @param length size of the buffer
  * @return 0 if validation failed, 1 if successful, -1 if any error ocurred
  */
-int validate_datagram(unsigned char *buffer, int length);
+int validate_dctp_packet(unsigned char *buffer, int length);
 
 int aux_insert_checksum(unsigned char *buffer, int length);
 
