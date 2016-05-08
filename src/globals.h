@@ -76,23 +76,6 @@
 #include "config.h"
 #include "messages.h"
 
-
-#define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
-#define MAX_INIT_RETRANS_ATTEMPTS    8
-#define MAX_PATH_RETRANS_TIMES    5
-#define VALID_COOKIE_LIFE_TIME  10000 //MS
-
-#define SACK_DELAY    200
-#define RTO_INITIAL     3000    /* 超时重传机制(RTO：Retransmission Timeout) */
-#define RTO_MIN                 1000
-#define RTO_MAX                 60000
-
-#define DEFAULT_MAX_SENDQUEUE   0       /* unlimited send queue */
-#define DEFAULT_MAX_RECVQUEUE   0       /* unlimited recv queue - unused really */
-#define DEFAULT_MAX_BURST       4       /* maximum burst parameter */
-
-
-#define MAX_COUNT_LOCAL_IP_ADDR 8
 #define GRANULARITY 1 /*ms default interval to timeout when no timers in poll*/
 
 /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
@@ -113,25 +96,12 @@
 #define USE_UDP_BUFSZ 65536 //RECV BUFFER IN POLLER
 #define DEFAULT_RWND_SIZE  10*USE_UDP_BUFSZ // 655350 bytes =
 
-/*this parameter specifies the maximum number of addresses
-that an endpoInt32 may have */
-#define MAX_NUM_ADDRESSES      32
 
-//#define BASE 65521L             /* largest prime smaller than 65536 */
-//#define NMAX 5552
-//#define NMIN 16
 /* src port + dest port + ver tag + checksum + 
 chunk type + chunk flag + chunk length = 16 bytes*/
 #define MIN_NETWORK_PACKET_HDR_SIZES \
 DCTP_PACKET_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE
 #define MAX_NETWORK_PACKET_HDR_SIZES 5552
-
-#define SECRET_KEYSIZE  4096
-#define KEY_INIT     0
-#ifndef KEY_READ
-#define KEY_READ     1
-#endif
-#define MAX_DEST    16
 
 //<--------------------------------- log ------------------------->
 #define TRACE_MUDULE_SIZE 50
@@ -404,78 +374,13 @@ extern uint get_random();
 
 
 
-/*=========== poll defines and functions =================*/
+/*================ sockaddr defines and functions =================*/
 #ifndef IN_EXPERIMENTAL
 #define  IN_EXPERIMENTAL(a)   ((((int) (a)) & 0xf0000000) == 0xf0000000)
 #endif
 
 #ifndef IN_BADCLASS
 #define  IN_BADCLASS(a)    IN_EXPERIMENTAL((a))
-#endif
-
-#if defined( __linux__) || defined(__unix__)
-#include <sys/poll.h>
-#else
-#define POLLIN     0x001 //2base    0001
-#define POLLPRI    0x002 //2base    0010
-#define POLLOUT    0x004 //2base  0100
-#define POLLERR    0x008//2base    1000
-#endif
-
-#define IFA_BUFFER_LENGTH   1024
-#define POLL_FD_UNUSED     -1
-#define MAX_FD_SIZE     32
-#define    EVENTCB_TYPE_SCTP       1
-#define    EVENTCB_TYPE_UDP        2
-#define    EVENTCB_TYPE_USER       3
-#define    EVENTCB_TYPE_ROUTING    4
-#define    EVENTCB_TYPE_STDIN          5
-
-#define GECO_CMSG_ALIGN(len) ( ((len)+sizeof(long)-1) & ~(sizeof(long)-1) )
-#define GECO_CMSG_SPACE(len) \
-(GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + GECO_CMSG_ALIGN(len))
-#define GECO_CMSG_LEN(len) (GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
-#define GECO_CMSG_DATA(cmsg) \
-((unsigned char*)(cmsg)+GECO_CMSG_ALIGN(sizeof(struct cmsghdr)))
-
-/*================ struct sockaddr =================*/
-#ifndef _WIN32
-#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
-#else
-#define ADDRESS_LIST_BUFFER_SIZE        4096
-//#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
-#define IFNAMSIZ IF_NAMESIZE
-struct iphdr
-{
-    uchar version_length;
-    uchar typeofservice; /* type of service */
-    ushort length; /* total length */
-    ushort identification; /* identification */
-    ushort fragment_offset; /* fragment offset field */
-    uchar ttl; /* time to live */
-    uchar protocol; /* protocol */
-    ushort checksum; /* checksum */
-    struct in_addr src_addr; /* source and dest address */
-    struct in_addr dst_addr;
-};
-
-#define msghdr _WSAMSG
-#define iovec _WSABUF 
-#endif
-
-#ifndef _WIN32
-#define USES_BSD_4_4_SOCKET
-#ifndef __sun
-#define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
-#define NEXT_SA(ap) \
-ap = (struct sockaddr *)((caddr_t) ap + (ap->sa_len ? \
-ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
-#else
-#define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
-#define RTAX_MAX RTA_NUMBITS
-#define RTAX_IFA 5
-#define _NO_SIOCGIFMTU_
-#endif
 #endif
 
 #define s4addr(X)   (((struct sockaddr_in *)(X))->sin_addr.s_addr)
@@ -519,73 +424,6 @@ union sockaddrunion
     struct sockaddr_in6 sin6;
 };
 
-/* Defines the callback function that is called when an event occurs
-on an internal GECO or UDP socket
-Params: 1. file-descriptor of the socket
-2. pointer to the datagram data, if any was received
-3. length of datagram data, if any was received
-4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
-5. source port number for UDP sockets, 0 for SCTP raw sockets
-*/
-typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen,
-    const char* addr, ushort port);
-
-/* Defines the callback function that is called when an event occurs
-on a user file-descriptor
-Params: 1. file-descriptor
-Params: 2. received events mask
-Params: 3. pointer to registered events mask.
-It may be changed by the callback function.
-Params: 4. user data
-*/
-typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
-
-
-union cbunion_t
-{
-    socket_cb_fun_t socket_cb_fun;
-    user_cb_fun_t user_cb_fun;
-};
-
-/**
-* Structure for callback events. The function "action" is called by the event-handler,
-* when an event occurs on the file-descriptor.
-*/
-struct event_handler_t
-{
-    //int used;
-    int sfd;
-    int eventcb_type;
-    /* pointer to possible arguments, associations etc. */
-    cbunion_t action;
-    void* arg1, *arg2, *userData;
-};
-struct stdin_data_t
-{
-    typedef void(*stdin_cb_func_t)(char* in, size_t datalen);
-    unsigned long len;
-    char buffer[1024];
-    stdin_cb_func_t stdin_cb_;
-#ifdef _WIN32
-    HANDLE event, eventback; // only used on win32 plateform
-#endif
-};
-
-struct socket_despt_t
-{
-    int event_handler_index;
-    int fd;
-    int events;
-    int revents;
-    long revision;
-#ifdef _WIN32
-    HANDLE event; // only used on win32 plateform
-    WSANETWORKEVENTS trigger_event;
-#endif
-};
-
-
-
 /* converts address-string
 * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
 *  str == NULL will bitzero saddr used as 'ANY ADRESS 0.0.0.0'
@@ -596,16 +434,42 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
     bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
-#endif /* MY_GLOBALS_H_ */
 
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
-extern int set_crc32_checksum(unsigned char *buffer, int length);
+#define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
+#define MAX_INIT_RETRANS_ATTEMPTS    8
+#define MAX_PATH_RETRANS_TIMES    5
+#define VALID_COOKIE_LIFE_TIME  10000 //MS
+
+#define SACK_DELAY    200
+#define RTO_INITIAL     3000    /* 超时重传机制(RTO：Retransmission Timeout) */
+#define RTO_MIN                 1000
+#define RTO_MAX                 60000
+
+#define DEFAULT_MAX_SENDQUEUE   0       /* unlimited send queue */
+#define DEFAULT_MAX_RECVQUEUE   0       /* unlimited recv queue - unused really */
+#define DEFAULT_MAX_BURST       4       /* maximum burst parameter */
+#define DEFAULT_ENDPOINT_SIZE 128
+
+/*this parameter specifies the maximum number of addresses
+that an endpoint may have */
+#define MAX_NUM_ADDRESSES      32
+
+#define SECRET_KEYSIZE  4096
+#define KEY_INIT     0
+#ifndef KEY_READ
+#define KEY_READ     1
+#endif
+#define MAX_DEST    16
+
+extern int set_crc32_checksum(char *buffer, int length);
 extern uchar* key_operation(int operation_code);
-extern int validate_crc32_checksum(char* buffer, size_t len);
+extern int validate_crc32_checksum(char* buffer, int len);
 
 
-/*=========  APPLICATION LAYER DEFINES AND FUNTIONS ===========*/
+/*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
+
 /**
 This struct containes the pointers to ULP callback functions.
 Each SCTP-instance can have its own set of callback functions.
@@ -719,3 +583,13 @@ struct applicaton_layer_cbs_t
     /* @} */
 };
 
+
+
+
+
+
+
+
+
+
+#endif /* MY_GLOBALS_H_ */

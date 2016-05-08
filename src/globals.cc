@@ -583,7 +583,7 @@ int validate_crc32_checksum(char *buffer, int length)
 
     return ((original_crc32 == crc32) ? 1 : 0);
 }
-int set_crc32_checksum(unsigned char *buffer, int length)
+int set_crc32_checksum(char *buffer, int length)
 {
     dctp_packet_t *message;
     uint      crc32c;
@@ -596,7 +596,6 @@ int set_crc32_checksum(unsigned char *buffer, int length)
     message->pk_comm_hdr.checksum = 0L;
     crc32c = generate_crc32c(buffer, length);
     message->pk_comm_hdr.checksum = htonl(crc32c);
-
     return 0;
 }
 uchar* key_operation(int operation_code)

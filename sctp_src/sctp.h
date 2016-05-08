@@ -174,7 +174,7 @@ extern "C" {
            of the SCTP instance to which it belongs. With the name of the SCTP-
            instance its datastruct can be read from the list of SCTP-instances.
            */
-    struct applicaton_layer_cbs_t
+    struct applicaton_layer_cbs
     {
         /* @{ */
         /**
@@ -276,7 +276,7 @@ extern "C" {
          */
         void(*asconfStatusNotif) (unsigned int, unsigned int, int, void*, void*);
         /* @} */
-    }applicaton_layer_cbs_t;
+    }applicaton_layer_cbs;
 
 
     typedef
@@ -508,7 +508,7 @@ extern "C" {
         unsigned short noOfOutStreams,
         unsigned int   noOfLocalAddresses,
         unsigned char  localAddressList[SCTP_MAX_NUM_ADDRESSES][SCTP_MAX_IP_LEN],
-        applicaton_layer_cbs_t ULPcallbackFunctions);
+        applicaton_layer_cbs ULPcallbackFunctions);
 
     int sctp_unregisterInstance(unsigned short instance_name);
 

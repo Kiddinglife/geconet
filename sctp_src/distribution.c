@@ -104,7 +104,7 @@ typedef struct SCTPINSTANCE
     gboolean    uses_IPv4;
     gboolean    uses_IPv6;
     /** set of callback functions that were registered by the ULP */
-    applicaton_layer_cbs_t ULPcallbackFunctions;
+    applicaton_layer_cbs ULPcallbackFunctions;
     /** maximum number of incoming streams that this instance will take */
     unsigned short noOfInStreams;
     /** maximum number of outgoingng streams that this instance will take */
@@ -135,7 +135,7 @@ dispatcher_t;
  * This struct contains all data of an association. As far as other modules must know elements
  * of this struct, read functions are provided. No other module has write access to this structure.
  */
-typedef struct ASSOCIATION
+typedef struct endpoint
 {
     /*@{*/
     /** The current ID of this association,
@@ -149,17 +149,17 @@ typedef struct ASSOCIATION
     /** Pointer to the SCTP-instance this association
         belongs to. It is equal to the wellknown port
         number of the ULP that uses this instance. */
-    dispatcher_t*  sctpInstance;
+    dispatcher_t*  sctpInstance; //dispatcher
     /** the local port number of this association. */
     unsigned short localPort;
     /** the remote port number of this association. */
     unsigned short remotePort;
     /** number of destination networks (paths) */
-    short noOfNetworks;
+    short remote_addres_size;
     /** array of destination addresses */
     union sockaddrunion *destinationAddresses;
     /** number of own addresses */
-    unsigned int noOfLocalAddresses;
+    unsigned int local_addres_size;
     /** array of local addresses */
     union sockaddrunion *localAddresses;
     /** pointer to flowcontrol structure */
@@ -194,7 +194,7 @@ typedef struct ASSOCIATION
     gboolean    peerSupportsPRSCTP;
     gboolean    peerSupportsADDIP;
     /*@}*/
-} Association;
+} endpoint_t;
 
 
 /******************** Declarations ****************************************************************/
@@ -228,8 +228,8 @@ static unsigned int ipv6_users = 0;
  * Read functions for 'global data' read data from the association pointed to by this pointer.
  * This pointer must be reset to null after the event  has been handled.
  */
-static Association *currentAssociation;
-static Association tmpAssoc;
+static endpoint_t *currentAssociation;
+static endpoint_t tmpAssoc;
 static union sockaddrunion tmpAddress;
 
 
@@ -394,9 +394,9 @@ gint compareAssociationIDs(gconstpointer a, gconstpointer b)
 {
     /* two associations are equal if there local tags (in this implementation also used as
        association ID) are equal. */
-    if (((Association*)a)->assocId == ((Association*)b)->assocId)
+    if (((endpoint_t*)a)->assocId == ((endpoint_t*)b)->assocId)
         return 0;
-    else if (((Association*)a)->assocId < ((Association*)b)->assocId)
+    else if (((endpoint_t*)a)->assocId < ((endpoint_t*)b)->assocId)
         return -1;
     else
         return 1;
@@ -418,21 +418,23 @@ gint equalAssociations(gconstpointer a, gconstpointer b)
     int i, j;
 
     event_logii(VVERBOSE, "equalAssociations: checking assoc A[id=%d] and assoc B[id=%d]",
-        ((Association*)a)->assocId, ((Association*)b)->assocId);
+        ((endpoint_t*)a)->assocId, ((endpoint_t*)b)->assocId);
 
     /* two associations are equal if their remote and local ports are equal and at least
        one of their remote addresses are equal. This is like in TCP, where a connection
        is identified by the transport address, i.e. the IP-address and port of the peer. */
 
-    if ((((Association *)a)->remotePort == ((Association *)b)->remotePort) &&
-        (((Association *)a)->localPort == ((Association *)b)->localPort)){
-        for (i = 0; i < ((Association *)a)->noOfNetworks; i++)
-            for (j = 0; j < ((Association *)b)->noOfNetworks; j++) {
+    if ((((endpoint_t *)a)->remotePort == ((endpoint_t *)b)->remotePort) &&
+        (((endpoint_t *)a)->localPort == ((endpoint_t *)b)->localPort))
+    {
+        for (i = 0; i < ((endpoint_t *)a)->remote_addres_size; i++)
+            for (j = 0; j < ((endpoint_t *)b)->remote_addres_size; j++) 
+            {
                 event_logii(VVERBOSE, "equalAssociations: checking address A[%d] address B[%d]", i, j);
                 if (adl_equal_address
-                    (&(((Association *)a)->destinationAddresses[i]),
-                    &(((Association *)b)->destinationAddresses[j])) == true) {
-                    if ((((Association *)b)->deleted == FALSE) && (((Association *)a)->deleted == FALSE)) {
+                    (&(((endpoint_t *)a)->destinationAddresses[i]),
+                    &(((endpoint_t *)b)->destinationAddresses[j])) == true) {
+                    if ((((endpoint_t *)b)->deleted == FALSE) && (((endpoint_t *)a)->deleted == FALSE)) {
                         event_log(VVERBOSE, "equalAssociations: found TWO equal assocs !");
                         return 0;
                     }
@@ -456,10 +458,10 @@ gint equalAssociations(gconstpointer a, gconstpointer b)
  * @param assocID  association ID
  * @return  pointer to the retrieved association, or NULL
  */
-Association *retrieveAssociation(unsigned int assocID)
+endpoint_t *retrieveAssociation(unsigned int assocID)
 {
-    Association *assoc;
-    Association *assocFindP;
+    endpoint_t *assoc;
+    endpoint_t *assocFindP;
     GList* result = NULL;
 
     event_logi(INTERNAL_EVENT_0, "retrieving association %08x from list", assocID);
@@ -472,7 +474,7 @@ Association *retrieveAssociation(unsigned int assocID)
     result = g_list_find_custom(AssociationList, assocFindP, &compareAssociationIDs);
     if (result != NULL) {
 
-        assoc = (Association *)result->data;
+        assoc = (endpoint_t *)result->data;
 
         if (assoc->deleted) {
             assoc = NULL;
@@ -491,10 +493,10 @@ Association *retrieveAssociation(unsigned int assocID)
  * @param assocID  association ID
  * @return  pointer to the retrieved association, or NULL
  */
-Association *retrieveAssociationForced(unsigned int assocID)
+endpoint_t *retrieveAssociationForced(unsigned int assocID)
 {
-    Association *assoc;
-    Association *assocFindP;
+    endpoint_t *assoc;
+    endpoint_t *assocFindP;
     GList* result = NULL;
 
     event_logi(INTERNAL_EVENT_0, "forced retrieval of association %08x from list", assocID);
@@ -504,7 +506,7 @@ Association *retrieveAssociationForced(unsigned int assocID)
     assoc = NULL;
     result = g_list_find_custom(AssociationList, assocFindP, &compareAssociationIDs);
     if (result != NULL) {
-        assoc = (Association *)result->data;
+        assoc = (endpoint_t *)result->data;
     }
     else {
         event_logi(INTERNAL_EVENT_0, "association %08x not in list", assocID);
@@ -524,16 +526,16 @@ Association *retrieveAssociationForced(unsigned int assocID)
  *   @param  fromPort SCTP port from which data arrived
  *   @return pointer to the retrieved association, or NULL
  */
-Association *retrieveAssociationByTransportAddress(union sockaddrunion * fromAddress,
+endpoint_t *retrieveAssociationByTransportAddress(union sockaddrunion * fromAddress,
     unsigned short fromPort,
     unsigned short toPort)
 {
 
-    Association *assocr;
-    Association *assocp;
+    endpoint_t *assocr;
+    endpoint_t *assocp;
     GList* result = NULL;
 
-    tmpAssoc.noOfNetworks = 1;
+    tmpAssoc.remote_addres_size = 1;
     tmpAssoc.destinationAddresses = &tmpAddress;
 
     switch (saddr_family(fromAddress)) {
@@ -572,9 +574,11 @@ Association *retrieveAssociationByTransportAddress(union sockaddrunion * fromAdd
 
     result = g_list_find_custom(AssociationList, assocp, equalAssociations);
 
-    if (result != NULL){
-        assocr = (Association *)result->data;
-        if (assocr->deleted) {
+    if (result != NULL)
+    {
+        assocr = (endpoint_t *)result->data;
+        if (assocr->deleted)
+        {
             event_logi(VERBOSE, "Found assoc that should be deleted, with id %u", assocr->assocId);
             assocr = NULL;
         }
@@ -582,7 +586,8 @@ Association *retrieveAssociationByTransportAddress(union sockaddrunion * fromAdd
             event_logi(VERBOSE, "Found valid assoc assoc with id %u", assocr->assocId);
         return assocr;
     }
-    else {
+    else
+    {
         event_log(INTERNAL_EVENT_0, "association indexed by transport address not in list");
     }
     return NULL;
@@ -598,7 +603,7 @@ Association *retrieveAssociationByTransportAddress(union sockaddrunion * fromAdd
  *  @param assoc_new the association to be compared with the association in the list.
  *  @return      1 if was association found, else  0
  */
-static short checkForExistingAssociations(Association * assoc_new)
+static short checkForExistingAssociations(endpoint_t * assoc_new)
 {
     GList* result = NULL;
 
@@ -685,7 +690,7 @@ static void releasePort(unsigned short portSeized)
  *  for it and <calls moduleprefix>_delete*(...) function at all modules.
  *  @param assoc  pointer to the association to be deleted.
  */
-static void mdi_removeAssociationData(Association * assoc)
+static void mdi_removeAssociationData(endpoint_t * assoc)
 {
     if (assoc != NULL) {
         event_logi(INTERNAL_EVENT_0, "Deleting association %08x ", assoc->assocId);
@@ -755,7 +760,7 @@ bool mdi_destination_address_okay(union sockaddrunion * dest_addr)
     if (currentAssociation != NULL) {
         /* search through the _association_ list */
         /* and accept or decline */
-        for (i = 0; i < currentAssociation->noOfLocalAddresses; i++) {
+        for (i = 0; i < currentAssociation->local_addres_size; i++) {
             event_logii(VVERBOSE, "mdi_destination_address_okay: Checking addresses Dest %x, local %x",
                 s4addr(dest_addr), s4addr(&(currentAssociation->localAddresses[i])));
             if (adl_equal_address(dest_addr, &(currentAssociation->localAddresses[i])) == true) {
@@ -904,7 +909,7 @@ union sockaddrunion * dest_addr)
         return;
     }
 
-    if (saddr_family(dest_addr) == AF_INET) 
+    if (saddr_family(dest_addr) == AF_INET)
     {
         addressType = SUPPORT_ADDRESS_TYPE_IPV4;
         event_log(VERBOSE, "recv_dctp_packet: checking for correct IPV4 addresses");
@@ -957,7 +962,7 @@ union sockaddrunion * dest_addr)
             &(dest_addr->sin6.sin6_addr))) discard = true;
             */
 #endif
-        }
+    }
         else
 #endif
         {
@@ -971,7 +976,7 @@ union sockaddrunion * dest_addr)
         "recv_dctp_packet : len %d, sourceaddress : %s, src_port %u,dest: %s, dest_port %u",
         bufferLength, source_addr_string, last_src_port, dest_addr_string, last_dest_port);
 
-    if (discard == true) 
+    if (discard == true)
     {
         last_source_addr = NULL;
         last_dest_addr = NULL;
@@ -988,12 +993,14 @@ union sockaddrunion * dest_addr)
     /* Retrieve association from list  */
     currentAssociation = retrieveAssociationByTransportAddress(last_source_addr, last_src_port, last_dest_port);
 
-    if (currentAssociation != NULL) {
+    if (currentAssociation != NULL) 
+    {
         /* meaning we MUST have an instance with no fixed port */
         sctpInstance = currentAssociation->sctpInstance;
         supportedAddressTypes = 0;
     }
-    else {
+    else
+    {
         /* OK - if this packet is for a server, we will find an SCTP instance, that shall
            handle it (i.e. we have the SCTP instance's localPort set and it matches the
            packet's destination port */
@@ -1255,14 +1262,14 @@ union sockaddrunion * dest_addr)
         if (sctpInstance == NULL) {
             sctpInstance = currentAssociation->sctpInstance;
             if (sctpInstance == NULL) {
-                error_log(ERROR_FATAL, "We have an Association, but no Instance, FIXME !");
+                error_log(ERROR_FATAL, "We have an endpoint_t, but no Instance, FIXME !");
             }
         }
 
         /* check if source address is in address list of this association.
            tbd: check the draft if this is correct. */
         if (sourceAddressExists == FALSE) {
-            for (i = 0; i < currentAssociation->noOfNetworks; i++) {
+            for (i = 0; i < currentAssociation->remote_addres_size; i++) {
                 if (adl_equal_address
                     (&(currentAssociation->destinationAddresses[i]), last_source_addr) == true) {
                     sourceAddressExists = true;
@@ -1491,7 +1498,7 @@ int sctp_initLibrary(void)
         error_log(ERROR_MAJOR, "You must be root to use the SCTPLIB-functions (or make your program SETUID-root !).");
         LEAVE_LIBRARY("sctp_initLibrary");
         return SCTP_INSUFFICIENT_PRIVILEGES;
-}
+    }
 #endif
 
 
@@ -1635,12 +1642,12 @@ gboolean mdi_checkForCorrectAddress(union sockaddrunion* su)
 
 static void printAssocList()
 {
-    Association* assoc;
+    endpoint_t* assoc;
     GList*       iterator;
     iterator = g_list_first(AssociationList);
     puts("AssocList:");
     while (iterator) {
-        assoc = (Association *)iterator->data;
+        assoc = (endpoint_t *)iterator->data;
         printf("   #%d: I=%u, deleted=%d\n", assoc->assocId, assoc->sctpInstance->sctpInstanceName, assoc->deleted);
         iterator = g_list_next(iterator);
     }
@@ -1667,7 +1674,7 @@ unsigned short noOfInStreams,
 unsigned short noOfOutStreams,
 unsigned int noOfLocalAddresses,
 unsigned char localAddressList[][SCTP_MAX_IP_LEN],
-applicaton_layer_cbs_t ULPcallbackFunctions)
+applicaton_layer_cbs ULPcallbackFunctions)
 {
 
     unsigned int i;
@@ -1681,7 +1688,7 @@ applicaton_layer_cbs_t ULPcallbackFunctions)
     gboolean with_ipv6 = FALSE;
 #endif
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_registerInstance");
     ZERO_CHECK_LIBRARY;
@@ -1727,8 +1734,8 @@ applicaton_layer_cbs_t ULPcallbackFunctions)
 #ifdef HAVE_IPV6
             if (su.sa.sa_family == AF_INET6) with_ipv6 = true;
 #endif
-        }
     }
+}
 
     event_logi(VERBOSE, "sctp_registerInstance : with_ipv4 : %s ", (with_ipv4 == true) ? "true" : "FALSE");
     /* if not IPv6 callback must be registered too ! */
@@ -1875,9 +1882,10 @@ applicaton_layer_cbs_t ULPcallbackFunctions)
     if (with_ipv6 == true) {
         ipv6_users++;
         sctpInstance->uses_IPv6 = true;
-    } else {
+    }
+    else {
         sctpInstance->uses_IPv6 = FALSE;
-}
+    }
 #endif
     if (with_ipv4 && sctp_socket == 0) {
         sctp_socket = adl_get_sctpv4_socket();
@@ -1940,7 +1948,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
 {
     /* Look through the instance list, and delete instance, when
        found, else return error. */
-    Association* assoc;
+    endpoint_t* assoc;
     GList* assocIterator = NULL;
     dispatcher_t temporary;
     dispatcher_t* instance;
@@ -1967,7 +1975,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
 #endif
         event_logi(INTERNAL_EVENT_0, "sctp_unregisterInstance: SCTP Instance %u found !!!", instance_name);
 #ifdef HAVE_IPV6
-        event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv6: %s ",(with_ipv6==true)?"true":"FALSE" );
+        event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv6: %s ", (with_ipv6 == true) ? "true" : "FALSE");
         if (with_ipv6 == true) ipv6_users--;
         event_logi(VERBOSE, "sctp_unregisterInstance : ipv6_users: %u ", ipv6_users);
 #endif
@@ -1977,7 +1985,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
 
         assocIterator = g_list_first(AssociationList);
         while (assocIterator) {
-            assoc = (Association*)assocIterator->data;
+            assoc = (endpoint_t*)assocIterator->data;
             if (assoc->sctpInstance == instance) {
                 event_logi(ERROR_MINOR, "sctp_unregisterInstance : instance still used by assoc %u !!!",
                     assoc->assocId);
@@ -1997,9 +2005,9 @@ int sctp_unregisterInstance(unsigned short instance_name)
         if (ipv6_sctp_socket != 0 &&  ipv6_users == 0) {
             fds = adl_remove_poll_fd(ipv6_sctp_socket);
             /* if there are no ipv6_users, deregister callback for ipv6-socket, if it was registered ! */
-            event_logi(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ",fds);
+            event_logi(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", fds);
             ipv6_sctp_socket = 0;
-    }
+        }
 #endif
 
         if (instance->has_INADDR_ANY_set == FALSE) {
@@ -2021,7 +2029,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
         InstanceList = g_list_remove(InstanceList, result->data);
         LEAVE_LIBRARY("sctp_unregisterInstance");
         return SCTP_SUCCESS;
-        }
+}
     else {
         event_logi(INTERNAL_EVENT_0, "SCTP Instance %u not in list", instance_name);
     }
@@ -2044,7 +2052,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
  */
 int sctp_deleteAssociation(unsigned int associationID)
 {
-    Association *assocFindP;
+    endpoint_t *assocFindP;
     GList* result = NULL;
 
     ENTER_LIBRARY("sctp_deleteAssociation");
@@ -2060,7 +2068,7 @@ int sctp_deleteAssociation(unsigned int associationID)
 
     result = g_list_find_custom(AssociationList, assocFindP, &compareAssociationIDs);
     if (result != NULL) {
-        currentAssociation = (Association *)result->data;
+        currentAssociation = (endpoint_t *)result->data;
         if (!currentAssociation->deleted) {
             currentAssociation = NULL;
             error_log(ERROR_MAJOR, "Deleted-Flag not set, returning from sctp_deleteAssociation !");
@@ -2069,7 +2077,7 @@ int sctp_deleteAssociation(unsigned int associationID)
         }
         /* remove the association from the list */
         AssociationList = g_list_remove(AssociationList, currentAssociation);
-        event_log(INTERNAL_EVENT_0, "sctp_deleteAssociation: Deleted Association from list");
+        event_log(INTERNAL_EVENT_0, "sctp_deleteAssociation: Deleted endpoint_t from list");
         /* free all association data */
         mdi_removeAssociationData(currentAssociation);
         currentAssociation = NULL;
@@ -2117,7 +2125,7 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     GList* result = NULL;
 
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_associatex");
 
@@ -2235,7 +2243,7 @@ void* ulp_data)
 int sctp_shutdown(unsigned int associationID)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_shutdown");
 
@@ -2274,7 +2282,7 @@ int sctp_shutdown(unsigned int associationID)
 int sctp_abort(unsigned int associationID)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     /* Retrieve association from list  */
     ENTER_LIBRARY("sctp_abort");
 
@@ -2330,7 +2338,7 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
 {
     int result = SCTP_SUCCESS;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     ENTER_LIBRARY("sctp_send");
 
     CHECK_LIBRARY;
@@ -2341,7 +2349,7 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
     if (currentAssociation != NULL) {
         sctpInstance = currentAssociation->sctpInstance;
 
-        if ((path_id >= -1) && (path_id < currentAssociation->noOfNetworks)) {
+        if ((path_id >= -1) && (path_id < currentAssociation->remote_addres_size)) {
             event_log(INTERNAL_EVENT_1, "sctp_send: sending chunk");
             /* Forward chunk to the addressed association */
             result = se_ulpsend(streamID, buffer, length, protocolId, path_id,
@@ -2378,7 +2386,7 @@ short sctp_setPrimary(unsigned int associationID, short path_id)
 {
     short rv;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_setPrimary");
 
@@ -2459,7 +2467,7 @@ int sctp_receivefrom(unsigned int associationID,
 {
     int result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_receive");
 
@@ -2526,7 +2534,7 @@ short path_id, gboolean heartbeatON, unsigned int timeIntervall)
 {
     int result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     ENTER_LIBRARY("sctp_changeHeartbeat");
 
     CHECK_LIBRARY;
@@ -2572,7 +2580,7 @@ int sctp_requestHeartbeat(unsigned int associationID, short path_id)
 {
     int result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_requestHeartbeat");
 
@@ -2606,7 +2614,7 @@ int sctp_getSrttReport(unsigned int associationID, short path_id)
 {
     unsigned int srtt;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_getSrttReport");
 
@@ -2656,13 +2664,13 @@ sctp_setFailureThreshold(unsigned int associationID, unsigned short pathMaxRetra
 {
     guint16 result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_setFailureThreshold");
 
     CHECK_LIBRARY;
 
-    event_logii(VERBOSE, "sctp_setFailureThreshold: Association %u, pathMaxRetr. %u", associationID,
+    event_logii(VERBOSE, "sctp_setFailureThreshold: endpoint_t %u, pathMaxRetr. %u", associationID,
         pathMaxRetransmissions);
     currentAssociation = retrieveAssociation(associationID);
 
@@ -2699,13 +2707,13 @@ int sctp_getPathStatus(unsigned int associationID, short path_id, SCTP_PathStatu
     guint32 assocState;
     unsigned int totalBytesInFlight;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_getPathStatus");
 
     CHECK_LIBRARY;
 
-    event_logii(VERBOSE, "sctp_getPathStatus: Association %u, Path %u", associationID, path_id);
+    event_logii(VERBOSE, "sctp_getPathStatus: endpoint_t %u, Path %u", associationID, path_id);
 
     if (status == NULL) {
         LEAVE_LIBRARY("sctp_getPathStatus");
@@ -2714,7 +2722,7 @@ int sctp_getPathStatus(unsigned int associationID, short path_id, SCTP_PathStatu
     currentAssociation = retrieveAssociation(associationID);
 
     /* TODO: error handling for these two events should be separated - return two different errors */
-    if (currentAssociation != NULL && path_id >= 0 && path_id < currentAssociation->noOfNetworks) {
+    if (currentAssociation != NULL && path_id >= 0 && path_id < currentAssociation->remote_addres_size) {
         assocState = sci_getState();
         if (assocState < ESTABLISHED) {
             result = SCTP_ASSOC_NOT_FOUND;
@@ -2782,7 +2790,7 @@ int sctp_setAssocStatus(unsigned int associationID, SCTP_AssociationStatus* new_
 {
     guint16 result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_setAssocStatus");
 
@@ -2796,7 +2804,7 @@ int sctp_setAssocStatus(unsigned int associationID, SCTP_AssociationStatus* new_
 
     if (currentAssociation != NULL) {
         sctpInstance = currentAssociation->sctpInstance;
-        event_logi(VERBOSE, "sctp_setAssocStatus: Association %u", associationID);
+        event_logi(VERBOSE, "sctp_setAssocStatus: endpoint_t %u", associationID);
         if (pm_setPrimaryPath(new_status->primaryAddressIndex)) {
             error_logi(ERROR_MINOR, "pm_setPrimary(%u) returned error", new_status->primaryAddressIndex);
             sctpInstance = old_Instance;
@@ -2865,7 +2873,7 @@ int sctp_getAssocStatus(unsigned int associationID, SCTP_AssociationStatus* stat
 {
     guint16 result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_getAssocStatus");
 
@@ -2879,9 +2887,9 @@ int sctp_getAssocStatus(unsigned int associationID, SCTP_AssociationStatus* stat
 
     if (currentAssociation != NULL) {
         sctpInstance = currentAssociation->sctpInstance;
-        event_logi(VERBOSE, "sctp_getAssocStatus: Association %u", associationID);
+        event_logi(VERBOSE, "sctp_getAssocStatus: endpoint_t %u", associationID);
         status->state = sci_getState();
-        status->numberOfAddresses = currentAssociation->noOfNetworks;
+        status->numberOfAddresses = currentAssociation->remote_addres_size;
         status->sourcePort = currentAssociation->localPort;
         status->destPort = currentAssociation->remotePort;
         status->primaryAddressIndex = pm_readPrimaryPath();
@@ -3159,7 +3167,7 @@ int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer, unsign
 {
     int result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_receiveUnsent");
 
@@ -3213,7 +3221,7 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer, unsig
 {
     int result;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_receiveUnacked");
 
@@ -3259,7 +3267,7 @@ short sctp_getPrimary(unsigned int associationID)
 {
     short primary;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     ENTER_LIBRARY("sctp_getPrimary");
 
@@ -3269,7 +3277,7 @@ short sctp_getPrimary(unsigned int associationID)
 
     if (currentAssociation != NULL) {
         sctpInstance = currentAssociation->sctpInstance;
-        event_logi(VERBOSE, "sctp_getPrimary: Association %u", associationID);
+        event_logi(VERBOSE, "sctp_getPrimary: endpoint_t %u", associationID);
         primary = pm_readPrimaryPath();
     }
     else{
@@ -3286,7 +3294,7 @@ short sctp_getPrimary(unsigned int associationID)
 int sctp_getInstanceID(unsigned int associationID, unsigned short* instanceID)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     int result = 0;
 
     ENTER_LIBRARY("sctp_getInstanceID");
@@ -3300,7 +3308,7 @@ int sctp_getInstanceID(unsigned int associationID, unsigned short* instanceID)
 
     if (currentAssociation != NULL) {
         sctpInstance = currentAssociation->sctpInstance;
-        event_logii(VERBOSE, "sctp_getInstanceID: Association %u, Instance %u",
+        event_logii(VERBOSE, "sctp_getInstanceID: endpoint_t %u, Instance %u",
             associationID, sctpInstance->sctpInstanceName);
         (*instanceID) = sctpInstance->sctpInstanceName;
     }
@@ -3480,7 +3488,7 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
 {
     int result = 0;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     if (sctpLibraryInitialized == FALSE) return -1;
 
@@ -3491,7 +3499,7 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
     if (currentAssociation != NULL) {
         sctpInstance = currentAssociation->sctpInstance;
         if (path_id >= 0) {
-            if (path_id >= currentAssociation->noOfNetworks) {
+            if (path_id >= currentAssociation->remote_addres_size) {
                 error_log(ERROR_MAJOR, "sctp_sendRawData: invalid destination address");
                 sctpInstance = old_Instance;
                 currentAssociation = old_assoc;
@@ -3582,7 +3590,7 @@ int mdi_send_message(dctp_packet_t * message, unsigned int length, short destAdd
     }
     else {
 
-        if (destAddressIndex < -1 || destAddressIndex >= currentAssociation->noOfNetworks) {
+        if (destAddressIndex < -1 || destAddressIndex >= currentAssociation->remote_addres_size) {
             error_log(ERROR_MAJOR, "mdi_send_message: invalid destination address");
             return 1;
         }
@@ -3595,9 +3603,9 @@ int mdi_send_message(dctp_packet_t * message, unsigned int length, short destAdd
             if (last_source_addr == NULL) {
                 dIdx = pm_readPrimaryPath();
                 event_logii(VVERBOSE, "mdi_send_message : sending to primary with index %u (with %u paths)",
-                    dIdx, currentAssociation->noOfNetworks);
+                    dIdx, currentAssociation->remote_addres_size);
 
-                if ((dIdx == 0xFFFF) || (dIdx >= currentAssociation->noOfNetworks)) {
+                if ((dIdx == 0xFFFF) || (dIdx >= currentAssociation->remote_addres_size)) {
                     error_log(ERROR_MAJOR, "mdi_send_message: could not get primary address");
                     return 1;
                 }
@@ -3680,7 +3688,7 @@ void mdi_dataArriveNotif(unsigned short streamID, unsigned int length, unsigned 
 {
 
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     if (currentAssociation != NULL) {
 
@@ -3717,7 +3725,7 @@ void mdi_dataArriveNotif(unsigned short streamID, unsigned int length, unsigned 
 void mdi_networkStatusChangeNotif(short destinationAddress, unsigned short newState)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     if (currentAssociation != NULL) {
 
         event_logiii(INTERNAL_EVENT_0, "mdi_networkStatusChangeNotif(assoc %u, path-id %d, state %u)",
@@ -3748,7 +3756,7 @@ void mdi_networkStatusChangeNotif(short destinationAddress, unsigned short newSt
 void mdi_sendFailureNotif(unsigned char *data, unsigned int dataLength, unsigned int *context)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     if (currentAssociation != NULL) {
         if (sctpInstance->ULPcallbackFunctions.sendFailureNotif) {
             ENTER_CALLBACK("sendFailureNotif");
@@ -3773,7 +3781,7 @@ void mdi_sendFailureNotif(unsigned char *data, unsigned int dataLength, unsigned
 void mdi_peerShutdownReceivedNotif(void)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     if (currentAssociation != NULL) {
 
         event_logi(INTERNAL_EVENT_0, "mdi_peerShutdownReceivedNotif(assoc %u)", currentAssociation->assocId);
@@ -3799,7 +3807,7 @@ void mdi_peerShutdownReceivedNotif(void)
 void mdi_shutdownCompleteNotif(void)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     if (currentAssociation != NULL) {
 
         event_logi(INTERNAL_EVENT_0, "mdi_shutdownCompleteNotif(assoc %u)", currentAssociation->assocId);
@@ -3825,7 +3833,7 @@ void mdi_shutdownCompleteNotif(void)
 void mdi_restartNotif(void)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
     if (currentAssociation != NULL) {
 
         event_logi(INTERNAL_EVENT_0, "mdi_restartNotif(assoc %u)", currentAssociation->assocId);
@@ -3854,7 +3862,7 @@ void mdi_restartNotif(void)
 void mdi_communicationLostNotif(unsigned short status)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     if (currentAssociation != NULL) {
 
@@ -3892,7 +3900,7 @@ void mdi_communicationUpNotif(unsigned short status)
     unsigned short noOfInStreams;
     unsigned short noOfOutStreams;
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     if (currentAssociation != NULL) {
         /* Find primary path */
@@ -3900,7 +3908,7 @@ void mdi_communicationUpNotif(unsigned short status)
 
         if (result != 1) {
 
-            for (primaryPath = 0; primaryPath < currentAssociation->noOfNetworks; primaryPath++) {
+            for (primaryPath = 0; primaryPath < currentAssociation->remote_addres_size; primaryPath++) {
                 if (adl_equal_address
                     (&(currentAssociation->destinationAddresses[primaryPath]), &lastAddress)) {
                     break;
@@ -3910,17 +3918,17 @@ void mdi_communicationUpNotif(unsigned short status)
         else {
             primaryPath = 0;
         }
-        if (primaryPath >= currentAssociation->noOfNetworks) primaryPath = 0;
+        if (primaryPath >= currentAssociation->remote_addres_size) primaryPath = 0;
 
         /* set number of paths and primary path at pathmanegement and start heartbeat */
-        pm_setPaths(currentAssociation->noOfNetworks, primaryPath);
+        pm_setPaths(currentAssociation->remote_addres_size, primaryPath);
 
         se_readNumberOfStreams(&noOfInStreams, &noOfOutStreams);
 
 
         event_logiii(VERBOSE,
-            "Distribution: COMM-UP, assocId: %u, status: %u, noOfNetworks: %u",
-            currentAssociation->assocId, status, currentAssociation->noOfNetworks);
+            "Distribution: COMM-UP, assocId: %u, status: %u, remote_addres_size: %u",
+            currentAssociation->assocId, status, currentAssociation->remote_addres_size);
         event_logii(VERBOSE, "noOfInStreams: %u,noOfOutStreams  %u", noOfInStreams, noOfOutStreams);
         /* FIXME (???) : retreive sctp-instance from list */
 
@@ -3930,13 +3938,13 @@ void mdi_communicationUpNotif(unsigned short status)
             currentAssociation->ulp_dataptr = sctpInstance->ULPcallbackFunctions.communicationUpNotif(
                 currentAssociation->assocId,
                 status,
-                currentAssociation->noOfNetworks,
+                currentAssociation->remote_addres_size,
                 noOfInStreams, noOfOutStreams,
                 currentAssociation->supportsPRSCTP,
                 currentAssociation->ulp_dataptr);
             LEAVE_CALLBACK("communicationUpNotif");
             if (currentAssociation != NULL) {
-                for (pathNum = 0; pathNum < currentAssociation->noOfNetworks; pathNum++) {
+                for (pathNum = 0; pathNum < currentAssociation->remote_addres_size; pathNum++) {
                     if (pm_readState((short)pathNum) == PM_ACTIVE) {
                         mdi_networkStatusChangeNotif((short)pathNum, PM_ACTIVE);
                     }
@@ -3967,7 +3975,7 @@ void mdi_communicationUpNotif(unsigned short status)
 void mdi_queueStatusChangeNotif(int queueType, int queueId, int queueLen)
 {
     dispatcher_t *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    endpoint_t *old_assoc = currentAssociation;
 
     if (currentAssociation != NULL) {
 
@@ -4177,7 +4185,7 @@ unsigned int mdi_readTagRemote(void)
 
 unsigned int mdi_getUnusedAssocId(void)
 {
-    Association * tmp = NULL;
+    endpoint_t * tmp = NULL;
     unsigned int newId;
 
     do {
@@ -4366,9 +4374,9 @@ short mdi_getIndexForAddress(union sockaddrunion* address)
             return -1;
         }
         /* send cookie back to the address where we got it from     */
-        for (index = 0; index < currentAssociation->noOfNetworks; index++)
+        for (index = 0; index < currentAssociation->remote_addres_size; index++)
             if (adl_equal_address(&(currentAssociation->destinationAddresses[index]), address)) break;
-        if (index == currentAssociation->noOfNetworks) /* not found */
+        if (index == currentAssociation->remote_addres_size) /* not found */
             return -1;
 
     }
@@ -4402,7 +4410,7 @@ void mdi_writeDestinationAddresses(union sockaddrunion addresses[MAX_NUM_ADDRESS
         memcpy(currentAssociation->destinationAddresses, addresses,
             noOfAddresses * sizeof(union sockaddrunion));
 
-        currentAssociation->noOfNetworks = noOfAddresses;
+        currentAssociation->remote_addres_size = noOfAddresses;
 
         return;
     }
@@ -4875,7 +4883,7 @@ union sockaddrunion *destinationAddressList)
         error_log(ERROR_MINOR, "current association not cleared");
     }
 
-    currentAssociation = (Association *)malloc(sizeof(Association));
+    currentAssociation = (endpoint_t *)malloc(sizeof(endpoint_t));
 
     if (!currentAssociation) {
         error_log_sys(ERROR_FATAL, (short)errno);
@@ -4902,7 +4910,7 @@ union sockaddrunion *destinationAddressList)
 
     if (instance->has_IN6ADDR_ANY_set) {
         /* get ALL addresses */
-        currentAssociation->noOfLocalAddresses = myNumberOfAddresses;
+        currentAssociation->local_addres_size = myNumberOfAddresses;
         currentAssociation->localAddresses =
             (union sockaddrunion *) calloc(myNumberOfAddresses, sizeof(union sockaddrunion));
         memcpy(currentAssociation->localAddresses, myAddressList,
@@ -4911,26 +4919,26 @@ union sockaddrunion *destinationAddressList)
     }
     else if (instance->has_INADDR_ANY_set) {
         /* get all IPv4 addresses */
-        currentAssociation->noOfLocalAddresses = 0;
+        currentAssociation->local_addres_size = 0;
         for (ii = 0; ii < myNumberOfAddresses; ii++) {
             if (saddr_family(&(myAddressList[ii])) == AF_INET) {
-                currentAssociation->noOfLocalAddresses++;
+                currentAssociation->local_addres_size++;
             }
         }
         currentAssociation->localAddresses =
-            (union sockaddrunion *) calloc(currentAssociation->noOfLocalAddresses, sizeof(union sockaddrunion));
-        currentAssociation->noOfLocalAddresses = 0;
+            (union sockaddrunion *) calloc(currentAssociation->local_addres_size, sizeof(union sockaddrunion));
+        currentAssociation->local_addres_size = 0;
         for (ii = 0; ii < myNumberOfAddresses; ii++) {
             if (saddr_family(&(myAddressList[ii])) == AF_INET) {
-                memcpy(&(currentAssociation->localAddresses[currentAssociation->noOfLocalAddresses]),
+                memcpy(&(currentAssociation->localAddresses[currentAssociation->local_addres_size]),
                     &(myAddressList[ii]), sizeof(union sockaddrunion));
-                currentAssociation->noOfLocalAddresses++;
+                currentAssociation->local_addres_size++;
             }
         }
-        event_logi(VERBOSE, " mdi_newAssociation: Assoc has has_INADDR_ANY_set, and %d addresses", currentAssociation->noOfLocalAddresses);
+        event_logi(VERBOSE, " mdi_newAssociation: Assoc has has_INADDR_ANY_set, and %d addresses", currentAssociation->local_addres_size);
     }
     else {        /* get all specified addresses */
-        currentAssociation->noOfLocalAddresses = instance->noOfLocalAddresses;
+        currentAssociation->local_addres_size = instance->noOfLocalAddresses;
         currentAssociation->localAddresses =
             (union sockaddrunion *) malloc(instance->noOfLocalAddresses * sizeof(union sockaddrunion));
         memcpy(currentAssociation->localAddresses, instance->localAddressList,
@@ -4941,7 +4949,7 @@ union sockaddrunion *destinationAddressList)
     currentAssociation->had_IN6ADDR_ANY_set = instance->has_IN6ADDR_ANY_set;
     currentAssociation->had_INADDR_ANY_set = instance->has_INADDR_ANY_set;
 
-    currentAssociation->noOfNetworks = noOfDestinationAddresses;
+    currentAssociation->remote_addres_size = noOfDestinationAddresses;
     currentAssociation->destinationAddresses =
         (union sockaddrunion *) malloc(noOfDestinationAddresses * sizeof(union sockaddrunion));
     memcpy(currentAssociation->destinationAddresses, destinationAddressList,
@@ -4978,7 +4986,7 @@ union sockaddrunion *destinationAddressList)
     currentAssociation->peerSupportsADDIP = FALSE;
 
 
-    event_logii(INTERNAL_EVENT_1, "new Association created ID=%08x, local tag=%08x",
+    event_logii(INTERNAL_EVENT_1, "new endpoint_t created ID=%08x, local tag=%08x",
         currentAssociation->assocId, currentAssociation->tagLocal);
 
     /* Enter association into list */
@@ -5047,12 +5055,12 @@ gboolean assocSupportsPRSCTP, gboolean assocSupportsADDIP)
     currentAssociation->supportsPRSCTP = withPRSCTP;
 
     currentAssociation->reliableTransfer =
-        (void *)rtx_new_reltransfer(currentAssociation->noOfNetworks, localInitialTSN);
+        (void *)rtx_new_reltransfer(currentAssociation->remote_addres_size, localInitialTSN);
     currentAssociation->flowControl =
         (void *)fc_new_flowcontrol(remoteSideReceiverWindow, localInitialTSN,
-        currentAssociation->noOfNetworks, currentAssociation->maxSendQueue);
+        currentAssociation->remote_addres_size, currentAssociation->maxSendQueue);
 
-    currentAssociation->rx_control = (void *)rxc_new_recvctrl(remoteInitialTSN, currentAssociation->noOfNetworks,
+    currentAssociation->rx_control = (void *)rxc_new_recvctrl(remoteInitialTSN, currentAssociation->remote_addres_size,
         currentAssociation->sctpInstance);
     currentAssociation->streamengine = (void *)se_new_stream_engine(noOfInStreams,
         noOfOutStreams,
@@ -5088,14 +5096,14 @@ union sockaddrunion *destinationAddressList,
         error_log(ERROR_MAJOR, "mdi_restartAssociation: sctpInstance is NULL !");
         return 1;
     }
-    if (noOfPaths > currentAssociation->noOfNetworks) {
+    if (noOfPaths > currentAssociation->remote_addres_size) {
         error_log(ERROR_MAJOR, "mdi_restartAssociation tries to increase number of paths !");
         /* discard silently */
         return -1;
     }
-    event_logiiii(INTERNAL_EVENT_0, "ASSOCIATION RESTART: in streams: %u, out streams: %u, rwnd: %u, paths: %u",
+    event_logiiii(INTERNAL_EVENT_0, "endpoint RESTART: in streams: %u, out streams: %u, rwnd: %u, paths: %u",
         noOfInStreams, noOfOutStreams, new_rwnd, noOfPaths);
-    event_logii(INTERNAL_EVENT_0, "ASSOCIATION RESTART: remote initial TSN:  %u, local initial TSN",
+    event_logii(INTERNAL_EVENT_0, "endpoint RESTART: remote initial TSN:  %u, local initial TSN",
         remoteInitialTSN, localInitialTSN);
 
     currentAssociation->reliableTransfer = rtx_restart_reliable_transfer(currentAssociation->reliableTransfer,
@@ -5134,7 +5142,7 @@ union sockaddrunion *destinationAddressList,
         return -1;
     }
 
-    event_logii(VERBOSE, "ASSOCIATION RESTART: calling pm_setPaths(%u, %u)", noOfPaths, primaryAddress);
+    event_logii(VERBOSE, "endpoint RESTART: calling pm_setPaths(%u, %u)", noOfPaths, primaryAddress);
 
     result = pm_setPaths(noOfPaths, primaryAddress);
     if (result != 0) {
@@ -5160,7 +5168,7 @@ void mdi_deleteCurrentAssociation(void)
     if (currentAssociation != NULL) {
         if (currentAssociation->tagRemote != 0) {
             /* stop timers */
-            for (pathID = 0; pathID < currentAssociation->noOfNetworks; pathID++)
+            for (pathID = 0; pathID < currentAssociation->remote_addres_size; pathID++)
                 pm_disableHB(pathID);
 
             fc_stop_timers();
@@ -5217,6 +5225,6 @@ void my_free(void* p)
         l   = ptr[0];
         memset(ptr, 0xba, l);
         free(ptr);
-    }
+}
 }
 #endif

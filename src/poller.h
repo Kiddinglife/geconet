@@ -79,6 +79,136 @@
 #endif
 #endif
 
+#define MAX_COUNT_LOCAL_IP_ADDR 8
+
+#if defined( __linux__) || defined(__unix__)
+#include <sys/poll.h>
+#else
+#define POLLIN     0x001 //2base    0001
+#define POLLPRI    0x002 //2base    0010
+#define POLLOUT    0x004 //2base  0100
+#define POLLERR    0x008//2base    1000
+#endif
+
+#define IFA_BUFFER_LENGTH   1024
+#define POLL_FD_UNUSED     -1
+#define MAX_FD_SIZE     32
+#define    EVENTCB_TYPE_SCTP       1
+#define    EVENTCB_TYPE_UDP        2
+#define    EVENTCB_TYPE_USER       3
+#define    EVENTCB_TYPE_ROUTING    4
+#define    EVENTCB_TYPE_STDIN          5
+
+#define GECO_CMSG_ALIGN(len) ( ((len)+sizeof(long)-1) & ~(sizeof(long)-1) )
+#define GECO_CMSG_SPACE(len) \
+(GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + GECO_CMSG_ALIGN(len))
+#define GECO_CMSG_LEN(len) (GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
+#define GECO_CMSG_DATA(cmsg) \
+((unsigned char*)(cmsg)+GECO_CMSG_ALIGN(sizeof(struct cmsghdr)))
+
+#ifndef _WIN32
+#define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"
+#else
+#define ADDRESS_LIST_BUFFER_SIZE        4096
+//#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
+#define IFNAMSIZ IF_NAMESIZE
+struct iphdr
+{
+    uchar version_length;
+    uchar typeofservice; /* type of service */
+    ushort length; /* total length */
+    ushort identification; /* identification */
+    ushort fragment_offset; /* fragment offset field */
+    uchar ttl; /* time to live */
+    uchar protocol; /* protocol */
+    ushort checksum; /* checksum */
+    struct in_addr src_addr; /* source and dest address */
+    struct in_addr dst_addr;
+};
+
+#define msghdr _WSAMSG
+#define iovec _WSABUF 
+#endif
+
+#ifndef _WIN32
+#define USES_BSD_4_4_SOCKET
+#ifndef __sun
+#define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
+#define NEXT_SA(ap) \
+ap = (struct sockaddr *)((caddr_t) ap + (ap->sa_len ? \
+ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
+#else
+#define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
+#define RTAX_MAX RTA_NUMBITS
+#define RTAX_IFA 5
+#define _NO_SIOCGIFMTU_
+#endif
+#endif
+
+/* Defines the callback function that is called when an event occurs
+on an internal GECO or UDP socket
+Params: 1. file-descriptor of the socket
+2. pointer to the datagram data, if any was received
+3. length of datagram data, if any was received
+4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
+5. source port number for UDP sockets, 0 for SCTP raw sockets
+*/
+typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen,
+    const char* addr, ushort port);
+
+/* Defines the callback function that is called when an event occurs
+on a user file-descriptor
+Params: 1. file-descriptor
+Params: 2. received events mask
+Params: 3. pointer to registered events mask.
+It may be changed by the callback function.
+Params: 4. user data
+*/
+typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
+
+
+union cbunion_t
+{
+    socket_cb_fun_t socket_cb_fun;
+    user_cb_fun_t user_cb_fun;
+};
+
+/**
+* Structure for callback events. The function "action" is called by the event-handler,
+* when an event occurs on the file-descriptor.
+*/
+struct event_handler_t
+{
+    //int used;
+    int sfd;
+    int eventcb_type;
+    /* pointer to possible arguments, associations etc. */
+    cbunion_t action;
+    void* arg1, *arg2, *userData;
+};
+struct stdin_data_t
+{
+    typedef void(*stdin_cb_func_t)(char* in, size_t datalen);
+    unsigned long len;
+    char buffer[1024];
+    stdin_cb_func_t stdin_cb_;
+#ifdef _WIN32
+    HANDLE event, eventback; // only used on win32 plateform
+#endif
+};
+
+struct socket_despt_t
+{
+    int event_handler_index;
+    int fd;
+    int events;
+    int revents;
+    long revision;
+#ifdef _WIN32
+    HANDLE event; // only used on win32 plateform
+    WSANETWORKEVENTS trigger_event;
+#endif
+};
 
 struct transport_layer_t;
 struct poller_t

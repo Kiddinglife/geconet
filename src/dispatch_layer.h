@@ -21,17 +21,19 @@
 #define __INCLUDE_DISPATCH_LAYER_H
 
 #include "globals.h"
+#include <unordered_map>
+
 
 /*------------------- Functions called by the ULP -----------------------*/
-/* This functions are defined in a seperate header file sctp.h in order to seperate the interface to
-the ULP and the interface to other modules within SCTP.*/
+/* This functions are defined in a seperate header file dctp.h
+ * in order to seperate the interface to the ULP and the interface
+ * to other modules within DCTP.*/
 /*------------------------------------------------------------------*/
-
 
 /**
  * This struct stores data of dispatcher_t.
- * Each dispatcher_t is related to one port and to
- * one poller. This may change soon !
+ * Each dispatcher_t is related to one port and to one poller.
+ * This may change soon !
  */
 struct dispatcher_t
 {
@@ -70,15 +72,81 @@ struct dispatcher_t
     uint default_maxBurst;
     uint supportedAddressTypes;
     uchar default_ipTos;
+
     bool    supportsPRSCTP;
     bool    supportsADDIP;
 };
 
-struct dispatch_layer_t
+/**
+ * This struct contains all data of an endpoint. As far as other modules must know
+ * elements of this struct, read functions are provided. No other module has write
+ * access to this structure
+ */
+struct endpoint_t
 {
+    /*The current ID of this endpoint,
+    it is used as a key to find a endpoint in the list,
+    and never changes in the  live of the endpoint */
+    uint ep_id;
+
+    uint local_tag;     /*The local tag of this endpoint*/
+    uint remote_tag;     /*The tag of remote side of this endpoint*/
+
+    /*Pointer to the SCTP-instance this association
+    belongs to. It is equal to the wellknown port
+    number of the ULP that uses this instance*/
+    dispatcher_t*  dispatcher;
+
+    /* a single same port  plus multi different ip addresses consist of a uniqe endpoint*/
+    ushort local_port;
+    sockaddrunion *local_addres;
+    uint local_addres_size;
+
+    unsigned short remote_port;
+    sockaddrunion *remote_addres;
+    uint remote_addres_size;
+
+    uchar ipTos;
+    uint locally_supported_addr_types;
+    uint maxSendQueue;
+    uint maxRecvQueue;
+    bool    is_INADDR_ANY;
+    bool    is_IN6ADDR_ANY;
+
+    void *flow_control;
+    void *reliable_transfer_control;
+    void *receive_control;
+    void *stream_control;
+    void *path_control;
+    void *bundle_control;
+    void *dctp_control;
+
+    /* do I support the DCTP extensions ? */
+    bool    locally_supported_PRDCTP;
+    bool     locally_supported_ADDIP;
+    /* and these values for our peer */
+    bool    remotely_supported_PRSCTP;
+    bool    remotely_supported_ADDIP;
+
+    /** marks an association for deletion */
+    bool deleted;
+    /** transparent pointer to some upper layer data */
+    void * application_layer_dataptr;
+};
+
+class dispatch_layer_t
+{
+    public:
     bool sctpLibraryInitialized;
 
-    /*Keyed list of associations with the association - ID as key*/
+    /*Keyed list of end_points_ with ep_id as key*/
+    // @checkme this may NOT be correct
+    // so use list to check one by one
+    //typedef uint endpoint_id;
+    //typedef ushort endpoint_local_port;
+    //std::unordered_map<endpoint_id, endpoint_t*> end_points_;
+    //std::unordered_map<endpoint_local_port, endpoint_t*> end_points_;
+    std::vector <endpoint_t*> endpoints_list_;
 
     /**
      * Whenever an external event (ULP-call, socket-event or timer-event) this variable must
@@ -99,12 +167,18 @@ struct dispatch_layer_t
     ushort last_dest_port_;
     uint last_init_tag_;;
 
+    /**
+    * Whenever an external event (ULP-call, socket-event or timer-event) this variable must
+    * contain the addressed association.
+    * Read functions for 'global data' read data from the association pointed to by this pointer.
+    * This pointer must be reset to null after the event  has been handled.
+    */
+    endpoint_t *curr_endpoint_ptr_;
+    endpoint_t tmp_endpoint_;
+    sockaddrunion tmp_addr;
 
-    dispatch_layer_t()
-    {
-        sctpLibraryInitialized = false;
+    dispatch_layer_t();
 
-    }
     /*------------------- Functions called by the Unix-Interface --------------*/
     /**
     * \fn recv_dctp_packet
@@ -120,9 +194,30 @@ struct dispatch_layer_t
     *  @param fromAddress        source address of DG
     *  @param portnum            bogus port number
     */
-    void recv_dctp_packet(int socket_fd, char *buffer,
-        int bufferLength, union sockaddrunion * source_addr,
-    union sockaddrunion * dest_addr);
+    void recv_dctp_packet(int socket_fd, char *buffer, int bufferLength,
+        sockaddrunion * source_addr,
+        sockaddrunion * dest_addr);
 
+    private:
+    /**
+    *   retrieveAssociation retrieves a association from the list using the transport address as key.
+    *   Returns NULL also if the association is marked "deleted" !
+    *   CHECKME : Must return NULL, if no Address-Port combination does not occur in ANY existing assoc.
+    *  If it occurs in one of these -> return it
+
+    * two associations are equal if their remote and local ports are equal and at least
+    one of their remote addresses are equal. This is like in TCP, where a connection
+    is identified by the transport address, i.e. the IP-address and port of the peer.
+
+    *   @param  src_addr address from which data arrived
+    *   @param  src_port SCTP port from which data arrived
+    *   @return pointer to the retrieved association, or NULL
+    */
+    endpoint_t *find_endpoint_by_addr(
+        sockaddrunion * src_addr,
+        ushort src_port,
+        ushort dest_port);
+
+    bool cmp_endpoint_by_addr_port(const endpoint_t& a, const endpoint_t& b);
 };
 #endif
