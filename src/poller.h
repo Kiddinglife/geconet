@@ -131,7 +131,7 @@ struct iphdr
 #endif
 
 #ifndef _WIN32
-#define USES_BSD_4_4_SOCKET
+//#define USES_BSD_4_4_SOCKET
 #ifndef __sun
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
 #define NEXT_SA(ap) \
@@ -564,19 +564,24 @@ struct transport_layer_t
         return this->poller_.timer_mgr_.reset_timer(tid, milliseconds);
     }
 
+    /**
+    * An address filtering function
+    * @param newAddress  a pointer to a sockaddrunion address
+    * @param flags       bit mask hiding (i.e. filtering) address classes
+    * returns true if address is not filtered, else FALSE if address is filtered by mask
+    */
     bool get_local_addresses(union sockaddrunion **addresses,
         int *numberOfNets,
         int sctp_fd,
         bool with_ipv6,
         int *max_mtu,
         const hide_address_flag_t  flags);
-
     int  get_local_ip_addresses(sockaddrunion addresses[MAX_COUNT_LOCAL_IP_ADDR])
     {
         memset(addresses, 0, 
             MAX_COUNT_LOCAL_IP_ADDR*sizeof(sockaddrunion));
         char buf[MAX_IPADDR_STR_LEN];
-        if (gethostname(buf, 80) == SOCKET_ERROR)
+        if (gethostname(buf, 80) <0)
             return -1;
 
         struct hostent *phe = gethostbyname(buf);
@@ -603,12 +608,7 @@ struct transport_layer_t
         }
         return idx-j;
     }
-    /**
-    * An address filtering function
-    * @param newAddress  a pointer to a sockaddrunion address
-    * @param flags       bit mask hiding (i.e. filtering) address classes
-    * returns true if address is not filtered, else FALSE if address is filtered by mask
-    */
+
     bool filter_address(union sockaddrunion* newAddress, hide_address_flag_t  flags);
 };
 #endif

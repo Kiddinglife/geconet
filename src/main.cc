@@ -573,8 +573,8 @@ static void test_getlocaladdr()
     int maxmtu = 0;
     ushort port = 0;
     char addr[MAX_IPADDR_STR_LEN];
-
-    nit.get_local_addresses(&saddr, &num, nit.ip4_socket_despt_, true, &maxmtu, flag_HideReserved);
+    hide_address_flag_t t =  (hide_address_flag_t)(flag_HideLocal|flag_Default);
+    nit.get_local_addresses(&saddr, &num, nit.ip4_socket_despt_, true, &maxmtu, t);
 
     event_logi(verbose, "max mtu  %d\n", maxmtu);
 

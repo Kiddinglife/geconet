@@ -22,7 +22,7 @@
 
 #include "globals.h"
 #include <unordered_map>
-
+#include <vector>
 
 /*------------------- Functions called by the ULP -----------------------*/
 /* This functions are defined in a seperate header file dctp.h
@@ -34,6 +34,7 @@
  * This struct stores data of dispatcher_t.
  * Each dispatcher_t is related to one port and to one poller.
  * This may change soon !
+ *  SCTP_INSTANCE
  */
 struct dispatcher_t
 {
@@ -81,6 +82,7 @@ struct dispatcher_t
  * This struct contains all data of an endpoint. As far as other modules must know
  * elements of this struct, read functions are provided. No other module has write
  * access to this structure
+ * ASSCIATION
  */
 struct endpoint_t
 {
