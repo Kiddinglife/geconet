@@ -172,7 +172,6 @@ public:
     ushort last_src_port_;
     ushort last_dest_port_;
     uint last_init_tag_;
-    ;
 
     /**
      * Whenever an external event (ULP-call, socket-event or timer-event) this variable must

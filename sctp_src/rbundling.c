@@ -66,7 +66,8 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
 
     current_position = pdu; /* points to the first chunk in this pdu */
 
-    while (processed_len < len) {
+    while (processed_len < len)
+    {
 
         event_logii(VERBOSE, "rbu_scanPDU : len==%u, processed_len == %u", len, processed_len);
 
@@ -78,7 +79,8 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
         if (chunk->chunk_header.chunk_id <= 30) {
             result = result | (1 << chunk->chunk_header.chunk_id);
             event_logii(VERBOSE, "rbu_scanPDU : Chunk type==%u, result == %x", chunk->chunk_header.chunk_id, result);
-        } else {
+        } else
+        {
             result = result | (1 << 31);
             event_logii(VERBOSE, "rbu_scanPDU : Chunk type==%u setting bit 31 --> result == %x", chunk->chunk_header.chunk_id, result);
         }
