@@ -26,7 +26,12 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>compile_dir/src</name>
+			<name>sctp_src</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/sctp_src</locationURI>
+		</link>
+		<link>
+			<name>src</name>
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/src</locationURI>
 		</link>
