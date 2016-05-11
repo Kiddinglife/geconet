@@ -1113,7 +1113,8 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
         return;
     }
 
-    lastInitiateTag = ntohl(network_packet_fixed->common_header.verification_tag);
+    lastInitiateTag = ntohl(
+            network_packet_fixed->common_header.verification_tag);
 
     chunkArray = rbu_scanPDU(network_packet_fixed->sctp_pdu, len);
 

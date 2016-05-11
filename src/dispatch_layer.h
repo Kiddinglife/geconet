@@ -86,6 +86,10 @@ struct dispatcher_t
  * elements of this struct, read functions are provided. No other module has write
  * access to this structure
  * ASSCIATION
+ * 偶联（AssociATION） 偶联就是两个 SCTP 端点通过SCTP 协议规定的4 步握手机制建立起来
+ * 的进行数据 传递的逻辑联系或者通道。 SCTP 协议规定在任何时刻两个端点之间能且仅能建立
+ * 一个偶联。由于偶联由两个 端点的传送地址来定义，所以通过数据配置本地IP 地址、
+ * 本地SCTP 端口号、对端 IP 地址、对端SCTP 端口号等四个参数，可以唯一标识一个SCTP 偶联
  */
 struct endpoint_t
 {
@@ -220,24 +224,25 @@ private:
      *   @return pointer to the retrieved association, or NULL
      *   TODO hash(src_addr, src_port, dest_port) as key for endpoint to improve the performaces
      */
-    endpoint_t *find_endpoint_by_addr(sockaddrunion * src_addr, ushort src_port,
-            ushort dest_port);
-    bool cmp_endpoint_by_addr_port(const endpoint_t& a, const endpoint_t& b);
+    endpoint_t *find_endpoint_by_transport_addr(sockaddrunion * src_addr,
+            ushort src_port, ushort dest_port);
+    bool cmp_endpoint(const endpoint_t& a, const endpoint_t& b);
 
-    /*
+    /**
      *   @return pointer to the retrieved association, or NULL
      */
-    dispatcher_t* find_dispatcher_by_port_addr(
-            const dispatcher_t& temp_dispatcher);
-    bool cmp_dispatcher_by_port_addr(const dispatcher_t& a,
-            const dispatcher_t& b);
+    dispatcher_t* find_dispatcher_by_transport_addr(sockaddrunion* dest_addr,
+            uint address_type);
+    bool cmp_dispatcher(const dispatcher_t& a, const dispatcher_t& b);
 
-    /*
+    /**
      * after dispatcher and  endpoint have been found for an
      * incoming packet, this function will return, if a packet may be processed
      * or if it is not destined for this instance
      */
     bool validate_dest_addr(sockaddrunion * dest_addr);
 
+    /**returns a value indicating which chunks are in the packet.*/
+    uint get_chunk_types(char* packet_value, int len);
 };
 #endif

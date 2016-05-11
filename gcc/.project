@@ -26,6 +26,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>docx</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/docx</locationURI>
+		</link>
+		<link>
 			<name>sctp_src</name>
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/sctp_src</locationURI>

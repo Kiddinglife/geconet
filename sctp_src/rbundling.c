@@ -53,8 +53,6 @@
 
 #define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(dctp_packet_fixed_t))
 
-
-
 unsigned int rbu_scanPDU(guchar * pdu, guint len)
 {
     gushort processed_len = 0;
@@ -69,7 +67,9 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
     while (processed_len < len)
     {
 
-        event_logii(VERBOSE, "rbu_scanPDU : len==%u, processed_len == %u", len, processed_len);
+        event_logii(VERBOSE,
+                "rbu_scanPDU : len==%u, processed_len == %u",
+                len, processed_len);
 
         chunk = (simple_chunk_t *) current_position;
         chunk_len = get_chunk_length((chunk_fixed_t *) chunk);
@@ -78,16 +78,21 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
 
         if (chunk->chunk_header.chunk_id <= 30) {
             result = result | (1 << chunk->chunk_header.chunk_id);
-            event_logii(VERBOSE, "rbu_scanPDU : Chunk type==%u, result == %x", chunk->chunk_header.chunk_id, result);
+            event_logii(VERBOSE,
+                    "rbu_scanPDU : Chunk type==%u, result == %x",
+                    chunk->chunk_header.chunk_id, result);
         } else
         {
             result = result | (1 << 31);
-            event_logii(VERBOSE, "rbu_scanPDU : Chunk type==%u setting bit 31 --> result == %x", chunk->chunk_header.chunk_id, result);
+            event_logii(VERBOSE,
+                    "rbu_scanPDU : Chunk type==%u setting bit 31 --> result == %x",
+                    chunk->chunk_header.chunk_id, result);
         }
         processed_len += chunk_len;
         pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
         processed_len += pad_bytes;
-        chunk_len = (get_chunk_length((chunk_fixed_t *) chunk) + pad_bytes * sizeof(unsigned char));
+        chunk_len = (get_chunk_length((chunk_fixed_t *) chunk) +
+                pad_bytes * sizeof(unsigned char));
 
         if (chunk_len < 4 || chunk_len + processed_len > len) return result;
         current_position += chunk_len;
