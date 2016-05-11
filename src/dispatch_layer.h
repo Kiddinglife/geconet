@@ -31,15 +31,15 @@
 /*------------------------------------------------------------------*/
 
 /**
- * This struct stores data of dispatcher_t.
- * Each dispatcher_t is related to one port and to one poller.
+ * This struct stores data of geco_instance_t.
+ * Each geco_instance_t is related to one port and to one poller.
  * This may change soon !
  *  SCTP_INSTANCE
  * a dispather could have many endpoints
  * this is similar to TCP listenning socket opens a new socket for new conenctions
  * with binding a new socket pair as indentifier.
  */
-struct dispatcher_t
+struct geco_instance_t
 {
     /*The name of this SCTP-instance, used as key*/
     ushort dispatcher_name;
@@ -56,6 +56,7 @@ struct dispatcher_t
     bool is_ip6;
 
     applicaton_layer_cbs_t applicaton_layer_cbs; /*setup by app layer*/
+
     /*maximum number of incoming streams that this instance will take */
     ushort noOfInStreams;
     /*maximum number of outgoingng streams that this instance will take */
@@ -82,7 +83,7 @@ struct dispatcher_t
 };
 
 /**
- * This struct contains all data of an endpoint. As far as other modules must know
+ * This struct contains all data of an channel. As far as other modules must know
  * elements of this struct, read functions are provided. No other module has write
  * access to this structure
  * ASSCIATION
@@ -91,27 +92,26 @@ struct dispatcher_t
  * 一个偶联。由于偶联由两个 端点的传送地址来定义，所以通过数据配置本地IP 地址、
  * 本地SCTP 端口号、对端 IP 地址、对端SCTP 端口号等四个参数，可以唯一标识一个SCTP 偶联
  */
-struct endpoint_t
+struct channel_t
 {
-    /*The current ID of this endpoint,
-     it is used as a key to find a endpoint in the list,
-     and never changes in the  live of the endpoint */
-    uint ep_id;
+    /*The current ID of this channel,
+     it is used as a key to find a channel in the list,
+     and never changes in the  live of the channel */
+    uint channel_id;
 
-    uint local_tag; /*The local tag of this endpoint*/
-    uint remote_tag; /*The tag of remote side of this endpoint*/
+    uint local_tag; /*The local tag of this channel*/
+    uint remote_tag; /*The tag of remote side of this channel*/
 
-    /*Pointer to the SCTP-instance this association
-     belongs to. It is equal to the wellknown port
-     number of the ULP that uses this instance*/
-    dispatcher_t* dispatcher;
+    /*Pointer to the geco-instance this association belongs to.
+    It is equal to the assignated port number of the ULP that uses this instance*/
+    geco_instance_t* dispatcher;
 
-    /* a single same port  plus multi different ip addresses consist of a uniqe endpoint*/
+    /* a single same port  plus multi different ip addresses consist of a uniqe channel*/
     ushort local_port;
     sockaddrunion *local_addres;
     uint local_addres_size;
 
-    unsigned short remote_port;
+    ushort remote_port;
     sockaddrunion *remote_addres;
     uint remote_addres_size;
 
@@ -137,33 +137,32 @@ struct endpoint_t
     bool remotely_supported_PRSCTP;
     bool remotely_supported_ADDIP;
 
-    /** marks an association for deletion */
-    bool deleted;
-    /** transparent pointer to some upper layer data */
-    void * application_layer_dataptr;
+    
+    bool deleted; /** marks an association for deletion */
+    void * application_layer_dataptr; /* transparent pointer to some upper layer data */
 };
 
 class dispatch_layer_t
 {
-public:
+    public:
     bool sctpLibraryInitialized;
 
     /*Keyed list of end_points_ with ep_id as key*/
     //typedef uint endpoint_id;
     //typedef ushort endpoint_local_port;
-    //std::unordered_map<endpoint_id, endpoint_t*> end_points_;
-    //std::unordered_map<endpoint_local_port, endpoint_t*> end_points_;
-    std::vector<endpoint_t*> endpoints_list_;
+    //std::unordered_map<endpoint_id, channel_t*> end_points_;
+    //std::unordered_map<endpoint_local_port, channel_t*> end_points_;
+    std::vector<channel_t*> endpoints_list_;
 
     /*Keyed list of dispatchers with dispatcher name as key*/
-    std::vector<dispatcher_t*> dispathers_list_;
+    std::vector<geco_instance_t*> dispathers_list_;
 
     /**
      * Whenever an external event (ULP-call, socket-event or timer-event) this variable must
      * contain the addressed sctp instance.
      * This pointer must be reset to null after the event  has been handled.
      */
-    dispatcher_t *dispatcher_;
+    geco_instance_t *curr_geco_instance_;
 
     /**
      initAck is sent to this address
@@ -183,10 +182,10 @@ public:
      * Read functions for 'global data' read data from the association pointed to by this pointer.
      * This pointer must be reset to null after the event  has been handled.
      */
-    endpoint_t *curr_endpoint_;
-    endpoint_t tmp_endpoint_;
+    channel_t *curr_channel_;
+    channel_t tmp_endpoint_;
     sockaddrunion tmp_addr_;
-    dispatcher_t tmp_dispather_;
+    geco_instance_t tmp_dispather_;
 
     dispatch_layer_t();
 
@@ -206,9 +205,9 @@ public:
      *  @param portnum            bogus port number
      */
     void recv_dctp_packet(int socket_fd, char *buffer, int bufferLength,
-            sockaddrunion * source_addr, sockaddrunion * dest_addr);
+        sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
-private:
+    private:
     /**
      *   retrieveAssociation retrieves a association from the list using the transport address as key.
      *   Returns NULL also if the association is marked "deleted" !
@@ -222,27 +221,27 @@ private:
      *   @param  src_addr address from which data arrived
      *   @param  src_port SCTP port from which data arrived
      *   @return pointer to the retrieved association, or NULL
-     *   TODO hash(src_addr, src_port, dest_port) as key for endpoint to improve the performaces
+     *   TODO hash(src_addr, src_port, dest_port) as key for channel to improve the performaces
      */
-    endpoint_t *find_endpoint_by_transport_addr(sockaddrunion * src_addr,
-            ushort src_port, ushort dest_port);
-    bool cmp_endpoint(const endpoint_t& a, const endpoint_t& b);
+    channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
+        ushort src_port, ushort dest_port);
+    bool cmp_channel(const channel_t& a, const channel_t& b);
 
     /**
      *   @return pointer to the retrieved association, or NULL
      */
-    dispatcher_t* find_dispatcher_by_transport_addr(sockaddrunion* dest_addr,
-            uint address_type);
-    bool cmp_dispatcher(const dispatcher_t& a, const dispatcher_t& b);
+    geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
+        uint address_type);
+    bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b);
 
     /**
-     * after dispatcher and  endpoint have been found for an
+     * after dispatcher and  channel have been found for an
      * incoming packet, this function will return, if a packet may be processed
      * or if it is not destined for this instance
      */
     bool validate_dest_addr(sockaddrunion * dest_addr);
 
     /**returns a value indicating which chunks are in the packet.*/
-    uint get_chunk_types(char* packet_value, int len);
+    uint find_chunk_types(uchar* packet_value, int len);
 };
 #endif

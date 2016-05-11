@@ -22,6 +22,9 @@
     <ClInclude Include="..\..\..\src\basic-type.h" />
     <ClInclude Include="..\..\..\src\config.h" />
     <ClInclude Include="..\..\..\src\dispatch_layer.h" />
+    <ClInclude Include="..\..\..\src\geco-ds-config.h" />
+    <ClInclude Include="..\..\..\src\geco-ds-malloc.h" />
+    <ClInclude Include="..\..\..\src\geco-thread.h" />
     <ClInclude Include="..\..\..\src\gecotimer.h" />
     <ClInclude Include="..\..\..\src\globals.h" />
     <ClInclude Include="..\..\..\src\md5.h" />
@@ -35,9 +38,6 @@
     <ClCompile Include="..\..\..\src\main.cc" />
     <ClCompile Include="..\..\..\src\md5.cc" />
     <ClCompile Include="..\..\..\src\poller.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\..\..\src\rfc4960.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BC88D1E1-2A21-4165-A5C2-9FBC87AFE852}</ProjectGuid>

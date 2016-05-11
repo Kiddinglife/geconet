@@ -97,7 +97,7 @@
 #define DEFAULT_RWND_SIZE  10*USE_UDP_BUFSZ // 655350 bytes =
 
 
-/* src port + dest port + ver tag + checksum + 
+/* src port + dest port + ver tag + checksum +
 chunk type + chunk flag + chunk length = 16 bytes*/
 #define MIN_NETWORK_PACKET_HDR_SIZES \
 DCTP_PACKET_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE
@@ -370,9 +370,10 @@ extern int sort_tsn(const internal_data_chunk_t& one,
     const internal_data_chunk_t& two);
 
 /*=========== help functions =================*/
+#define BITS_TO_BYTES(x) (((x)+7)>>3)
 extern uint get_random();
-
-
+extern char* Bitify(size_t mWritePosBits, char* mBuffer);
+extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 
 /*================ sockaddr defines and functions =================*/
 #ifndef IN_EXPERIMENTAL

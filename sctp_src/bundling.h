@@ -69,11 +69,11 @@ void bu_delete(gpointer instancePtr);
 /**
  * returns a value indicating which chunks are in the packet.
  */
-unsigned int rbu_scanPDU(guchar * pdu, guint len);
+unsigned int find_chunk_types(guchar * pdu, guint len);
 
 /*
  * rbu_datagramContains: looks for chunk_type in a newly received datagram
- * Should be called after rbu_scanPDU().
+ * Should be called after find_chunk_types().
  * The chunkArray parameter is inspected. This only really checks for chunks
  * with an ID <= 30. For all other chunks, it just guesses...
  * @return true is chunk_type exists in chunkArray, false if it is not in there

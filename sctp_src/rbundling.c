@@ -53,7 +53,7 @@
 
 #define TOTAL_SIZE(buf)		((buf)->ctrl_position+(buf)->sack_position+(buf)->data_position- 2*sizeof(dctp_packet_fixed_t))
 
-unsigned int rbu_scanPDU(guchar * pdu, guint len)
+unsigned int find_chunk_types(guchar * pdu, guint len)
 {
     gushort processed_len = 0;
     gushort chunk_len = 0;
@@ -68,7 +68,7 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
     {
 
         event_logii(VERBOSE,
-                "rbu_scanPDU : len==%u, processed_len == %u",
+                "find_chunk_types : len==%u, processed_len == %u",
                 len, processed_len);
 
         chunk = (simple_chunk_t *) current_position;
@@ -79,13 +79,13 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
         if (chunk->chunk_header.chunk_id <= 30) {
             result = result | (1 << chunk->chunk_header.chunk_id);
             event_logii(VERBOSE,
-                    "rbu_scanPDU : Chunk type==%u, result == %x",
+                    "find_chunk_types : Chunk type==%u, result == %x",
                     chunk->chunk_header.chunk_id, result);
         } else
         {
             result = result | (1 << 31);
             event_logii(VERBOSE,
-                    "rbu_scanPDU : Chunk type==%u setting bit 31 --> result == %x",
+                    "find_chunk_types : Chunk type==%u setting bit 31 --> result == %x",
                     chunk->chunk_header.chunk_id, result);
         }
         processed_len += chunk_len;

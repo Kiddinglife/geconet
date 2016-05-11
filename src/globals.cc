@@ -627,3 +627,75 @@ uchar* key_operation(int operation_code)
     }
     return secret_key;
 }
+
+char* Bitify(size_t mWritePosBits, char* mBuffer)
+{
+    static char out[1024 * 1024];
+
+    if (mWritePosBits <= 0)
+    {
+        strcpy(out, "no bits to print\n");
+        return;
+    }
+    int strIndex = 0;
+    int inner;
+    int stopPos;
+    int outter;
+    int len = BITS_TO_BYTES(mWritePosBits);
+
+    for (outter = 0; outter < len; outter++)
+    {
+        if (outter == len - 1)
+            stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
+        else
+            stopPos = 0;
+
+        for (inner = 7; inner >= stopPos; inner--)
+        {
+            if ((mBuffer[outter] >> inner) & 1)
+                out[strIndex++] = '1';
+            else
+                out[strIndex++] = '0';
+        }
+        out[strIndex++] = '\n';
+    }
+
+    out[strIndex++] = '\n';
+    out[strIndex++] = 0;
+
+    return out;
+}
+void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
+{
+    if (mWritePosBits <= 0)
+    {
+        strcpy(out, "no bits to print\n");
+        return;
+    }
+    int strIndex = 0;
+    int inner;
+    int stopPos;
+    int outter;
+    int len = BITS_TO_BYTES(mWritePosBits);
+
+    for (outter = 0; outter < len; outter++)
+    {
+        if (outter == len - 1)
+            stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
+        else
+            stopPos = 0;
+
+        for (inner = 7; inner >= stopPos; inner--)
+        {
+            if ((mBuffer[outter] >> inner) & 1)
+                out[strIndex++] = '1';
+            else
+                out[strIndex++] = '0';
+        }
+        out[strIndex++] = '\n';
+    }
+
+    out[strIndex++] = '\n';
+    out[strIndex++] = 0;
+
+}

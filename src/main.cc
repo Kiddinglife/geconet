@@ -573,7 +573,7 @@ static void test_getlocaladdr()
     int maxmtu = 0;
     ushort port = 0;
     char addr[MAX_IPADDR_STR_LEN];
-    hide_address_flag_t t =  (hide_address_flag_t)(flag_HideLocal|flag_Default);
+    hide_address_flag_t t = (hide_address_flag_t)(flag_HideLocal | flag_Default);
     nit.get_local_addresses(&saddr, &num, nit.ip4_socket_despt_, true, &maxmtu, t);
 
     event_logi(verbose, "max mtu  %d\n", maxmtu);
@@ -593,6 +593,23 @@ static void test_getlocaladdr()
         event_logii(verbose, "ip address %s port %d\n", addr, port);
     }
 }
+
+//#define GECO_PRINTS
+#include "geco-ds-malloc.h"
+static void test_alloc_pool()
+{
+    char* intptr = (char*)geco::ds::single_client_alloc::allocate(8);
+    assert(intptr != 0);
+    geco::ds::single_client_alloc::deallocate(intptr, 8);
+
+    intptr = (char*)geco::ds::alloc::allocate(8);
+    assert(intptr != 0);
+    geco::ds::alloc::deallocate(intptr, 8);
+
+    geco::ds::single_client_alloc::destroy();
+    geco::ds::alloc::destroy();
+}
+
 int main(int arg, char** args)
 {
     // get_random();
@@ -611,6 +628,7 @@ int main(int arg, char** args)
     // test_add_remove_fd();
     //std::cin.get();
     //test_pollsss();
-    test_getlocaladdr();
+    //test_getlocaladdr();
+    test_alloc_pool();
     return 0;
 }
