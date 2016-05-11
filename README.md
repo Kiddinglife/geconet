@@ -1,1 +1,1 @@
-# c++ implementation of SCTP-Stack
+c++ implementation of sctp stack
