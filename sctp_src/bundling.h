@@ -83,13 +83,13 @@ gboolean rbu_datagramContains(gushort chunk_type, unsigned int chunkArray);
 guchar* rbu_scanInitChunkForParameter(guchar * chunk, gushort paramType);
 
 /*
- * rbu_findChunk: looks for chunk_type in a newly received datagram
+ * rbu_find_first_Chunk: looks for chunk_type in a newly received datagram
  *
  * All chunks within the datagram are looked at, until one is found
  * that equals the parameter chunk_type.
  * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
  */
-guchar* rbu_findChunk(guchar * datagram, guint len, gushort chunk_type);
+guchar* rbu_find_first_Chunk(guchar * datagram, guint len, gushort chunk_type);
 
 /*
  * rbu_scanDatagramForError : looks for Error chunk_type in a newly received datagram
