@@ -195,6 +195,7 @@ struct data_chunk_t
 #define VLPARAM_SUCCESS_REPORT          0xC005
 #define VLPARAM_ADAPTATION_LAYEREASON_IND    0xC006
 
+#define VLPARAM_FIXED_SIZE  (2 * sizeof(ushort))
 /* Header of variable length parameters */
 struct vlparam_fixed_t
 {
@@ -206,8 +207,8 @@ struct ip_address_t
     vlparam_fixed_t vlparam_header;
     union
     {
-        uint sctp_ipv4;
-        uint sctp_ipv6[4];
+        uint ipv4_addr;
+        uint ipv6_addr[4];
     } dest_addr_un;
 };
 /* Supported Addresstypes */

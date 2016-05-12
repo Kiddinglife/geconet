@@ -103,7 +103,7 @@ struct channel_t
     uint remote_tag; /*The tag of remote side of this channel*/
 
     /*Pointer to the geco-instance this association belongs to.
-    It is equal to the assignated port number of the ULP that uses this instance*/
+     It is equal to the assignated port number of the ULP that uses this instance*/
     geco_instance_t* dispatcher;
 
     /* a single same port  plus multi different ip addresses consist of a uniqe channel*/
@@ -137,14 +137,13 @@ struct channel_t
     bool remotely_supported_PRSCTP;
     bool remotely_supported_ADDIP;
 
-    
     bool deleted; /** marks an association for deletion */
     void * application_layer_dataptr; /* transparent pointer to some upper layer data */
 };
 
 class dispatch_layer_t
 {
-    public:
+public:
     bool sctpLibraryInitialized;
 
     /*Keyed list of end_points_ with ep_id as key*/
@@ -186,6 +185,7 @@ class dispatch_layer_t
     channel_t tmp_endpoint_;
     sockaddrunion tmp_addr_;
     geco_instance_t tmp_dispather_;
+    sockaddrunion found_addres_[MAX_NUM_ADDRESSES];
 
     dispatch_layer_t();
 
@@ -205,9 +205,9 @@ class dispatch_layer_t
      *  @param portnum            bogus port number
      */
     void recv_dctp_packet(int socket_fd, char *buffer, int bufferLength,
-        sockaddrunion * source_addr, sockaddrunion * dest_addr);
+            sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
-    private:
+private:
     /**
      *   retrieveAssociation retrieves a association from the list using the transport address as key.
      *   Returns NULL also if the association is marked "deleted" !
@@ -224,14 +224,14 @@ class dispatch_layer_t
      *   TODO hash(src_addr, src_port, dest_port) as key for channel to improve the performaces
      */
     channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
-        ushort src_port, ushort dest_port);
+            ushort src_port, ushort dest_port);
     bool cmp_channel(const channel_t& a, const channel_t& b);
 
     /**
      *   @return pointer to the retrieved association, or NULL
      */
-    geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
-        uint address_type);
+    geco_instance_t* find_geco_instance_by_transport_addr(
+            sockaddrunion* dest_addr, uint address_type);
     bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b);
 
     /**
@@ -243,5 +243,68 @@ class dispatch_layer_t
 
     /**returns a value indicating which chunks are in the packet.*/
     uint find_chunk_types(uchar* packet_value, int len);
+    /**@return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one*/
+    inline int contains_chunk(uchar chunk_type, uint chunk_types)
+    {
+        // 0000 0000 ret = 0 at beginning
+        // 0000 0001 1
+        // 1                chunktype init
+        // 0000 0010 ret
+        // 2                chunktype init ack
+        // 0000 0110 ret
+        // 7                chunktype shutdown
+        // 1000 0110 ret
+        // 192            chunktype shutdown
+        // 1000 0000-byte0-byte0-1000 0110 ret
+
+        uint val = 0;
+        chunk_type > 30 ? val = (1 << 31) : val = (1 << chunk_type);
+
+        if ((val & chunk_types) == 0)
+        {
+            // not contains
+            return 0;
+        }
+        else
+        {
+            // 1 only have this chunk type,  2 Not only this chunk type
+            return val == chunk_types ? 1 : 2;
+        }
+        return 0;
+    }
+
+    /**
+     * find_chunk: looks for chunk_type in a newly received datagram
+     * All chunks within the datagram are looked at, until one is found
+     * that equals the parameter chunk_type.
+     * @param  datagram     pointer to the newly received data
+     * @param  len          stop after this many bytes
+     * @param  chunk_type   chunk type to look for
+     * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
+     */
+    uchar* find_chunk(uchar * packet_value, int packet_val_len,
+            uchar chunk_type);
+
+    /**
+     * find_sockaddr: looks for address type parameters in INIT or INIT-ACKs
+     * All parameters within the chunk are looked at, and the n-th supported address is
+     * copied into the provided buffer pointed to by the foundAddress parameter.
+     * If there are less than n addresses, an appropriate error is
+     * returned. n should be at least 1, of course.
+     * @param  chunk            pointer to an INIT or INIT ACK chunk
+     * @param  n                get the n-th address
+     * @param  foundAddress
+     * pointer to a buffer where an address, if found, will be copied
+     * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
+     *             that many addresses in the chunk.
+     */
+    int find_sockaddr_from_init_or_initack_chunk(uchar * chunk, uint chunk_len,
+            uint n, sockaddrunion* foundAddress, int supportedAddressTypes);
+    /**
+     * @return -1 prama error, >=0 number of the found addresses
+     * */
+    int find_sockaddr_from_init_or_initack_chunk(uchar * chunk, uint chunk_len,
+            int supportedAddressTypes);
+
 };
 #endif

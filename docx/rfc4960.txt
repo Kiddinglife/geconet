@@ -307,12 +307,12 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
        _____________                                      _____________
       |  SCTP User  |                                    |  SCTP User  |
-      | Application |                                    | Application |
-      |-------------|                                    |-------------|
-      |    SCTP     |                                    |    SCTP     |
-      |  Transport  |                                    |  Transport  |
-      |   Service   |                                    |   Service   |
-      |-------------|                                    |-------------|
+      | Application |                                     | Application |
+      |-------------|                                          |-------------|
+      |    SCTP     |                                       |    SCTP     |
+      |  Transport  |                                      |  Transport  |
+      |   Service   |                                       |   Service   |
+      |-------------|                                           |-------------|
       |             |One or more    ----      One or more|             |
       | IP Network  |IP address      \/        IP address| IP Network  |
       |   Service   |appearances     /\       appearances|   Service   |
@@ -708,13 +708,45 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    the SCTP common header.  The Verification Tag value is chosen by each
    end of the association during association startup.  Packets received
    without the expected Verification Tag value are discarded, as a
-   protection against blind masquerade attacks and against stale SCTP
+   protection against blind masquerade attacks [1] and against stale SCTP
    packets from a previous association.  The CRC32c checksum should be
    set by the sender of each SCTP packet to provide additional
    protection against data corruption in the network.  The receiver of
    an SCTP packet with an invalid CRC32c checksum silently discards the
    packet.
-
+   
+   [1] blind masquerade attacks :
+   see https://en.wikipedia.org/wiki/IP_address_spoofing for details
+   also called IP address spoofing or IP spoofing is the creation of Internet Protocol (IP) 
+   packets with a forged (伪造) source IP address, with the purpose of concealing (隐瞒)
+   the identity of the sender or impersonating (假扮) another computing system.
+   
+   Defence of Flood Syn Attacks:
+   when spoofed INIT packet incomes, the receiver responses with init ack to the forged
+   sender, watiing for him to reply an INIT-ACK. But as source addresss is forged, 
+   the forged sender does not know what the packet is and therefore will not reply an INIT-ACK.
+   in such way, flood syn attacks are defeated. 
+   
+   Defence of Replay acctacks:
+   
+   INIT Replay Attack: 
+   replayed INIT packets will be accepted and returns INIT-ACK to attacker,
+   but no any resources kept
+   
+   INIT-ACK Replay Attack:  
+   replayed INIT-ACK packets will be accpeted by receiver and return 
+   COOKIE-ECHO to attacker, but no any resource kept.
+   
+   COOKIE-ECHO Replay Attack: 
+   1) ip-spoofed-replayed COOKIE-ECHO packets will be discarded by validating the echoed cookie.
+   2) replayed-COOKIE-ECHO packets will be accepted and do validate until cokkie exprires, 
+       attacker may request extend cookie life span. the only cost is cpu cycles of validating 
+       cookie within cokkie life span, no resource kept.
+       
+   DATA-CHUNK Replay Attack:
+    this is accepted as normal packet. the only cost is wast of cpu cycles, but no resource kept.
+   
+   
 1.5.7.  Path Management
 
    The sending SCTP user is able to manipulate the set of transport
@@ -734,7 +766,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    when other packet traffic is inadequate to provide this information
    and advises the SCTP user when reachability of any far-end transport
-   address changes.  The path management function is also responsible
+   address changes. The path management function is also responsible
    for reporting the eligible set of local transport addresses to the
    far end during association startup, and for reporting the transport
    addresses returned from the far end to the SCTP user.
@@ -777,10 +809,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    Number Arithmetic as defined in [RFC1982] where SERIAL_BITS = 16.
    All other arithmetic and comparisons in this document use normal
    arithmetic.
-
-
-
-
 
 
 Stewart                     Standards Track                    [Page 14]

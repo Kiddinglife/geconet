@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>wheel-linux-sctp</name>
+	<name>geco-sctp-cplus</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -41,4 +41,10 @@
 			<locationURI>PARENT-1-PROJECT_LOC/src</locationURI>
 		</link>
 	</linkedResources>
+	<variableList>
+		<variable>
+			<name>copy_PARENT</name>
+			<value>$%7BPARENT-2-PROJECT_LOC%7D/2016209/geco-sctp-cplus</value>
+		</variable>
+	</variableList>
 </projectDescription>
