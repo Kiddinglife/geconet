@@ -1976,26 +1976,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       DATA chunk received in this Gap Ack Block.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Stewart                     Standards Track                    [Page 36]
 
 RFC 4960          Stream Control Transmission Protocol    September 2007
@@ -2752,7 +2732,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    This chunk is used only during the initialization of an association.
    It is sent by the initiator of an association to its peer to complete
-   the initialization process.  This chunk MUST precede any DATA chunk
+   the initialization process.  This chunk MUST precede(之前) any DATA chunk
    sent within the association, but MAY be bundled with one or more DATA
    chunks in the same packet.
 
@@ -2897,21 +2877,21 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
                       -----          -------- (from any state)
                     /       \      /  rcv ABORT      [ABORT]
-   rcv INIT        |         |    |   ----------  or ----------
-   --------------- |         v    v   delete TCB     snd ABORT
-   generate Cookie  \    +---------+                 delete TCB
-   snd INIT ACK       ---|  CLOSED |
-                         +---------+
+rcv INIT        |         |    |   ----------  or ----------
+---------------    |         v   v   delete TCB     snd ABORT
+generate Cookie +----------+                 delete TCB
+snd INIT ACK       |CLOSED|
+                         +----------+
                           /      \      [ASSOCIATE]
                          /        \     ---------------
-                        |          |    create TCB
+                        |          |    CREATE TCB
                         |          |    snd INIT
                         |          |    strt init timer
-         rcv valid      |          |
-       COOKIE  ECHO     |          v
-   (1) ---------------- |      +------------+
-       create TCB       |      | COOKIE-WAIT| (2)
-       snd COOKIE ACK   |      +------------+
+     rcv valid      |          |
+ COOKIE  ECHO |          v
+1) ----------------   |      +-------------------+
+ CREATE TCB    |      | COOKIE-WAIT | (2)
+snd COOKIEACK|     +--------------------+
                         |          |
                         |          |    rcv INIT ACK
                         |          |    -----------------
@@ -2919,17 +2899,17 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
                         |          |    stop init timer
                         |          |    strt cookie timer
                         |          v
-                        |      +--------------+
-                        |      | COOKIE-ECHOED| (3)
-                        |      +--------------+
+                        |      +-------------------------+
+                        |      | COOKIE-ECHOED  | (3)
+                        |      +-------------------------+
                         |          |
                         |          |    rcv COOKIE ACK
                         |          |    -----------------
                         |          |    stop cookie timer
                         v          v
-                      +---------------+
-                      |  ESTABLISHED  |
-                      +---------------+
+                      +---------------------+
+                      | ESTABLISHED  |
+                      +---------------------+
 
 
 
@@ -2979,7 +2959,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    ----------------------|    \              |
    stop shutdown timer   |     \rcv:SHUTDOWN |
    send SHUTDOWN COMPLETE|      \  (B)       |
-   delete TCB            |       \           |
+   DELETE TCB            |       \           |
                          |        \          | No more outstanding
                          |         \         |-----------------
                          |          \        | send SHUTDOWN ACK
@@ -2997,7 +2977,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
                          |                   | (C)rcv SHUTDOWN COMPLETE
                          |                   |-----------------
                          |                   | stop shutdown timer
-                         |                   | delete TCB
+                         |                   | DELETE TCB 
                          |                   |
 
 
@@ -3151,7 +3131,8 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    them.
 
    An endpoint MUST send the INIT ACK to the IP address from which it
-   received the INIT.
+   received the INIT. (the source address in ip header is always validate 
+   but the ones in address list may not be so. eg, NAT)
 
    Note: T1-init timer and T1-cookie timer shall follow the same rules
    given in Section 6.3.
@@ -3165,10 +3146,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    cause parameters with the ABORT chunk.  The Verification Tag field in
    the common header of the outbound SCTP packet containing the ABORT
    chunk MUST be set to the Initiate Tag value of the peer.
-
-
-
-
 
 Stewart                     Standards Track                    [Page 57]
 

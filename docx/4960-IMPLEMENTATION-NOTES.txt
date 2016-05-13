@@ -158,10 +158,62 @@ create the association, along with a Message Authentication Code
 
 
 3.3.4.  Selective Acknowledgement (SACK) (3)
+32)
 This chunk is sent to the peer endpoint to acknowledge received DATA
 chunks and to inform the peer endpoint of gaps in the received
 subsequences of DATA chunks as represented by their TSNs.
 
 
+3.3.6.  Heartbeat Acknowledgement (HEARTBEAT ACK) (5)
+33)
+An endpoint should send this chunk to its peer endpoint as a response
+to a HEARTBEAT chunk (see Section 8.3).  A HEARTBEAT ACK is always
+sent to the source IP address of the IP datagram containing the
+HEARTBEAT chunk to which this ack is responding.
 
-      
+3.3.7.  Abort Association (ABORT) (6)
+34)
+DATA chunks MUST NOT be
+bundled with ABORT.  Control chunks (except for INIT, INIT ACK, and
+SHUTDOWN COMPLETE) MAY be bundled with an ABORT, but they MUST be
+placed before the ABORT in the SCTP packet or they will be ignored by
+the receiver.
+35)
+  If an endpoint receives an ABORT with a format error or no TCB is
+   found, it MUST silently discard it.  Moreover, under any
+   circumstances, an endpoint that receives an ABORT MUST NOT respond to
+   that ABORT by sending an ABORT of its own. 
+
+5.  Association Initialization  
+35)
+IMPLEMENTATION NOTE: An implementation may choose to send the
+Communication Up notification to the SCTP user upon reception of a
+valid COOKIE ECHO chunk.
+36)
+An endpoint MUST send the INIT ACK to the IP address from which it
+received the INIT.
+37)
+   If an endpoint receives an INIT, INIT ACK, or COOKIE ECHO chunk but
+   decides not to establish the new association due to missing mandatory
+   parameters in the received INIT or INIT ACK, invalid parameter
+   values, or lack of local resources, it SHOULD respond with an ABORT
+   chunk.  It SHOULD also specify the cause of abort, such as the type
+   of the missing mandatory parameters, etc., by including the error
+   cause parameters with the ABORT chunk.  The Verification Tag field in
+   the common header of the outbound SCTP packet containing the ABORT
+   chunk MUST be set to the Initiate Tag value of the peer.
+38)
+   Note that a COOKIE ECHO chunk that does NOT pass the integrity check
+   is NOT considered an 'invalid parameter' and requires special
+   handling; see Section 5.1.5.
+39)
+   IMPLEMENTATION NOTE: The IP addresses and SCTP port are generally
+   used as the key to find the TCB within an SCTP instance.
+40)
+REFERS TO 5.1.2.  Handle Address Parameters
+41)
+the receiver MUST derive and record all the
+transport addresses from the received chunk AND the source IP
+address that sent the INIT or INIT ACK. 
+ 
+   
