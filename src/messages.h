@@ -144,13 +144,11 @@ struct chunk_fixed_t
 #define DCHUNK_FLAG_UNRELIABLE 0x08
 // unreliable data chunk     10base: 8    2base : 1000
 
+/* when chunk_id == CHUNK_DATA */
 #define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
-//#define DATA_CHUNK_FIXED_SIZE (2*sizeof(uint)+2*sizeof(ushort))
 #define DATA_CHUNK_FIXED_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
 #define MAX_DATA_CHUNK_VALUE_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
-
-/* when chunk_id == CHUNK_DATA */
 struct data_chunk_fixed_t
 {
     uint trans_seq_num; // unrealiable msg has NO this field
@@ -162,6 +160,58 @@ struct data_chunk_t
     chunk_fixed_t comm_chunk_hdr;
     data_chunk_fixed_t data_chunk_hdr;
     uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
+};
+
+#define DATA_CHUNK_FIXED_NOTSN_SIZE (sizeof(uint)+sizeof(ushort))
+#define DATA_CHUNK_FIXED_NOTSN_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOTSN_SIZE)
+#define MAX_DATA_CHUNK_VALUE_NOTSN_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOTSN_SIZES)
+struct data_chunk_fixed_notsn_t
+{
+    //uint trans_seq_num; // unrealiable msg has NO this field
+    ushort stream_identity;
+    ushort stream_seq_num; // unordered msg has NO this field
+};
+struct data_chunk_notsn_t
+{
+    chunk_fixed_t comm_chunk_hdr;
+    data_chunk_fixed_notsn_t data_chunk_hdr;
+    uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOTSN_SIZE];
+};
+
+#define DATA_CHUNK_FIXED_NOSSN_SIZE (sizeof(uint)+sizeof(ushort))
+#define DATA_CHUNK_FIXED_NOSSN_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOSSN_SIZE)
+#define MAX_DATA_CHUNK_VALUE_NOSSN_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSN_SIZES)
+struct data_chunk_fixed_nossn_t
+{
+    uint trans_seq_num; // unrealiable msg has NO this field
+    ushort stream_identity;
+    //ushort stream_seq_num; // unordered msg has NO this field
+};
+struct data_chunk_nossn_t
+{
+    chunk_fixed_t comm_chunk_hdr;
+    data_chunk_fixed_nossn_t data_chunk_hdr;
+    uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSN_SIZE];
+};
+
+#define DATA_CHUNK_FIXED_NOSSNTSN_SIZE (sizeof(ushort))
+#define DATA_CHUNK_FIXED_NOSSNTSN_SIZES \
+(CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOSSNTSN_SIZE)
+#define MAX_DATA_CHUNK_VALUE_NOSSNTSN_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSNTSN_SIZES)
+struct data_chunk_fixed_nossntsn_t
+{
+    //uint trans_seq_num; // unrealiable msg has NO this field
+    ushort stream_identity;
+    //ushort stream_seq_num; // unordered msg has NO this field
+};
+struct data_chunk_nossntsn_t
+{
+    chunk_fixed_t comm_chunk_hdr;
+    data_chunk_fixed_nossntsn_t data_chunk_hdr;
+    uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSNTSN_SIZE];
 };
 
 /*************************** variable length parameter definitions ***************************/

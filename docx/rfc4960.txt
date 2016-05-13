@@ -1188,21 +1188,8 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 3.3.  SCTP Chunk Definitions
 
-   This section defines the format of the different SCTP chunk types.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+   This section defines the format of the different SCTP chunk types
+   
 Stewart                     Standards Track                    [Page 21]
 
 RFC 4960          Stream Control Transmission Protocol    September 2007
@@ -1215,13 +1202,11 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 0    | Reserved|U|B|E|    Length                     |
+       |   Type = 0    |unsed|O|U|B|E|    Length             |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                              TSN                              |
+       |                              TSN                                  |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |      Stream Identifier S      |   Stream Sequence Number n    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                  Payload Protocol Identifier                  |
+       |  Stream Identifier     |   Stream Seq Number    |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        \                                                               \
        /                 User Data (seq n of Stream S)                 /
@@ -1352,24 +1337,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    This chunk is used to initiate an SCTP association between two
    endpoints.  The format of the INIT chunk is shown below:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Stewart                     Standards Track                    [Page 24]
 
@@ -1692,25 +1659,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    The parameter part of INIT ACK is formatted similarly to the INIT
    chunk.  It uses two extra variable parameters: The State Cookie and
    the Unrecognized Parameter:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Stewart                     Standards Track                    [Page 30]
 
