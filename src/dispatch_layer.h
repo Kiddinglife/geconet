@@ -143,7 +143,7 @@ struct channel_t
 
 class dispatch_layer_t
 {
-public:
+    public:
     bool sctpLibraryInitialized;
 
     /*Keyed list of end_points_ with ep_id as key*/
@@ -205,9 +205,9 @@ public:
      *  @param portnum            bogus port number
      */
     void recv_dctp_packet(int socket_fd, char *buffer, int bufferLength,
-            sockaddrunion * source_addr, sockaddrunion * dest_addr);
+        sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
-private:
+    private:
     /**
      *   retrieveAssociation retrieves a association from the list using the transport address as key.
      *   Returns NULL also if the association is marked "deleted" !
@@ -224,14 +224,14 @@ private:
      *   TODO hash(src_addr, src_port, dest_port) as key for channel to improve the performaces
      */
     channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
-            ushort src_port, ushort dest_port);
+        ushort src_port, ushort dest_port);
     bool cmp_channel(const channel_t& a, const channel_t& b);
 
     /**
      *   @return pointer to the retrieved association, or NULL
      */
     geco_instance_t* find_geco_instance_by_transport_addr(
-            sockaddrunion* dest_addr, uint address_type);
+        sockaddrunion* dest_addr, uint address_type);
     bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b);
 
     /**
@@ -243,7 +243,15 @@ private:
 
     /**returns a value indicating which chunks are in the packet.*/
     uint find_chunk_types(uchar* packet_value, int len);
-    /**@return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one*/
+
+    /**
+    * contains_chunk: looks for chunk_type in a newly received geco packet
+    * Should be called after find_chunk_types().
+    * The chunkArray parameter is inspected. This only really checks for chunks
+    * with an ID <= 30. For all other chunks, it just guesses...
+    * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
+    * @pre: need call find_chunk_types() first 
+    */
     inline int contains_chunk(uchar chunk_type, uint chunk_types)
     {
         // 0000 0000 ret = 0 at beginning
@@ -274,7 +282,7 @@ private:
     }
 
     /**
-     * find_chunk: looks for chunk_type in a newly received datagram
+     * find_first_chunk: looks for chunk_type in a newly received datagram
      * All chunks within the datagram are looked at, until one is found
      * that equals the parameter chunk_type.
      * @param  datagram     pointer to the newly received data
@@ -282,8 +290,8 @@ private:
      * @param  chunk_type   chunk type to look for
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
-    uchar* find_chunk(uchar * packet_value, int packet_val_len,
-            uchar chunk_type);
+    uchar* find_first_chunk(uchar * packet_value, int packet_val_len,
+        uchar chunk_type);
 
     /**
      * find_sockaddr: looks for address type parameters in INIT or INIT-ACKs
@@ -299,12 +307,12 @@ private:
      *             that many addresses in the chunk.
      */
     int find_sockaddr_from_init_or_initack_chunk(uchar * chunk, uint chunk_len,
-            uint n, sockaddrunion* foundAddress, int supportedAddressTypes);
+        uint n, sockaddrunion* foundAddress, int supportedAddressTypes);
     /**
      * @return -1 prama error, >=0 number of the found addresses
      * */
     int find_sockaddr_from_init_or_initack_chunk(uchar * chunk, uint chunk_len,
-            int supportedAddressTypes);
+        int supportedAddressTypes);
 
 };
 #endif

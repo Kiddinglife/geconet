@@ -1120,7 +1120,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
 
     if (currentAssociation == NULL)
     {
-        if ((initPtr = rbu_findChunk(sctp_packet->sctp_pdu, len,
+        if ((initPtr = rbu_find_first_Chunk(sctp_packet->sctp_pdu, len,
         CHUNK_INIT)) != NULL)
         {
             event_log(VERBOSE,
@@ -1140,7 +1140,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
                 i++;
             } while (currentAssociation == NULL && retval == 0);
         }
-        if ((initPtr = rbu_findChunk(sctp_packet->sctp_pdu, len,
+        if ((initPtr = rbu_find_first_Chunk(sctp_packet->sctp_pdu, len,
         CHUNK_INIT_ACK)) != NULL)
         {
             event_log(VERBOSE,
@@ -1278,7 +1278,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
             return;
         }
 
-        if ((initPtr = rbu_findChunk(sctp_packet->sctp_pdu, len,
+        if ((initPtr = rbu_find_first_Chunk(sctp_packet->sctp_pdu, len,
         CHUNK_INIT)) != NULL)
         {
             if (sctpInstance != NULL)
@@ -1434,7 +1434,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastFromPath = i;
 
         /* check for verification tag rules --> see section 8.5 */
-        if ((initPtr = rbu_findChunk(sctp_packet->sctp_pdu, len,
+        if ((initPtr = rbu_find_first_Chunk(sctp_packet->sctp_pdu, len,
         CHUNK_INIT)) != NULL)
         {
             /* check that there is ONLY init */
@@ -1537,7 +1537,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
             cookieEchoFound = true;
         }
 
-        if ((initPtr = rbu_findChunk(sctp_packet->sctp_pdu, len,
+        if ((initPtr = rbu_find_first_Chunk(sctp_packet->sctp_pdu, len,
         CHUNK_INIT_ACK)) != NULL)
         {
 

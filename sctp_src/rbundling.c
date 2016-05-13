@@ -171,7 +171,7 @@ guchar* rbu_scanInitChunkForParameter(guchar * chunk, gushort paramType)
 }
 
 /*
- * rbu_findChunk: looks for chunk_type in a newly received datagram
+ * rbu_find_first_Chunk: looks for chunk_type in a newly received datagram
  *
  * All chunks within the datagram are looked at, until one is found
  * that equals the parameter chunk_type.
@@ -180,7 +180,7 @@ guchar* rbu_scanInitChunkForParameter(guchar * chunk, gushort paramType)
  * @param  chunk_type   chunk type to look for
  * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
  */
-guchar* rbu_findChunk(guchar * datagram, guint len, gushort chunk_type)
+guchar* rbu_find_first_Chunk(guchar * datagram, guint len, gushort chunk_type)
 {
     gushort processed_len = 0, chunk_len = 0;
     guchar *current_position;
@@ -192,7 +192,7 @@ guchar* rbu_findChunk(guchar * datagram, guint len, gushort chunk_type)
     {
 
         event_logii(INTERNAL_EVENT_0,
-                "rbu_findChunk : len==%u, processed_len == %u", len,
+                "rbu_find_first_Chunk : len==%u, processed_len == %u", len,
                 processed_len);
 
         chunk = (simple_chunk_t *) current_position;
