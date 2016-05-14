@@ -7,6 +7,27 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mywheel", "project\project.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sctplib", "sctplib\sctplib.vcxproj", "{87E7966E-23B1-4BE3-9B62-828513C360EC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docx", "docx", "{EB5B755E-C028-4DCF-B2E1-7AFAF9BFAB16}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\docx\4960-IMPLEMENTATION-NOTES.txt = ..\..\docx\4960-IMPLEMENTATION-NOTES.txt
+		..\..\docx\rfc1191- ICMP Path MTU Discovery.txt = ..\..\docx\rfc1191- ICMP Path MTU Discovery.txt
+		..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt = ..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt
+		..\..\docx\rfc2246 - TLS.txt = ..\..\docx\rfc2246 - TLS.txt
+		..\..\docx\rfc2522-session-key-mgr-ptl.txt = ..\..\docx\rfc2522-session-key-mgr-ptl.txt
+		..\..\docx\rfc3257 - (SCTP) - Applicability Statement.txt = ..\..\docx\rfc3257 - (SCTP) - Applicability Statement.txt
+		..\..\docx\rfc3286-An Introduction to sctp.txt = ..\..\docx\rfc3286-An Introduction to sctp.txt
+		..\..\docx\rfc3309- (SCTP) Checksum Change.txt = ..\..\docx\rfc3309- (SCTP) Checksum Change.txt
+		..\..\docx\rfc3436-(SCTP) Transport Layer Security over sctp.txt = ..\..\docx\rfc3436-(SCTP) Transport Layer Security over sctp.txt
+		..\..\docx\rfc3554-(SCTP) On the Use of sctp with IPsec.txt = ..\..\docx\rfc3554-(SCTP) On the Use of sctp with IPsec.txt
+		..\..\docx\rfc3758-(SCTP)  Partial Reliability Extension.txt = ..\..\docx\rfc3758-(SCTP)  Partial Reliability Extension.txt
+		..\..\docx\rfc4301 - IPSec.txt = ..\..\docx\rfc4301 - IPSec.txt
+		..\..\docx\rfc4820-(SCTP) padding-chunk.txt = ..\..\docx\rfc4820-(SCTP) padding-chunk.txt
+		..\..\docx\rfc4821 - Packetization Layer Path MTU Discovery.txt = ..\..\docx\rfc4821 - Packetization Layer Path MTU Discovery.txt
+		..\..\docx\rfc4821-Packetization Layer Path MTU Discovery.txt = ..\..\docx\rfc4821-Packetization Layer Path MTU Discovery.txt
+		..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt = ..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt
+		..\..\docx\rfc4960.txt = ..\..\docx\rfc4960.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

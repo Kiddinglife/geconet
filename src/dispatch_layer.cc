@@ -143,8 +143,6 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
 
     if (discard)
     {
-        //        last_source_addr_ = NULL;
-        //        last_dest_addr_ = NULL;
         last_src_port_ = 0;
         last_dest_port_ = 0;
         event_logii(loglvl_intevent,
@@ -168,8 +166,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
     }
     else
     {
-        /* 6)
-         *  find dctp instancefor this packet
+        /* 6) find dctp instancefor this packet
          *  if this packet is for a server dctp instance,
          *  we will find that dctp instance and let it handle this packet
          *  (i.e. we have the dctp instance's localPort set and
@@ -222,10 +219,8 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
     bool found_existed_channel_from_init_chunks;
 
     /* 10)
-     * This packet contains init-stage chunks (init or init-ack chunk)
-     * that we need process on.
-     * refers to RFC 4060
-     * section 3.3.2.1 - Optional/Variable-Length Parameters in INIT */
+     * This packet contains init-stage chunks (init or init-ack chunk) that we need process on.
+     * refers to RFC 4060 section 3.3.2.1 - Optional/Variable-Length Parameters in INIT */
     if (curr_channel_ == NULL)
     {
         /*11) it is init chunk*/
@@ -405,7 +400,7 @@ int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
 
         vlp = (vlparam_fixed_t*)curr_pos;
         vlp_len = ntohs(vlp->param_length);
-        if (vlp_len < vlp || vlp_len + read_len > len)
+        if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
             return -1;
 
         /*4) validate received addresses in this chunk*/
@@ -499,7 +494,7 @@ int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
 
         vlp = (vlparam_fixed_t*)curr_pos;
         vlp_len = ntohs(vlp->param_length);
-        if (vlp_len < vlp || vlp_len + read_len > len)
+        if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
             return -1;
 
         /*4) validate received addresses in this chunk*/

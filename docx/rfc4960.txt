@@ -3494,44 +3494,57 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    sends a user message to "Z", then "Z" sends two user messages to "A"
    later (assuming no bundling or fragmentation occurs):
 
-    Endpoint A                                          Endpoint Z
+    Endpoint A                                                  Endpoint Z
     {app sets association with Z}
     (build TCB)
     INIT [I-Tag=Tag_A
-          & other info]  ------\
-    (Start T1-init timer)       \
-    (Enter COOKIE-WAIT state)    \---> (compose temp TCB and Cookie_Z)
-                                    /-- INIT ACK [Veri Tag=Tag_A,
-                                   /             I-Tag=Tag_Z,
-    (Cancel T1-init timer) <------/              Cookie_Z, & other info]
-                                         (destroy temp TCB)
-    COOKIE ECHO [Cookie_Z] ------\
-    (Start T1-init timer)         \
-    (Enter COOKIE-ECHOED state)    \---> (build TCB enter ESTABLISHED
-                                          state)
-                                   /---- COOKIE-ACK
-                                  /
-    (Cancel T1-init timer, <-----/
-     Enter ESTABLISHED state)
+          & other info]  ----- ->\
+    (Start T1-init timer)               \
+    (Enter COOKIE-WAIT state)   \--------> (compose temp TCB and Cookie_Z)
+
+                                                             /<---- INIT ACK [
+                                                           /             Veri Tag=Tag_A,
+                                                         /               I-Tag=Tag_Z,
+    (Cancel T1-init timer) <------/                 Cookie_Z, 
+                                                                         OtherInfos]
+                                                                         (destroy temp TCB)
+
+    COOKIE ECHO 
+    [Cookie_Z] -------------- >\
+    (Start T1-init timer)                    \
+    (Enter COOKIE-ECHOED state)  \----> (build TCB)
+                                                                       (Enter ESTABLISHED state)
+                                                         /<-----COOKIE-ACK
+                                                       /
+    (Cancel T1-init timer) <-----/
+    (Enter ESTABLISHED state)
     {app sends 1st user data; strm 0}
     DATA [TSN=initial TSN_A
-        Strm=0,Seq=0 & user data]--\
-    (Start T3-rtx timer)            \
-                                     \->
-                                   /----- SACK [TSN Ack=init
-                                  /           TSN_A,Block=0]
-    (Cancel T3-rtx timer) <------/
-                                          ...
-                                         {app sends 2 messages;strm 0}
-                                   /---- DATA
-                                  /        [TSN=init TSN_Z
-                              <--/          Strm=0,Seq=0 & user data 1]
-    SACK [TSN Ack=init TSN_Z,      /---- DATA
-          Block=0]     --------\  /        [TSN=init TSN_Z +1,
-                                \/          Strm=0,Seq=1 & user data 2]
-                         <------/\
-                                  \
-                                   \------>
+    Strm=0,Seq=0 & user data]-----\
+    (Start T3-rtx timer)                          \
+                                                               \--> DATA 
+                                                                           ...
+
+                                                         /<------ SACK [ TSN Ack=init, TSN_A, Block=0 ]
+                                                       /
+    (Cancel T3-rtx timer) <-----/
+                                                                           ...
+                                                                          {app sends 2 messages;strm 0}
+                                                   /<--------- DATA
+                                                 /                        [TSN=init TSN_ZStrm=0,
+                                               /                          Seq=0,
+                                             /                            user data 1]
+                              <-----/
+                ...
+    SACK 
+    [TSN Ack=init TSN_Z,Block=0]           /<- DATA
+    ----------------------  --->\    /        [TSN=init TSN_Z +1,
+                                                            \/          Strm=0,
+                                                            /\          Seq=1,
+                                                          /    \        user data 2]
+                                  ..          <----/        \
+                                                                   \
+                                                                     \------> ...
 
                         Figure 4: INITIATION Example
 
@@ -3571,19 +3584,18 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    The following scenarios can cause duplicated or unexpected chunks:
 
    A) The peer has crashed without being detected, restarted itself, and
-      sent out a new INIT chunk trying to restore the association,
+        sent out a new INIT chunk trying to restore the association.
+        (duplicate INIT sent to an endpoint with an exsting asscition)
 
-   B) Both sides are trying to initialize the association at about the
-      same time,
+   B) Both sides are trying to initialize the association at about the same time.
+       (unexpected INIT sent to an endpoint without existing assciation)
 
-   C) The chunk is from a stale packet that was used to establish the
-      present association or a past association that is no longer in
-      existence,
+   C) The chunk is from a stale packet (verfig tag inconsistent) that was used to
+        establish the present association or a past association that is no longer in existence.   
 
    D) The chunk is a false packet generated by an attacker, or
 
-   E) The peer never received the COOKIE ACK and is retransmitting its
-      COOKIE ECHO.
+   E) The peer never received the COOKIE ACK and is retransmitting its COOKIE ECHO.
 
    The rules in the following sections shall be applied in order to
    identify and correctly handle these cases.
@@ -3600,7 +3612,63 @@ Stewart                     Standards Track                    [Page 65]
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
-5.2.1.  INIT Received in COOKIE-WAIT or COOKIE-ECHOED State (Item B)
+5.2.1.  INIT Received in COOKIE-WAIT or COOKIE-ECHOED State (Item B)  
+
+     //Upon receipt of an INIT in the COOKIE-WAIT state\\
+    Endpoint A                                                                          
+    {app sets association with Z}                                   
+    (build TCB)                                                   
+    INIT [I-Tag=Tag_A& other info]                          
+    (Start T1-init timer)                               
+    (Enter COOKIE-WAIT state)                                                                           
+                                                                                                Endpoint Z                      
+                                                                       /<---------- {app sends Duplicate INIT to A} 
+                                                                     / 
+    (create temp TCB and Cookie_Z) ----/    
+    INIT ACK [   
+    Veri Tag= Veri Tag from INIT_Z,
+    I-Tag= I-Tag from INIT_A,
+    Cookie created used params from INIT_A, 
+    other info from INIT_A]
+    (T1-init timer shall be still running)
+    (TCB shall be still alive)                 
+    
+
+
+     //Upon receipt of an INIT in the  COOKIE-ECHOED state\\
+
+                                                                                 Endpoint Z 
+                                                                     /<----INIT ACK [
+                                                                   /             Veri Tag=Tag_A,
+                                                                 /               I-Tag=Tag_Z,
+                                                               /                 Cookie_Z, 
+                                                             /                   OtherInfos]
+    Endpoint A                                    /                     (destroy temp TCB)
+    (Cancel T1-init timer) <-------/  
+    COOKIE ECHO 
+    [Cookie_Z]
+    (Start T1-init timer)                    
+    (Enter COOKIE-ECHOED state)  
+                                                                          
+                                                                                                                     
+                                                                       /<---{ app sends Duplicate INIT to A } 
+                                                                     / 
+    (create temp TCB and Cookie_Z) ----/    
+    INIT ACK [   
+    Veri Tag= Veri Tag from INIT_Z,
+    I-Tag= I-Tag from INIT_A,
+    Cookie created used params from INIT_A, 
+    other info from INIT_A]
+    (T1-init timer shall be still running)
+    (TCB shall be still alive)   
+    [same process when at COOKIE-WAIT state,
+    provided that no NEW address has been added to the forming association
+    If the INIT message indicates that a new address has been added to the
+    association, compared with the addres in the INIT-ACK received from Z. 
+    then the entire INIT MUST be discarded, and NO changes
+    should be made to the existing association]
+
+
 
    This usually indicates an initialization collision, i.e., each
    endpoint is attempting, at about the same time, to establish an

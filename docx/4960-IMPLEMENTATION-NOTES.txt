@@ -1,3 +1,9 @@
+
+since the CHALLENGE messages must include the correct COOKIE, it means that all 
+flooding clients are using their real IP addresses.  So the server might automatically 
+enter a new firewall rule to ignore packets from their IP address.
+
+
 RFC 4960 
 
 
@@ -10,8 +16,8 @@ All integer fields in an SCTP packet MUST be transmitted in network
 byte order, unless otherwise stated.
 3) 
 Source Port Number is the SCTP sender's port number. 
- It can be used by the receiver in combination with the source IP address, 
- the SCTP destination port, and possibly the destination IP address to
+It can be used by the receiver in combination with the source IP address, 
+the SCTP destination port, and possibly the destination IP address to
 identify the association to which this packet belongs.
 Source Port Number MUST NOT be 0
 Dest Port Number MUST NOT be 0
@@ -31,7 +37,7 @@ Chunk Types are encoded such that the highest-order 2 bits specify
 the action that must be taken if the processing endpoint does not
 recognize the Chunk Type.
 7)
- if the Chunk Value field is zero-length, the Length
+if the Chunk Value field is zero-length, the Length
 field will be set to 4.  The Chunk Length field does not count any
 chunk padding.
 8)
@@ -94,8 +100,8 @@ association by transmitting an ABORT.
 19)
 A receiver of an INIT with the OS value set to 0 SHOULD abort the association.
 20)
- Thevalue 0 MUST NOT be used for MIS
- 21)
+Thevalue 0 MUST NOT be used for MIS
+21)
 Note: There is no negotiation of the actual number of streams but
 instead the two endpoints will use the min(requested, offered).
 See Section 5.1.1 for details.
@@ -110,17 +116,17 @@ Initial TSN (I-TSN) field MAY be set to the value of the Initiate Tag field.
 3.3.2.1.  Optional/Variable-Length Parameters in INIT
 24)
 Combined with the Source Port Number in the SCTP common header,
-      the value passed in an IPv4 or IPv6 Address parameter indicates a
-      transport address the sender of the INIT will support for the
-      association being initiated. 
+    the value passed in an IPv4 or IPv6 Address parameter indicates a
+    transport address the sender of the INIT will support for the
+    association being initiated. 
 25)
-  If the INIT contains at least one IP Address parameter, then the
-      source address of the IP datagram containing the INIT chunk and
-      any additional address(es) provided within the INIT can be used as
-      destinations by the endpoint receiving the INIT.  If the INIT does
-      not contain any IP Address parameters, the endpoint receiving the
-      INIT MUST use the source address associated with the received IP
-      datagram as its sole destination address for the association.
+If the INIT contains at least one IP Address parameter, then the
+    source address of the IP datagram containing the INIT chunk and
+    any additional address(es) provided within the INIT can be used as
+    destinations by the endpoint receiving the INIT.  If the INIT does
+    not contain any IP Address parameters, the endpoint receiving the
+    INIT MUST use the source address associated with the received IP
+    datagram as its sole destination address for the association.
       
       
 3.3.3.  Initiation Acknowledgement (INIT ACK) (2)
@@ -179,10 +185,10 @@ SHUTDOWN COMPLETE) MAY be bundled with an ABORT, but they MUST be
 placed before the ABORT in the SCTP packet or they will be ignored by
 the receiver.
 35)
-  If an endpoint receives an ABORT with a format error or no TCB is
-   found, it MUST silently discard it.  Moreover, under any
-   circumstances, an endpoint that receives an ABORT MUST NOT respond to
-   that ABORT by sending an ABORT of its own. 
+If an endpoint receives an ABORT with a format error or no TCB is
+found, it MUST silently discard it.  Moreover, under any
+circumstances, an endpoint that receives an ABORT MUST NOT respond to
+that ABORT by sending an ABORT of its own. 
 
 5.  Association Initialization  
 35)
@@ -193,27 +199,47 @@ valid COOKIE ECHO chunk.
 An endpoint MUST send the INIT ACK to the IP address from which it
 received the INIT.
 37)
-   If an endpoint receives an INIT, INIT ACK, or COOKIE ECHO chunk but
-   decides not to establish the new association due to missing mandatory
-   parameters in the received INIT or INIT ACK, invalid parameter
-   values, or lack of local resources, it SHOULD respond with an ABORT
-   chunk.  It SHOULD also specify the cause of abort, such as the type
-   of the missing mandatory parameters, etc., by including the error
-   cause parameters with the ABORT chunk.  The Verification Tag field in
-   the common header of the outbound SCTP packet containing the ABORT
-   chunk MUST be set to the Initiate Tag value of the peer.
+If an endpoint receives an INIT, INIT ACK, or COOKIE ECHO chunk but
+decides not to establish the new association due to missing mandatory
+parameters in the received INIT or INIT ACK, invalid parameter
+values, or lack of local resources, it SHOULD respond with an ABORT
+chunk.  It SHOULD also specify the cause of abort, such as the type
+of the missing mandatory parameters, etc., by including the error
+cause parameters with the ABORT chunk.  The Verification Tag field in
+the common header of the outbound SCTP packet containing the ABORT
+chunk MUST be set to the Initiate Tag value of the peer.
 38)
-   Note that a COOKIE ECHO chunk that does NOT pass the integrity check
-   is NOT considered an 'invalid parameter' and requires special
-   handling; see Section 5.1.5.
+Note that a COOKIE ECHO chunk that does NOT pass the integrity check
+is NOT considered an 'invalid parameter' and requires special
+handling; see Section 5.1.5.
 39)
-   IMPLEMENTATION NOTE: The IP addresses and SCTP port are generally
-   used as the key to find the TCB within an SCTP instance.
+IMPLEMENTATION NOTE: The IP addresses and SCTP port are generally
+used as the key to find the TCB within an SCTP instance.
 40)
 REFERS TO 5.1.2.  Handle Address Parameters
 41)
 the receiver MUST derive and record all the
 transport addresses from the received chunk AND the source IP
 address that sent the INIT or INIT ACK. 
- 
-   
+42)
+After the association is initialized, the valid outbound stream
+identifier range for either endpoint shall be 0 to min(local OS,
+remote MIS)-1.
+
+5.1.2.  Handle Address Parameters
+43)
+After all transport addresses are derived from the INIT or INIT ACK
+chunk using the above rules, the endpoint shall select one of the
+transport addresses as the initial primary path.
+44)
+The sender of INIT may include a 'Supported Address Types' parameter
+in the INIT to indicate what types of address are acceptable.  When
+this parameter is present, the receiver of INIT (initiate) MUST
+either use one of the address types indicated in the Supported
+Address Types parameter when responding to the INIT, or abort the
+association with an "Unresolvable Address" error cause if it is
+unwilling or incapable of using any of the address types indicated by
+its peer.
+45)
+
+
