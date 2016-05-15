@@ -1262,9 +1262,9 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
 
 #ifdef USE_UDP
     // len is the length of chunks ,
-    // len+DCTP_PACKET_FIXED_SIZE is the length of the total packet
+    // len+GECO_PACKET_FIXED_SIZE is the length of the total packet
     // here we test if the default udp send buffer cannot hold this packet
-    size_t packet_total_length = len + DCTP_PACKET_FIXED_SIZE;
+    size_t packet_total_length = len + GECO_PACKET_FIXED_SIZE;
     if (USE_UDP_BUFSZ < packet_total_length)
     {
         error_log(loglvl_fatal_error_exit, "msg is too large ! bye !\n");
@@ -1272,7 +1272,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     }
 
     memcpy(poller_.internal_udp_buffer_, buf, len);
-    udp_hdr_ptr_ = (dctp_packet_fixed_t*)poller_.internal_udp_buffer_;
+    udp_hdr_ptr_ = (geco_packet_fixed_t*)poller_.internal_udp_buffer_;
     udp_hdr_ptr_->src_port = htons(USED_UDP_PORT);
     udp_hdr_ptr_->dest_port = htons(USED_UDP_PORT);
     udp_hdr_ptr_->length = htons(packet_total_length);
@@ -1305,9 +1305,9 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
         txmt_len = sendto(sfd, poller_.internal_udp_buffer_, packet_total_length,
                 0, (struct sockaddr *) &(dest->sin),
                 sizeof(struct sockaddr_in));
-        if (txmt_len >= (int)DCTP_PACKET_FIXED_SIZE)
+        if (txmt_len >= (int)GECO_PACKET_FIXED_SIZE)
         {
-            txmt_len -= (int)DCTP_PACKET_FIXED_SIZE;
+            txmt_len -= (int)GECO_PACKET_FIXED_SIZE;
         }
 #else
         txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin),
@@ -1332,9 +1332,9 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
         txmt_len = sendto(sfd, poller_.internal_udp_buffer_,
                 packet_total_length, 0, (struct sockaddr *) &(dest->sin6),
                 sizeof(struct sockaddr_in6));
-        if (txmt_len >= (int)DCTP_PACKET_FIXED_SIZE)
+        if (txmt_len >= (int)GECO_PACKET_FIXED_SIZE)
         {
-            txmt_len -= (int)DCTP_PACKET_FIXED_SIZE;
+            txmt_len -= (int)GECO_PACKET_FIXED_SIZE;
         }
 #else
         txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin6),
@@ -1451,7 +1451,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
 
 #ifdef USE_UDP
     int ip_pk_hdr_len = (int) sizeof(struct iphdr)
-    + (int)DCTP_PACKET_FIXED_SIZE;
+    + (int)GECO_PACKET_FIXED_SIZE;
     if (len < ip_pk_hdr_len)
     {
         error_log(loglvl_warnning_error, "recv_geco_msg():: ip_pk_hdr_len illegal!\n");
@@ -1459,8 +1459,8 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
     }
 
     // check dest_port legal
-    dctp_packet_fixed_t* udp_packet_fixed =
-    (dctp_packet_fixed_t*)((char*)dest + sizeof(struct iphdr));
+    geco_packet_fixed_t* udp_packet_fixed =
+    (geco_packet_fixed_t*)((char*)dest + sizeof(struct iphdr));
     if (ntohs(udp_packet_fixed->dest_port) != USED_UDP_PORT)
     {
         error_log(loglvl_warnning_error, "recv_geco_msg()::dest_port illegal !\n");
@@ -1471,8 +1471,8 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
     // now we need move the data to the next of iphdr, skipping all bytes in updhdr
     // as if udphdr never exists
     char* ptr = (char*)udp_packet_fixed;
-    memmove(ptr, &ptr[DCTP_PACKET_FIXED_SIZE], (len - ip_pk_hdr_len));
-    len -= (int)DCTP_PACKET_FIXED_SIZE;
+    memmove(ptr, &ptr[GECO_PACKET_FIXED_SIZE], (len - ip_pk_hdr_len));
+    len -= (int)GECO_PACKET_FIXED_SIZE;
 #endif
 
     if (len < 0)

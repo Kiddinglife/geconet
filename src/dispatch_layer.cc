@@ -1,18 +1,27 @@
 #include "dispatch_layer.h"
+#include "geco-ds-malloc.h"
 #include <algorithm>
-#include "globals.h"
 
 dispatch_layer_t::dispatch_layer_t()
 {
+    assert(MAX_NETWORK_PACKET_VALUE_SIZE == sizeof(simple_chunk_t));
+
     sctpLibraryInitialized = false;
     curr_channel_ = NULL;
     curr_geco_instance_ = NULL;
+
     last_source_addr_ = last_dest_addr_ = 0;
     last_src_port_ = last_dest_port_ = 0;
     last_init_tag_ = 0;
     last_src_path_ = 0;
+
     endpoints_list_.reserve(DEFAULT_ENDPOINT_SIZE);
     memset(found_addres_, 0, MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
+
+    free_chunk_id_ = 0;
+    memset(simple_chunks_, 0, MAX_NETWORK_PACKET_VALUE_SIZE*MAX_CHUNKS_SIZE);
+    memset(write_cursors_, 0, MAX_CHUNKS_SIZE);
+    memset(completed_chunks_, 0, MAX_CHUNKS_SIZE);
 }
 
 void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
@@ -34,7 +43,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
     }
 
     /* 2) validate port numbers */
-    dctp_packet_fixed_t* dctp_packet_fixed = (dctp_packet_fixed_t*)dctp_packet;
+    geco_packet_fixed_t* dctp_packet_fixed = (geco_packet_fixed_t*)dctp_packet;
     last_src_port_ = ntohs(dctp_packet_fixed->src_port);
     last_dest_port_ = ntohs(dctp_packet_fixed->dest_port);
     if (last_src_port_ == 0 || last_dest_port_ == 0)
@@ -208,7 +217,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
     }
 
     /*9) fetch all chunk types contained in this packet value field for use in the folowing */
-    int packet_value_len = dctp_packet_len - DCTP_PACKET_FIXED_SIZE;
+    int packet_value_len = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
     uint chunk_types = find_chunk_types(((dctp_packet_t*)dctp_packet)->chunk,
         packet_value_len);
 
@@ -230,7 +239,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
         {
             event_log(verbose,
                 "recv_dctp_packet()::Looking for source address in INIT CHUNK");
-            i = find_sockaddr_from_init_or_initack_chunk(init_chunk,
+            i = find_sockaddres(init_chunk,
                 packet_value_len, supported_addr_types) - 1;
             for (; i >= 0; i--)
             {
@@ -240,7 +249,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
             // fixme this is official way
             //            do
             //            {
-            //                retval = find_sockaddr_from_init_or_initack_chunk(init_chunk,
+            //                retval = find_sockaddres(init_chunk,
             //                        packet_value_len, i, &addr_from_init_or_ack_chunk,
             //                        supported_addr_types);
             //                if (retval == 0) // found an addr
@@ -260,7 +269,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
         {
             event_log(verbose,
                 "recv_dctp_packet()::Looking for source address in CHUNK_INIT_ACK");
-            i = find_sockaddr_from_init_or_initack_chunk(init_chunk,
+            i = find_sockaddres(init_chunk,
                 packet_value_len, supported_addr_types) - 1;
             for (; i >= 0; i--)
             {
@@ -297,7 +306,6 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
         || contains_chunk((uchar)CHUNK_SHUTDOWN_COMPLETE, chunk_types)
         == 2)
     {
-
         /* silently discard */
         error_log(loglvl_minor_error,
             "recv_dctp_packet(): discarding illegal packet (init init ack or sdcomplete)\n");
@@ -310,25 +318,21 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
         return;
     }
 
-
+    /*13) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets
+     * curr_channel_ null means no channel found for this chunk */
     if (curr_channel_ == NULL)
     {
-        /*13)
-        * curr_channel_ null means:
-        * this is normal connection or disconnection pharse that is not finished yet.
-        * this packet may carry chunks among init, init-ack, cookie-echo, cookie-ack,
-        * shutdown-ack or shutdown-complete)
-        * also need to process error chunk in the phrase*/
-
         event_log(verbose,
             "recv_dctp_packet()::current channel ==NULL, start scanning !\n");
 
-        // check if there is abort chunk comtained in this packet
-        // todo discard this packet is delegant, better to notify remote endpoint and ulp
+        /* 14)
+         * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (2)
+         * TODO discard this packet is delegant, better to notify remote endpoint and ulp
+         * the abort and the error casuse carried in the ABORT*/
         if (contains_chunk((uchar)CHUNK_ABORT, chunk_types) > 0)
         {
             event_log(verbose,
-                "mdi_receiveMsg: Found ABORT chunk in init packet, discarding it !");
+                "recv_dctp_packet()::Found ABORT in init packet, discarding it !");
             last_source_addr_ = NULL;
             last_dest_addr_ = NULL;
             last_src_port_ = 0;
@@ -337,6 +341,20 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
             curr_geco_instance_ = NULL;
             return;
         }
+
+        /*15) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (5) */
+        if (contains_chunk((uchar)CHUNK_SHUTDOWN_ACK, chunk_types) > 0)
+        {
+            event_log(verbose,
+                "recv_dctp_packet()::Found SHUTDOWN_ACK  in init packet, send SHUTDOWN_COMPLETE !");
+            uchar shutdown_complete_cid = build_simple_chunk(
+                (uchar)CHUNK_SHUTDOWN_ACK, FLAG_NO_TCB);
+            curr_simple_chunk_ptr_ = get_simple_chunk(shutdown_complete_cid);
+            put_simple_chunk(curr_simple_chunk_ptr_, NULL);
+
+            return;
+        }
+
     }
     else
     {
@@ -355,7 +373,99 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
     sockaddrunion alternate_addr;
     geco_instance_t temp_dispatcher;
 }
-int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
+
+int dispatch_layer_t::send_bundled_chunks(uint * ad_idx)
+{
+    return 0;
+}
+
+int dispatch_layer_t::put_simple_chunk(simple_chunk_t * chunk, uint * dest_index)
+{
+
+    bundle_controller_t* bundle_ctrl =
+        (bundle_controller_t*)get_bundle_control(curr_channel_);
+
+    /*1) no channel exists, so we take the global bundling buffer */
+    if (bundle_ctrl == NULL)
+    {
+        event_log(verbose, "Copying Control Chunk to global bundling buffer ");
+        bundle_ctrl = &default_bundle_ctrl_;
+    }
+
+    bool locked;
+    ushort chunk_len = get_chunk_length((chunk_fixed_t*)chunk);
+    if (get_bundle_total_size(bundle_ctrl) + chunk_len
+        >= MAX_NETWORK_PACKET_VALUE_SIZE)
+    {
+        /*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
+        event_logi(verbose,
+            "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
+            (dest_index == NULL) ? 0 : *dest_index);
+
+        locked = bundle_ctrl->locked;
+        if (locked) bundle_ctrl->locked = false;
+        send_bundled_chunks(dest_index);
+        if (locked) bundle_ctrl->locked = true;
+    }
+    else
+    {
+        /*3) an packet CAN hold all data*/
+        if(dest_index != NULL)
+        {
+            bundle_ctrl->got_send_address = true;
+            bundle_ctrl->requested_destination = *dest_index;
+        }else
+        {
+            bundle_ctrl->got_send_address = false;
+            bundle_ctrl->requested_destination = 0;
+        }
+    }
+
+    /*3) copy new chunk to bundle and insert padding, if necessary*/
+    memcpy(&bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position], chunk, chunk_len);
+    bundle_ctrl->ctrl_position += chunk_len;
+    chunk_len = 4 - (chunk_len % 4);
+    bundle_ctrl->ctrl_chunk_in_buffer = true;
+    if (chunk_len < 4)
+    {
+        memcpy(&bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position], 0, chunk_len);
+        bundle_ctrl->ctrl_position += chunk_len;
+    }
+
+    event_logii(verbose,
+        "put_simple_chunk() : %u , Total buffer size now (includes pad): %u\n",
+        get_chunk_length((chunk_fixed_t *)chunk), get_bundle_total_size(bundle_ctrl));
+    return 0;
+}
+
+simple_chunk_t* dispatch_layer_t::get_simple_chunk(uchar chunkID)
+{
+    if (simple_chunks_[chunkID] == NULL)
+    {
+        error_log(loglvl_warnning_error, "Invalid chunk ID\n");
+        return NULL;
+    }
+
+    simple_chunks_[chunkID]->chunk_header.chunk_length =
+        htons((simple_chunks_[chunkID]->chunk_header.chunk_length +
+        write_cursors_[chunkID]));
+    completed_chunks_[chunkID] = true;
+    return simple_chunks_[chunkID];
+}
+
+uchar dispatch_layer_t::build_simple_chunk(uchar chunk_type, uchar flag)
+{
+    assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
+    //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
+    simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*)geco::ds::single_client_alloc::allocate(MAX_SIMPLE_CHUNK_VALUE_SIZE);
+    simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
+    simple_chunk_ptr->chunk_header.chunk_flags = flag;
+    simple_chunk_ptr->chunk_header.chunk_length = 0x0004;
+    debug_simple_chunk(simple_chunk_ptr, "create simple chunk %u");
+    return free_chunk_id_;
+}
+
+int dispatch_layer_t::find_sockaddres(uchar * chunk,
     uint chunk_len, int supportedAddressTypes)
 {
     /*1) validate method input params*/
@@ -388,7 +498,7 @@ int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
     while (read_len < len)
     {
         event_logii(verbose,
-            "find_sockaddr_from_init_or_initack_chunk() : len==%u, processed_len == %u",
+            "find_sockaddres() : len==%u, processed_len == %u",
             len, read_len);
 
         if (len - read_len < VLPARAM_FIXED_SIZE)
@@ -441,7 +551,7 @@ int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
     } // while
     return found_addr_number;
 }
-int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
+int dispatch_layer_t::find_sockaddres(uchar * chunk,
     uint chunk_len, uint n, sockaddrunion* foundAddress,
     int supportedAddressTypes)
 {
@@ -482,7 +592,7 @@ int dispatch_layer_t::find_sockaddr_from_init_or_initack_chunk(uchar * chunk,
     while (read_len < len)
     {
         event_logii(verbose,
-            "find_sockaddr_from_init_or_initack_chunk() : len==%u, processed_len == %u",
+            "find_sockaddres() : len==%u, processed_len == %u",
             len, read_len);
 
         if (len - read_len < VLPARAM_FIXED_SIZE)

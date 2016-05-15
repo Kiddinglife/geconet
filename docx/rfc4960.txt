@@ -4765,12 +4765,12 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    (Start T3-rtx timer)
                                            {App sends 1 message; strm 1}
                                            (bundle ack with data)
-   DATA [TSN=8,Strm=0,Seq=4] ----\     /-- SACK [TSN Ack=7,Block=0]
-                                  \   /      DATA [TSN=6,Strm=1,Seq=2]
-                                   \ /     (Start T3-rtx timer)
-                                    \
-                                   / \
-   (Restart T3-rtx timer)  <------/   \--> (ack delayed)
+   DATA [TSN=8,Strm=0,Seq=4] ----\      /-- SACK [TSN Ack=7,Block=0]
+                                                                \   /      DATA [TSN=6,Strm=1,Seq=2]
+                                                                 \ /     (Start T3-rtx timer)
+                                                                  \
+                                                                / \
+           (Restart T3-rtx timer)  <----- /    \--> (ack delayed)
    (ack delayed)
    {send ack}
    SACK [TSN Ack=6,Block=0] --------------> (Cancel T3-rtx timer)

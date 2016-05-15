@@ -141,6 +141,42 @@ struct channel_t
     void * application_layer_dataptr; /* transparent pointer to some upper layer data */
 };
 
+/**
+* this struct contains all data belonging to a bundling module
+*/
+struct bundle_controller_t
+{
+    /** buffer for control chunks */
+    uchar ctrl_buf[MAX_MTU_SIZE];
+    /** buffer for sack chunks */
+    uchar sack_buf[MAX_MTU_SIZE];
+    /** buffer for data chunks */
+    uchar data_buf[MAX_MTU_SIZE];
+    /* Leave some space for the SCTP common header */
+    /**  current position in the buffer for control chunks */
+    uint ctrl_position;
+    /**  current position in the buffer for sack chunks */
+    uint sack_position;
+    /**  current position in the buffer for data chunks */
+    uint data_position;
+    /** is there data to be sent in the buffer ? */
+    bool data_in_buffer;
+    /**  is there a control chunk  to be sent in the buffer ? */
+    bool ctrl_chunk_in_buffer;
+    /**  is there a sack chunk  to be sent in the buffer ? */
+    bool sack_in_buffer;
+    /** status flag for correct sequence of actions */
+    bool got_send_request;
+    /** */
+    bool got_send_address;
+    /** */
+    bool locked;
+    /** did we receive a shutdown, either by ULP or peer ? */
+    bool got_shutdown;
+    /** */
+    uint requested_destination;
+};
+
 class dispatch_layer_t
 {
     public:
@@ -187,7 +223,91 @@ class dispatch_layer_t
     geco_instance_t tmp_dispather_;
     sockaddrunion found_addres_[MAX_NUM_ADDRESSES];
 
+    /* related to chunk handler and builder */
+    uchar                    write_cursors_[MAX_CHUNKS_SIZE];
+    simple_chunk_t*   simple_chunks_[MAX_CHUNKS_SIZE];
+    bool                      completed_chunks_[MAX_CHUNKS_SIZE];
+    uchar                    free_chunk_id_;
+    simple_chunk_t*  curr_simple_chunk_ptr_;
+
+    /* a buffer that is used if no channel bundling controller
+     * has been allocated and initialized yet */
+    bundle_controller_t default_bundle_ctrl_;
+
     dispatch_layer_t();
+
+    uint get_bundle_total_size(bundle_controller_t* buf)
+    {
+        assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
+        return ((buf)->ctrl_position + (buf)->sack_position + (buf)->data_position
+            - 2 * GECO_PACKET_FIXED_SIZE);
+    }
+
+    uint get_bundle_sack_size(bundle_controller_t* buf)
+    {
+        assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
+        return ((buf)->ctrl_position + (buf)->data_position - GECO_PACKET_FIXED_SIZE);
+    }
+
+
+    /**
+    * Trigger sending of all chunks previously entered with put_Chunk functions
+    *  Chunks sent are deleted afterwards.
+    *
+    * FIXME : special treatment for GLOBAL BUFFER, as this is not associated with
+    *         any association.
+    *
+    *
+    *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
+    *  @param   ad_idx     pointer to address index or NULL if data is to be sent to default address
+    */
+    int send_bundled_chunks(uint * ad_idx);
+
+    /**
+    * creates a simple chunk except of DATA chunk. It can be used for parameterless
+    * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
+    * that have only variable length parameters like the error chunks
+    */
+    uchar build_simple_chunk(uchar chunk_type, uchar flag);
+
+    void debug_simple_chunk(simple_chunk_t * chunk, const char *log_text)
+    {
+        uint cid;
+        free_chunk_id_ = (free_chunk_id_ + 1) % MAX_CHUNKS_SIZE;
+        cid = free_chunk_id_;
+        event_logi(loglvl_intevent, log_text, cid);
+        simple_chunks_[free_chunk_id_] = chunk;
+        write_cursors_[free_chunk_id_] = 0;
+        completed_chunks_[free_chunk_id_] = false;
+    }
+
+    /** returns a pointer to the beginning of a simple chunk.*/
+    simple_chunk_t *get_simple_chunk(uchar chunkID);
+
+    /**
+    * this function used for bundling of control chunks
+    * Used by geco-control and path management
+    * @param chunk pointer to chunk, that is to be put in the bundling buffer
+    * @return TODO : error value, 0 on success
+    */
+    int put_simple_chunk(simple_chunk_t * chunk, uint * dest_index);
+
+    /**
+    * function to return a pointer to the bundling module of this association
+    * @return   pointer to the bundling data structure, null in case of error.
+    */
+    void* get_bundle_control(channel_t* channel)
+    {
+        if (channel == NULL)
+        {
+            error_log(verbose, "mdi_readBundling: association not set");
+            return NULL;
+        }
+        else
+        {
+            return channel->bundle_control;
+        }
+    }
 
     /*------------------- Functions called by the Unix-Interface --------------*/
     /**
@@ -250,7 +370,7 @@ class dispatch_layer_t
     * The chunkArray parameter is inspected. This only really checks for chunks
     * with an ID <= 30. For all other chunks, it just guesses...
     * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
-    * @pre: need call find_chunk_types() first 
+    * @pre: need call find_chunk_types() first
     */
     inline int contains_chunk(uchar chunk_type, uint chunk_types)
     {
@@ -306,12 +426,12 @@ class dispatch_layer_t
      * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
      *             that many addresses in the chunk.
      */
-    int find_sockaddr_from_init_or_initack_chunk(uchar * chunk, uint chunk_len,
+    int find_sockaddres(uchar * chunk, uint chunk_len,
         uint n, sockaddrunion* foundAddress, int supportedAddressTypes);
     /**
      * @return -1 prama error, >=0 number of the found addresses
      * */
-    int find_sockaddr_from_init_or_initack_chunk(uchar * chunk, uint chunk_len,
+    int find_sockaddres(uchar * init_chunk, uint chunk_len,
         int supportedAddressTypes);
 
 };

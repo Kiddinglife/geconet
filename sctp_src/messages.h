@@ -72,7 +72,7 @@ typedef struct UDP_HEADER {
     gushort dest_port;
     gushort length;
     gushort checksum;
-} dctp_packet_fixed_t;
+} geco_packet_fixed_t;
 #endif
 
 
@@ -93,13 +93,13 @@ typedef struct
     uint verification_tag;
     uint checksum;
 }
-dctp_packet_fixed_t;
+geco_packet_fixed_t;
 
 /*
  * max. SCTP-datagram length without common header
  */
 #define MAX_NETWORK_PACKET_VALUE_SIZE  \
-(MAX_MTU_SIZE - IP_HEADERLENGTH - sizeof(dctp_packet_fixed_t))
+(MAX_MTU_SIZE - IP_HEADERLENGTH - sizeof(geco_packet_fixed_t))
 
 
 /*
@@ -107,7 +107,7 @@ dctp_packet_fixed_t;
  */
 typedef struct SCTP_MESSAGE
 {
-    dctp_packet_fixed_t common_header;
+    geco_packet_fixed_t common_header;
     uchar sctp_pdu[MAX_NETWORK_PACKET_VALUE_SIZE];
 }
 dctp_packet_t;

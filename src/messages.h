@@ -18,6 +18,9 @@
 #include "config.h"
 #include "basic-type.h"
 
+typedef short chunk_id_t;
+#define MAX_CHUNKS_SIZE 8
+
 /**
  * RC32为32bit的简单hash，MD5为128bit较复杂的hash算法。
  * 直觉上貌似CRC32的计算速度要比MD5快的。
@@ -55,12 +58,12 @@
 #define IP_HDR_SIZE 20
 
 #ifdef USE_UDP
-#define DCTP_PACKET_FIXED_SIZE  (4*sizeof(ushort))
+#define GECO_PACKET_FIXED_SIZE  (4*sizeof(ushort))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE - DCTP_PACKET_FIXED_SIZE)
+(MAX_MTU_SIZE - IP_HDR_SIZE - GECO_PACKET_FIXED_SIZE)
 /* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
-struct dctp_packet_fixed_t
+struct geco_packet_fixed_t
 {
     ushort src_port;
     ushort dest_port;
@@ -68,10 +71,10 @@ struct dctp_packet_fixed_t
     ushort checksum;
 };
 #else
-#define DCTP_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
+#define GECO_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE- DCTP_PACKET_FIXED_SIZE)
-struct dctp_packet_fixed_t
+(MAX_MTU_SIZE - IP_HDR_SIZE- GECO_PACKET_FIXED_SIZE)
+struct geco_packet_fixed_t
 {
     ushort src_port;
     ushort dest_port;
@@ -82,7 +85,7 @@ struct dctp_packet_fixed_t
 // A general struct for an SCTP-message
 struct dctp_packet_t
 {
-    dctp_packet_fixed_t pk_comm_hdr;
+    geco_packet_fixed_t pk_comm_hdr;
     uchar chunk[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 

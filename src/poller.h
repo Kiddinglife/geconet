@@ -376,7 +376,7 @@ struct transport_layer_t
     int icmp_socket_despt_; /* socket fd for ICMP messages */
 
     bool use_udp_; /* enable udp-based-impl */
-    dctp_packet_fixed_t* udp_hdr_ptr_;
+    geco_packet_fixed_t* udp_hdr_ptr_;
     int dummy_ipv4_udp_despt_;
     int dummy_ipv6_udp_despt_;
 

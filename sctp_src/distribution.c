@@ -940,7 +940,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
         return;
     }
 
-    len = bufferLength - sizeof(dctp_packet_fixed_t);
+    len = bufferLength - sizeof(geco_packet_fixed_t);
 
     /* save from address for response if a remote address is not available otherwise.
      For instance initAck or cookieAck. */
@@ -1195,6 +1195,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
         return;
     }
 
+    //13
     /* check if sctp-sctp_packet belongs to an existing association */
     if (currentAssociation == NULL)
     {
@@ -1619,7 +1620,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
 
     /* forward DG to bundling */
     rbu_rcvDatagram(lastFromPath, sctp_packet->sctp_pdu,
-            bufferLength - sizeof(dctp_packet_fixed_t));
+            bufferLength - sizeof(geco_packet_fixed_t));
 
     lastInitiateTag = 0;
     currentAssociation = NULL;
