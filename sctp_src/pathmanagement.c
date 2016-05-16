@@ -306,8 +306,8 @@ void pm_heartbeat(heartbeat_chunk_t * heartbeatChunk, unsigned int source_addres
 {
     heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
 
-    bu_put_Ctrl_Chunk((simple_chunk_t *) heartbeatChunk, &source_address);
-    bu_sendAllChunks(&source_address);
+    bundle_simple_chunk((simple_chunk_t *) heartbeatChunk, &source_address);
+    send_bundled_chunks(&source_address);
 }                               /* end: pm_heartbeat */
 
 
@@ -386,9 +386,9 @@ void pm_heartbeatTimer(TimerID timerID, void *associationIDvoid, void *pathIDvoi
         /* send heartbeat if no chunks have been acked in the last HB-intervall (path is idle). */
         event_log(VERBOSE, "--------------> Sending HB");
         heartbeatCID = ch_makeHeartbeat(pm_getTime(), pathID);
-        bu_put_Ctrl_Chunk(ch_chunkString(heartbeatCID), &pathID);
-        bu_sendAllChunks(&pathID);
-        ch_deleteChunk(heartbeatCID);
+        bundle_simple_chunk(get_simple_chunk(heartbeatCID), &pathID);
+        send_bundled_chunks(&pathID);
+        free_simple_chunk(heartbeatCID);
         pmData->pathData[pathID].heartbeatSent = true;
     } else if (!removed_association) {
         pmData->pathData[pathID].heartbeatSent = FALSE;
@@ -451,9 +451,9 @@ int pm_doHB(gshort pathID)
     }
     pid = (guint32)pathID;
     heartbeatCID = ch_makeHeartbeat(pm_getTime(), pathID);
-    bu_put_Ctrl_Chunk(ch_chunkString(heartbeatCID),&pid);
-    bu_sendAllChunks(&pid);
-    ch_deleteChunk(heartbeatCID);
+    bundle_simple_chunk(get_simple_chunk(heartbeatCID),&pid);
+    send_bundled_chunks(&pid);
+    free_simple_chunk(heartbeatCID);
     pmData->pathData[pathID].heartbeatSent = true;
 
     return SCTP_SUCCESS;

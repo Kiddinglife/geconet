@@ -173,8 +173,8 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
         if (localData->initRetransCounter < localData->assocMaxInitRetransmissions) {
             /* increase retransmissission-counter, resend init and restart init-timer */
             localData->initRetransCounter++;
-            bu_put_Ctrl_Chunk((simple_chunk_t *) localData->initChunk,NULL);
-            bu_sendAllChunks(NULL);
+            bundle_simple_chunk((simple_chunk_t *) localData->initChunk,NULL);
+            send_bundled_chunks(NULL);
             /* restart init timer after timer backoff */
             localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
             event_logi(INTERNAL_EVENT_0, "init timer backedoff %d msecs",
@@ -203,8 +203,8 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
         if (localData->initRetransCounter < localData->assocMaxInitRetransmissions) {
             /* increase retransmissission-counter, resend init and restart init-timer */
             localData->initRetransCounter++;
-            bu_put_Ctrl_Chunk((simple_chunk_t *) localData->cookieChunk,NULL);
-            bu_sendAllChunks(NULL);
+            bundle_simple_chunk((simple_chunk_t *) localData->cookieChunk,NULL);
+            send_bundled_chunks(NULL);
             /* restart cookie timer after timer backoff */
             localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
             event_logi(INTERNAL_EVENT_0, "cookie timer backedoff %d msecs",
@@ -239,9 +239,9 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 
             /* make and send shutdown again, with updated TSN (section 9.2)     */
             shutdownCID = ch_makeShutdown(rxc_read_cummulativeTSNacked());
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownCID),&primary);
-            bu_sendAllChunks(&primary);
-            ch_deleteChunk(shutdownCID);
+            bundle_simple_chunk(get_simple_chunk(shutdownCID),&primary);
+            send_bundled_chunks(&primary);
+            free_simple_chunk(shutdownCID);
 
             /* restart shutdown timer after timer backoff */
             localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
@@ -271,17 +271,17 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
             /* increase retransmissission-counter */
             localData->initRetransCounter++;
 
-            shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID),&primary);
-            bu_sendAllChunks(&primary);
-            ch_deleteChunk(shutdownAckCID);
+            shutdownAckCID = build_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+            bundle_simple_chunk(get_simple_chunk(shutdownAckCID),&primary);
+            send_bundled_chunks(&primary);
+            free_simple_chunk(shutdownAckCID);
 
             /* COMMENTED OUT BECAUSE PROBABLY VERY WRONG............. */
             /* make and send shutdown_complete again */
-            /* shutdown_complete_CID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NONE); */
-            /* bu_put_Ctrl_Chunk(ch_chunkString(shutdown_complete_CID)); */
-            /* bu_sendAllChunks(&primary); */
-            /* ch_deleteChunk(shutdown_complete_CID); */
+            /* shutdown_complete_CID = build_simple_chunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NONE); */
+            /* bundle_simple_chunk(get_simple_chunk(shutdown_complete_CID)); */
+            /* send_bundled_chunks(&primary); */
+            /* free_simple_chunk(shutdown_complete_CID); */
 
             /* restart shutdown timer after timer backoff */
             localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
@@ -402,13 +402,13 @@ void scu_associate(unsigned short noOfOutStreams,
             ch_enterIPaddresses(initCID, lAddresses, nlAddresses);
 
 
-        localData->initChunk = (init_chunk_t *) ch_chunkString(initCID);
+        localData->initChunk = (init_chunk_t *) get_simple_chunk(initCID);
         ch_forgetChunk(initCID);
 
         /* send init chunk */
         for (count = 0; count < numDestAddresses; count++) {
-            bu_put_Ctrl_Chunk((simple_chunk_t *) localData->initChunk, &count);
-            bu_sendAllChunks(&count);
+            bundle_simple_chunk((simple_chunk_t *) localData->initChunk, &count);
+            send_bundled_chunks(&count);
         }
 
         localData->cookieChunk = NULL;
@@ -469,9 +469,9 @@ void scu_shutdown()
         if (readyForShutdown) {
             /* make and send shutdown */
             shutdownCID = ch_makeShutdown(rxc_read_cummulativeTSNacked());
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownCID),NULL);
-            bu_sendAllChunks(NULL);
-            ch_deleteChunk(shutdownCID);
+            bundle_simple_chunk(get_simple_chunk(shutdownCID),NULL);
+            send_bundled_chunks(NULL);
+            free_simple_chunk(shutdownCID);
 
             /* start shutdown timer */
             localData->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
@@ -585,16 +585,16 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
         event_logi(EXTERNAL_EVENT, "event: scu_abort in state %2d --> send abort", state);
 
         /* make and send abort message */
-        abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NONE);
+        abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NONE);
 
         if (error_type >= 0) {
             sci_add_abort_error_cause(abortCID,  (unsigned short)error_type, error_param_length, error_param_data);
         }
-        bu_put_Ctrl_Chunk(ch_chunkString(abortCID),NULL);
-        bu_sendAllChunks(NULL);
+        bundle_simple_chunk(get_simple_chunk(abortCID),NULL);
+        send_bundled_chunks(NULL);
         bu_unlock_sender(NULL);
         /* free abort chunk */
-        ch_deleteChunk(abortCID);
+        free_simple_chunk(abortCID);
         /* stop init timer */
         if (localData->initTimer != 0) {
             sctp_stopTimer(localData->initTimer);
@@ -612,17 +612,17 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
         event_logi(EXTERNAL_EVENT, "event: scu_abort in state %02d --> send abort", state);
 
         /* make and send abort message */
-        abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NONE);
+        abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NONE);
 
         if (error_type >= 0) {
             sci_add_abort_error_cause(abortCID,  (unsigned short)error_type, error_param_length,error_param_data);
         }
 
-        bu_put_Ctrl_Chunk(ch_chunkString(abortCID),NULL);
-        bu_sendAllChunks(NULL);
+        bundle_simple_chunk(get_simple_chunk(abortCID),NULL);
+        send_bundled_chunks(NULL);
         bu_unlock_sender(NULL);
         /* free abort chunk */
-        ch_deleteChunk(abortCID);
+        free_simple_chunk(abortCID);
         /* delete all data of this association */
         mdi_deleteCurrentAssociation();
         removed = true;
@@ -689,13 +689,13 @@ int sctlr_init(init_chunk_t * init)
         event_log(EXTERNAL_EVENT, "event: received init with zero number of streams, or zero TAG");
 
         /* make and send abort message */
-        abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NONE);
+        abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NONE);
         ch_enterErrorCauseData(abortCID, ECC_INVALID_MANDATORY_PARAM, 0, NULL);
 
-        bu_put_Ctrl_Chunk(ch_chunkString(abortCID),NULL);
-        bu_sendAllChunks(NULL);
+        bundle_simple_chunk(get_simple_chunk(abortCID),NULL);
+        send_bundled_chunks(NULL);
         /* free abort chunk */
-        ch_deleteChunk(abortCID);
+        free_simple_chunk(abortCID);
         /* delete all data of this association */
         if ((localData = (SCTP_controlData *) mdi_readSCTP_control()) != NULL) {
             bu_unlock_sender(NULL);
@@ -770,7 +770,7 @@ int sctlr_init(init_chunk_t * init)
         process_further = ch_enterUnrecognizedParameters(initCID, initAckCID, supportedTypes);
 
         if (process_further == -1) {
-         /*   ch_deleteChunk(initAckCID);
+         /*   free_simple_chunk(initAckCID);
             ch_forgetChunk(initCID); */
             return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
             /* return return_state; */
@@ -779,11 +779,11 @@ int sctlr_init(init_chunk_t * init)
                 return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
             }
             /* send initAck */
-            bu_put_Ctrl_Chunk(ch_chunkString(initAckCID),NULL);
+            bundle_simple_chunk(get_simple_chunk(initAckCID),NULL);
         }
-        bu_sendAllChunks(NULL);
+        send_bundled_chunks(NULL);
         bu_unlock_sender(NULL);
-        ch_deleteChunk(initAckCID);
+        free_simple_chunk(initAckCID);
         event_log(INTERNAL_EVENT_1, "event: initAck sent");
     } else {
         /* save a-sides init-tag from init-chunk to be used as a verification tag of the sctp-
@@ -836,7 +836,7 @@ int sctlr_init(init_chunk_t * init)
                                         ch_initialTSN(initCID_local));
 
             /* reset length field again to NBO...and remove reference */
-            ch_chunkString(initCID_local);
+            get_simple_chunk(initCID_local);
             ch_forgetChunk(initCID_local);
 
             /* retreive a-side source addresses from message */
@@ -861,7 +861,7 @@ int sctlr_init(init_chunk_t * init)
             process_further = ch_enterUnrecognizedParameters(initCID, initAckCID, supportedTypes);
 
             if (process_further == -1) {
-                ch_deleteChunk(initAckCID);
+                free_simple_chunk(initAckCID);
                 ch_forgetChunk(initCID);
                 return_state =STATE_STOP_PARSING ; /* to stop parsing without actually removing it */
                 return return_state;
@@ -870,10 +870,10 @@ int sctlr_init(init_chunk_t * init)
             }
 
             /* send initAck */
-            bu_put_Ctrl_Chunk(ch_chunkString(initAckCID),NULL);
-            bu_sendAllChunks(NULL);
+            bundle_simple_chunk(get_simple_chunk(initAckCID),NULL);
+            send_bundled_chunks(NULL);
             bu_unlock_sender(NULL);
-            ch_deleteChunk(initAckCID);
+            free_simple_chunk(initAckCID);
             event_logi(INTERNAL_EVENT_1, "event: initAck sent in state %u", state);
             break;
 
@@ -921,7 +921,7 @@ int sctlr_init(init_chunk_t * init)
             process_further = ch_enterUnrecognizedParameters(initCID, initAckCID, supportedTypes);
 
             if (process_further == -1) {
-                ch_deleteChunk(initAckCID);
+                free_simple_chunk(initAckCID);
                 ch_forgetChunk(initCID);
                 return_state = STATE_STOP_PARSING;
                 return return_state;
@@ -930,19 +930,19 @@ int sctlr_init(init_chunk_t * init)
             }
 
             /* send initAck */
-            bu_put_Ctrl_Chunk(ch_chunkString(initAckCID),NULL);
-            bu_sendAllChunks(NULL);
+            bundle_simple_chunk(get_simple_chunk(initAckCID),NULL);
+            send_bundled_chunks(NULL);
             bu_unlock_sender(NULL);
-            ch_deleteChunk(initAckCID);
+            free_simple_chunk(initAckCID);
             event_logi(INTERNAL_EVENT_1, "event: initAck sent in state %u", state);
             break;
         case SHUTDOWNACKSENT:
             /* We are supposed to discard the Init, and retransmit SHUTDOWN_ACK (9.2) */
-            shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID),NULL);
-            bu_sendAllChunks(NULL);
+            shutdownAckCID = build_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+            bundle_simple_chunk(get_simple_chunk(shutdownAckCID),NULL);
+            send_bundled_chunks(NULL);
             bu_unlock_sender(NULL);
-            ch_deleteChunk(shutdownAckCID);
+            free_simple_chunk(shutdownAckCID);
             break;
         default:
             error_logi(ERROR_MAJOR, "Unexpected State %02u - Program Error ???", state);
@@ -1029,13 +1029,13 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
                 localData->initTimer = 0;
             }
            /* make and send abort message */
-            abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NONE);
+            abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NONE);
             ch_enterErrorCauseData(abortCID, ECC_INVALID_MANDATORY_PARAM, 0, NULL);
-            bu_put_Ctrl_Chunk(ch_chunkString(abortCID),NULL);
-            ch_deleteChunk(abortCID);
+            bundle_simple_chunk(get_simple_chunk(abortCID),NULL);
+            free_simple_chunk(abortCID);
 
             bu_unlock_sender(NULL);
-            bu_sendAllChunks(NULL);
+            send_bundled_chunks(NULL);
             /* delete all data of this association */
             mdi_deleteCurrentAssociation();
             mdi_communicationLostNotif(0);
@@ -1086,7 +1086,7 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
 
 
         /* reset length field again to NBO... */
-        ch_chunkString(initCID),
+        get_simple_chunk(initCID),
         /* free initChunk memory */
         ch_forgetChunk(initCID);
 
@@ -1127,8 +1127,8 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
 
         if (process_further == -1) {
             ch_forgetChunk(initAckCID);
-            ch_deleteChunk(cookieCID);
-            if (errorCID != 0) ch_deleteChunk(errorCID);
+            free_simple_chunk(cookieCID);
+            if (errorCID != 0) free_simple_chunk(errorCID);
             bu_unlock_sender(NULL);
             if (localData->initTimer != 0) {
                 sctp_stopTimer(localData->initTimer);
@@ -1145,7 +1145,7 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
             return_state = STATE_STOP_PARSING;
         }
 
-        localData->cookieChunk = (cookie_echo_chunk_t *) ch_chunkString(cookieCID);
+        localData->cookieChunk = (cookie_echo_chunk_t *) get_simple_chunk(cookieCID);
         /* populate tie tags -> section 5.2.1/5.2.2 */
         localData->local_tie_tag = mdi_readLocalTag();
         localData->peer_tie_tag = ch_initiateTag(initAckCID);
@@ -1163,13 +1163,13 @@ gboolean sctlr_initAck(init_chunk_t * initAck)
             if (adl_equal_address(&(dAddresses[index]),&destAddress)) break;
 
         /* send cookie */
-        bu_put_Ctrl_Chunk((simple_chunk_t *) localData->cookieChunk, &index);
+        bundle_simple_chunk((simple_chunk_t *) localData->cookieChunk, &index);
         if (errorCID != 0) {
-            bu_put_Ctrl_Chunk((simple_chunk_t *)ch_chunkString(errorCID), &index);
-            ch_deleteChunk(errorCID);
+            bundle_simple_chunk((simple_chunk_t *)get_simple_chunk(errorCID), &index);
+            free_simple_chunk(errorCID);
         }
 
-        bu_sendAllChunks(&index);
+        send_bundled_chunks(&index);
         bu_unlock_sender(&index);
         event_logi(INTERNAL_EVENT_1, "event: sent cookie echo to PATH %u", index);
 
@@ -1288,8 +1288,8 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
         (mdi_readLastDestPort()      != ch_CookieDestPort(cookieCID)))  {
 
         ch_forgetChunk(cookieCID);
-        ch_deleteChunk(initCID);
-        ch_deleteChunk(initAckCID);
+        free_simple_chunk(initCID);
+        free_simple_chunk(initAckCID);
         event_log(EXTERNAL_EVENT, "event: good cookie echo received, but with incorrect verification tag");
         return;
     }
@@ -1302,14 +1302,14 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
 
             mdi_writeLastInitiateTag(cookie_remote_tag);
             /* make and send stale cookie error */
-            errorCID = ch_makeSimpleChunk(CHUNK_ERROR, FLAG_NONE);
+            errorCID = build_simple_chunk(CHUNK_ERROR, FLAG_NONE);
             ch_enterStaleCookieError(errorCID, (unsigned int) (1.2 * cookieLifetime));
-            bu_put_Ctrl_Chunk(ch_chunkString(errorCID),NULL);
-            bu_sendAllChunks(NULL);
+            bundle_simple_chunk(get_simple_chunk(errorCID),NULL);
+            send_bundled_chunks(NULL);
             ch_forgetChunk(cookieCID);
-            ch_deleteChunk(initCID);
-            ch_deleteChunk(initAckCID);
-            ch_deleteChunk(errorCID);
+            free_simple_chunk(initCID);
+            free_simple_chunk(initAckCID);
+            free_simple_chunk(errorCID);
             return;
         }                       /* ELSE : Case 5.2.4.E. Valid Cookie, unpack into a TCB */
     }
@@ -1318,8 +1318,8 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
     result = mdi_readLastFromAddress(&destAddress);
     if (result != 0) {
        error_log(ERROR_MAJOR, "sctlr_cookie_echo: mdi_readLastFromAddress failed !");
-       ch_deleteChunk(initCID);
-       ch_deleteChunk(initAckCID);
+       free_simple_chunk(initCID);
+       free_simple_chunk(initAckCID);
        ch_forgetChunk(cookieCID);
        return;
     }
@@ -1338,8 +1338,8 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
         if (noSuccess) {
             /* new association could not be entered in the list of associations */
             error_log(ERROR_MAJOR, "sctlr_cookie_echo: Creation of association failed");
-            ch_deleteChunk(initCID);
-            ch_deleteChunk(initAckCID);
+            free_simple_chunk(initCID);
+            free_simple_chunk(initAckCID);
             ch_forgetChunk(cookieCID);
             return;
         }
@@ -1347,8 +1347,8 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
 
     if ((localData = (SCTP_controlData *) mdi_readSCTP_control()) == NULL) {
         error_log(ERROR_MAJOR, "sctlr_cookie-echo: program error: SCTP-control NULL");
-        ch_deleteChunk(initCID);
-        ch_deleteChunk(initAckCID);
+        free_simple_chunk(initCID);
+        free_simple_chunk(initAckCID);
         ch_forgetChunk(cookieCID);
         return;
     }
@@ -1391,13 +1391,13 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
 
 
         /* make cookie acknowledgement */
-        cookieAckCID = ch_makeSimpleChunk(CHUNK_COOKIE_ACK, FLAG_NONE);
+        cookieAckCID = build_simple_chunk(CHUNK_COOKIE_ACK, FLAG_NONE);
 
         /* send cookie acknowledgement */
-        bu_put_Ctrl_Chunk(ch_chunkString(cookieAckCID),NULL);
-        bu_sendAllChunks(NULL);
+        bundle_simple_chunk(get_simple_chunk(cookieAckCID),NULL);
+        send_bundled_chunks(NULL);
         bu_unlock_sender(NULL);
-        ch_deleteChunk(cookieAckCID);
+        free_simple_chunk(cookieAckCID);
 
         /* notification to ULP */
         SendCommUpNotification = SCTP_COMM_UP_RECEIVED_VALID_COOKIE;
@@ -1466,12 +1466,12 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
                     SendCommUpNotification = SCTP_COMM_UP_RECEIVED_VALID_COOKIE;
                 }
                 /* make cookie acknowledgement */
-                cookieAckCID = ch_makeSimpleChunk(CHUNK_COOKIE_ACK, FLAG_NONE);
+                cookieAckCID = build_simple_chunk(CHUNK_COOKIE_ACK, FLAG_NONE);
                 /* send cookie acknowledgement */
-                bu_put_Ctrl_Chunk(ch_chunkString(cookieAckCID),NULL);
-                bu_sendAllChunks(NULL);
+                bundle_simple_chunk(get_simple_chunk(cookieAckCID),NULL);
+                send_bundled_chunks(NULL);
                 bu_unlock_sender(NULL);
-                ch_deleteChunk(cookieAckCID);
+                free_simple_chunk(cookieAckCID);
             } else {                                /* case B */
                 /*  The endpoint should stay in or enter
                     the ESTABLISHED state but it MUST update its peer's Verification
@@ -1516,12 +1516,12 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
                 mdi_rewriteTagRemote(cookie_remote_tag);
                 mdi_rewriteLocalTag(cookie_local_tag);
                 /* make cookie acknowledgement */
-                cookieAckCID = ch_makeSimpleChunk(CHUNK_COOKIE_ACK, FLAG_NONE);
+                cookieAckCID = build_simple_chunk(CHUNK_COOKIE_ACK, FLAG_NONE);
                 /* send cookie acknowledgement */
-                bu_put_Ctrl_Chunk(ch_chunkString(cookieAckCID),NULL);
-                bu_sendAllChunks(NULL);
+                bundle_simple_chunk(get_simple_chunk(cookieAckCID),NULL);
+                send_bundled_chunks(NULL);
                 bu_unlock_sender(NULL);
-                ch_deleteChunk(cookieAckCID);
+                free_simple_chunk(cookieAckCID);
             }
         } else {                                    /* cases A or C */
             if ((cookie_remote_tag      == remote_tag)  &&
@@ -1530,8 +1530,8 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
                     /* section 5.2.4. action C : silently discard cookie */
                     event_log(VERBOSE, "Dupl. CookieEcho, case 5.2.4.C) --> Silently discard !");
                     ch_forgetChunk(cookieCID);
-                    ch_deleteChunk(initCID);
-                    ch_deleteChunk(initAckCID);
+                    free_simple_chunk(initCID);
+                    free_simple_chunk(initAckCID);
                     localData = NULL;
                     return;         /* process data as usual ? */
             }  else if ((cookie_remote_tag != remote_tag) &&
@@ -1559,12 +1559,12 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
                         /* go to ESTABLISHED state */
                         new_state = ESTABLISHED;
                         /* make cookie acknowledgement */
-                        cookieAckCID = ch_makeSimpleChunk(CHUNK_COOKIE_ACK, FLAG_NONE);
+                        cookieAckCID = build_simple_chunk(CHUNK_COOKIE_ACK, FLAG_NONE);
                         /* send cookie acknowledgement */
-                        bu_put_Ctrl_Chunk(ch_chunkString(cookieAckCID),NULL);
-                        bu_sendAllChunks(NULL);
+                        bundle_simple_chunk(get_simple_chunk(cookieAckCID),NULL);
+                        send_bundled_chunks(NULL);
                         bu_unlock_sender(NULL);
-                        ch_deleteChunk(cookieAckCID);
+                        free_simple_chunk(cookieAckCID);
 
                         SendCommUpNotification = SCTP_COMM_UP_RECEIVED_COOKIE_RESTART;
                         /* mdi_restartNotif(); */
@@ -1572,32 +1572,32 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
                     } else {  /* silently discard */
                         event_log(VERBOSE, "Restart not successful, silently discarding CookieEcho");
                         ch_forgetChunk(cookieCID);
-                        ch_deleteChunk(initCID);
-                        ch_deleteChunk(initAckCID);
+                        free_simple_chunk(initCID);
+                        free_simple_chunk(initAckCID);
                         localData = NULL;
                         return;             /* process data as usual ? */
                     }
                 } else {
                     event_log(VERBOSE, "Peer Restart case, state == SHUTDOWN_ACK_SENT");
                     /* resend SHUTDOWN_ACK */
-                    shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+                    shutdownAckCID = build_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
                     /* add ERROR_CHUNK with Error Cause : "Cookie Received while shutting down" */
-                    bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID),NULL);
+                    bundle_simple_chunk(get_simple_chunk(shutdownAckCID),NULL);
                     errorCID = ch_makeErrorChunk();
                     ch_enterErrorCauseData(errorCID, ECC_COOKIE_RECEIVED_DURING_SHUTDWN, 0, NULL);
-                    bu_put_Ctrl_Chunk(ch_chunkString(errorCID),NULL);
+                    bundle_simple_chunk(get_simple_chunk(errorCID),NULL);
                     /* send cookie acknowledgement */
-                    bu_sendAllChunks(NULL);
+                    send_bundled_chunks(NULL);
                     bu_unlock_sender(NULL);
-                    ch_deleteChunk(shutdownAckCID);
-                    ch_deleteChunk(errorCID);
+                    free_simple_chunk(shutdownAckCID);
+                    free_simple_chunk(errorCID);
                 }
 
             } else { /* silently discard */
                 event_log(VERBOSE, "Dupl. CookieEcho, silently discarding CookieEcho");
                 ch_forgetChunk(cookieCID);
-                ch_deleteChunk(initCID);
-                ch_deleteChunk(initAckCID);
+                free_simple_chunk(initCID);
+                free_simple_chunk(initAckCID);
                 localData = NULL;
                 return;             /* process data as usual ? */
             }
@@ -1609,8 +1609,8 @@ void sctlr_cookie_echo(cookie_echo_chunk_t * cookie_echo)
         break;
     }
 
-    ch_deleteChunk(initCID);
-    ch_deleteChunk(initAckCID);
+    free_simple_chunk(initCID);
+    free_simple_chunk(initAckCID);
     ch_forgetChunk(cookieCID);
 
     if (new_state != 0xFFFFFFFF)
@@ -1742,11 +1742,11 @@ int sctlr_shutdown(simple_chunk_t * shutdown_chunk)
     switch (state) {
     case CLOSED:
         event_log(EXTERNAL_EVENT, "event: sctlr_shutdown in state CLOSED, send ABORT ! ");
-        abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NO_TCB);
-        bu_put_Ctrl_Chunk(ch_chunkString(abortCID),&lastFromPath);
-        bu_sendAllChunks(&lastFromPath);
+        abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NO_TCB);
+        bundle_simple_chunk(get_simple_chunk(abortCID),&lastFromPath);
+        send_bundled_chunks(&lastFromPath);
 		bu_unlock_sender(&lastFromPath);
-        ch_deleteChunk(abortCID);
+        free_simple_chunk(abortCID);
         /* delete all data of this association */
         mdi_deleteCurrentAssociation();
         removed = true;
@@ -1782,10 +1782,10 @@ int sctlr_shutdown(simple_chunk_t * shutdown_chunk)
             /* retransmissions are not necessary */
             /* send shutdownAck */
             event_log(VERBOSE, "We are ready for SHUTDOWN, sending SHUTDOWN_ACK !");
-            shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID),&lastFromPath);
-            bu_sendAllChunks(&lastFromPath);
-            ch_deleteChunk(shutdownAckCID);
+            shutdownAckCID = build_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+            bundle_simple_chunk(get_simple_chunk(shutdownAckCID),&lastFromPath);
+            send_bundled_chunks(&lastFromPath);
+            free_simple_chunk(shutdownAckCID);
             if (localData->initTimer != 0) sctp_stopTimer(localData->initTimer);
 
             localData->initTimer =
@@ -1810,10 +1810,10 @@ int sctlr_shutdown(simple_chunk_t * shutdown_chunk)
         if (readyForShutdown) {
             /* retransmissions are not necessary */
             /* send shutdownAck */
-            shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID),&lastFromPath);
-            bu_sendAllChunks(&lastFromPath);
-            ch_deleteChunk(shutdownAckCID);
+            shutdownAckCID = build_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+            bundle_simple_chunk(get_simple_chunk(shutdownAckCID),&lastFromPath);
+            send_bundled_chunks(&lastFromPath);
+            free_simple_chunk(shutdownAckCID);
             if (localData->initTimer != 0) sctp_stopTimer(localData->initTimer);
             localData->initTimer =
                 adl_startTimer(localData->initTimerDuration, &sci_timer_expired,TIMER_TYPE_SHUTDOWN,
@@ -1884,7 +1884,7 @@ int sctlr_shutdownAck()
         /* see also section 8.5.E.) treat this like OOTB packet, leave T1 timer run ! */
         event_logi(EXTERNAL_EVENT,
                    "event: sctlr_shutdownAck in state %u, send SHUTDOWN_COMPLETE ! ", state);
-        shdcCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
+        shdcCID = build_simple_chunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
 
         /* make sure the shutdown_complete is written to the peer with his tag */
         if (mdi_readTagRemote() == 0) {
@@ -1893,10 +1893,10 @@ int sctlr_shutdownAck()
             mdi_rewriteTagRemote(lastTag);
         }
 
-        bu_put_Ctrl_Chunk(ch_chunkString(shdcCID),&lastFromPath);
-        bu_sendAllChunks(&lastFromPath);
+        bundle_simple_chunk(get_simple_chunk(shdcCID),&lastFromPath);
+        send_bundled_chunks(&lastFromPath);
 		bu_unlock_sender(&lastFromPath);
-        ch_deleteChunk(shdcCID);
+        free_simple_chunk(shdcCID);
         return_state = STATE_OK;
 
         if (tagWasZero == true) {
@@ -1926,11 +1926,11 @@ int sctlr_shutdownAck()
             error_log(ERROR_FATAL, "Timer not running - Error in Program Logic");
         }
 
-        shdcCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NONE);
-        bu_put_Ctrl_Chunk(ch_chunkString(shdcCID),&lastFromPath);
+        shdcCID = build_simple_chunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NONE);
+        bundle_simple_chunk(get_simple_chunk(shdcCID),&lastFromPath);
 
-        bu_sendAllChunks(&lastFromPath);
-        ch_deleteChunk(shdcCID);
+        send_bundled_chunks(&lastFromPath);
+        free_simple_chunk(shdcCID);
 
         bu_unlock_sender(&lastFromPath);
         /* delete all data of this association */
@@ -2146,8 +2146,8 @@ void sctlr_staleCookie(simple_chunk_t * error_chunk)
         ch_enterCookiePreservative(initCID, ch_stalenessOfCookieError(errorCID));
 
         /* resend init */
-        bu_put_Ctrl_Chunk(ch_chunkString(initCID),NULL);
-        bu_sendAllChunks(NULL);
+        bundle_simple_chunk(get_simple_chunk(initCID),NULL);
+        send_bundled_chunks(NULL);
         ch_forgetChunk(initCID);
 
         state = COOKIE_WAIT;
@@ -2245,9 +2245,9 @@ void sci_allChunksAcked()
 
         /* make and send shutdown */
         shutdownCID = ch_makeShutdown(rxc_read_cummulativeTSNacked());
-        bu_put_Ctrl_Chunk(ch_chunkString(shutdownCID),NULL);
-        bu_sendAllChunks(NULL);
-        ch_deleteChunk(shutdownCID);
+        bundle_simple_chunk(get_simple_chunk(shutdownCID),NULL);
+        send_bundled_chunks(NULL);
+        free_simple_chunk(shutdownCID);
 
         /* start shutdown timer */
         localData->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
@@ -2273,10 +2273,10 @@ void sci_allChunksAcked()
         event_log(EXTERNAL_EVENT, "event: sci_allChunksAcked in state SHUTDOWNRECEIVED");
 
         /* send shutdownAck */
-        shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
-        bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID),NULL);
-        bu_sendAllChunks(NULL);
-        ch_deleteChunk(shutdownAckCID);
+        shutdownAckCID = build_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+        bundle_simple_chunk(get_simple_chunk(shutdownAckCID),NULL);
+        send_bundled_chunks(NULL);
+        free_simple_chunk(shutdownAckCID);
 
         /* ADDED : should probably be OK */
         if (localData->initTimer != 0) sctp_stopTimer(localData->initTimer);

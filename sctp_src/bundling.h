@@ -50,7 +50,7 @@
 #include "pathmanagement.h"
 
 void bu_init_bundling(void);
-int bu_put_Ctrl_Chunk(simple_chunk_t * chunk,unsigned int * dest_index);
+int bundle_simple_chunk(simple_chunk_t * chunk,unsigned int * dest_index);
 int bu_put_Data_Chunk(simple_chunk_t * chunk,unsigned int * dest_index);
 
 
@@ -141,12 +141,12 @@ int bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int* dest_index);
 
 
 /*
- * bu_sendAllChunks: Trigger to send all chunks previously entered with putChunk.
+ * send_bundled_chunks: Trigger to send all chunks previously entered with putChunk.
  *
  * Return value: error value
  * Chunks sent are deleted afterwards.
  */
-int bu_sendAllChunks(guint * ad_idx);
+int send_bundled_chunks(guint * ad_idx);
 
 void bu_request_sack(void);
 

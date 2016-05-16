@@ -132,7 +132,7 @@ GECO_PACKET_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE
 #define loglvl_minor_error  3
 /*recovery from error was possible with some affects to the system,
  * for instance abort of an association.*/
-#define major_error_abort  2
+#define loglvl_major_error_abort  2
 /* recovery from error was not possible, the program exits. */
 #define loglvl_fatal_error_exit 1
 /* Defines the level up to which the errors are prInt32ed.

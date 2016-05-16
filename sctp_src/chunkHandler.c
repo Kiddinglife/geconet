@@ -2052,11 +2052,11 @@ unsigned int ch_HBpathID(ChunkID chunkID)
 
 /***** create simple chunk **********************************************************************/
 
-/* ch_makeSimpleChunk creates a simple chunk. It can be used for parameterless simple_chunks_ like
+/* build_simple_chunk creates a simple chunk. It can be used for parameterless simple_chunks_ like
    abort, cookieAck and shutdownAck. It can also be used for simple_chunks_ that have only variable
    length parameters like the error simple_chunks_
 */
-ChunkID ch_makeSimpleChunk(unsigned char chunkType, unsigned char flag)
+ChunkID build_simple_chunk(unsigned char chunkType, unsigned char flag)
 {
     simple_chunk_t *simpleChunk;
 
@@ -2348,7 +2348,7 @@ unsigned short ch_chunkLength(ChunkID chunkID)
 
 /* returns a pointer to the beginning of a simple chunk.
 */
-simple_chunk_t *ch_chunkString(ChunkID chunkID)
+simple_chunk_t *get_simple_chunk(ChunkID chunkID)
 {
     if (simple_chunks_[chunkID] == NULL) {
         error_log(ERROR_MAJOR, "Invalid chunk ID");
@@ -2366,7 +2366,7 @@ simple_chunk_t *ch_chunkString(ChunkID chunkID)
 
 /*
  * swaps length INSIDE the packet !!!!!!!!!!! Phew ! and puts chunk pointer
- * into the current array of simple_chunks_ -- does not need ch_deleteChunk !!
+ * into the current array of simple_chunks_ -- does not need free_simple_chunk !!
  */
 ChunkID ch_makeChunk(simple_chunk_t * chunk)
 {
@@ -2383,10 +2383,10 @@ ChunkID ch_makeChunk(simple_chunk_t * chunk)
 }
 
 
-/* ch_deleteChunk removes the chunk from the array of simple_chunks_ and frees the
+/* free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
    memory allocated for that chunk.
 */
-void ch_deleteChunk(ChunkID chunkID)
+void free_simple_chunk(ChunkID chunkID)
 {
     unsigned int cid;
 

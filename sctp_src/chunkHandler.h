@@ -249,10 +249,10 @@ unsigned int ch_HBpathID(ChunkID chunkID);
 
 /***** create simple chunk **********************************************************************/
 
-/* ch_makeSimpleChunk creates a simple chunk. It can be used for parameterless chunks like
+/* build_simple_chunk creates a simple chunk. It can be used for parameterless chunks like
    abort, cookieAck and shutdownAck.
 */
-ChunkID ch_makeSimpleChunk(unsigned char chunkType, unsigned char flag);
+ChunkID build_simple_chunk(unsigned char chunkType, unsigned char flag);
 
 void
 ch_addParameterToInitChunk(ChunkID initChunkID, unsigned short pCode,
@@ -312,7 +312,7 @@ unsigned short ch_chunkLength(ChunkID chunkID);
 
 /* returns a pointer to the beginning of a simple chunk.
 */
-simple_chunk_t *ch_chunkString(ChunkID chunkID);
+simple_chunk_t *get_simple_chunk(ChunkID chunkID);
 
 
 
@@ -321,10 +321,10 @@ ChunkID ch_makeChunk(simple_chunk_t * chunk);
 
 
 
-/* ch_deleteChunk removes the chunk from the array of chunks and frees the
+/* free_simple_chunk removes the chunk from the array of chunks and frees the
    memory allocated for that chunk.
 */
-void ch_deleteChunk(ChunkID chunkID);
+void free_simple_chunk(ChunkID chunkID);
 
 
 

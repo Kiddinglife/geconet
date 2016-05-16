@@ -261,16 +261,46 @@ class dispatch_layer_t
     *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
     *  @param   ad_idx     pointer to address index or NULL if data is to be sent to default address
     */
-    int send_bundled_chunks(uint * ad_idx);
+    int send_bundled_chunks(uint * ad_idx = NULL);
 
     /**
     * creates a simple chunk except of DATA chunk. It can be used for parameterless
     * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
     * that have only variable length parameters like the error chunks
     */
-    uchar build_simple_chunk(uchar chunk_type, uchar flag);
+    uchar alloc_simple_chunk(uchar chunk_type, uchar flag)
+    {
+        assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
+        //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
+        simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*)geco::ds::single_client_alloc::allocate(MAX_SIMPLE_CHUNK_VALUE_SIZE);
+        simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
+        simple_chunk_ptr->chunk_header.chunk_flags = flag;
+        simple_chunk_ptr->chunk_header.chunk_length = 0x0004;
+        debug_simple_chunk(simple_chunk_ptr, "create simple chunk %u");
+        return free_chunk_id_;
+    }
 
-    void debug_simple_chunk(simple_chunk_t * chunk, const char *log_text)
+    /**
+      * free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
+      * memory allocated for that chunk
+      */
+    void free_simple_chunk(uchar chunkID)
+    {
+        uint cid = chunkID;
+        if (simple_chunks_[chunkID] != NULL)
+        {
+            event_logi(loglvl_intevent, "freed simple chunk %u", cid);
+            geco::ds::single_client_alloc::deallocate(
+                simple_chunks_[chunkID], MAX_SIMPLE_CHUNK_VALUE_SIZE);
+            simple_chunks_[chunkID] = NULL;
+        }
+        else
+        {
+            error_log(loglvl_major_error_abort, "chunk already freed\n");
+        }
+    }
+
+    void debug_simple_chunk(simple_chunk_t * chunk, const char *log_text = NULL)
     {
         uint cid;
         free_chunk_id_ = (free_chunk_id_ + 1) % MAX_CHUNKS_SIZE;
@@ -290,13 +320,13 @@ class dispatch_layer_t
     * @param chunk pointer to chunk, that is to be put in the bundling buffer
     * @return TODO : error value, 0 on success
     */
-    int put_simple_chunk(simple_chunk_t * chunk, uint * dest_index);
+    int bundle_simple_chunk(simple_chunk_t * chunk, uint * dest_index = NULL);
 
     /**
     * function to return a pointer to the bundling module of this association
     * @return   pointer to the bundling data structure, null in case of error.
     */
-    void* get_bundle_control(channel_t* channel)
+    inline void* get_bundle_control(channel_t* channel = NULL)
     {
         if (channel == NULL)
         {
@@ -307,6 +337,49 @@ class dispatch_layer_t
         {
             return channel->bundle_control;
         }
+    }
+
+    /**
+    * Enable sending again - wait after received chunks have been diassembled completely.
+    */
+    inline void unlock_bundle_ctrl(uint* ad_idx = NULL)
+    {
+        bundle_controller_t* bundle_ctrl =
+            (bundle_controller_t*)get_bundle_control(curr_channel_);
+
+        /*1) no channel exists, it is NULL, so we take the global bundling buffer */
+        if (bundle_ctrl == NULL)
+        {
+            event_log(verbose, "unlock_bundle_ctrl()::Setting global bundling buffer ");
+            bundle_ctrl = &default_bundle_ctrl_;
+        }
+
+        bundle_ctrl->locked = false;
+        if (bundle_ctrl->got_send_request)
+            send_bundled_chunks(ad_idx);
+
+        event_logi(verbose, "unlock_bundle_ctrl() was called..and got %s send request -> processing",
+            (bundle_ctrl->got_send_request == true) ? "A" : "NO");
+    }
+
+    /**
+    * Keep sender from sending data right away - wait after received chunks have
+    * been diassembled completely.
+    */
+    inline void lock_bundle_ctrl()
+    {
+        bundle_controller_t* bundle_ctrl =
+            (bundle_controller_t*)get_bundle_control(curr_channel_);
+
+        /*1) no channel exists, it is NULL, so we take the global bundling buffer */
+        if (bundle_ctrl == NULL)
+        {
+            event_log(verbose, "lock_bundle_ctrl()::Setting global bundling buffer ");
+            bundle_ctrl = &default_bundle_ctrl_;
+        }
+
+        bundle_ctrl->locked = true;
+        bundle_ctrl->got_send_request = false;
     }
 
     /*------------------- Functions called by the Unix-Interface --------------*/

@@ -614,7 +614,7 @@ void rxc_sack_timer_cb(TimerID tid, void *assoc, void *dummy)
     /* sending sack */
     /* FIXME : maybe choose different address ??? */
     rxc_create_sack(&rxc->last_address, true);
-    bu_sendAllChunks(&rxc->last_address);
+    send_bundled_chunks(&rxc->last_address);
 
     mdi_clearAssociationData();
     return;
@@ -790,7 +790,7 @@ int rxc_start_sack_timer(unsigned int oldQueueLen)
         (rxc->my_rwnd - bytesQueued >= 2 * MAX_NETWORK_PACKET_VALUE_SIZE)) {
         /* send SACK at once */
         rxc_create_sack(&rxc->last_address, true);
-        bu_sendAllChunks(&rxc->last_address);
+        send_bundled_chunks(&rxc->last_address);
         rxc_stop_sack_timer();
     } else {    /* normal application read, no need to rush things */
         if (rxc->timer_running != true) {

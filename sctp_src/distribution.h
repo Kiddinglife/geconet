@@ -251,7 +251,7 @@ void *mdi_readPathMan(void);
  * returns: pointer to the bundling data structure.
  *          null in case of error.
  */
-void *mdi_readBundling(void);
+void *get_bundle_control(void);
 
 
 

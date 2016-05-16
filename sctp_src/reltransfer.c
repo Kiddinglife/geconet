@@ -438,9 +438,9 @@ int rtx_send_forward_tsn(rtx_buffer *rtx, unsigned int forward_tsn, unsigned int
 
     event_logi(INTERNAL_EVENT_0, "===================>  Sending FORWARD TSN : %u",forward_tsn);
 
-    result = bu_put_Ctrl_Chunk((simple_chunk_t *) &chk, &idx);
+    result = bundle_simple_chunk((simple_chunk_t *) &chk, &idx);
     if (sendAtOnce == true) {
-        result = bu_sendAllChunks(&idx);
+        result = send_bundled_chunks(&idx);
     }
     rtx->lastSentForwardTSN = forward_tsn;
     return result;

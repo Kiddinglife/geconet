@@ -153,8 +153,8 @@ int eh_make_invalid_streamid_error(unsigned short streamid)
     /* add parameters */
     ch_enterErrorCauseData(errorCID, ECC_INVALID_STREAM_ID, 4, (unsigned char*)&error_info);
 
-    bu_put_Ctrl_Chunk(ch_chunkString(errorCID),NULL);
-    ch_deleteChunk(errorCID);
+    bundle_simple_chunk(get_simple_chunk(errorCID),NULL);
+    free_simple_chunk(errorCID);
     
     return 0;
 }
@@ -173,10 +173,10 @@ int eh_send_unrecognized_chunktype(unsigned char* faulty_chunk, unsigned short l
     /* add parameters */
     ch_enterErrorCauseData(errorCID, ECC_UNRECOGNIZED_CHUNKTYPE, length, (unsigned char*)faulty_chunk);
 
-    bu_put_Ctrl_Chunk(ch_chunkString(errorCID),NULL);
-    ch_deleteChunk(errorCID);
+    bundle_simple_chunk(get_simple_chunk(errorCID),NULL);
+    free_simple_chunk(errorCID);
     
-    return bu_sendAllChunks(NULL);
+    return send_bundled_chunks(NULL);
 }
 
 /**
@@ -214,8 +214,8 @@ int eh_make_empty_data_chunk_error(unsigned int tsn)
     /* add parameters */
     ch_enterErrorCauseData(errorCID, ECC_NO_USER_DATA, sizeof(unsigned int), (unsigned char*)&tsn);
 
-    bu_put_Ctrl_Chunk(ch_chunkString(errorCID),NULL);
-    ch_deleteChunk(errorCID);
+    bundle_simple_chunk(get_simple_chunk(errorCID),NULL);
+    free_simple_chunk(errorCID);
 
     return 0;
 }

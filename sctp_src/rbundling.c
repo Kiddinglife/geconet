@@ -626,7 +626,7 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
             send_it = rxc_create_sack(&address_index, FALSE);
             se_doNotifications();
             if (send_it == true)
-                bu_sendAllChunks(&address_index);
+                send_bundled_chunks(&address_index);
         }
         /* if the association has already been removed, we cannot unlock it anymore */
         bu_unlock_sender(&address_index);

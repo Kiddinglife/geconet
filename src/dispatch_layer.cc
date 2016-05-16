@@ -2,6 +2,8 @@
 #include "geco-ds-malloc.h"
 #include <algorithm>
 
+#define NULL_DEST_INDEX NULL
+
 dispatch_layer_t::dispatch_layer_t()
 {
     assert(MAX_NETWORK_PACKET_VALUE_SIZE == sizeof(simple_chunk_t));
@@ -218,7 +220,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
 
     /*9) fetch all chunk types contained in this packet value field for use in the folowing */
     int packet_value_len = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
-    uint chunk_types = find_chunk_types(((dctp_packet_t*)dctp_packet)->chunk,
+    uint chunk_types_arr = find_chunk_types(((dctp_packet_t*)dctp_packet)->chunk,
         packet_value_len);
 
     int i = 0;
@@ -301,9 +303,9 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
     /* 12) validate init chunks
      * (see section 3.1 of RFC 4960 at line 931 An INIT chunk MUST be the only chunk
      * in the SCTP packet carrying it)*/
-    if (contains_chunk((uchar)CHUNK_INIT, chunk_types) == 2
-        || contains_chunk((uchar)CHUNK_INIT_ACK, chunk_types) == 2
-        || contains_chunk((uchar)CHUNK_SHUTDOWN_COMPLETE, chunk_types)
+    if (contains_chunk((uchar)CHUNK_INIT, chunk_types_arr) == 2
+        || contains_chunk((uchar)CHUNK_INIT_ACK, chunk_types_arr) == 2
+        || contains_chunk((uchar)CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr)
         == 2)
     {
         /* silently discard */
@@ -329,7 +331,7 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
          * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (2)
          * TODO discard this packet is delegant, better to notify remote endpoint and ulp
          * the abort and the error casuse carried in the ABORT*/
-        if (contains_chunk((uchar)CHUNK_ABORT, chunk_types) > 0)
+        if (contains_chunk((uchar)CHUNK_ABORT, chunk_types_arr) > 0)
         {
             event_log(verbose,
                 "recv_dctp_packet()::Found ABORT in init packet, discarding it !");
@@ -342,19 +344,59 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
             return;
         }
 
-        /*15) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (5) */
-        if (contains_chunk((uchar)CHUNK_SHUTDOWN_ACK, chunk_types) > 0)
+        /*15) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (5)
+         If the packet contains a SHUTDOWN ACK chunk, the receiver should
+         respond to the sender of the OOTB packet with a SHUTDOWN
+         COMPLETE.  When sending the SHUTDOWN COMPLETE, the receiver of
+         the OOTB packet must fill in the Verification Tag field of the
+         outbound packet with the Verification Tag received in the
+         SHUTDOWN ACK and set the T bit in the Chunk Flags to indicate
+         that the Verification Tag is reflected*/
+        if (contains_chunk((uchar)CHUNK_SHUTDOWN_ACK, chunk_types_arr) > 0)
         {
-            event_log(verbose,
-                "recv_dctp_packet()::Found SHUTDOWN_ACK  in init packet, send SHUTDOWN_COMPLETE !");
-            uchar shutdown_complete_cid = build_simple_chunk(
-                (uchar)CHUNK_SHUTDOWN_ACK, FLAG_NO_TCB);
+            uchar shutdown_complete_cid = alloc_simple_chunk(
+                (uchar)CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
             curr_simple_chunk_ptr_ = get_simple_chunk(shutdown_complete_cid);
-            put_simple_chunk(curr_simple_chunk_ptr_, NULL);
+            // this method will internally send all bundled chunks if exceeding packet max
+            bundle_simple_chunk(curr_simple_chunk_ptr_);
+            // FIXME need more considerations about why locked or unlocked?
+            unlock_bundle_ctrl();
+            // explicitely call send to send this simple chunk
+            send_bundled_chunks();
+            // free this simple chunk
+            free_simple_chunk(shutdown_complete_cid);
 
+            last_source_addr_ = NULL;
+            last_dest_addr_ = NULL;
+            last_src_port_ = 0;
+            last_dest_port_ = 0;
+            curr_channel_ = NULL;
+            curr_geco_instance_ = NULL;
+
+            event_log(verbose,
+                "recv_dctp_packet()::Found SHUTDOWN_ACK without channel found, will send SHUTDOWN_COMPLETE to the peer!");
             return;
         }
 
+        /*16) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (6)
+        If the packet contains a SHUTDOWN COMPLETE chunk, the receiver
+        should silently discard the packet and take no further action.
+        this is good because when receiving st-cp chunk, the peer has finished
+        shutdown pharse withdeleting TCB and all related data, channek is NULL
+        is actually what we want*/
+        if (contains_chunk((uchar)CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr) > 0)
+        {
+            last_source_addr_ = NULL;
+            last_dest_addr_ = NULL;
+            last_src_port_ = 0;
+            last_dest_port_ = 0;
+            curr_channel_ = NULL;
+            curr_geco_instance_ = NULL;
+
+            event_log(loglvl_intevent,
+                "recv_dctp_packet()::Found SHUTDOWN_COMPLETE chunk without channel found, discarding it\n!");
+            return;
+        }
     }
     else
     {
@@ -379,7 +421,7 @@ int dispatch_layer_t::send_bundled_chunks(uint * ad_idx)
     return 0;
 }
 
-int dispatch_layer_t::put_simple_chunk(simple_chunk_t * chunk, uint * dest_index)
+int dispatch_layer_t::bundle_simple_chunk(simple_chunk_t * chunk, uint * dest_index)
 {
 
     bundle_controller_t* bundle_ctrl =
@@ -410,11 +452,12 @@ int dispatch_layer_t::put_simple_chunk(simple_chunk_t * chunk, uint * dest_index
     else
     {
         /*3) an packet CAN hold all data*/
-        if(dest_index != NULL)
+        if (dest_index != NULL)
         {
             bundle_ctrl->got_send_address = true;
             bundle_ctrl->requested_destination = *dest_index;
-        }else
+        }
+        else
         {
             bundle_ctrl->got_send_address = false;
             bundle_ctrl->requested_destination = 0;
@@ -433,7 +476,7 @@ int dispatch_layer_t::put_simple_chunk(simple_chunk_t * chunk, uint * dest_index
     }
 
     event_logii(verbose,
-        "put_simple_chunk() : %u , Total buffer size now (includes pad): %u\n",
+        "bundle_simple_chunk() : %u , Total buffer size now (includes pad): %u\n",
         get_chunk_length((chunk_fixed_t *)chunk), get_bundle_total_size(bundle_ctrl));
     return 0;
 }
@@ -453,17 +496,7 @@ simple_chunk_t* dispatch_layer_t::get_simple_chunk(uchar chunkID)
     return simple_chunks_[chunkID];
 }
 
-uchar dispatch_layer_t::build_simple_chunk(uchar chunk_type, uchar flag)
-{
-    assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
-    //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
-    simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*)geco::ds::single_client_alloc::allocate(MAX_SIMPLE_CHUNK_VALUE_SIZE);
-    simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
-    simple_chunk_ptr->chunk_header.chunk_flags = flag;
-    simple_chunk_ptr->chunk_header.chunk_length = 0x0004;
-    debug_simple_chunk(simple_chunk_ptr, "create simple chunk %u");
-    return free_chunk_id_;
-}
+
 
 int dispatch_layer_t::find_sockaddres(uchar * chunk,
     uint chunk_len, int supportedAddressTypes)

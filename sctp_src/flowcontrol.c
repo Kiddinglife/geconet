@@ -826,7 +826,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
 
     if (data_is_submitted == true) {
         fc->one_packet_inflight = true;
-        bu_sendAllChunks(&destination);
+        send_bundled_chunks(&destination);
 
         if (fc->maxQueueLen != 0) {
             if (len < fc->maxQueueLen && oldListLen >= fc->maxQueueLen) {
@@ -1213,7 +1213,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
        result = fc_check_for_txmit(fc, oldListLen, true);
     }
     /* make sure that SACK chunk is actually sent ! */
-    if (result != 0) bu_sendAllChunks(NULL);
+    if (result != 0) send_bundled_chunks(NULL);
 
     get_time_now(&(fc->cparams[address_index].time_of_cwnd_adjustment));
 

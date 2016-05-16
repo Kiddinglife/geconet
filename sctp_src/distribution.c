@@ -1219,14 +1219,14 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found SHUTDOWN_ACK chunk, send SHUTDOWN_COMPLETE !");
             /* section 8.4.5 : return SHUTDOWN_COMPLETE with peers veri-tag and T-Bit set */
-            shutdownCompleteCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_COMPLETE,
+            shutdownCompleteCID = build_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
             FLAG_NO_TCB);
-            bu_put_Ctrl_Chunk(ch_chunkString(shutdownCompleteCID), NULL);
+            bundle_simple_chunk(get_simple_chunk(shutdownCompleteCID), NULL);
             bu_unlock_sender(NULL);
             /* should send it to last address */
-            bu_sendAllChunks(NULL);
+            send_bundled_chunks(NULL);
             /* free abort chunk */
-            ch_deleteChunk(shutdownCompleteCID);
+            free_simple_chunk(shutdownCompleteCID);
 
             /* send an ABORT with peers veri-tag, set T-Bit */
             event_log(VERBOSE,
@@ -1239,6 +1239,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
             currentAssociation = NULL;
             return;
         }
+
         if (rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray) == true)
         {
             event_log(INTERNAL_EVENT_0,
@@ -1251,6 +1252,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
             currentAssociation = NULL;
             return;
         }
+
         if (rbu_datagramContains(CHUNK_COOKIE_ACK, chunkArray) == true)
         {
             event_log(INTERNAL_EVENT_0,
@@ -1519,11 +1521,11 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
                 event_logi(EXTERNAL_EVENT,
                         "mdi_receive_message: shutdownAck in state %u, send SHUTDOWN_COMPLETE ! ",
                         state);
-                shutdownCompleteCID = ch_makeSimpleChunk(
+                shutdownCompleteCID = build_simple_chunk(
                 CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
-                bu_put_Ctrl_Chunk(ch_chunkString(shutdownCompleteCID), NULL);
-                bu_sendAllChunks(NULL);
-                ch_deleteChunk(shutdownCompleteCID);
+                bundle_simple_chunk(get_simple_chunk(shutdownCompleteCID), NULL);
+                send_bundled_chunks(NULL);
+                free_simple_chunk(shutdownCompleteCID);
                 currentAssociation = NULL;
                 sctpInstance = NULL;
                 last_src_port = 0;
@@ -1594,18 +1596,18 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
         /* make and send abort sctp_packet */
         if (currentAssociation == NULL)
         {
-            abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NO_TCB);
+            abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NO_TCB);
         }
         else
         {
-            abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NONE);
+            abortCID = build_simple_chunk(CHUNK_ABORT, FLAG_NONE);
         }
-        bu_put_Ctrl_Chunk(ch_chunkString(abortCID), NULL);
+        bundle_simple_chunk(get_simple_chunk(abortCID), NULL);
         /* should send it to last address */
         bu_unlock_sender(NULL);
-        bu_sendAllChunks(NULL);
+        send_bundled_chunks(NULL);
         /* free abort chunk */
-        ch_deleteChunk(abortCID);
+        free_simple_chunk(abortCID);
         /* send an ABORT with peers veri-tag, set T-Bit */
         event_log(VERBOSE, "mdi_receiveMsg: sending ABORT with T-Bit");
         last_source_addr = NULL;
@@ -4556,12 +4558,12 @@ void *mdi_readPathMan(void)
  * function to return a pointer to the bundling module of this association
  * @return   pointer to the bundling data structure, null in case of error.
  */
-void *mdi_readBundling(void)
+void *get_bundle_control(void)
 {
     if (currentAssociation == NULL)
     {
         /*
-         error_log(ERROR_MINOR, "mdi_readBundling: association not set");
+         error_log(ERROR_MINOR, "get_bundle_control: association not set");
          */
         return NULL;
     }
