@@ -430,20 +430,23 @@ gint send_bundled_chunks(guint * ad_idx)
         return 1;
     }
 
-    if (bu_ptr->sack_in_buffer) {
+    if (bu_ptr->sack_in_buffer)
+    {
         rxc_stop_sack_timer();
         /* SACKs by default go to the last active address, from which data arrived */
         send_len = bu_ptr->sack_position; /* at least sizeof(geco_packet_fixed_t) */
         /* at most pointing to the end of SACK chunk */
         event_logi(VVERBOSE, "send_bundled_chunks(sack) : send_len == %d ", send_len);
-        if (bu_ptr->ctrl_chunk_in_buffer) {
+        if (bu_ptr->ctrl_chunk_in_buffer)
+        {
             memcpy(&send_buffer[send_len],
                 &(bu_ptr->ctrl_buf[sizeof(geco_packet_fixed_t)]),
                 (bu_ptr->ctrl_position - sizeof(geco_packet_fixed_t)));
             send_len += bu_ptr->ctrl_position - sizeof(geco_packet_fixed_t);
             event_logi(VVERBOSE, "send_bundled_chunks(sack+ctrl) : send_len == %d ", send_len);
         }
-        if (bu_ptr->data_in_buffer) {
+        if (bu_ptr->data_in_buffer)
+        {
             memcpy(&send_buffer[send_len],
                 &(bu_ptr->data_buf[sizeof(geco_packet_fixed_t)]),
                 (bu_ptr->data_position - sizeof(geco_packet_fixed_t)));
@@ -451,7 +454,8 @@ gint send_bundled_chunks(guint * ad_idx)
             event_logi(VVERBOSE, "send_bundled_chunks(sack+data) : send_len == %d ", send_len);
         }
     }
-    else if (bu_ptr->ctrl_chunk_in_buffer) {
+    else if (bu_ptr->ctrl_chunk_in_buffer)
+    {
         send_len = bu_ptr->ctrl_position;
         event_logi(VVERBOSE, "send_bundled_chunks(ctrl) : send_len == %d ", send_len);
         if (bu_ptr->data_in_buffer) {
