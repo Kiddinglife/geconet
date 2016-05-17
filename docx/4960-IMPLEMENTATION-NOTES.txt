@@ -3,6 +3,9 @@ since the CHALLENGE messages must include the correct COOKIE, it means that all
 flooding clients are using their real IP addresses.  So the server might automatically 
 enter a new firewall rule to ignore packets from their IP address.
 
+Why control chunks always before DATA chunks?
+thisi s for effciency because we always need to detect some certain ctrl chunks
+in an packet and the number of DATA chunks uaually is more than that of ctrl chunks
 
 RFC 4960 
 

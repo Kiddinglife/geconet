@@ -101,7 +101,7 @@ struct dctp_packet_t
 #define CHUNK_ABORT             0x06 //6
 #define CHUNK_SHUTDOWN          0x07 //7
 #define CHUNK_SHUTDOWN_ACK      0x08 //8
-#define CHUNK_EREASONROR             0x09 //9
+#define CHUNK_ERROR             0x09 //9
 #define CHUNK_COOKIE_ECHO       0x0A //10
 #define CHUNK_COOKIE_ACK        0x0B //11
 #define CHUNK_ECNE              0x0C //12

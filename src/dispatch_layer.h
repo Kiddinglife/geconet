@@ -142,8 +142,8 @@ struct channel_t
 };
 
 /**
-* this struct contains all data belonging to a bundling module
-*/
+ * this struct contains all data belonging to a bundling module
+ */
 struct bundle_controller_t
 {
     /** buffer for control chunks */
@@ -179,7 +179,7 @@ struct bundle_controller_t
 
 class dispatch_layer_t
 {
-    public:
+public:
     bool sctpLibraryInitialized;
 
     /*Keyed list of end_points_ with ep_id as key*/
@@ -210,6 +210,7 @@ class dispatch_layer_t
     ushort last_src_port_;
     ushort last_dest_port_;
     uint last_init_tag_;
+    uint last_veri_tag_;
 
     /**
      * Whenever an external event (ULP-call, socket-event or timer-event) this variable must
@@ -224,55 +225,100 @@ class dispatch_layer_t
     sockaddrunion found_addres_[MAX_NUM_ADDRESSES];
 
     /* related to chunk handler and builder */
-    uchar                    write_cursors_[MAX_CHUNKS_SIZE];
-    simple_chunk_t*   simple_chunks_[MAX_CHUNKS_SIZE];
-    bool                      completed_chunks_[MAX_CHUNKS_SIZE];
-    uchar                    free_chunk_id_;
-    simple_chunk_t*  curr_simple_chunk_ptr_;
+    uchar write_cursors_[MAX_CHUNKS_SIZE];
+    simple_chunk_t* simple_chunks_[MAX_CHUNKS_SIZE];
+    bool completed_chunks_[MAX_CHUNKS_SIZE];
+    uchar free_chunk_id_;
+    simple_chunk_t* curr_simple_chunk_ptr_;
 
     /* a buffer that is used if no channel bundling controller
      * has been allocated and initialized yet */
     bundle_controller_t default_bundle_ctrl_;
+    bool send_abort_for_oob_packet_;
 
     dispatch_layer_t();
+
+private:
+    /**
+     * Disassembles chunks from a received datagram
+     *
+     * FIXME : data chunks may only be parsed after control chunks.....
+     *
+     * All chunks within the datagram are dispatched and sent to the appropriate
+     * module, i.e.: control chunks are sent to sctp_control/pathmanagement,
+     * SACK chunks to reliable_transfer, and data_chunks to RX_control.
+     * Those modules must get a pointer to the start of a chunk and
+     * information about its size (without padding).
+     * @param  address_index  index of address on which this data arrived
+     * @param  datagram     pointer to first chunk of the newly received data
+     * @param  len          length of payload (i.e. len of the concatenation of chunks)
+     */
+    int handle_chunks_from_geco_packet(uint address_index, uchar * datagram,
+            int len);
+
+    void clear()
+    {
+        last_source_addr_ = NULL;
+        last_dest_addr_ = NULL;
+        last_src_port_ = 0;
+        last_dest_port_ = 0;
+        curr_channel_ = NULL;
+        curr_geco_instance_ = NULL;
+    }
+
+    /**
+     * looks for Error chunk_type in a newly received datagram
+     * that contains a special error cause code
+     *
+     * All chunks within the datagram are lookes at, until one is found
+     * that equals the parameter chunk_type.
+     * @param  packet_value     pointer to the newly received data
+     * @param  len          stop after this many bytes
+     * @param  error_cause  error cause code to look for
+     * @return true is chunk_type exists in SCTP datagram, false if it is not in there
+     */
+    bool contains_error_chunk(uchar * packet_value, int packet_val_len,
+            ushort error_cause);
 
     uint get_bundle_total_size(bundle_controller_t* buf)
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
-        return ((buf)->ctrl_position + (buf)->sack_position + (buf)->data_position
-            - 2 * GECO_PACKET_FIXED_SIZE);
+        return ((buf)->ctrl_position + (buf)->sack_position
+                + (buf)->data_position - 2 * GECO_PACKET_FIXED_SIZE);
     }
 
     uint get_bundle_sack_size(bundle_controller_t* buf)
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
-        return ((buf)->ctrl_position + (buf)->data_position - GECO_PACKET_FIXED_SIZE);
+        return ((buf)->ctrl_position + (buf)->data_position
+                - GECO_PACKET_FIXED_SIZE);
     }
 
-
     /**
-    * Trigger sending of all chunks previously entered with put_Chunk functions
-    *  Chunks sent are deleted afterwards.
-    *
-    * FIXME : special treatment for GLOBAL BUFFER, as this is not associated with
-    *         any association.
-    *
-    *
-    *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
-    *  @param   ad_idx     pointer to address index or NULL if data is to be sent to default address
-    */
+     * Trigger sending of all chunks previously entered with put_Chunk functions
+     *  Chunks sent are deleted afterwards.
+     *
+     * FIXME : special treatment for GLOBAL BUFFER, as this is not associated with
+     *         any association.
+     *
+     *
+     *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
+     *  @param   ad_idx     pointer to address index or NULL if data is to be sent to default address
+     */
     int send_bundled_chunks(uint * ad_idx = NULL);
 
     /**
-    * creates a simple chunk except of DATA chunk. It can be used for parameterless
-    * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
-    * that have only variable length parameters like the error chunks
-    */
+     * creates a simple chunk except of DATA chunk. It can be used for parameterless
+     * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
+     * that have only variable length parameters like the error chunks
+     */
     uchar alloc_simple_chunk(uchar chunk_type, uchar flag)
     {
         assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
-        simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*)geco::ds::single_client_alloc::allocate(MAX_SIMPLE_CHUNK_VALUE_SIZE);
+        simple_chunk_t* simple_chunk_ptr =
+                (simple_chunk_t*) geco::ds::single_client_alloc::allocate(
+                MAX_SIMPLE_CHUNK_VALUE_SIZE);
         simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
         simple_chunk_ptr->chunk_header.chunk_flags = flag;
         simple_chunk_ptr->chunk_header.chunk_length = 0x0004;
@@ -281,17 +327,17 @@ class dispatch_layer_t
     }
 
     /**
-      * free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
-      * memory allocated for that chunk
-      */
+     * free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
+     * memory allocated for that chunk
+     */
     void free_simple_chunk(uchar chunkID)
     {
         uint cid = chunkID;
         if (simple_chunks_[chunkID] != NULL)
         {
             event_logi(loglvl_intevent, "freed simple chunk %u", cid);
-            geco::ds::single_client_alloc::deallocate(
-                simple_chunks_[chunkID], MAX_SIMPLE_CHUNK_VALUE_SIZE);
+            geco::ds::single_client_alloc::deallocate(simple_chunks_[chunkID],
+            MAX_SIMPLE_CHUNK_VALUE_SIZE);
             simple_chunks_[chunkID] = NULL;
         }
         else
@@ -315,17 +361,17 @@ class dispatch_layer_t
     simple_chunk_t *get_simple_chunk(uchar chunkID);
 
     /**
-    * this function used for bundling of control chunks
-    * Used by geco-control and path management
-    * @param chunk pointer to chunk, that is to be put in the bundling buffer
-    * @return TODO : error value, 0 on success
-    */
+     * this function used for bundling of control chunks
+     * Used by geco-control and path management
+     * @param chunk pointer to chunk, that is to be put in the bundling buffer
+     * @return TODO : error value, 0 on success
+     */
     int bundle_simple_chunk(simple_chunk_t * chunk, uint * dest_index = NULL);
 
     /**
-    * function to return a pointer to the bundling module of this association
-    * @return   pointer to the bundling data structure, null in case of error.
-    */
+     * function to return a pointer to the bundling module of this association
+     * @return   pointer to the bundling data structure, null in case of error.
+     */
     inline void* get_bundle_control(channel_t* channel = NULL)
     {
         if (channel == NULL)
@@ -340,17 +386,18 @@ class dispatch_layer_t
     }
 
     /**
-    * Enable sending again - wait after received chunks have been diassembled completely.
-    */
+     * Enable sending again - wait after received chunks have been diassembled completely.
+     */
     inline void unlock_bundle_ctrl(uint* ad_idx = NULL)
     {
         bundle_controller_t* bundle_ctrl =
-            (bundle_controller_t*)get_bundle_control(curr_channel_);
+                (bundle_controller_t*) get_bundle_control(curr_channel_);
 
         /*1) no channel exists, it is NULL, so we take the global bundling buffer */
         if (bundle_ctrl == NULL)
         {
-            event_log(verbose, "unlock_bundle_ctrl()::Setting global bundling buffer ");
+            event_log(verbose,
+                    "unlock_bundle_ctrl()::Setting global bundling buffer ");
             bundle_ctrl = &default_bundle_ctrl_;
         }
 
@@ -358,23 +405,25 @@ class dispatch_layer_t
         if (bundle_ctrl->got_send_request)
             send_bundled_chunks(ad_idx);
 
-        event_logi(verbose, "unlock_bundle_ctrl() was called..and got %s send request -> processing",
-            (bundle_ctrl->got_send_request == true) ? "A" : "NO");
+        event_logi(verbose,
+                "unlock_bundle_ctrl() was called..and got %s send request -> processing",
+                (bundle_ctrl->got_send_request == true) ? "A" : "NO");
     }
 
     /**
-    * Keep sender from sending data right away - wait after received chunks have
-    * been diassembled completely.
-    */
+     * Keep sender from sending data right away - wait after received chunks have
+     * been diassembled completely.
+     */
     inline void lock_bundle_ctrl()
     {
         bundle_controller_t* bundle_ctrl =
-            (bundle_controller_t*)get_bundle_control(curr_channel_);
+                (bundle_controller_t*) get_bundle_control(curr_channel_);
 
         /*1) no channel exists, it is NULL, so we take the global bundling buffer */
         if (bundle_ctrl == NULL)
         {
-            event_log(verbose, "lock_bundle_ctrl()::Setting global bundling buffer ");
+            event_log(verbose,
+                    "lock_bundle_ctrl()::Setting global bundling buffer ");
             bundle_ctrl = &default_bundle_ctrl_;
         }
 
@@ -398,9 +447,9 @@ class dispatch_layer_t
      *  @param portnum            bogus port number
      */
     void recv_dctp_packet(int socket_fd, char *buffer, int bufferLength,
-        sockaddrunion * source_addr, sockaddrunion * dest_addr);
+            sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
-    private:
+private:
     /**
      *   retrieveAssociation retrieves a association from the list using the transport address as key.
      *   Returns NULL also if the association is marked "deleted" !
@@ -417,14 +466,14 @@ class dispatch_layer_t
      *   TODO hash(src_addr, src_port, dest_port) as key for channel to improve the performaces
      */
     channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
-        ushort src_port, ushort dest_port);
+            ushort src_port, ushort dest_port);
     bool cmp_channel(const channel_t& a, const channel_t& b);
 
     /**
      *   @return pointer to the retrieved association, or NULL
      */
     geco_instance_t* find_geco_instance_by_transport_addr(
-        sockaddrunion* dest_addr, uint address_type);
+            sockaddrunion* dest_addr, uint address_type);
     bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b);
 
     /**
@@ -438,13 +487,13 @@ class dispatch_layer_t
     uint find_chunk_types(uchar* packet_value, int len);
 
     /**
-    * contains_chunk: looks for chunk_type in a newly received geco packet
-    * Should be called after find_chunk_types().
-    * The chunkArray parameter is inspected. This only really checks for chunks
-    * with an ID <= 30. For all other chunks, it just guesses...
-    * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
-    * @pre: need call find_chunk_types() first
-    */
+     * contains_chunk: looks for chunk_type in a newly received geco packet
+     * Should be called after find_chunk_types().
+     * The chunkArray parameter is inspected. This only really checks for chunks
+     * with an ID <= 30. For all other chunks, it just guesses...
+     * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
+     * @pre: need call find_chunk_types() first
+     */
     inline int contains_chunk(uchar chunk_type, uint chunk_types)
     {
         // 0000 0000 ret = 0 at beginning
@@ -484,7 +533,7 @@ class dispatch_layer_t
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
     uchar* find_first_chunk(uchar * packet_value, int packet_val_len,
-        uchar chunk_type);
+            uchar chunk_type);
 
     /**
      * find_sockaddr: looks for address type parameters in INIT or INIT-ACKs
@@ -499,13 +548,16 @@ class dispatch_layer_t
      * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
      *             that many addresses in the chunk.
      */
-    int find_sockaddres(uchar * chunk, uint chunk_len,
-        uint n, sockaddrunion* foundAddress, int supportedAddressTypes);
+    int find_sockaddres(uchar * init_chunk, uint chunk_len, uint n,
+            sockaddrunion* foundAddress, int supportedAddressTypes);
     /**
      * @return -1 prama error, >=0 number of the found addresses
      * */
     int find_sockaddres(uchar * init_chunk, uint chunk_len,
-        int supportedAddressTypes);
+            int supportedAddressTypes);
 
+    /** NULL no params, otherwise have params*/
+    uchar* find_vlparam_fixed_from_setup_chunk(uchar * setup_chunk,
+            int chunk_len, ushort param_type);
 };
 #endif
