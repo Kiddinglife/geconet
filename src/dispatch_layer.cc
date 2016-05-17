@@ -29,7 +29,7 @@ dispatch_layer_t::dispatch_layer_t()
 }
 
 void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
-        int dctp_packet_len, sockaddrunion * source_addr,
+        uint dctp_packet_len, sockaddrunion * source_addr,
         sockaddrunion * dest_addr)
 {
     event_logiii(verbose,
@@ -38,8 +38,8 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
 
     /* 1) validate packet hdr size, checksum and if aligned 4 bytes */
     if (dctp_packet_len % 4 != 0
-            || dctp_packet_len < (int) MIN_NETWORK_PACKET_HDR_SIZES
-            || dctp_packet_len > (int) MAX_NETWORK_PACKET_HDR_SIZES
+            || dctp_packet_len < MIN_NETWORK_PACKET_HDR_SIZES
+            || dctp_packet_len > MAX_NETWORK_PACKET_HDR_SIZES
             || !validate_crc32_checksum(dctp_packet, dctp_packet_len))
     {
         event_log(loglvl_intevent, "received corrupted datagramm\n");
@@ -480,9 +480,10 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
 
                 // validate fixme checkme if we need to see if there are ip4 or ip6 addres
                 // present in the packet, need check rfc 4060 to confirm that ?
-                vlparam_fixed = find_vlparam_fixed_from_setup_chunk(init_chunk,
-                        packet_value_len,
-                        VLPARAM_HOST_NAME_ADDR);
+                vlparam_fixed =
+                        (vlparam_fixed_t*) find_vlparam_fixed_from_setup_chunk(
+                                init_chunk, packet_value_len,
+                                VLPARAM_HOST_NAME_ADDR);
                 if (vlparam_fixed != NULL)
                 {
                     event_log(loglvl_intevent,
@@ -614,10 +615,10 @@ int dispatch_layer_t::handle_chunks_from_geco_packet(uint address_index,
 }
 
 uchar* dispatch_layer_t::find_vlparam_fixed_from_setup_chunk(
-        uchar * setup_chunk, int chunk_len, ushort param_type)
+        uchar * setup_chunk, uint chunk_len, ushort param_type)
 {
     /*1) validate packet length*/
-    int read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
+    uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
     if (chunk_len < read_len)
     {
         event_logii(loglvl_warnning_error,
@@ -631,7 +632,7 @@ uchar* dispatch_layer_t::find_vlparam_fixed_from_setup_chunk(
     if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
             && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
     {
-        return false;
+        return NULL;
     }
 
     uint len = ntohs(init_chunk->chunk_header.chunk_length);
@@ -652,7 +653,7 @@ uchar* dispatch_layer_t::find_vlparam_fixed_from_setup_chunk(
         {
             event_log(loglvl_warnning_error,
                     "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
-            return -1;
+            return NULL;
         }
 
         vlp = (vlparam_fixed_t*) curr_pos;
@@ -734,7 +735,7 @@ int dispatch_layer_t::bundle_simple_chunk(simple_chunk_t * chunk,
     bundle_ctrl->ctrl_chunk_in_buffer = true;
     if (chunk_len < 4)
     {
-        memcpy(&bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position], 0,
+        memset(&(bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position]), 0,
                 chunk_len);
         bundle_ctrl->ctrl_position += chunk_len;
     }
@@ -948,10 +949,10 @@ int dispatch_layer_t::find_sockaddres(uchar * chunk, uint chunk_len, uint n,
     return 1;
 }
 uchar* dispatch_layer_t::find_first_chunk(uchar * packet_value,
-        int packet_val_len, uchar chunk_type)
+        uint packet_val_len, uchar chunk_type)
 {
-    int chunk_len = 0;
-    int read_len = 0;
+    uint chunk_len = 0;
+    uint read_len = 0;
     uint padding_len;
     chunk_fixed_t* chunk;
     uchar* curr_pos = packet_value;
@@ -986,10 +987,10 @@ uchar* dispatch_layer_t::find_first_chunk(uchar * packet_value,
 }
 
 bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
-        int packet_val_len, ushort error_cause)
+        uint packet_val_len, ushort error_cause)
 {
-    int chunk_len = 0;
-    int read_len = 0;
+    uint chunk_len = 0;
+    uint read_len = 0;
     uint padding_len;
     chunk_fixed_t* chunk;
     uchar* curr_pos = packet_value;
@@ -1001,7 +1002,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
                 "contains_error_chunk()::packet_val_len=%d, read_len=%d",
                 packet_val_len, read_len);
 
-        if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
+        if (packet_val_len - read_len < (int)CHUNK_FIXED_SIZE)
         {
             event_log(loglvl_warnning_error,
                     "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
@@ -1010,7 +1011,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
 
         chunk = (chunk_fixed_t*) curr_pos;
         chunk_len = get_chunk_length(chunk);
-        if (chunk_len < CHUNK_FIXED_SIZE
+        if (chunk_len < (int)CHUNK_FIXED_SIZE
                 || chunk_len + read_len > packet_val_len)
             return false;
 
@@ -1018,11 +1019,11 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
         {
             event_log(loglvl_intevent,
                     "contains_error_chunk()::Error Chunk Found");
-            int err_param_len = 0;
-            char* simple_chunk;
-            int param_len = 0;
+            uint err_param_len = 0;
+            uchar* simple_chunk;
+            uint param_len = 0;
             // search for target error param
-            while (err_param_len < chunk_len - CHUNK_FIXED_SIZE)
+            while (err_param_len < chunk_len - (int)CHUNK_FIXED_SIZE)
             {
                 if (chunk_len - CHUNK_FIXED_SIZE
                         - err_param_len< VLPARAM_FIXED_SIZE)
@@ -1054,9 +1055,10 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
         read_len += padding_len;
         curr_pos += read_len;
     }
+    return false;
 }
 
-uint dispatch_layer_t::find_chunk_types(uchar* packet_value, int packet_val_len)
+uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len)
 {
     // 0000 0000 ret = 0 at beginning
     // 0000 0001 1
@@ -1070,8 +1072,8 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, int packet_val_len)
     // 1000 0000-byte0-byte0-1000 0110 ret
 
     uint result = 0;
-    int chunk_len = 0;
-    int read_len = 0;
+    uint chunk_len = 0;
+    uint read_len = 0;
     uint padding_len;
     chunk_fixed_t* chunk;
     uchar* curr_pos = packet_value;
@@ -1114,6 +1116,7 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, int packet_val_len)
         read_len += padding_len;
         curr_pos += read_len;
     }
+    return result;
 }
 
 bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a,

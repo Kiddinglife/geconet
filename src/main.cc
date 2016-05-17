@@ -15,7 +15,7 @@ static void test_logging()
     read_trace_levels();
     event_log1(loglvl_extevent, "module1", "test log file %d", 12);
     error_log1(loglvl_fatal_error_exit, "module2", 12, "test log file %d", 12);
-    error_log1(major_error_abort, "module2", 12, "test log file %d", 12);
+    error_log1(loglvl_major_error_abort, "module2", 12, "test log file %d", 12);
 }
 
 #include "md5.h"

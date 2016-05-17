@@ -21,6 +21,7 @@
 #define __INCLUDE_DISPATCH_LAYER_H
 
 #include "globals.h"
+#include "geco-ds-malloc.h"
 #include <unordered_map>
 #include <vector>
 
@@ -238,6 +239,24 @@ public:
 
     dispatch_layer_t();
 
+    /*------------------- Functions called by the Unix-Interface --------------*/
+    /**
+     * \fn recv_dctp_packet
+     *  recv_dctp_packet is the callback function of the DCTP-message dispatch_layer.
+     *  It is called by the Unix-interface module when a new ip packet is received.
+     *  This function also performs OOTB handling, tag verification etc.
+     *  (see also RFC 4960, section 8.5.1.B)  and sends data to the bundling module of
+     *  the right association
+     *
+     *  @param socket_fd          the socket file discriptor
+     *  @param buffer             pointer to arrived datagram
+     *  @param bufferlength       length of datagramm
+     *  @param fromAddress        source address of DG
+     *  @param portnum            bogus port number
+     */
+    void recv_dctp_packet(int socket_fd, char *buffer, uint bufferLength,
+            sockaddrunion * source_addr, sockaddrunion * dest_addr);
+
 private:
     /**
      * Disassembles chunks from a received datagram
@@ -277,7 +296,7 @@ private:
      * @param  error_cause  error cause code to look for
      * @return true is chunk_type exists in SCTP datagram, false if it is not in there
      */
-    bool contains_error_chunk(uchar * packet_value, int packet_val_len,
+    bool contains_error_chunk(uchar * packet_value, uint packet_val_len,
             ushort error_cause);
 
     uint get_bundle_total_size(bundle_controller_t* buf)
@@ -431,25 +450,6 @@ private:
         bundle_ctrl->got_send_request = false;
     }
 
-    /*------------------- Functions called by the Unix-Interface --------------*/
-    /**
-     * \fn recv_dctp_packet
-     *  recv_dctp_packet is the callback function of the DCTP-message dispatch_layer.
-     *  It is called by the Unix-interface module when a new ip packet is received.
-     *  This function also performs OOTB handling, tag verification etc.
-     *  (see also RFC 4960, section 8.5.1.B)  and sends data to the bundling module of
-     *  the right association
-     *
-     *  @param socket_fd          the socket file discriptor
-     *  @param buffer             pointer to arrived datagram
-     *  @param bufferlength       length of datagramm
-     *  @param fromAddress        source address of DG
-     *  @param portnum            bogus port number
-     */
-    void recv_dctp_packet(int socket_fd, char *buffer, int bufferLength,
-            sockaddrunion * source_addr, sockaddrunion * dest_addr);
-
-private:
     /**
      *   retrieveAssociation retrieves a association from the list using the transport address as key.
      *   Returns NULL also if the association is marked "deleted" !
@@ -484,7 +484,7 @@ private:
     bool validate_dest_addr(sockaddrunion * dest_addr);
 
     /**returns a value indicating which chunks are in the packet.*/
-    uint find_chunk_types(uchar* packet_value, int len);
+    uint find_chunk_types(uchar* packet_value, uint len);
 
     /**
      * contains_chunk: looks for chunk_type in a newly received geco packet
@@ -532,7 +532,7 @@ private:
      * @param  chunk_type   chunk type to look for
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
-    uchar* find_first_chunk(uchar * packet_value, int packet_val_len,
+    uchar* find_first_chunk(uchar * packet_value, uint packet_val_len,
             uchar chunk_type);
 
     /**
@@ -558,6 +558,6 @@ private:
 
     /** NULL no params, otherwise have params*/
     uchar* find_vlparam_fixed_from_setup_chunk(uchar * setup_chunk,
-            int chunk_len, ushort param_type);
+            uint chunk_len, ushort param_type);
 };
 #endif

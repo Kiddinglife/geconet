@@ -6,7 +6,7 @@ static void safe_close_soket(int sfd)
 {
     if (sfd < 0)
     {
-        error_log(major_error_abort, "invalid sfd!\n");
+        error_log(loglvl_major_error_abort, "invalid sfd!\n");
         return;
     }
 
@@ -21,11 +21,11 @@ static void safe_close_soket(int sfd)
     {
 #endif
 #ifdef _WIN32
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "safe_cloe_soket()::close socket failed! {%d} !\n",
                 WSAGetLastError());
 #else
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "safe_cloe_soket()::close socket failed! {%d} !\n", errno);
 #endif
     }
@@ -70,7 +70,7 @@ static LPFN_WSARECVMSG getwsarecvmsg()
                     NULL
             ))
     {
-        error_log(major_error_abort,
+        error_log(loglvl_major_error_abort,
                 "WSAIoctl SIO_GET_EXTENSION_FUNCTION_POINTER\n");
         return NULL;
     }
@@ -106,7 +106,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
 
     if (hs_port <= 0)
     {
-        error_log(major_error_abort, "Invalid port \n");
+        error_log(loglvl_major_error_abort, "Invalid port \n");
         return -1;
     }
 
@@ -227,7 +227,7 @@ bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
                         sizeof(s6addr(&a->sin6)) == 0);
         break;
     default:
-        error_logi(major_error_abort, "Address family %d not supported",
+        error_logi(loglvl_major_error_abort, "Address family %d not supported",
                 saddr_family(a));
         return false;
         break;
@@ -372,7 +372,7 @@ void poller_t::set_expected_event_on_fd(int sfd, int eventcb_type,
 
     if (socket_despts_size_ >= MAX_FD_SIZE)
     {
-        error_log(major_error_abort,
+        error_log(loglvl_major_error_abort,
                 "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
         return;
     }
@@ -553,11 +553,11 @@ void poller_t::fire_event(int num_of_events)
                         portnum_);
 
             dispatch_layer_.recv_dctp_packet(socket_despts[i].fd,
-                    &internal_dctp_buffer[iphdrlen], recvlen_, &src, &dest);
+                    &(internal_dctp_buffer[iphdrlen]), recvlen_, &src, &dest);
             break;
 
         default:
-            error_logi(major_error_abort, "No such  eventcb_type %d",
+            error_logi(loglvl_major_error_abort, "No such  eventcb_type %d",
                     event_callbacks[i].eventcb_type);
             break;
         }
@@ -726,7 +726,7 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
         dummy_ipv4_udp_despt_ = open_ipproto_udp_socket(&su, myRwnd);
         if (dummy_ipv4_udp_despt_ < 0)
         {
-            error_log(major_error_abort,
+            error_log(loglvl_major_error_abort,
                     "Could not open UDP dummy socket !\n");
             return dummy_ipv4_udp_despt_;
         }
@@ -738,7 +738,7 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
         dummy_ipv6_udp_despt_ = open_ipproto_udp_socket(&su, myRwnd);
         if (dummy_ipv6_udp_despt_ < 0)
         {
-            error_log(major_error_abort,
+            error_log(loglvl_major_error_abort,
                     "Could not open UDP dummy socket !\n");
             return dummy_ipv6_udp_despt_;
         }
@@ -921,11 +921,11 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
                 unlock(data);
             }
 #ifdef _WIN32
-            error_logi(major_error_abort,
+            error_logi(loglvl_major_error_abort,
                     "select():: failed! {%d} !\n",
                     WSAGetLastError());
 #else
-            error_logi(major_error_abort, "select():: failed! {%d} !\n", errno);
+            error_logi(loglvl_major_error_abort, "select():: failed! {%d} !\n", errno);
 #endif
         }
 
@@ -992,7 +992,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
 #endif
     if (sockdespt < 0)
     {
-        error_logii(major_error_abort, "socket()  return  %d, errorno %d!\n",
+        error_logii(loglvl_major_error_abort, "socket()  return  %d, errorno %d!\n",
                 sockdespt, errno);
         return sockdespt;
     }
@@ -1032,7 +1032,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     if (*rwnd < 0)
     {
         safe_close_soket(sockdespt);
-        error_logii(major_error_abort,
+        error_logii(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_RCVBUF {%d} but failed errno %d\n!",
                 *rwnd, errno);
     }
@@ -1042,11 +1042,11 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
     {
         safe_close_soket(sockdespt);
 #ifdef _WIN32
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
                 WSAGetLastError());
 #else
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
 #endif
         return -1;
@@ -1059,7 +1059,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
             (const char *) &optval, optval) < 0)
     {
         safe_close_soket(sockdespt);
-        error_log(major_error_abort, "setsockopt: IP_PMTU_DISCOVER failed !");
+        error_log(loglvl_major_error_abort, "setsockopt: IP_PMTU_DISCOVER failed !");
     }
 
     // test to make sure we set it correctly
@@ -1067,7 +1067,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
             &opt_size) < 0)
     {
         safe_close_soket(sockdespt);
-        error_log(major_error_abort, "getsockopt: SO_RCVBUF failed !");
+        error_log(loglvl_major_error_abort, "getsockopt: SO_RCVBUF failed !");
     }
     else
     {
@@ -1131,7 +1131,7 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
         af = AF_INET6;
         break;
     default:
-        error_log(major_error_abort, "upd ip4 socket() failed!\n");
+        error_log(loglvl_major_error_abort, "upd ip4 socket() failed!\n");
         break;
     }
 
@@ -1140,11 +1140,11 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     if ((sfd = socket(af, SOCK_DGRAM, IPPROTO_UDP)) < 0)
     {
 #ifdef _WIN32
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "upd ip4 socket() failed error code (%d)!\n",
                 WSAGetLastError());
 #else
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "upd ip4 socket() failed error code (%d)!\n", errno);
 #endif
     }
@@ -1157,11 +1157,11 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     if (*rwnd < 0)
     {
 #ifdef _WIN32
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
                 *rwnd, WSAGetLastError());
 #else
-        error_logii(major_error_abort,
+        error_logii(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_RCVBUF {%d} but failed {%d} !\n",
                 *rwnd, errno);
 #endif
@@ -1172,11 +1172,11 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     {
         safe_close_soket(sfd);
 #ifdef _WIN32
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
                 WSAGetLastError());
 #else
-        error_logi(major_error_abort,
+        error_logi(loglvl_major_error_abort,
                 "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
 #endif
         return -1;
@@ -1187,7 +1187,7 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     if (ch < 0)
     {
         safe_close_soket(sfd);
-        error_log(major_error_abort,
+        error_log(loglvl_major_error_abort,
                 "bind() failed, please check if adress exits !\n");
         return -1;
     }
@@ -1205,25 +1205,25 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
 {
     if (sfd <= 0)
     {
-        error_log(major_error_abort, "send UDP data on an invalid fd!\n");
+        error_log(loglvl_major_error_abort, "send UDP data on an invalid fd!\n");
         return -1;
     }
 
     if (length <= 0)
     {
-        error_log(major_error_abort, "Invalid length!\n");
+        error_log(loglvl_major_error_abort, "Invalid length!\n");
         return -1;
     }
 
     if (buf == NULL)
     {
-        error_log(major_error_abort, "Invalid buf in send_udp_msg(%s)\n");
+        error_log(loglvl_major_error_abort, "Invalid buf in send_udp_msg(%s)\n");
         return -1;
     }
 
     if (sfd == this->ip4_socket_despt_ || sfd == this->ip6_socket_despt_)
     {
-        error_log(major_error_abort, "cannot send UDP msg on a geco socket!\n");
+        error_log(loglvl_major_error_abort, "cannot send UDP msg on a geco socket!\n");
         return -1;
     }
 
@@ -1243,7 +1243,7 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
                 sizeof(struct sockaddr_in6));
         break;
     default:
-        error_log(major_error_abort,
+        error_log(loglvl_major_error_abort,
                 "Invalid AF address family in send_udp_msg()\n");
         result = -1;
         break;
@@ -1287,13 +1287,13 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
         tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, &opt_len);
         if (tmp < 0)
         {
-            error_log(major_error_abort, "getsockopt(IP_TOS) failed!\n");
+            error_log(loglvl_major_error_abort, "getsockopt(IP_TOS) failed!\n");
             return -1;
         }
         tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, &tos, sizeof(char));
         if (tmp < 0)
         {
-            error_log(major_error_abort, "setsockopt(tos) failed!\n");
+            error_log(loglvl_major_error_abort, "setsockopt(tos) failed!\n");
             return -1;
         }
         event_logiiiiii(verbose,
@@ -1320,7 +1320,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
         if (inet_ntop(AF_INET6, s6addr(dest), (char *) hostname,
         IFNAMSIZ) == NULL)
         {
-            error_log(major_error_abort,
+            error_log(loglvl_major_error_abort,
                     "inet_ntop()  buffer is too small !\n");
             return -1;
         }
@@ -1342,7 +1342,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
 #endif
         break;
     default:
-        error_logi(major_error_abort, "no such Adress Family %u !\n",
+        error_logi(loglvl_major_error_abort, "no such Adress Family %u !\n",
                 saddr_family(dest));
         return -1;
         break;
@@ -1361,7 +1361,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
 {
     if ((dest == NULL) || (from == NULL) || (to == NULL))
     {
-        error_log(major_error_abort, "some param is NULL !\n");
+        error_log(loglvl_major_error_abort, "some param is NULL !\n");
         return -1;
     }
 
@@ -1445,7 +1445,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
     }
     else
     {
-        error_log(major_error_abort, "recv_geco_msg()::no such AF!\n");
+        error_log(loglvl_major_error_abort, "recv_geco_msg()::no such AF!\n");
         return -1;
     }
 
@@ -1476,7 +1476,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
 #endif
 
     if (len < 0)
-        error_log(major_error_abort, "recv()  failed () !");
+        error_log(loglvl_major_error_abort, "recv()  failed () !");
     event_logi(verbose, "recv_geco_msg():: recv %u bytes od data\n", len);
     return len;
 }
@@ -1486,7 +1486,7 @@ int transport_layer_t::recv_udp_packet(int sfd, char *dest, int maxlen,
     int len;
     if ((len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from,
             from_len)) < 0)
-        error_log(major_error_abort,
+        error_log(loglvl_major_error_abort,
                 "recvfrom  failed in get_message(), aborting !\n");
     return len;
 }
@@ -1494,7 +1494,7 @@ int transport_layer_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
         socket_cb_fun_t scb)
 {
 #ifdef _WIN32
-    error_log(major_error_abort,
+    error_log(loglvl_major_error_abort,
             "WIN32: Registering ULP-Callbacks for UDP not installed !\n");
     return -1;
 #endif
@@ -1517,7 +1517,7 @@ int transport_layer_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
     }
     else
     {
-        error_log(major_error_abort,
+        error_log(loglvl_major_error_abort,
                 "UNKNOWN ADDRESS TYPE - CHECK YOUR PROGRAM !\n");
         return -1;
     }
@@ -1534,7 +1534,7 @@ void transport_layer_t::add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
         short int eventMask)
 {
 #ifdef _WIN32
-    error_log(major_error_abort,
+    error_log(loglvl_major_error_abort,
             "WIN32: Registering User Callbacks not installed !\n");
 #endif
     cbunion_.user_cb_fun = cbfun;

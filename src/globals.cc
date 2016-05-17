@@ -359,7 +359,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
         sprintf(str, "%s exits at line %d", module_name, line_no);
         perr_exit(str);
     }
-    if (error_loglvl == major_error_abort)
+    if (error_loglvl == loglvl_major_error_abort)
     {
         char str[32];
         sprintf(str, "%s aborts at line %d", module_name, line_no);
@@ -635,7 +635,7 @@ char* Bitify(size_t mWritePosBits, char* mBuffer)
     if (mWritePosBits <= 0)
     {
         strcpy(out, "no bits to print\n");
-        return;
+        return NULL;
     }
     int strIndex = 0;
     int inner;
