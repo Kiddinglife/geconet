@@ -298,6 +298,18 @@ extern void print_time_now(ushort level);
 extern void print_timeval(timeval* tv);
 
 //<---------------------- helpers --------------------->
+enum ctrl_type
+{
+    bundle_ctrl,
+    recv_ctrl,
+    flow_ctrl,
+    reliable_transfer_ctrl,
+    path_ctrl,
+    geco_ctrl,
+    stream_ctrl,
+    unkown
+};
+
 struct internal_stream_data_t
 {
     ushort stream_id;
@@ -332,6 +344,9 @@ struct internal_data_chunk_t
     bool hasBeenFastRetransmitted;
     bool hasBeenRequeued;
     bool context;
+
+    /*which ctrl this struct belongs to*/
+    ctrl_type ct;
 };
 
 /**
@@ -398,7 +413,7 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 
 // SEE http://book.51cto.com/art/201012/236880.htm
 // USE MINIMUM_DELAY AS TOS
-#define IPTOS_DEFAULT 0xe0|0x1000 // Precedence 111 + TOS 1000 + MBZ 0
+#define IPTOS_DEFAULT (0xe0|0x1000) // Precedence 111 + TOS 1000 + MBZ 0
 
 enum hide_address_flag_t
 {
@@ -456,7 +471,6 @@ extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 /*this parameter specifies the maximum number of addresses
 that an endpoint may have */
 #define MAX_NUM_ADDRESSES      32
-
 #define SECRET_KEYSIZE  4096
 #define KEY_INIT     0
 #ifndef KEY_READ

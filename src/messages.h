@@ -56,11 +56,11 @@ typedef short chunk_id_t;
 #define MAX_MTU_SIZE 1500
 #define DEFAULT_MTU_CEILING     1500
 #define IP_HDR_SIZE 20
-
+#define MAX_GECO_PACKET_SIZE  (MAX_MTU_SIZE - IP_HDR_SIZE)
 #ifdef USE_UDP
 #define GECO_PACKET_FIXED_SIZE  (4*sizeof(ushort))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE - GECO_PACKET_FIXED_SIZE)
+(MAX_GECO_PACKET_SIZE - GECO_PACKET_FIXED_SIZE)
 /* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
 /* #warning Using SCTP over UDP! */
 struct geco_packet_fixed_t
@@ -73,7 +73,7 @@ struct geco_packet_fixed_t
 #else
 #define GECO_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_MTU_SIZE - IP_HDR_SIZE- GECO_PACKET_FIXED_SIZE)
+(MAX_GECO_PACKET_SIZE - GECO_PACKET_FIXED_SIZE)
 struct geco_packet_fixed_t
 {
     ushort src_port;
@@ -388,6 +388,7 @@ struct heartbeat_chunk_t
  simple chunk can also be used for transfering chunks to/from bundling, since bundling
  looks only on the chunk header.
  */
+#define SIMPLE_CHUNK_SIZE MAX_NETWORK_PACKET_VALUE_SIZE
 #define MAX_SIMPLE_CHUNK_VALUE_SIZE  (MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE)
 struct simple_chunk_t
 {
