@@ -184,13 +184,13 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
             return;
         }
     }
+    /* 6) find dctp instancefor this packet
+     *  if this packet is for a server dctp instance,
+     *  we will find that dctp instance and let it handle this packet
+     *  (i.e. we have the dctp instance's localPort set and
+     *  it matches the packet's destination port) */
     else
     {
-        /* 6) find dctp instancefor this packet
-         *  if this packet is for a server dctp instance,
-         *  we will find that dctp instance and let it handle this packet
-         *  (i.e. we have the dctp instance's localPort set and
-         *  it matches the packet's destination port) */
         curr_geco_instance_ = find_geco_instance_by_transport_addr(dest_addr,
                 address_type);
         if (curr_geco_instance_ == NULL)
@@ -213,7 +213,10 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
         }
     }
 
-    /*8) now we can validate if dest_addr in localaddress */
+    /*8)
+     * now we can validate if dest_addr in localaddress
+     * this method internally uses curr_geco_instance_ and curr_channel_
+     * so we must call it right here */
     if (!validate_dest_addr(dest_addr))
     {
         event_log(verbose,
@@ -289,20 +292,6 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
                 curr_channel_ = find_channel_by_transport_addr(
                         &found_addres_[i], last_src_port_, last_dest_port_);
             }
-            // fixme this is official way
-            //            do
-            //            {
-            //                retval = find_sockaddres(init_chunk,
-            //                        packet_value_len, i, &addr_from_init_or_ack_chunk,
-            //                        supported_addr_types);
-            //                if (retval == 0) // found an addr
-            //                {
-            //                    curr_channel_ = find_channel_by_transport_addr(
-            //                            &addr_from_init_or_ack_chunk, last_src_port_,
-            //                            last_dest_port_);
-            //                }
-            //                i++;
-            //            } while (curr_channel_ == NULL && retval == 0);
         }        //if (init_chunk != NULL) CHUNK_INIT
 
         /* 12)
@@ -344,8 +333,8 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
 
         /*15)
          * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (2)
-         * TODO discard this packet is delegant, better to notify remote endpoint and ulp
-         * the abort and the error casuse carried in the ABORT*/
+         * If the OOTB packet contains an ABORT chunk, the receiver MUST
+         * silently discard the OOTB packet and take no further action*/
         if (contains_chunk((uchar) CHUNK_ABORT, chunk_types_arr) > 0)
         {
             event_log(verbose,
@@ -431,6 +420,12 @@ void dispatch_layer_t::recv_dctp_packet(int socket_fd, char *dctp_packet,
          containing the ABORT chunk MUST be the Initiate Tag of the
          received INIT chunk, and the T bit of the ABORT chunk has to be
          set to 0, indicating that the Verification Tag is NOT reflected.*/
+
+        // if this packet has channel, codes in 11 if (curr_channel_ == NULL)
+        // at line 260 will not actually run, that is why we find it again here
+        if (init_chunk == NULL)
+            init_chunk = find_first_chunk(((dctp_packet_t*) dctp_packet)->chunk,
+                    packet_value_len, (uchar) CHUNK_INIT);
         if (init_chunk != NULL)
         {
             event_log(loglvl_intevent,
@@ -678,6 +673,7 @@ uchar* dispatch_layer_t::find_vlparam_fixed_from_setup_chunk(
 
 int dispatch_layer_t::send_bundled_chunks(uint * ad_idx)
 {
+
     return 0;
 }
 
@@ -1002,7 +998,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
                 "contains_error_chunk()::packet_val_len=%d, read_len=%d",
                 packet_val_len, read_len);
 
-        if (packet_val_len - read_len < (int)CHUNK_FIXED_SIZE)
+        if (packet_val_len - read_len < (int) CHUNK_FIXED_SIZE)
         {
             event_log(loglvl_warnning_error,
                     "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
@@ -1011,7 +1007,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
 
         chunk = (chunk_fixed_t*) curr_pos;
         chunk_len = get_chunk_length(chunk);
-        if (chunk_len < (int)CHUNK_FIXED_SIZE
+        if (chunk_len < (int) CHUNK_FIXED_SIZE
                 || chunk_len + read_len > packet_val_len)
             return false;
 
@@ -1023,7 +1019,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
             uchar* simple_chunk;
             uint param_len = 0;
             // search for target error param
-            while (err_param_len < chunk_len - (int)CHUNK_FIXED_SIZE)
+            while (err_param_len < chunk_len - (int) CHUNK_FIXED_SIZE)
             {
                 if (chunk_len - CHUNK_FIXED_SIZE
                         - err_param_len< VLPARAM_FIXED_SIZE)
@@ -1058,7 +1054,8 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
     return false;
 }
 
-uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len)
+uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
+        uint packet_val_len)
 {
     // 0000 0000 ret = 0 at beginning
     // 0000 0001 1
