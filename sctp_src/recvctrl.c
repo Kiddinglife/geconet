@@ -639,7 +639,8 @@ void rxc_stop_sack_timer(void)
     g_list_free(rxc->dup_list);
     rxc->dup_list = NULL;
 
-    if (rxc->timer_running == true) {
+    if (rxc->timer_running == true) 
+    {
         result = sctp_stopTimer(rxc->sack_timer);
         event_logi(INTERNAL_EVENT_0, "Stopped Timer, Result was %d", result);
         rxc->timer_running = FALSE;
