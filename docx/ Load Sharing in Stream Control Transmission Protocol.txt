@@ -1,0 +1,1654 @@
+
+
+
+
+Internet Engineering Task Force                             A. Abd El Al
+INTERNET-DRAFT                                                T. Saadawi
+Expires: October 2005                                             M. Lee 
+ 					               City University of New York
+                                                               May, 2005
+
+
+ 	    Load Sharing in Stream Control Transmission Protocol
+                     <draft-ahmed-lssctp-01.txt>
+
+
+Status of this memo
+
+    By submitting this Internet-Draft, each author represents that
+    any applicable patent or other IPR claims of which he or she is
+    aware have been or will be disclosed, and any of which he or she
+    becomes aware will be disclosed, in accordance with Section 6 of
+    BCP 79.
+
+    Internet-Drafts are working documents of the Internet Engineering
+    Task Force (IETF), its areas, and its working groups.  Note that
+    other groups may also distribute working documents as Internet-
+    Drafts.
+
+    Internet-Drafts are draft documents valid for a maximum of six
+    months and may be updated, replaced, or obsoleted by other documents
+    at any time.  It is inappropriate to use Internet-Drafts as
+    reference material or to cite them other than as "work in progress."
+
+    The list of current Internet-Drafts can be accessed at
+    http://www.ietf.org/1id-abstracts.txt
+
+    The list of Internet-Draft Shadow Directories can be accessed at
+    http://www.ietf.org/shadow.html
+
+
+Abstract
+
+   Stream Control Transmission Protocol (SCTP) RFC2960 [SXM00] 
+   specifications utilize the possible multiple paths between the 
+   sender and receiver for retransmission of lost data chunks and as a 
+   backup for the primary path, in case of primary path failure. 
+   Other than that, all the data chunks are being sent on the primary 
+   path chosen by the SCTP user during the association initiation. 
+   This memo describes an extension to SCTP that allows endpoints to 
+   use the multiple available paths for simultaneous data transmission. 
+   The extension maintains SCTP congestion control on each path, so as 
+   to ensure fair integration with other traffic in the network. 
+
+
+
+
+
+
+Abd El Al, et al.                                               [Page 1]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+Table of Contents
+
+  1. Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+  1.1 Abbreviations . . . . . . . . . . . . . . . . . . . . . . . . . 3
+  1.2 Overview of LS-SCTP . . . . . . . . . . . . . . . . . . . . . . 3
+  1.3 Motivations . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+  1.4 Architectural View of LS-SCTP . . . . . . . . . . . . . . . . . 4  
+  2. Conventions  . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+  3. Protocol Changes to support LS-SCTP  . . . . . . . . . . . . . . 5
+  3.1 Load-Sharing-Supported Parameter for INIT and INIT-ACK  . . . . 5
+  3.2 Initial-PSN (I-PSN) Parameter for COOKIE-ECHO and COOKIE-ACK  . 6  
+  3.3 LS-SCTP Data chunk (LS-DATA)  . . . . . . . . . . . . . . . .   7
+  3.4 LS-SCTP Selective Acknowledgement (LS-SACK) . . . . . . . . .  10 
+  3.5 Negotiation of Load-Sharing-Supported parameter . . . . . . .  13
+  3.5.1 Sending Load-Sharing-Supported param in INIT  . . . . . . .  13
+  3.5.2 Receipt of Load-Sharing-Supported param in INIT or INIT-ACK  13
+  3.5.3 Receipt of Op. Error for Load-Sharing-Supported Param . . .  14
+  3.6 Exchanging Initial-PSN Param in the COOKIE-ECHO and 
+      COOKIE-ACK  . . . . . . . . . . . . . . . . . . . . . . . . .  14
+  3.7 Sender Side Implementation of PR-SCTP . . . . . . . . . . . .  15
+  3.7.1 Transmission of DATA Chunks . . . . . . . . . . . . . . . .  17
+  3.7.2 Path MTU Discovery  . . . . . . . . . . . . . . . . . . . .  17
+  3.7.3 Fragmentation  and Reassembly . . . . . . . . . . . . . . .  17
+  3.7.4 Path Decision  .  . . . . . . . . . . . . . . . . . . . . .  18
+  3.7.5 Distributing Data Chunks on Association Paths . . . . . . .  18
+  3.7.6 Processing Received LS-SACK . . . . . . . . . . . . . . . .  19
+  3.7.7 Re-transmitting Data Chunks   . . . . . . . . . . . . . . .  20
+  3.7.8 Inactive Destination Address  . . . . . . . . . . . . . . .  20
+  3.7.9 Bundling .  . . . . . . . . . . . . . . . . . . . . . . . .  20
+  3.8 Receiver Side Implementation of PR-SCTP . . . . . . . . . . .  21
+  3.8.1 Acknowledgement on Reception of DATA Chunks . . . . . . . .  23
+  3.8.2 DATA Chunks Delivery to ULP . . . . . . . . . . . . . . . .  24
+  4. Termination of Association . . . . . . . . . . . . . . . . . .  24 
+  5. Security Considerations  . . . . . . . . . . . . . . . . . . .  25
+  6. IANA Considerations  . . . . . . . . . . . . . . . . . . . . .  26
+  6.1 Chunk Extension . . . . . . . . . . . . . . . . . . . . . . .  26
+  6.2 Chunk Parameter Extension   . . . . . . . . . . . . . . . . .  26
+      References  . . . . . . . . . . . . . . . . . . . . . . . . .  27
+      Authors' Addresses  . . . . . . . . . . . . . . . . . . . . .  27
+      Full Copyright Statement  . . . . . . . . . . . . . . . . . .  29
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                               [Page 2]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+1. Introduction
+
+   This memo describes an extension to the Stream Control Transmission
+   Protocol (SCTP) RFC2960 [SXM00] that allows SCTP endpoints to utilize 
+   the available multiple paths for simultaneous transmission of data 
+   chunks, while maintaining the SCTP congestion control on each path, 
+   so as to ensure fair integration with other traffic in the network. 
+   This sort of resource aggregation was used at different layers of 
+   the  protocol stack to achieve higher throughput [BTS95]. We believe 
+   that the increase in the SCTP throughput provided by bandwidth 
+   aggregation can be extremely beneficial for wireless networks, with 
+   limited bandwidth and high loss rate. The extension is flexible, as 
+   it allows the SCTP sender to allocate different data streams, within
+   an association, to different paths. In addition, it allows 
+   distributing the data chunks of one stream among multiple paths, 
+   then the receiver reorders those chunks before delivering them to 
+   the upper layer.
+
+1.1 Abbreviations
+
+   ASN       - Association Sequence Number
+   IANA      - Internet Assigned Numbers Authority
+   I-ASN     - Initial - Association Sequence Number
+   IETF      - Internet Engineering Task Force
+   IP        - Internet Protocol
+   I-PSN     - Initial - Path Sequence Number
+   LS-Data   - Load Sharing - Data
+   LS-SACK   - Load Sharing - Selective Acknowledgement
+   LS-SCTP   - Load Sharing - Stream Control Transmission Protocol
+   MTU       - Maximum Transfer Unit
+   PID       - Path Identifier
+   PMTU      - Path Maximum Transfer Unit
+   PSN       - Path Sequence Number
+   QoS       - Quality of Service
+   RFC       - Request For Comments
+   SACK      - Selective Acknowledgement  
+   SCTP      - Stream Control Transmission Protocol
+   TCP       - Transmission Control Protocol
+   ULP       - Upper Layer Application
+
+
+1.2 Overview of LS-SCTP
+
+   Hereafter, we use the notation "LS-SCTP" to refer to the SCTP
+   protocol extended as defined in this document. Also, we use the 
+   notation ôNon LS-SCTPö to refer to the SCTP protocol as defined 
+   RFC2960 [SXM00].
+
+   
+
+
+Abd El Al, et al.                                               [Page 3]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   The protocol extension described in this document consists of two 
+   new elements:
+
+   1.  A single new parameter in the INIT/INIT-ACK exchange that
+     	 indicates whether the endpoint supports the extension
+
+   2.  Two new chunk types. The first is a new Data Chunk, 
+       LOAD SHARING DATA Chunk, used for sending data from the sender 
+       endpoint to the  receiver endpoint. The second is a new SACK 
+       chunk, LOAD SHARING SACK Chunk, used to provide selective 
+       acknowledgement to the sender on a per path basis.
+
+1.3 Motivations
+
+   Our motivations to extend SCTP for load sharing are:
+
+   1.	The increase in the number of multi-homed wireless devices that 
+      can be simultaneously connected to different networks through  
+      different interfaces.
+
+   2.	By aggregating the bandwidth available on the different paths, 
+      applications can gain higher throughput, as shown in [ASLJ04]
+      [ASLD04]. We believe that this will be extremely important for 
+      networks with limited bandwidth and high error rate.
+
+   3.	SCTP is more attractive for load sharing than other transport 
+      protocols such as TCP. As multi-homing is inherently a part of 
+      the SCTP, extending SCTP to support load sharing will be easier 
+      than TCP. Each TCP connection (Socket) can only send data to one 
+      destination interface, thus extending TCP for load sharing will 
+      require an overhead in establishing, monitoring and terminating 
+      the multiple TCP sockets. In addition, implementing load sharing  
+      in SCTP will provide the applications with the SCTP features that  
+      do not exist in TCP such as, multi-streaming [AA01], transmission  
+      paths monitoring through heartbeats control chunks, and protection 
+      against denial of service attacks using the cookies concept [SXM00]. 
+
+1.4 Architectural View of LS-SCTP
+
+   The LS-SCTP is based on the idea of separating the association flow 
+   control from congestion control. In LS-SCTP the flow control is 
+   on association basis, thus both the sender and receiver endpoints  
+   use their association buffer to hold the data chunks regardless
+   the path on which these data chunks will be sent or received.
+   On the other hand, congestion control is performed on per path basis, 
+   thus the sender will have a separate congestion control for each 
+   path, and these congestion control mechanisms can be used 
+   simultaneously for the data chunks to be transmitted on the paths.
+
+
+
+Abd El Al, et al.                                               [Page 4]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+ 
+   Thus we can say that the  sender endpoint has a virtual congestion
+   window (cwnd) size equal to the aggregate of the cwnds of all the 
+   paths within the association, that are currently being used for load
+   sharing. The congestion control mechanism on each path is following
+   RFC2960[SXM00], section 7, so as to insure fair integration with other
+   traffic in the network. 
+
+   In order to separate the flow control from the congestion control, 
+   LS-STCP uses two different sequence numbers. The first sequence 
+   number is the Association Sequence Number (ASN), that is a per 
+   association sequence number, and it is used to reorder the received 
+   data chunks at the receiver association buffer, regardless the path 
+   from which they have been received. The second sequence number is 
+   the Path Sequence Number (PSN) which is a per path sequence number 
+   used for reliability and congestion control on each path.
+
+
+          -------------------------------------------------
+         |           Association Flow Control              |
+         |                                                 | 
+          -------------------------------------------------  
+              |                 |                      |
+        -------------     -------------           -------------            
+       | Congestion  |   | Congestion  |         | Congestion  |  
+       |   Control   |   |   Control   |         |   Control   |        
+       |    for      |   |    for      | . . . . |    for      |    
+       |    Path     |   |    Path     |         |    Path     |             
+       |     #1      |   |     #2      |         |     #N      | 
+        -------------     -------------           ------------- 
+
+                  Figure 1: Architectural View of LS-SCTP
+
+
+2. Conventions
+
+   The keywords MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD,
+   SHOULD NOT, RECOMMENDED, NOT RECOMMENDED, MAY, and OPTIONAL, when
+   they appear in this document, are to be interpreted as described in
+   RFC2119 [RFC2199].
+
+
+3. Protocol Changes to support LS-SCTP
+
+3.1 Load-Sharing-Supported Parameter for INIT and INIT-ACK
+
+   The following new OPTIONAL parameter is added to the INIT and 
+   INIT-ACK chunks.
+
+
+
+
+Abd El Al, et al.                                               [Page 5]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+      Parameter Name                       Status     Type Value
+       -------------------------------------------------------------
+       Load-Sharing-Supported               OPTIONAL    0xC001
+
+   At the initialization of the association, the sender of the INIT or
+   INIT-ACK chunk shall include this OPTIONAL parameter to inform its
+   peer that it is able to support Load Sharing.  The format of this 
+   parameter is defined as follows:
+
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |    Parameter Type = 0xC001    |  Parameter Length = 4         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+       Type: 16 bit u_int
+
+          0xC001, indicating Load-Sharing-Supported parameter
+
+       Length: 16 bit u_int
+
+          Indicate the size of the parameter i.e. 4.
+
+
+3.2 Initial-PSN (I-PSN) Parameter for COOKIE-ECHO and COOKIE-ACK
+
+      Defines a new OPTIONAL Initial PSN parameter that the 
+      COOKIE-ECHO/COOKIE-ACK sender will use to indicate the initial 
+      PSN that the sender will use for each destination address. 
+
+	The order of the I-PSN parameters within COOKIE-ECHO and 
+      COOKIE-ACK MAY correspond to the destination addresses 
+      specified by the receiver of this parameter during the 
+      INIT/INIT-ACK exchange.
+	
+      
+       Parameter Name                       Status     Type Value
+       -------------------------------------------------------------
+       Initial-PSN                          OPTIONAL    0x0010
+
+      The format of this parameter is defined as follows:
+
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |    Parameter Type = 0x0010    |  Parameter Length = 8         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |  PID  |                      I-PSN                            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      
+
+
+
+Abd El Al, et al.                                               [Page 6]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+       Type: 16 bit u_int
+
+          0x0010, indicating I-PSN parameter
+
+       Length: 16 bit u_int
+
+          Indicate the size of the parameter i.e. 8.
+
+       Path Identifier PID: 4 bits (unsigned integer)
+
+           An identification number for each destination address           
+
+       Initial-Path Sequence Number I-PSN: 28 bits (unsigned integer)
+
+           Defines the initial PSN that the sender will use for the 
+           Data Chunks that will be sent to the destination address.  
+           The valid range of I-PSN is from 0 to 68435455 (2**28 - 1).    
+
+3.3 LS-SCTP Data chunk (LS-DATA) (10)
+
+   The following format MUST be used by LS-SCTP association for the 
+   DATA chunk:
+
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |   Type = 10   | Reserved|U|B|E|    Length                     |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                              ASN                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |  PID  |                      PSN                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |      Stream Identifier S      |   Stream Sequence Number n    |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                  Payload Protocol Identifier                  |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      \                                                               \
+      /                 User Data (seq n of Stream S)                 /
+      \                                                               \
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Reserved: 5 bits
+
+      Should be set to all '0's and ignored by the receiver.
+
+
+
+
+
+Abd El Al, et al.                                               [Page 7]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   U bit: 1 bit
+
+      The (U)nordered bit, if set to '1', indicates that this is an
+      unordered DATA chunk, and there is no Stream Sequence Number
+      assigned to this DATA chunk.  Therefore, the receiver MUST ignore
+      the Stream Sequence Number field.
+
+      After re-assembly (if necessary), unordered DATA chunks MUST be
+      dispatched to the upper layer by the receiver without any attempt
+      to re-order.
+
+      If an unordered user message is fragmented, each fragment of the
+      message MUST have its U bit set to '1'.
+
+   B bit: 1 bit
+
+      The (B)eginning fragment bit, if set, indicates the first   
+      fragment of a user message.
+
+   E bit:  1 bit
+
+      The (E)nding fragment bit, if set, indicates the last fragment of
+      a user message.
+
+
+   An unfragmented user message shall have both the B and E bits set to
+   '1'.  Setting both B and E bits to '0' indicates a middle fragment  
+   of a multi-fragment user message, as summarized in the following 
+   table:
+
+
+            B E                  Description
+         ===========================================================         |  1 0 | First piece of a fragmented user message          |
+         +----------------------------------------------------------+
+         |  0 0 | Middle piece of a fragmented user message         |
+         +----------------------------------------------------------+
+         |  0 1 | Last piece of a fragmented user message           |
+         +----------------------------------------------------------+
+         |  1 1 | Unfragmented Message                              |
+         ===========================================================         |             Table 1: Fragment Description Flags          |
+         ==========================================================   When a user message is fragmented into multiple chunks, the PSNs are
+   used by the receiver to reassemble the message.  This means that the
+   PSNs for each fragment, of a fragmented user message, MUST be 
+   strictly sequential.
+
+
+Abd El Al, et al.                                               [Page 8]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   Length:  16 bits (unsigned integer)
+
+      This field indicates the length of the DATA chunk in bytes from
+      the beginning of the type field to the end of the user data field
+      excluding any padding.  A DATA chunk with no user data field will
+      have Length set to 20 (indicating 20 bytes).
+
+   Association Sequence Number ASN : 32 bits (unsigned integer)
+
+      The ASN represents a sequence number for data chunks over the 
+      association regardless the path over which the data chunks will 
+      be sent. This value represents the ASN for this DATA chunk.  The   
+      valid range of ASN is from 0 to 4294967295 (2**32 - 1).  ASN 
+      wraps back to 0 after reaching 4294967295.
+
+   Path Identifier PID: 4 bits (unsigned integer)
+
+      Identifies the path over which the data chunk is being sent.
+
+   Path Sequence Number PSN: 28 bits (unsigned integer)
+
+      The PSN represents a sequence number for data chunks over the 
+      a certain  path. This value represents the PSN for this DATA 
+      chunk.  The valid range of PSN is from 0 to 268435455 
+      (2**28 - 1).  PSN wraps back to 0 after reaching 268435455.
+
+   Stream Identifier S: 16 bits (unsigned integer)
+
+      Identifies the stream to which the following user data belongs.
+
+   Stream Sequence Number n: 16 bits (unsigned integer)
+
+      This value represents the stream sequence number of the following
+      user data within the stream S.  Valid range is 0 to 65535.
+
+      When a user message is fragmented by LS-SCTP for transport, the 
+      same stream sequence number MUST be carried in each of the 
+      fragments of the message.
+
+   Payload Protocol Identifier: 32 bits (unsigned integer)
+
+      This value represents an application (or upper layer) specified
+      protocol identifier.  This value is passed to LS-SCTP by its 
+      upper layer and sent to its peer.  This identifier is not used by 
+      LS-SCTP but can be used by certain network entities as well as 
+      the peer application to identify the type of information being 
+      carried in this DATA chunk. This field must be sent even in 
+      fragmented DATA chunks (to make sure it is available for agents 
+      in the middle of the network).
+
+
+
+Abd El Al, et al.                                               [Page 9]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+      The value 0 indicates no application identifier is specified by
+      the upper layer for this payload data.
+
+   User Data: variable length
+
+      This is the payload user data.  The implementation MUST pad the
+      end of the data to a 4 byte boundary with all-zero bytes.  Any
+      padding MUST NOT be included in the length field.  A sender MUST
+      never add more than 3 bytes of padding.
+
+3.4 LS-SCTP Selective Acknowledgement (LS-SACK) (13)
+
+   This chunk is sent to the peer endpoint to acknowledge received DATA
+   chunks on a certain path and to inform the peer endpoint of gaps in 
+   the received subsequences of DATA chunks as represented by their 
+   PSNs.
+
+   The LS-SACK MUST contain the Cumulative ASN Ack that indicates the 
+   highest in-sequence ASN received at the receiver, as well as  
+   Cumulative PSN that indicates the highest in-sequence PSN received 
+   on this path. In addition, Advertised Receiver Window Credit 
+   (a_rwnd) parameters, that indicates the available space at the 
+   association receiver buffer, MUST be included.
+
+   By definition, the value of the Cumulative ASN Ack parameter is the
+   last ASN received before a break in the sequence of received ASNs
+   occurs; the next ASN value following this one has not yet been
+   received at the endpoint sending the LS-SACK.  This parameter 
+   therefore acknowledges receipt of all ASNs less than or equal to its 
+   value. The same is also true for the Cumulative PSN Ack parameter.
+
+   The LS-SACK also contains zero or more Gap Ack Blocks.  Each Gap Ack
+   Block acknowledges a subsequence of PSNs received following a break
+   in the sequence of received PSNs.  By definition, all PSNs
+   acknowledged by Gap Ack Blocks are greater than the value of the
+   Cumulative PSN Ack.
+
+   A Time Stamp parameter is included in the LS-SACK to indicate the 
+   time at which the receiver endpoint sent the LS-SACK.
+
+   As the parameters that represent a PSN in the LS-SACK are 32 bits, 
+   while the PSN in the data chunk is 28 bits, the implementer has to
+   to use only 28 bits in the LS-SACK for the PSN, and pad the  
+   remaining bits with 0s.  		
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 10]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |   Type = 13   |Chunk  Flags   |      Chunk Length             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                      Cumulative ASN Ack                       |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          Advertised Receiver Window Credit (a_rwnd)           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                          Time Stamp                           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                      Cumulative PSN Ack                       |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      | Number of Gap Ack Blocks = N  |  Number of Duplicate PSNs = X |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |  Gap Ack Block #1 Start       |   Gap Ack Block #1 End        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      /                                                               /
+      \                              ...                              \
+      /                                                               /
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |   Gap Ack Block #N Start      |  Gap Ack Block #N End         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                       Duplicate PSN 1                         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      /                                                               /
+      \                              ...                              \
+      /                                                               /
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                       Duplicate PSN X                         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Chunk Flags: 8 bits
+
+      Set to all zeros on transmit and ignored on receipt.
+
+   Cumulative ASN Ack: 32 bits (unsigned integer)
+
+      This parameter contains the ASN of the last DATA chunk received 
+      in sequence before a gap.
+
+   Advertised Receiver Window Credit (a_rwnd): 32 bits (unsigned
+      integer)
+
+      This field indicates the updated receive buffer space in bytes of
+      the sender of this LS-SACK. 
+
+ 
+
+ 
+ 
+Abd El Al, et al.                                              [Page 11]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   Time Stamp: 32 bits (unsigned integer)
+
+      This parameter contains a time stamp that indicate the time at 
+      which the LS-SACK was generated at the receiver. This time stamp 
+      MAY be represented as the number of m-seconds since starting the 
+      association. In this case, the receiver endpoint is responsible 
+      for setting this parameter in the outgoing LS-SACKs, such that 
+      consecutive LS-SACKs generated form the receiver, MUST have their
+      Time Stamps incremented by 1, even they are acknowledging data 
+      chunks received from different paths.
+
+  Cumulative PSN Ack: 32 bits (unsigned integer)
+
+      This parameter contains the PSN of the last DATA chunk received 
+      in sequence before a gap, on the path this LS-SACK is 
+      acknowleging.
+
+   Number of Gap Ack Blocks: 16 bits (unsigned integer)
+
+      Indicates the number of Gap Ack Blocks included in this LS-SACK.
+
+   Number of Duplicate PSNs: 16 bit
+
+      This field contains the number of duplicate PSNs the endpoint has
+      received on a given path.  Each duplicate PSN is listed following 
+      the Gap Ack Block list.
+
+   Gap Ack Blocks:
+
+      These fields contain the Gap Ack Blocks.  They are repeated for
+      each Gap Ack Block up to the number of Gap Ack Blocks defined in
+      the Number of Gap Ack Blocks field.  All DATA chunks with PSNs
+      greater than or equal to (Cumulative PSN Ack + Gap Ack Block
+      Start) and less than or equal to (Cumulative PSN Ack + Gap Ack
+      Block End) of each Gap Ack Block are assumed to have been 
+      received correctly.
+
+   Gap Ack Block Start: 16 bits (unsigned integer)
+
+      Indicates the Start offset PSN for this Gap Ack Block.  To
+      calculate the actual PSN number the Cumulative PSN Ack is added 
+      to this offset number.  This calculated PSN identifies the first 
+      PSN in this Gap Ack Block that has been received.
+
+   Gap Ack Block End:  16 bits (unsigned integer)
+
+      Indicates the End offset PSN for this Gap Ack Block.  To 
+      calculate the actual PSN number the Cumulative PSN Ack is added 
+      to this offset number.  This calculated PSN identifies the PSN of 
+      the last DATA chunk received in this Gap Ack Block.
+
+Abd El Al, et al.                                              [Page 12]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+3.5 Negotiation of Load-Sharing-Supported parameter
+
+3.5.1 Sending Load-Sharing-Supported param in INIT
+
+   If an SCTP endpoint supports the LS-SCTP, then any time it
+   sends an INIT during association establishment, it SHOULD include 
+   the Load-Sharing-Supported parameter in the INIT chunk to indicate 
+   this fact to its peer.
+
+   An endpoint SHOULD report Load-Sharing-Supported parameter if ALL  
+   the following conditions are valid:
+
+   o The endpoint is supporting and willing to use LS-SCTP,
+
+   o The endpoint has more than one interface, and it is willing to use 
+     them for load sharing during the association,
+
+   o The endpoint will include the interface addresses, it is willing 
+     to use for load sharing during the association, within the 
+     INIT/INIT-ACK chunk using the optional address parameter.
+
+   If the endpoint includes Load-Sharing-Supported parameter in the 
+   INIT or INIT-ACK chunks, the initial sequence number in these chunks 
+   should reflect the Initial-Association Sequence Number (I-ASN) that 
+   the sender intends to use after association initiation.
+
+3.5.2 Receipt of Load-Sharing-Supported param in INIT or INIT-ACK
+
+   When a receiver of an INIT detects a Load-Sharing-Supported 
+   parameter, and does not support LS-SCTP, the receiver SHOULD
+   treat this parameter as an invalid or unrecognized parameter and
+   respond to the data sender with an unrecognized parameter in the
+   INIT-ACK, following the rules defined in Section 3.3.3 of RFC2960
+   [SXM00].
+
+   When a receiver of an INIT-ACK detects a Load-Sharing-Supported
+   parameter, and does not support LS-SCTP, the receiver SHOULD treat  
+   this parameter as an invalid or unrecognized parameter and respond  
+   to the data sender with an unrecognized parameter error, following 
+   the rules defined in Section 3.3.3 of RFC2960 [SXM00]. This error 
+   SHOULD be reported in an ERROR chunk bundled with the COOKIE-ECHO.
+
+   When a receiver of an INIT detects a Load-Sharing-Supported     
+   parameter, and does support LS-SCTP, the receiver SHOULD respond 
+   with a Load-Sharing-Supported parameter in the INIT-ACK chunk.
+
+   When an endpoint that supports LS-SCTP receives an INIT that does 
+   not contain the Load-Sharing-Supported Parameter, that endpoint:
+
+
+
+Abd El Al, et al.                                              [Page 13]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   o  MAY include the Load-Sharing-Supported parameter in the INIT-ACK,
+
+   o  SHOULD record the fact that the peer does not support the 
+      LS-SCTP,
+
+   o  MUST NOT use LS-SCTP at any time during the associations life,
+
+   o  SHOULD inform the upper layer, if the upper layer has requested
+      such notification.
+
+3.5.3 Receipt of Op. Error for Load-Sharing-Supported Param
+
+   When an SCTP endpoint that desires to use LS-SCTP feature receives   
+   an operational error from the remote endpoint (either bundled with 
+   the COOKIE or as a unrecognized parameter in the INIT-ACK),  
+   indicating that the remote endpoint does not recognize the  
+   Load-Sharing-Supported parameter, the local endpoint SHOULD inform 
+   its upper layer of the remote endpoint's inability to support 
+   LS-SCTP, if the upper layer has requested such notification.
+
+   The local endpoint may then choose to either:
+
+      1) end the initiation process (in cases where the initiation
+      process have already ended the endpoint may need to send an
+      ABORT), in consideration of the peer's inability to supply the
+      requested features for the new association, or
+
+      2) continue the initiation process (in cases where the initiation
+      process has already completed the endpoint MUST just mark the
+      association as not supporting LS-SCTP), but with the       
+      understanding that LS-SCTP is not supported.  In this case, the 
+      endpoint receiving the operational error SHOULD not use LS-SCTP  
+      during the life of the association.
+
+3.6 Exchanging Initial-PSN Param in the COOKIE-ECHO and COOKIE-ACK
+
+   After the Load-Sharing-Supported parameter exchange, if both 
+   endpoints support LS-SCTP, both endpoints MAY include I-PSN 
+   parameter during their exchange of the COOKIE-ECHO and COOKIE-ACK. 
+
+   The I-PSN parameter includes a Path Identifier (PID) field, that   
+   indicates an identification assigned by the sender of the parameter   
+   for each destination address, reported previously by the receiver of 
+   the parameter during the INIT and INIT-ACK exchange. In addition, 
+   the parameter includes Initial Path Sequence Number (I-PSN) field 
+   that indicates the initial path sequence number that will be used by 
+   the sender of the parameter for this destination address.
+
+
+
+
+Abd El Al, et al.                                              [Page 14]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   The order of the I-PSN parameter(s) in the COOKIE-ECHO and the 
+   COOKIE-ACK SHOULD be in the same order of the address parameter(s) 
+   specified in the INIT and the INIT-ACK chunks, so that the receiver   
+   of the I-PSN parameter(s) could easily correlate the parameter(s) to 
+   the previously reported address(es).
+
+   If both endpoints agree to use LS-SCTP, the Initial Sequence Number 
+   included previously in the INIT/INIT-ACK SHOULD be interpreted as  
+   the Initial Association Sequence Number (I-ASN). 
+
+   The sender of the COOKIE-ECHO/COOKIE-ACK, MAY choose not to include 
+   the I-PSN parameter(s), after agreeing with the peer endpoint to 
+   use LS-SCTP. In this case, the sender SHOULD use the sequence 
+   number specified previously in the INIT/INIT-ACK as the I-PSN over 
+   all the paths within the association, as well as the Initial ASN.
+
+   If an endpoint does not include the I-PSN parameter(s) in the 
+   COOKIE-ECHO/COOKIE-ACK, after agreeing with the peer endpoint to 
+   use LS-SCTP, the receiver of the COOKIE-ECHO/COOKIE-ACK SHOULD 
+   assume that the sender will use the sequence number specified 
+   previously in the INIT/INIT-ACK as the I-PSN over all the paths 
+   within the association, as well as the Initial ASN.
+
+
+3.7 Sender Side Implementation of PR-SCTP
+
+   Figure 2, shows the outbound message passage at the sender endpoint.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 15]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+
+             -------    -------    -------    -------
+  User      |       |  |       |  |       |  |       |   User 
+  Messages   -------    -------    -------    -------  Application
+   --------------------------------------------------------------         
+                                | 
+                          ---------------
+   	                   | Fragmentation |               LS-SCTP   
+                          ---------------               Transport
+                                |                        Service  
+                          ---------------
+			       | Path Decision |
+                          ---------------
+   Association Buffer           |
+    ------------------------------------------------------------------
+   |  Data SSN SID ASN  Data SSN SID ASN  Data SSN SID ASN  Data SSN SID ASN   |
+   | -------+-+-+-   -------+-+-+-    ------+-+-+-    -------+-+-+-   |
+   ||       |2|2|4| |       |2|1|3|  |      |1|2|2|  |       |1|1|1|  |
+   | ---------+-+-   ---------+-+-    --------+-+-    ---------+-+-   |
+    ------------------------------------------------------------------
+                               /           \
+                              /             \     
+    |    Data   SSN SID ASN PSN PID |        |    Data   SSN SID ASN PSN PID |
+    |   -------+--+--+--+--+--   |        |   -------+--+--+--+--+--   |  
+    |  |       |2 |2 |4 |2 |2 |  |        |  |       |1 |2 |2 |2 |1 |  |                 
+    |   -----------------------  |        |   ----------------------   |
+    |    Data  SSN SID ASN PSN PID  |        |    Data   SSN SID ASN PSN PID | 
+    |   -------+--+--+--+--+--   |        |   -------+--+--+--+--+--   | 
+    |  |       |2 |1 |3 |1 |2 |  |        |  |       |1 |1 |1 |1 |1 |  |                  
+    |   ----------------------   |        |   ----------------------   |
+     ----------------------------          ----------------------------
+     Interface 0 Virtual Buffer             Interface 1 Virtual Buffer
+                            \              /  
+                             \ ---------- /     --------------------
+	  		            | Bundling | <-> | LS-SCTP Controller |
+                               ----------       --------------------
+      Data     Control Common       /\                        
+      Chunk     Chunk  Header      /  \
+   ------------+------+------     /    \
+  |            |      |      |   /      \
+   ------------+------+------   /        \                         
+   ----------------------------/----------\---------------------------                                                            
+                              /            \                 IP Network 
+               To Interface 0              To Interface 1     Service                      
+
+          Figure 2: Outbound Message Passage in the LS-SCTP
+
+
+
+
+
+Abd El Al, et al.                                              [Page 16]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+3.7.1 Transmission of DATA Chunks
+
+   As the LS-SCTP sender receives data messages from Upper Layer 
+   Protocol (ULP), if required, it fragments the message into multiple 
+   Data chunks according to the message size and the current Path MTU  
+   (PMTU). Sections 3.7.2 and 3.7.3 in this memo, detail Path MTU 
+   discovery and fragmentation and reassembly of ULP messages 
+   respectively. The sender endpoint assigns the Data chunks resulted 
+   from fragmenting one ULP message the same SSN, as well as 
+   assigning them the same ASN. The Data chunks are then passed 
+   to the Path Decision module of the LS-SCTP, which, as will be 
+   described in section 3.7.4 of this memo, can pre-select a 
+   transmission path for the Data chunks. The Data chunks are then 
+   placed in the association buffer, waiting for transmission. If no 
+   path was pre-selected for a Data chunk, by the Path Decision module, 
+   LS-SCTP will select a path based on the bandwidth availability of 
+   the association paths. As soon as the Virtual Buffer, for the path 
+   on which the Data chunks were assigned, is ready to accept more Data  
+   chunks, the Data chunks will be assigned a PID and PSN for this 
+   path. Before the Data chunks are sent on a given path, they can be  
+   bundled together, or bundled with Control chunks. Bundling will be 
+   described in detail in section 3.7.9 of this memo. The common header
+   is then added to the bundled chunks and the packet is handed to the
+   IP network layer for transmission on the specified path.
+
+3.7.2 Path MTU Discovery
+
+   As in RFC2960 [SXM00], section 7.3, an LS-SCTP endpoint MUST maintain 
+   separate MTU estimates for each destination address of its peer,    
+   using the mechanisms described in RFC1191 [RFC1191] and RFC1981 [RFC1981].
+
+3.7.3 Fragmentation and Reassembly
+
+   The sender SHOULD track an association Path MTU (PMTU), which will 
+   be the smallest MTU discovered for all of the peer's destination
+   addresses.  When fragmenting messages into multiple parts, this
+   association PMTU SHOULD be used to calculate the size of each
+   fragment.  This will allow retransmissions to be seamlessly sent
+   to an alternate address without encountering IP fragmentation.
+
+   In addition, the LS-SCTP sender endpoint MAY assign all the 
+   segments of a given message to the same path, so as to ensure that 
+   the message fragments will be received in order at the receiver 
+   endpoint, thus reducing the time required to reassemble the original 
+   message.
+
+   The sender endpoint MUST assign the same ASN to each of the DATA
+   chunks in the fragments series.  Also, fragments DATA chunks are
+   assigned the same SSN. After assigning the fragments Data chunks 
+
+
+Abd El Al, et al.                                              [Page 17]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   to a transmission path, all the fragments Data chunks MUST be 
+   assigned, in sequence, PSN on this path.     
+
+   As in RFC2960[SXM00], section 6.9, the receiver endpoint MUST recognize 
+   fragmented DATA chunks, received on each path, by examining the B/E 
+   bits in each of the received DATA chunks, and queue the fragmented 
+   DATA chunks for re-assembly.  Once the user message is reassembled, 
+   LS-SCTP shall pass the re-assembled user message to the specific 
+   stream for possible reordering and final dispatching.
+
+3.7.4 Path Decision
+
+   The Path Decision module in LS-SCTP, is responsible for 
+   pre-assigning  transmission paths for Data chunks. The decision can 
+   be based on a criteria requested by the ULP during the association 
+   initiation. For example, the ULP MAY request the LS-SCTP to assign 
+   different data streams, within the association, to different paths. 
+   The ULP request May be in the form of Quality of Service (QoS) 
+   requirement for each stream. Based on the QoS requirements for the 
+   streams as well as the current characteristic of the active 
+   transmission paths, the Path Decision Module can dynamically change 
+   the streams-Paths assignment, trying to fulfill the streams QoS. 
+   If the Path Decision module makes no decision, the LS-SCTP will 
+   decide the transmission paths for Data Chunks based on the bandwidth 
+   availability of active paths within the association, as will be 
+   described in the next section. Details of the design of the Path 
+   Decision module is not discussed in this memo at this time, but it 
+   will be added in a later version of this draft. 
+   
+3.7.5 Distributing Data Chunks on Association Paths
+
+   If no transmission path was pre-assigned by the Path Decision 
+   module, LS-SCTP assigns Data chunks to the transmission paths 
+   based on a bandwidth estimate of these paths. LS-SCTP uses 
+   non-intrusive mechanism for estimating the bandwidth, so it uses the  
+   current Congestion Window (cwnd) of each path, as an estimate of the 
+   current bandwidth of this path. The sender endpoint assigns Data 
+   chunks from the association buffer to a Virtual Buffer, that 
+   represents a path, whenever it has enough bandwidth to transmit the 
+   Data chunk. The Virtual Buffer keeps track of the congestion 
+   variables control on each path, as shown in RFC2960 [SXM00] section 7,
+   including cwnd, slow-start threshold (ssthresh), Round Trip Time
+   (RTT), Retransmission Time Out (RTO), Outstanding Data Count,  
+   and partial bytes acknowledged (partial_bytes_acked). In addition,   
+   the Virtual Buffer keeps track of the PSNs sent on each path, and 
+   processes the LS-SACK received from the receiver endpoint for this 
+   path. The Receiver window Size (rwnd), which represents the 
+   available buffer space in the receiver association buffer is kept
+   on the association basis, as the Data chunks that are sent on 
+
+
+
+Abd El Al, et al.                                              [Page 18]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   different paths within the association will all share the 
+   association buffer at the receiver. After assigning a Data chunk
+   to Virtual Buffer, the Data chunk will be assigned the PID that 
+   identifies the path, as well as an in-sequence PSN on this path. 
+
+3.7.6 Processing Received LS-SACK
+
+   Each LS-SACK, an endpoint Virtual Buffer receives, contains an 
+   a_rwnd value.  This value represents the amount of association    
+   buffer space that has been left, at the time of transmitting the 
+   LS-SACK, out of the total association buffer space (as specified  
+   in the INIT/INIT ACK).  
+
+   Upon reception of a LS-SACK the following SHOULD be done by the 
+   sender endpoint:
+
+   o At the Virtual Buffer that receives the LS-SACK, the sender SHOULD  
+   use the Cumulative PSN Ack, Gap Ack Blocks and Duplicate Ack Blocks  
+   to determine the Data chunks that have been received successfully by 
+   the receiver on this path.
+
+   o The sender endpoint uses the Cumulative ASN Ack, included in the 
+   LS-SACK, to update the Cumulative ASN Ack Point, and accordingly 
+   it flushes, from the association buffer, the Data chunks that have 
+   ASN less than the Cumulative ASN Ack Point.
+ 
+   o Using a_rwnd and the outstanding Data chunks on each path, the 
+   sender endpoint can develop a representation of the peer's receive   
+   buffer space. After processing the Cumulative ASN Ack and the Gap 
+   Ack Blocks in the last received LS-SACK, the sender SHOULD use the 
+   following equation to calculate the current free space at the 
+   receiver's association buffer: 
+
+   Association rwnd  = a_rwnd reported in the last LS-SACK - Number of 
+   bytes still outstanding on all the Active paths within the 
+   association 
+   
+   One of the problems the data sender must take into account when
+   processing a LS-SACK, that as LS-SACKs are received on all the paths 
+   that are used for load sharing within the association, they can be 
+   received out of order, due to the different delay of the paths on 
+   which the LS-SACKs were sent. This out of order arrival of the 
+   LS-SACKs can cause the data sender to develop an incorrect view of 
+   the peerÆs receive buffer space, as all the LS-SACKs sent form the 
+   receiver endpoint include the receiver free buffer space, at the 
+   time the LS-SACK was sent. Thus the receiver of the LS-SACK SHOULD  
+   use the Time Stamp field included in the LS-SACK in order to 
+   determine their order. Consequently, when the sender endpoint 
+   receives an old LS-SACK, it SHOULD not update its view of the 
+
+
+
+Abd El Al, et al.                                              [Page 19]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   receiver buffer space, as well as the ASN Cumulative Point, based on 
+   the values in this LS-SACK, but it SHOULD use the remaining values 
+   for updating the Virtual Buffer for the path from which the LS-SACK 
+   was received.
+
+   The Virtual Buffers for each path SHOULD use the received LS-SACK 
+   pertaining to the Data chunks sent over this path, as described in 
+   RFC2960 [SXM00] section 6.2.1.
+
+3.7.7 Re-transmitting Data Chunks
+
+   LS-SCTP performs congestion control on a per path basis, which means  
+   that all the Data chunks to be transmitted on a certain path should 
+   be assigned in-sequence PSNs, in addition the LS-SACKs that will be 
+   sent by the receiver endpoint to acknowledge these Data chunks MUST 
+   be sent to the same address from which these chunks was received. 
+
+   When a Data chunk is to be retransmitted, the sender endpoint SHOULD 
+   try to retransmit this Data chunk to an active destination address 
+   that is different from the last destination address to which the 
+   DATA chunk was sent. The PSN that was assigned to the Data chunk on 
+   the last path SHOULD be returned to the PSN pool for this path, and 
+   can be used by other new Data chunks on this path. The retransmitted 
+   Data chunk will be assigned a new PID and PSN according to the new 
+   path it will be retransmitted on.
+
+   LS-SCTP adjusts the outstanding data counts on the new path and the 
+   old path according to the size of the retransmitted Data chunk.
+
+3.7.8 Monitoring Transmission Paths
+   
+   The LS-SCTP sender keeps track of the set of Active destination 
+   addresses. Initially, the set will  be set according to the 
+   destination address(es) received from the receiver endpoint during 
+   the association initiation, and all the addresses will be marked as 
+   Active. The sender endpoint will only consider Active destination 
+   addresses for load sharing. When the LS-SCTP sender detects the 
+   failure of a destination address, using techniques similar to that 
+   described in RFC2960 [SXM00] section 8.2, the sender changes the status 
+   of a destination address to Inactive. The LS-SCTP will continue to 
+   monitor Inactive destination addresses, using heartbeats, as shown 
+   in RFC2960 [SXM00] section 8.3, and as soon as an Inactive paths turns 
+   Active, the sender starts to use it again for load sharing.
+
+3.7.9 Bundling
+   
+   LS-SCTP is following RFC2960 [SXM00], section 6.10, in performing the 
+   bundling. There are only 2 specifics for the LS-SCTP:
+  
+
+
+
+Abd El Al, et al.                                              [Page 20]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+   
+
+   1) Only Data chunks that are to be sent on the same path, are 
+   allowed to be bundled together. Also Data chunks that are assigned 
+   to be sent on a certain path are only allowed to bundled with 
+   control chunks pertaining to this path.
+  
+   2)	Bundling on each path MUST be based on the latest MTU of this 
+   path.
+
+3.8 Receiver Side Implementation of PR-SCTP
+
+   Figure 3, shows the inbound message passage at the receiver 
+   endpoint.
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 21]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+            |       |  |       |  |       |  |       |        User 
+            |       |  |       |  |       |  |       |      Application
+  --------- |-------|--|-------|--|-------|--|-------|-----------------              
+            |-------|  |-------|  |-------|  |-------|   Stream                    
+             -------    -------    -------    -------   Reordering    
+                |           |         |          |       Queues 
+                ----------------------------------     
+                                |
+                           ------------                     LS-SCTP   
+ 			        | Reassembly |                   Transport
+                           ------------                     Service  
+   Association Buffer           |                           
+    ------------------------------------------------------------------
+   |  Data SSN SID ASN  Data SSN SID ASN   Data SSN SID ASN   Data SSN SID ASN |
+   | -------+-+-+-   -------+-+-+-    ------+-+-+-    -------+-+-+-   |
+   ||       |2|2|4| |       |2|1|3|  |      |1|2|2|  |       |1|1|1|  |
+   | ---------+-+-   ---------+-+-    --------+-+-    ---------+-+-   |
+    ------------------------------------------------------------------
+                               /             \     
+    |    Data   SSN SID ASN PSN PID |       |    Data   SSN SID ASN PSN PID  |
+    |   -------+--+--+--+--+--   |       |   -------+--+--+--+--+--    |  
+    |  |       |2 |1 |3 |1 |2 |  |       |  |       |1 |1 |1 |1 |1 |   |                 
+    |   ----------------------   |       |   ----------------------    |
+    |    Data   SSN SID ASN PSN PID |       |    Data   SSN SID ASN PSN PID  | 
+    |   -------+--+--+--+--+--   |       |   -------+--+--+--+--+--    | 
+    |  |       |2 |2 |4 |2 |2 |  |       |  |       |1 |2 |2 |2 |1 |   |                  
+    |   ----------------------   |       |   -----------------------   |
+     ----------------------------         -----------------------------
+     Interface 0 Virtual Buffer           Interface 1 Virtual Buffer
+                             \ ---------- /     -------------------
+	  		           |Un-Bundling| <->| LS-SCTP Controller |
+                               ----------       -------------------
+     Data      Control Common      /\                        
+     Chunk      Chunk  Header     /  \ 
+   ------------+------+-----     /    \ 
+  |            |      |     |   /      \
+   ------------+------+-----   /        \                         
+  ----------------------------/----------\-----------------------------
+                             /            \                 IP Network 
+                From Interface 0           From Interface 1    Service                    
+
+            Figure 3: Inbound Message Passage in the LS-SCTP
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 22]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   As the LS-SCTP packets are received from the network layer, the 
+   receiver endpoint will check the common header and strip it form the 
+   packet, then unbundling module will unbundle Control chunks from 
+   Data chunks. The Control chunks are delivered to the LS-Controller, 
+   while the Data chunks are examined by the receiver endpoint and the 
+   Virtual Buffer corresponding to the path from which the Data chunks 
+   were received will be updated. The receiver will acknowledge the 
+   Data chunks, as described in section 3.8.1 of this memo. The Data 
+   chunks will be placed in the receiver association buffer, until they 
+   are delivered to the ULP.
+
+3.8.1 Acknowledgement on Reception of DATA Chunks
+
+   The LS-SCTP endpoint MUST always acknowledge the reception of each 
+   valid DATA chunk received on the paths used for load sharing within 
+   the association.
+
+   The LS-SCTP receiver SHOULD generate LS-SACK, following the  
+   guidelines described in RFC2960 [SXM00] section 6.2.
+
+   As DATA chunks are received and buffered in the receiver association 
+   buffer, the receiver endpoint decrements the  a_rwnd by the number 
+   of bytes received and buffered.  This is, in effect, closing rwnd at 
+   the data sender and restricting the amount of data it can transmit.
+
+   As DATA chunks are delivered to the ULP and released from the
+   receiver buffer, the receiver increments the a_rwnd by the number of 
+   bytes delivered to the upper layer.  This is, in effect, opening up
+   rwnd on the data sender and allowing it to send more data.  The
+   data receiver SHOULD NOT increment a_rwnd unless it has released   
+   bytes from its receive buffer.  For example, if the receiver is  
+   holding fragmented DATA chunks in a reassembly queue, it should not 
+   increment a_rwnd.
+
+   When sending a LS-SACK on a certain path, the data receiver SHOULD 
+   place the current value of a_rwnd into the a_rwnd field.  In 
+   addition, the data receiver SHOULD set the Cumulative ASN, that 
+   represents the highest ASN delivered to the ULP, taking into account 
+   that the data sender will not retransmit DATA chunks that are      
+   acknowledged via the Cumulative ASN Ack (i.e., will drop from its 
+   retransmit queue). 
+
+   The receiver has to set the Time Stamp within the LS-SACK to reflect 
+   the time at which the receiver sent the LS-SACK. 
+
+   The receiver Virtual Buffer for each path will be used to set the   
+   Cumulative PSN in the LS-SACK, that represents the highest in 
+   sequence PSN received at the receiver over this path. This value  
+   will be used by the corresponding Virtual Buffer at the sender for  
+
+
+Abd El Al, et al.                                              [Page 23]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   congestion control over this path. In addition, the duplicate and 
+   missing PSNs over this path SHOULD be reported in the LS-SACK.
+
+   THE LS-SACK SHOULD be sent to the source address from which the 
+   acknowledged Data chunks were received. 
+
+3.8.2 DATA Chunks Delivery to ULP
+
+   As described in RFC2960 [SXM00] section 6.6, within a stream, an 
+   endpoint MUST deliver DATA chunks received with the U flag set to 0 
+   to the ULP according to the order of their stream sequence number.  
+   If DATA chunks arrive out of order of their stream sequence 
+   number, the endpoint MUST hold the received DATA chunks from 
+   delivery to the ULP until they are re-ordered. The receiver will be
+   able to deliver Data chunks, within a stream, if there is no gaps
+   in their Stream Sequence Number, even there is gaps in the ASN 
+   proceeding the ASN of these Data chunks. As this feature has the  
+   benefit of preventing head-of-line blocking in SCTP, it will have  
+   more benefits in LS-SCTP, as there is high possibility of gaps in 
+   the ASN due to out of order arrival of Data chunks at the receiver, 
+   because different paths were used for transmitting the Data chunks.
+      
+   When an endpoint receives a DATA chunk with the U flag set to 1, it
+   must bypass the ordering mechanism and immediately deliver the data
+   to the upper layer (after re-assembly if the user data is fragmented
+   by the data sender).
+
+
+4. Termination of Association
+
+   LS-SCTP SHOULD follow the SCTP association termination procedure 
+   described in RFC2960 [SXM00] section 9. 
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 24]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+5. Security Considerations
+
+   [Open Issue TBD: Security issues are not discussed in this memo at
+   this time, but will be added in a later version of this draft.]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 25]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+6. IANA Considerations
+
+6.1 Chunk Extension
+
+    Two new chunk types are added to SCTP by this document:
+
+    1. LS-Data chunk (æ0x10Æ)
+    2. LS-SACK chunk (æ0x13Æ)     
+
+    The full description of these chunks are shown in sections 3.3 and 
+    3.4 respectively.
+
+6.2 Chunk Parameter Extension
+
+   Two new chunk parameters are added to SCTP by this document:
+
+   1. Load-Sharing-Supported Parameter for INIT and INIT-ACK (æ0xC001Æ)
+   2. Initial-PSN (I-PSN) Parameter for COOKIE-ECHO and COOKIE-ACK 
+   (æ0x0010Æ)     
+   
+   The full description of these chunk parameters are shown in sections 
+   3.1 and 3.2 respectively.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 26]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+7. References
+
+7.1. Normative References
+
+  [SXM00]  R. Stewart, Q. Xie, K. Morneault, C. Sharp, H. Schwarzbauer,
+           T. Taylor, I. Rytina, M. Kalla, L. Zhang, V. Paxson,
+           "Stream Control Transmission Protocol", RFC 2960, 
+           October 2000.
+
+7.2. Informative References
+
+  [BTS95]  C. Brenden, S. Traw, M. Smith, ôStriping Within the Network   
+           Subsystemö, IEEE Network, July/August 1995.
+
+  [ASLJ04] A. Abd El Al, T. Saadawi, M. Lee, ôBandwidth Aggregation in 
+           Stream Control Transmission Protocolö, In Proceedings of 
+           IEEE International Symposium on Computers and Communications 
+           (ISCC), July 2004. 
+
+  [ASLD04] A. Abd El Al, T. Saadawi, M. Lee, ôImproving Throughput and 
+           Reliability in Mobile Wireless Networks Via Transport Layer 
+           Bandwidth Aggregationö, Computer Networks, special issue on 
+           Future Advances in Military Communications Systems & 
+           Technologies, Vol. 46, No. 5, pp. 635-649, December 2004. 
+
+  [AA01]   A. Caro, P. Amer et al., ôImproving Multimedia Performance 
+           Over Lossy Networks Via SCTPö, ATIRP 2001, College Park, MD, 
+           March 2001.
+
+  [RFC2199] S. Bradner, "Key words for use in RFCs to Indicate 
+            Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+  [RFC1191] J. Mogul, S. Deering, ôPath MTU Discoveryö, RFC 1191, 
+            November 1990.
+
+  [RFC1981] J. McCann, S. Deering, J. Mogul, ôPath MTU Discovery for 
+            IP version 6ö, RFC 1981, August 1996.
+
+
+8. Authors' Addresses
+
+   Ahmed Abd El Al
+   Department of Electrical Engineering
+   The City College of New York
+   Convent Avenue and 138th St.
+   New York, NY  10031
+   USA
+
+   Phone: +1-212-650-7158
+   EMail: aabdelal@ieee.org
+
+
+   
+
+Abd El Al, et al.                                              [Page 27]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+   Tarek Saadawi
+   Department of Electrical Engineering
+   The City College of New York
+   Convent Avenue and 138th St.
+   New York, NY  10031
+   USA
+
+   Phone: +1-212-650-7263
+   EMail: saadawi@ee1s0.engr.ccny.cuny.edu
+
+
+   Myung Lee	
+   Department of Electrical Engineering
+   The City College of New York
+   Convent Avenue and 138th St.
+   New York, NY  10031
+   USA
+
+   Phone: +1-212-650-7260
+   EMail: mjlee@ee1s0.engr.ccny.cuny.edu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 28]
+
+
+INTERNET-DRAFT            Load Sharing in SCTP                 May, 2005
+
+
+ Full Copyright Statement
+
+   Copyright (C) The Internet Society (2005).
+
+   This document is subject to the rights, licenses and restrictions
+   contained in BCP 78, and except as set forth therein, the authors
+   retain all their rights.
+
+   This document and the information contained herein are provided
+   on an "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE
+   REPRESENTS OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY AND
+   THE INTERNET ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT
+   THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR
+   ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+   PARTICULAR PURPOSE.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abd El Al, et al.                                              [Page 29]
+
+
