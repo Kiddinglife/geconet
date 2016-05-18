@@ -197,12 +197,12 @@ int aux_insert_checksum(unsigned char *buffer, int length)
 
 static int insert_adler32(unsigned char *buffer, int length)
 {
-    dctp_packet_t *message;
+    geco_packet_t *message;
     uint      a32;
     /* save crc value from PDU */
     if (length > NMAX || length < NMIN)
         return -1;
-    message = (dctp_packet_t *) buffer;
+    message = (geco_packet_t *) buffer;
     message->common_header.checksum = htonl(0L);
 
     /* now compute the thingie */
@@ -243,14 +243,14 @@ static uint generate_crc32c(unsigned char *buffer, int length)
 
 static int set_crc32_checksum(unsigned char *buffer, int length)
 {
-    dctp_packet_t *message;
+    geco_packet_t *message;
     uint      crc32c;
 
     /* check packet length */
     if (length > NMAX  || length < NMIN)
       return -1;
 
-    message = (dctp_packet_t *) buffer;
+    message = (geco_packet_t *) buffer;
     message->common_header.checksum = 0L;
     crc32c =  generate_crc32c(buffer, length);
     /* and insert it into the message */
@@ -273,12 +273,12 @@ int validate_size(unsigned char *header_start, int length)
 
 static int validate_adler32(unsigned char *header_start, int length)
 {
-    dctp_packet_t *message;
+    geco_packet_t *message;
     uint      old_crc32;
     uint      a32;
 
     /* save crc value from PDU */
-    message = (dctp_packet_t *) header_start;
+    message = (geco_packet_t *) header_start;
     old_crc32 = ntohl(message->common_header.checksum);
 
     event_logi(VVERBOSE, "DEBUG Validation : old adler == %x", old_crc32);
@@ -295,14 +295,14 @@ static int validate_adler32(unsigned char *header_start, int length)
 
 static int validate_crc32(unsigned char *buffer, int length)
 {
-    dctp_packet_t *message;
+    geco_packet_t *message;
     uint      original_crc32;
     uint      crc32 = ~0;
 
     /* check packet length */
 
     /* save and zero checksum */
-    message = (dctp_packet_t *) buffer;
+    message = (geco_packet_t *) buffer;
     original_crc32 = ntohl(message->common_header.checksum);
     event_logi(VVERBOSE, "DEBUG Validation : old crc32c == %x", original_crc32);
     message->common_header.checksum = 0;

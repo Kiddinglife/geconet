@@ -105,13 +105,13 @@ union sockaddrunion * dest_addr);
    - convert the SCTP message to a byte string
    - retrieve the socket-file descriptor of the SCTP-instance
    - retrieve the destination address
-   @param dctp_packet_t     SCTP message (UDP-datapart) as a struct
+   @param geco_packet_t     SCTP message (UDP-datapart) as a struct
    @param length           length of SCTP message.
    @param destAddresIndex  Index of address in the destination address list.
    @return                 Errorcode.
    */
 
-int mdi_send_message(dctp_packet_t * message, unsigned int length, short destAddressIndex);
+int mdi_send_message(geco_packet_t * message, unsigned int length, short destAddressIndex);
 
 
 

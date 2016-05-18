@@ -199,12 +199,15 @@ gint bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int * dest_index)
 
     bu_ptr = (bundling_instance *)get_bundle_control();
 
-    if (!bu_ptr) {              /* Assume that no association exists, so we take the global bundling buffer */
+    if (!bu_ptr)
+    {              /* Assume that no association exists, so we take the global bundling buffer */
         event_log(VERBOSE, "Copying SACK to global bundling buffer ");
         bu_ptr = global_buffer;
     }
 
-    if (SACK_SIZE(bu_ptr) + get_chunk_length((chunk_fixed_t *)chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
+    if (SACK_SIZE(bu_ptr) +
+        get_chunk_length((chunk_fixed_t *)chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE)
+    {
         lock = bu_ptr->locked;
         event_logi(VERBOSE,
             "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
@@ -213,12 +216,14 @@ gint bu_put_SACK_Chunk(sack_chunk_t * chunk, unsigned int * dest_index)
         send_bundled_chunks(dest_index);
         if (lock) bu_ptr->locked = true;
     }
-    else if (dest_index != NULL) {
+    else if (dest_index != NULL)
+    {
         bu_ptr->got_send_address = true;
         bu_ptr->requested_destination = *dest_index;
     }
 
-    if (bu_ptr->sack_in_buffer == true) { /* multiple calls in between */
+    if (bu_ptr->sack_in_buffer == true)
+    { /* multiple calls in between */
         event_log(INTERNAL_EVENT_0,
             "bu_put_SACK_Chunk was called a second time, deleting first chunk");
         bu_ptr->sack_position = sizeof(geco_packet_fixed_t);
@@ -324,12 +329,14 @@ gint bu_put_Data_Chunk(simple_chunk_t * chunk, unsigned int * dest_index)
 
     bu_ptr = (bundling_instance *)get_bundle_control();
 
-    if (!bu_ptr) {              /* Assume that no association exists, so we take the global bundling buffer */
+    if (!bu_ptr)
+    {              /* Assume that no association exists, so we take the global bundling buffer */
         event_log(VERBOSE, "Copying data to global bundling buffer ");
         bu_ptr = global_buffer;
     }
 
-    if (TOTAL_SIZE(bu_ptr) + get_chunk_length((chunk_fixed_t *)chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE) {
+    if (TOTAL_SIZE(bu_ptr) + get_chunk_length((chunk_fixed_t *)chunk) >= MAX_NETWORK_PACKET_VALUE_SIZE)
+    {
         lock = bu_ptr->locked;
         event_logi(VERBOSE,
             "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
@@ -338,7 +345,8 @@ gint bu_put_Data_Chunk(simple_chunk_t * chunk, unsigned int * dest_index)
         send_bundled_chunks(dest_index);
         if (lock) bu_ptr->locked = true;
     }
-    else if (dest_index != NULL) {
+    else if (dest_index != NULL)
+    {
         bu_ptr->got_send_address = true;
         bu_ptr->requested_destination = *dest_index;
     }
@@ -348,8 +356,10 @@ gint bu_put_Data_Chunk(simple_chunk_t * chunk, unsigned int * dest_index)
 
 
     /* insert padding, if necessary */
-    if ((get_chunk_length((chunk_fixed_t *)chunk) % 4) != 0) {
-        for (count = 0; count < (4 - (get_chunk_length((chunk_fixed_t *)chunk) % 4)); count++) {
+    if ((get_chunk_length((chunk_fixed_t *)chunk) % 4) != 0)
+    {
+        for (count = 0; count < (4 - (get_chunk_length((chunk_fixed_t *)chunk) % 4)); count++)
+        {
             bu_ptr->data_buf[bu_ptr->data_position] = 0;
             bu_ptr->data_position++;
         }
@@ -482,7 +492,7 @@ gint send_bundled_chunks(guint * ad_idx)
 
     event_logii(VERBOSE, "send_bundled_chunks() : sending message len==%u to adress idx=%d", send_len, idx);
 
-    result = mdi_send_message((dctp_packet_t *)send_buffer, send_len, idx);
+    result = mdi_send_message((geco_packet_t *)send_buffer, send_len, idx);
 
     event_logi(VVERBOSE, "send_bundled_chunks(): result == %s ", (result == 0) ? "OKAY" : "ERROR");
 

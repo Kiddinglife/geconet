@@ -131,6 +131,22 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\sctp_original_src\adaptation.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\auxiliary.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\chunkHandler.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\distribution.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\errorhandler.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\flowcontrol.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\globals.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\md5.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\pathmanagement.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\rbundling.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\recvctrl.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\reltransfer.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\sbundling.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\SCTP-control.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\streamengine.c" />
+    <ClCompile Include="..\..\..\sctp_original_src\timer_list.c" />
     <ClCompile Include="..\..\..\sctp_src\adaptation.c" />
     <ClCompile Include="..\..\..\sctp_src\auxiliary.c" />
     <ClCompile Include="..\..\..\sctp_src\chunkHandler.c" />
@@ -149,6 +165,23 @@
     <ClCompile Include="..\..\..\sctp_src\timer_list.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\sctp_original_src\adaptation.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\auxiliary.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\bundling.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\chunkHandler.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\distribution.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\errorhandler.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\flowcontrol.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\globals.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\md5.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\messages.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\pathmanagement.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\recvctrl.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\reltransfer.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\SCTP-control.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\sctp.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\streamengine.h" />
+    <ClInclude Include="..\..\..\sctp_original_src\timer_list.h" />
     <ClInclude Include="..\..\..\sctp_src\adaptation.h" />
     <ClInclude Include="..\..\..\sctp_src\auxiliary.h" />
     <ClInclude Include="..\..\..\sctp_src\bundling.h" />
@@ -167,6 +200,11 @@
     <ClInclude Include="..\..\..\sctp_src\sctp.h" />
     <ClInclude Include="..\..\..\sctp_src\streamengine.h" />
     <ClInclude Include="..\..\..\sctp_src\timer_list.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\sctp_original_src\Makefile.am" />
+    <None Include="..\..\..\sctp_original_src\Makefile.in" />
+    <None Include="..\..\..\sctp_original_src\Makefile.nmake" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

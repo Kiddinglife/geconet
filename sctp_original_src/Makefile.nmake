@@ -1,0 +1,63 @@
+## Makefile for building sctp.lib and some servers with Microsoft C and nmake
+## Use: nmake -f makefile.nmake
+##      nmake all -f makefile.nmake
+#
+
+include ..\..\config.nmake
+
+CFLAGS=/Od /I$(GLIB_DIR) /I$(GLIB_DIR2) /w /W0
+
+CVARSDLL=-DWIN32 -DMBCS
+
+
+.c.obj::
+   $(CC) $(CVARSDLL) $(CFLAGS) -Fd.\ -c $<
+
+SCTP_SRC = \
+	adaptation.c	\
+	auxiliary.c	\
+	chunkHandler.c	\
+	distribution.c	\
+	errorhandler.c	\
+	flowcontrol.c	\
+	globals.c	\
+	md5.c	\
+	pathmanagement.c	\
+	rbundling.c	\
+	recvctrl.c	\
+	reltransfer.c	\
+	sbundling.c	\
+	SCTP-control.c	\
+	streamengine.c	\
+	timer_list.c
+
+
+SCTP_HEADERS = \
+	adaptation.h	\
+	auxiliary.h	\
+	bundling.h	\
+	chunkHandler.h	\
+	distribution.h	\
+	errorhandler.h	\
+	flowcontrol.h	\
+	globals.h	\
+	md5.h	\
+	messages.h	\
+	pathmanagement.h	\
+	recvctrl.h	\
+	reltransfer.h	\
+	SCTP-control.h	\
+	streamengine.h	\
+	timer_list.h
+
+SCTP_OBJECTS = $(SCTP_SRC:.c=.obj)
+	
+
+sctp.lib	: $(SCTP_OBJECTS) $(SCTP_HEADERS)
+	lib /out:sctp.lib $(SCTP_OBJECTS)
+
+
+          
+clean:
+	rm -f $(SCTP_OBJECTS)
+

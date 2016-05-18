@@ -9,6 +9,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="original">
+      <UniqueIdentifier>{f9034526-0620-4d42-aed2-1ac910b482da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -61,6 +64,54 @@
     </ClCompile>
     <ClCompile Include="..\..\..\sctp_src\timer_list.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\adaptation.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\auxiliary.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\chunkHandler.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\distribution.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\errorhandler.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\flowcontrol.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\globals.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\md5.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\pathmanagement.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\rbundling.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\recvctrl.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\reltransfer.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\sbundling.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\SCTP-control.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\streamengine.c">
+      <Filter>original</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\sctp_original_src\timer_list.c">
+      <Filter>original</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -118,5 +169,67 @@
     <ClInclude Include="..\..\..\sctp_src\timer_list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\adaptation.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\auxiliary.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\bundling.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\chunkHandler.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\distribution.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\errorhandler.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\flowcontrol.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\globals.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\md5.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\messages.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\pathmanagement.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\recvctrl.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\reltransfer.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\sctp.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\SCTP-control.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\streamengine.h">
+      <Filter>original</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\sctp_original_src\timer_list.h">
+      <Filter>original</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\sctp_original_src\Makefile.am">
+      <Filter>original</Filter>
+    </None>
+    <None Include="..\..\..\sctp_original_src\Makefile.in">
+      <Filter>original</Filter>
+    </None>
+    <None Include="..\..\..\sctp_original_src\Makefile.nmake">
+      <Filter>original</Filter>
+    </None>
   </ItemGroup>
 </Project>

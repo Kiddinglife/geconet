@@ -83,7 +83,7 @@ struct geco_packet_fixed_t
 };
 #endif
 // A general struct for an SCTP-message
-struct dctp_packet_t
+struct geco_packet_t
 {
     geco_packet_fixed_t pk_comm_hdr;
     uchar chunk[MAX_NETWORK_PACKET_VALUE_SIZE];

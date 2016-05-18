@@ -552,7 +552,7 @@ void poller_t::fire_event(int num_of_events)
                         &internal_dctp_buffer[iphdrlen], recvlen_, src_address,
                         portnum_);
 
-            dispatch_layer_.recv_dctp_packet(socket_despts[i].fd,
+            dispatch_layer_.recv_geco_packet(socket_despts[i].fd,
                     &(internal_dctp_buffer[iphdrlen]), recvlen_, &src, &dest);
             break;
 

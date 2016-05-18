@@ -110,7 +110,7 @@ typedef struct SCTP_MESSAGE
     geco_packet_fixed_t common_header;
     uchar sctp_pdu[MAX_NETWORK_PACKET_VALUE_SIZE];
 }
-dctp_packet_t;
+geco_packet_t;
 
 
 /**************************** SCTP chunk definitions ******************************************/

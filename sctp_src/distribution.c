@@ -900,7 +900,7 @@ void mdi_dummy_callback(gint socket_fd, unsigned char *buffer, int bufferLength,
 void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
         union sockaddrunion * source_addr, union sockaddrunion * dest_addr)
 {
-    dctp_packet_t *sctp_packet;
+    geco_packet_t *sctp_packet;
     init_chunk_fixed_t *initChunk = NULL;
     guchar* initPtr = NULL;
     guchar source_addr_string[SCTP_MAX_IP_LEN];
@@ -930,7 +930,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
 
     lastFromPath = 0;
 
-    sctp_packet = (dctp_packet_t *) buffer;
+    sctp_packet = (geco_packet_t *) buffer;
 
     if (!validate_dctp_packet(buffer, bufferLength))
     {
@@ -3894,7 +3894,7 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
         event_logiii(INTERNAL_EVENT_1, "sctp_sendRawData(assoc:%u, path: %d): send %u bytes",associationID,
                 path_id,length);
         /* Forward chunk to the addressed association */
-        result = mdi_send_message((dctp_packet_t *) buffer, length, path_id);
+        result = mdi_send_message((geco_packet_t *) buffer, length, path_id);
 
     }
     else
@@ -3925,12 +3925,12 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
  * \item retrieve destination port ???
  * \end{itemize}
  *
- *  @param dctp_packet_t     SCTP message as a struct (i.e. common header and chunks)
+ *  @param geco_packet_t     SCTP message as a struct (i.e. common header and chunks)
  *  @param length           length of complete SCTP message.
  *  @param destAddresIndex  Index of address in the destination address list.
  *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
  */
-int mdi_send_message(dctp_packet_t * message, unsigned int length,
+int mdi_send_message(geco_packet_t * message, unsigned int length,
         short destAddressIndex)
 {
     union sockaddrunion dest_su, *dest_ptr;
