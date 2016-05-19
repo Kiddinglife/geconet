@@ -10,11 +10,12 @@ dispatch_layer_t::dispatch_layer_t()
     sctpLibraryInitialized = false;
     curr_channel_ = NULL;
     curr_geco_instance_ = NULL;
-
+    curr_simple_chunk_ptr_ = NULL;
     last_source_addr_ = last_dest_addr_ = 0;
     last_src_port_ = last_dest_port_ = 0;
     last_init_tag_ = 0;
     last_src_path_ = 0;
+    last_veri_tag_ = 0;
 
     endpoints_list_.reserve(DEFAULT_ENDPOINT_SIZE);
     memset(found_addres_, 0, MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
