@@ -466,7 +466,7 @@ void poller_t::fire_event(int num_of_events)
                 error_logi(loglvl_minor_error,
                         "Poll Error Condition on fd %d\n", socket_despts[i].fd);
                 event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-                        NULL, 0, NULL, 0);
+                NULL, 0, NULL, 0);
             }
 
             // we only have pollerr
@@ -925,7 +925,8 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
                     "select():: failed! {%d} !\n",
                     WSAGetLastError());
 #else
-            error_logi(loglvl_major_error_abort, "select():: failed! {%d} !\n", errno);
+            error_logi(loglvl_major_error_abort, "select():: failed! {%d} !\n",
+                    errno);
 #endif
         }
 
@@ -992,8 +993,8 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
 #endif
     if (sockdespt < 0)
     {
-        error_logii(loglvl_major_error_abort, "socket()  return  %d, errorno %d!\n",
-                sockdespt, errno);
+        error_logii(loglvl_major_error_abort,
+                "socket()  return  %d, errorno %d!\n", sockdespt, errno);
         return sockdespt;
     }
 
@@ -1059,7 +1060,8 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
             (const char *) &optval, optval) < 0)
     {
         safe_close_soket(sockdespt);
-        error_log(loglvl_major_error_abort, "setsockopt: IP_PMTU_DISCOVER failed !");
+        error_log(loglvl_major_error_abort,
+                "setsockopt: IP_PMTU_DISCOVER failed !");
     }
 
     // test to make sure we set it correctly
@@ -1205,7 +1207,8 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
 {
     if (sfd <= 0)
     {
-        error_log(loglvl_major_error_abort, "send UDP data on an invalid fd!\n");
+        error_log(loglvl_major_error_abort,
+                "send UDP data on an invalid fd!\n");
         return -1;
     }
 
@@ -1217,13 +1220,15 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
 
     if (buf == NULL)
     {
-        error_log(loglvl_major_error_abort, "Invalid buf in send_udp_msg(%s)\n");
+        error_log(loglvl_major_error_abort,
+                "Invalid buf in send_udp_msg(%s)\n");
         return -1;
     }
 
     if (sfd == this->ip4_socket_despt_ || sfd == this->ip6_socket_despt_)
     {
-        error_log(loglvl_major_error_abort, "cannot send UDP msg on a geco socket!\n");
+        error_log(loglvl_major_error_abort,
+                "cannot send UDP msg on a geco socket!\n");
         return -1;
     }
 
@@ -1259,16 +1264,13 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     char old_tos;
     socklen_t opt_len;
     int tmp;
-
     // len is total length of geco packet (udp hdr(MAYBE 0 length) + geco hdr + chunks) ,
-    size_t packet_total_length = len;
 
 #ifdef USE_UDP
     // len+GECO_PACKET_FIXED_SIZE is the length of the total packet
     // here we test if the default udp send buffer cannot hold this packet
     //size_t packet_total_length = len + GECO_PACKET_FIXED_SIZE;
-    len -= UDP_PACKET_FIXED_SIZE;
-    if (USE_UDP_BUFSZ < packet_total_length)
+    if (USE_UDP_BUFSZ < len)
     {
         error_log(loglvl_fatal_error_exit, "msg is too large ! bye !\n");
         return -1;
@@ -1279,7 +1281,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     udp_hdr_ptr_ = (udp_packet_fixed_t*)buf;
     udp_hdr_ptr_->src_port = htons(USED_UDP_PORT);
     udp_hdr_ptr_->dest_port = htons(USED_UDP_PORT);
-    udp_hdr_ptr_->length = htons(packet_total_length);
+    udp_hdr_ptr_->length = htons(len);
     udp_hdr_ptr_->checksum = 0x0000;
     //udp_hdr_ptr_->checksum = udp_checksum(udp_hdr_ptr_, packet_total_length);
 #endif
@@ -1305,9 +1307,8 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
                 tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr),
                 ntohs(dest->sin.sin_port));
 
-        txmt_len = sendto(sfd, buf, packet_total_length,
-            0, (struct sockaddr *) &(dest->sin),
-            sizeof(struct sockaddr_in));
+        txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin),
+                sizeof(struct sockaddr_in));
 
 #ifdef USE_UDP
         if (txmt_len >= (int)UDP_PACKET_FIXED_SIZE)
@@ -1330,9 +1331,8 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
                 "AF_INET6 :: send_ip_packet :sfd : %d, len %d, destination : %s::%u\n",
                 sfd, len, hostname, ntohs(dest->sin6.sin6_port));
 
-        txmt_len = sendto(sfd, buf, packet_total_length, 0,
-            (struct sockaddr *) &(dest->sin6),
-            sizeof(struct sockaddr_in6));
+        txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin6),
+                sizeof(struct sockaddr_in6));
 
 #ifdef USE_UDP
         if (txmt_len >= (int)UDP_PACKET_FIXED_SIZE)
@@ -1350,9 +1350,11 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     }
 
     stat_send_event_size_++;
-    stat_send_bytes_ += len;
-    event_logii(verbose, "stat_send_event_size_ %u, stat_send_bytes_ %u\n",
-            stat_send_event_size_, stat_send_bytes_);
+    stat_send_bytes_ += txmt_len;
+    event_logiii(verbose,
+            "stat_send_event_size_ %u, stat_send_bytes_ %u, packet len %u\n",
+            stat_send_event_size_, stat_send_bytes_,
+            len - UDP_PACKET_FIXED_SIZE);
 
     return txmt_len;
 }
@@ -1880,7 +1882,7 @@ bool transport_layer_t::get_local_addresses(union sockaddrunion **addresses,
         toUse = &ifrequest->ifr_addr;
 
         saddr2str((union sockaddrunion*) toUse, addrBuffer2, MAX_IPADDR_STR_LEN,
-                NULL);
+        NULL);
         event_logi(verbose, "we are talking about the address %s", addrBuffer2);
 
         memset(&local, 0, sizeof(local));

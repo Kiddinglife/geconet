@@ -401,7 +401,10 @@ struct transport_layer_t
         use_udp_ = false;
         dummy_ipv4_udp_despt_ = -1;
         dummy_ipv6_udp_despt_ = -1;
+
+#ifdef USE_UDP
         udp_hdr_ptr_ = 0;
+#endif
 
         stat_send_event_size_ = 0;
         stat_recv_event_size_ = 0;
