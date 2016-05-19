@@ -96,9 +96,8 @@
 #define USE_UDP_BUFSZ 65536 //RECV BUFFER IN POLLER
 #define DEFAULT_RWND_SIZE  10*USE_UDP_BUFSZ // 655350 bytes =
 
-
 /* src port + dest port + ver tag + checksum +
-chunk type + chunk flag + chunk length = 16 bytes*/
+ chunk type + chunk flag + chunk length = 16 bytes*/
 #define MIN_NETWORK_PACKET_HDR_SIZES \
 GECO_PACKET_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE
 #define MAX_NETWORK_PACKET_HDR_SIZES 5552
@@ -242,7 +241,7 @@ extern void perr_abort(const char *infostring);
  @author     H�zlwimmer
  */
 extern void event_log1(short event_loglvl, const char *module_name,
-    const char *log_info, ...);
+        const char *log_info, ...);
 
 /* This function logs errors.
  Parameters:
@@ -253,7 +252,7 @@ extern void event_log1(short event_loglvl, const char *module_name,
  @author     H�zlwimmer
  */
 extern void error_log1(short error_loglvl, const char *module_name, int line_no,
-    const char *log_info, ...);
+        const char *log_info, ...);
 
 /* This function logs system call errors.
  This function calls error_log.
@@ -266,7 +265,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
  @author     H�zlwimmer
  */
 extern void error_log_sys1(short error_loglvl, const char *module_name,
-    int line_no, short errnumber);
+        int line_no, short errnumber);
 
 //<---------------- time-------------------->
 typedef uint TimerID;
@@ -379,10 +378,10 @@ extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
  */
 extern ushort in_check(uchar *buf, int sz);
 int sort_ssn(const internal_stream_data_t& one,
-    const internal_stream_data_t& two);
+        const internal_stream_data_t& two);
 // function that correctly sorts TSN values, minding wrapround
 extern int sort_tsn(const internal_data_chunk_t& one,
-    const internal_data_chunk_t& two);
+        const internal_data_chunk_t& two);
 
 /*=========== help functions =================*/
 #define BITS_TO_BYTES(x) (((x)+7)>>3)
@@ -421,7 +420,7 @@ enum hide_address_flag_t
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-    | flag_HideSiteLocal,
+            | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
@@ -441,16 +440,16 @@ union sockaddrunion
 };
 
 /* converts address-string
-* (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
-*  str == NULL will bitzero saddr used as 'ANY ADRESS 0.0.0.0'
-*  port number will be always >0
-*  default  is IPv4
-*  @return 0 for success, else -1.*/
+ * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
+ *  str == NULL will bitzero saddr used as 'ANY ADRESS 0.0.0.0'
+ *  port number will be always >0
+ *  default  is IPv4
+ *  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
-    bool ip4 = true);
-extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum);
+        bool ip4 = true);
+extern int saddr2str(sockaddrunion *su, char * buf, size_t len,
+        ushort* portnum);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
-
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
@@ -469,7 +468,7 @@ extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 #define DEFAULT_ENDPOINT_SIZE 128
 
 /*this parameter specifies the maximum number of addresses
-that an endpoint may have */
+ that an endpoint may have */
 #define MAX_NUM_ADDRESSES      32
 #define SECRET_KEYSIZE  4096
 #define KEY_INIT     0
@@ -482,129 +481,121 @@ extern int set_crc32_checksum(char *buffer, int length);
 extern uchar* key_operation(int operation_code);
 extern int validate_crc32_checksum(char* buffer, int len);
 
-
 /*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
 
 /**
-This struct containes the pointers to ULP callback functions.
-Each SCTP-instance can have its own set of callback functions.
-The callback functions of each SCTP-instance can be found by
-first reading the datastruct of an association from the list of
-associations. The datastruct of the association contains the name
-of the SCTP instance to which it belongs. With the name of the SCTP-
-instance its datastruct can be read from the list of SCTP-instances.
-*/
+ This struct containes the pointers to ULP callback functions.
+ Each SCTP-instance can have its own set of callback functions.
+ The callback functions of each SCTP-instance can be found by
+ first reading the datastruct of an association from the list of
+ associations. The datastruct of the association contains the name
+ of the SCTP instance to which it belongs. With the name of the SCTP-
+ instance its datastruct can be read from the list of SCTP-instances.
+ */
 struct applicaton_layer_cbs_t
 {
     /* @{ */
     /**
-    * indicates that new data arrived from peer (chapter 10.2.A).
-    *  @param 1 associationID
-    *  @param 2 streamID
-    *  @param 3 length of data
-    *  @param 4 stream sequence number
-    *  @param 5 tsn of (at least one) chunk belonging to the message
-    *  @param 6 protocol ID
-    *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
-    *  @param 8 pointer to ULP data
-    */
-    void(*dataArriveNotif) (unsigned int, unsigned short, unsigned int, unsigned short, unsigned int, unsigned int, unsigned int, void*);
+     * indicates that new data arrived from peer (chapter 10.2.A).
+     *  @param 1 associationID
+     *  @param 2 streamID
+     *  @param 3 length of data
+     *  @param 4 stream sequence number
+     *  @param 5 tsn of (at least one) chunk belonging to the message
+     *  @param 6 protocol ID
+     *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
+     *  @param 8 pointer to ULP data
+     */
+    void (*dataArriveNotif)(unsigned int, unsigned short, unsigned int,
+            unsigned short, unsigned int, unsigned int, unsigned int, void*);
     /**
-    * indicates a send failure (chapter 10.2.B).
-    *  @param 1 associationID
-    *  @param 2 pointer to data not sent
-    *  @param 3 dataLength
-    *  @param 4 pointer to context from sendChunk
-    *  @param 5 pointer to ULP data
-    */
-    void(*sendFailureNotif) (unsigned int, unsigned char *, unsigned int, unsigned int *, void*);
+     * indicates a send failure (chapter 10.2.B).
+     *  @param 1 associationID
+     *  @param 2 pointer to data not sent
+     *  @param 3 dataLength
+     *  @param 4 pointer to context from sendChunk
+     *  @param 5 pointer to ULP data
+     */
+    void (*sendFailureNotif)(unsigned int, unsigned char *, unsigned int,
+            unsigned int *, void*);
     /**
-    * indicates a change of network status (chapter 10.2.C).
-    *  @param 1 associationID
-    *  @param 2 destinationAddresses
-    *  @param 3 newState
-    *  @param 4 pointer to ULP data
-    */
-    void(*networkStatusChangeNotif) (unsigned int, short, unsigned short, void*);
+     * indicates a change of network status (chapter 10.2.C).
+     *  @param 1 associationID
+     *  @param 2 destinationAddresses
+     *  @param 3 newState
+     *  @param 4 pointer to ULP data
+     */
+    void (*networkStatusChangeNotif)(unsigned int, short, unsigned short,
+            void*);
     /**
-    * indicates that a association is established (chapter 10.2.D).
-    *  @param 1 associationID
-    *  @param 2 status, type of event
-    *  @param 3 number of destination addresses
-    *  @param 4 number input streamns
-    *  @param 5 number output streams
-    *  @param 6 int  supportPRSCTP (0=FALSE, 1=TRUE)
-    *  @param 7 pointer to ULP data, usually NULL
-    *  @return the callback is to return a pointer, that will be transparently returned with every callback
-    */
-    void* (*communicationUpNotif) (unsigned int, int, unsigned int,
-        unsigned short, unsigned short,
-        int, void*);
+     * indicates that a association is established (chapter 10.2.D).
+     *  @param 1 associationID
+     *  @param 2 status, type of event
+     *  @param 3 number of destination addresses
+     *  @param 4 number input streamns
+     *  @param 5 number output streams
+     *  @param 6 int  supportPRSCTP (0=FALSE, 1=TRUE)
+     *  @param 7 pointer to ULP data, usually NULL
+     *  @return the callback is to return a pointer, that will be transparently returned with every callback
+     */
+    void* (*communicationUpNotif)(unsigned int, int, unsigned int,
+            unsigned short, unsigned short, int, void*);
     /**
-    * indicates that communication was lost to peer (chapter 10.2.E).
-    *  @param 1 associationID
-    *  @param 2 status, type of event
-    *  @param 3 pointer to ULP data
-    */
-    void(*communicationLostNotif) (unsigned int, unsigned short, void*);
+     * indicates that communication was lost to peer (chapter 10.2.E).
+     *  @param 1 associationID
+     *  @param 2 status, type of event
+     *  @param 3 pointer to ULP data
+     */
+    void (*communicationLostNotif)(unsigned int, unsigned short, void*);
     /**
-    * indicates that communication had an error. (chapter 10.2.F)
-    * Currently not implemented !?
-    *  @param 1 associationID
-    *  @param 2 status, type of error
-    *  @param 3 pointer to ULP data
-    */
-    void(*communicationErrorNotif) (unsigned int, unsigned short, void*);
+     * indicates that communication had an error. (chapter 10.2.F)
+     * Currently not implemented !?
+     *  @param 1 associationID
+     *  @param 2 status, type of error
+     *  @param 3 pointer to ULP data
+     */
+    void (*communicationErrorNotif)(unsigned int, unsigned short, void*);
     /**
-    * indicates that a RESTART has occurred. (chapter 10.2.G)
-    *  @param 1 associationID
-    *  @param 2 pointer to ULP data
-    */
-    void(*restartNotif) (unsigned int, void*);
+     * indicates that a RESTART has occurred. (chapter 10.2.G)
+     *  @param 1 associationID
+     *  @param 2 pointer to ULP data
+     */
+    void (*restartNotif)(unsigned int, void*);
     /**
-    * indicates that a SHUTDOWN has been received by the peer. Tells the
-    * application to stop sending new data.
-    *  @param 0 instanceID
-    *  @param 1 associationID
-    *  @param 2 pointer to ULP data
-    */
-    void(*peerShutdownReceivedNotif) (unsigned int, void*);
+     * indicates that a SHUTDOWN has been received by the peer. Tells the
+     * application to stop sending new data.
+     *  @param 0 instanceID
+     *  @param 1 associationID
+     *  @param 2 pointer to ULP data
+     */
+    void (*peerShutdownReceivedNotif)(unsigned int, void*);
     /**
-    * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
-    *  @param 0 instanceID
-    *  @param 1 associationID
-    *  @param 2 pointer to ULP data
-    */
-    void(*shutdownCompleteNotif) (unsigned int, void*);
+     * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
+     *  @param 0 instanceID
+     *  @param 1 associationID
+     *  @param 2 pointer to ULP data
+     */
+    void (*shutdownCompleteNotif)(unsigned int, void*);
     /**
-    * indicates that a queue length has exceeded (or length has dropped
-    * below) a previously determined limit
-    *  @param 0 associationID
-    *  @param 1 queue type (in-queue, out-queue, stream queue etc.)
-    *  @param 2 queue identifier (maybe for streams ? 0 if not used)
-    *  @param 3 queue length (either bytes or messages - depending on type)
-    *  @param 4 pointer to ULP data
-    */
-    void(*queueStatusChangeNotif) (unsigned int, int, int, int, void*);
+     * indicates that a queue length has exceeded (or length has dropped
+     * below) a previously determined limit
+     *  @param 0 associationID
+     *  @param 1 queue type (in-queue, out-queue, stream queue etc.)
+     *  @param 2 queue identifier (maybe for streams ? 0 if not used)
+     *  @param 3 queue length (either bytes or messages - depending on type)
+     *  @param 4 pointer to ULP data
+     */
+    void (*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
     /**
-    * indicates that a ASCONF request from the ULP has succeeded or failed.
-    *  @param 0 associationID
-    *  @param 1 correlation ID
-    *  @param 2 result (int, negative for error)
-    *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
-    *  @param 4 pointer to ULP data
-    */
-    void(*asconfStatusNotif) (unsigned int, unsigned int, int, void*, void*);
+     * indicates that a ASCONF request from the ULP has succeeded or failed.
+     *  @param 0 associationID
+     *  @param 1 correlation ID
+     *  @param 2 result (int, negative for error)
+     *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
+     *  @param 4 pointer to ULP data
+     */
+    void (*asconfStatusNotif)(unsigned int, unsigned int, int, void*, void*);
     /* @} */
 };
-
-
-
-
-
-
-
-
-
 
 #endif /* MY_GLOBALS_H_ */

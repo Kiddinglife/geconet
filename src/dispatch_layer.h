@@ -100,11 +100,11 @@ struct geco_instance_t
 struct bundle_controller_t
 {
     /** buffer for control chunks */
-    uchar ctrl_buf[MAX_MTU_SIZE];
+    char ctrl_buf[MAX_GECO_PACKET_SIZE];
     /** buffer for sack chunks */
-    uchar sack_buf[MAX_MTU_SIZE];
+    char sack_buf[MAX_GECO_PACKET_SIZE];
     /** buffer for data chunks */
-    uchar data_buf[MAX_MTU_SIZE];
+    char data_buf[MAX_GECO_PACKET_SIZE];
 
     /* Leave some space for the SCTP common header */
     /**  current position in the buffer for control chunks */
@@ -317,6 +317,7 @@ struct retransmit_controller_t
     std::vector<data_chunk_t*> prChunks;  //fixme what is the type used ?
 };
 
+struct transport_layer_t;
 class dispatch_layer_t
 {
     public:
@@ -377,7 +378,9 @@ class dispatch_layer_t
     bool send_abort_for_oob_packet_;
 
     timer_mgr timer_mgr_;
+    transport_layer_t* transport_layer_;
 
+    char hoststr_[MAX_IPADDR_STR_LEN];
     dispatch_layer_t();
 
     /*------------------- Functions called by the Unix-Interface --------------*/
@@ -403,7 +406,7 @@ class dispatch_layer_t
     /**
     * Used by bundling to send a geco packet.
     *
-    * Bundling passes a static pointer and leaves space for common header, so
+    * Bundling passes a static pointer and leaves space for udp hdr and geco hdr , so
     * we can fill that header in up front !
     * Before calling send_message at the adaption-layer, this function does:
     * \begin{itemize}
@@ -416,13 +419,24 @@ class dispatch_layer_t
     *
     *  @param geco_packet     geco_packet (i.e.geco_packet_fixed_t and chunks)
     *  @param length          
-        length of complete geco_packet (including legth of geco_packet_fixed_t and chunks)
+        length of complete geco_packet (including legth of udp hdr(if has), geco hdr,and chunks)
     *  @param destAddresIndex  Index of address in the destination address list.
     *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
     */
-    int send_geco_packet(geco_packet_t* geco_packet, uint length, short destAddressIndex);
+    int send_geco_packet(char* geco_packet, uint length, short destAddressIndex);
 
     private:
+    int get_primary_path()
+    {
+        path_controller_t* path_ctrl = get_path_controller();
+        if (path_ctrl == NULL)
+        {
+            error_log(loglvl_major_error_abort,
+                "set_path_chunk_sent_on: GOT path_ctrl NULL");
+            return -1;
+        }
+        return path_ctrl->primary_path;
+    }
     /**
     * function to return a pointer to the path management module of this association
     * @return  pointer to the pathmanagement data structure, null in case of error.
@@ -562,7 +576,7 @@ class dispatch_layer_t
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
         return ((buf)->ctrl_position + (buf)->sack_position
-            + (buf)->data_position - 2 * GECO_PACKET_FIXED_SIZE);
+            + (buf)->data_position - 2 * UDP_GECO_PACKET_FIXED_SIZES);
     }
 
     // fixme 
@@ -572,7 +586,7 @@ class dispatch_layer_t
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
         return ((buf)->ctrl_position + (buf)->data_position
-            - GECO_PACKET_FIXED_SIZE);
+            - UDP_GECO_PACKET_FIXED_SIZES);
     }
 
     /**

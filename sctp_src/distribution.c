@@ -1113,8 +1113,7 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
         return;
     }
 
-    lastInitiateTag = ntohl(
-            sctp_packet->common_header.verification_tag);
+    lastInitiateTag = ntohl(sctp_packet->common_header.verification_tag);
 
     chunkArray = find_chunk_types(sctp_packet->sctp_pdu, len);
 
@@ -1523,7 +1522,8 @@ void recv_dctp_packet(gint socket_fd, unsigned char *buffer, int bufferLength,
                         state);
                 shutdownCompleteCID = build_simple_chunk(
                 CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
-                bundle_simple_chunk(get_simple_chunk(shutdownCompleteCID), NULL);
+                bundle_simple_chunk(get_simple_chunk(shutdownCompleteCID),
+                        NULL);
                 send_bundled_chunks(NULL);
                 free_simple_chunk(shutdownCompleteCID);
                 currentAssociation = NULL;
@@ -2154,7 +2154,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     sctpInstance->default_rtoInitial = RTO_INITIAL;
     sctpInstance->default_validCookieLife = VALID_COOKIE_LIFE_TIME;
     sctpInstance->default_assocMaxRetransmits =
-    ASSOCIATION_MAX_RETRANS_ATTEMPTS;
+            ASSOCIATION_MAX_RETRANS_ATTEMPTS;
     sctpInstance->default_pathMaxRetransmits = MAX_PATH_RETRANS_TIMES;
     sctpInstance->default_maxInitRetransmits = MAX_INIT_RETRANS_ATTEMPTS;
     /* using the static variable defined after initialization of the adaptation layer */
@@ -2463,8 +2463,9 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     currentAssociation->ulp_dataptr = ulp_data;
 
     /* call associate at SCTP-control */
-    scu_associate(noOfOutStreams, ((geco_instance_t*) result->data)->noOfInStreams,
-            dest_su, noOfDestinationAddresses, withPRSCTP);
+    scu_associate(noOfOutStreams,
+            ((geco_instance_t*) result->data)->noOfInStreams, dest_su,
+            noOfDestinationAddresses, withPRSCTP);
 
     assocID = currentAssociation->assocId;
 
@@ -3094,8 +3095,7 @@ int sctp_setAssocStatus(unsigned int associationID,
     if (currentAssociation != NULL)
     {
         sctpInstance = currentAssociation->sctpInstance;
-        event_logi(VERBOSE, "sctp_setAssocStatus: channel_t %u",
-                associationID);
+        event_logi(VERBOSE, "sctp_setAssocStatus: channel_t %u", associationID);
         if (pm_setPrimaryPath(new_status->primaryAddressIndex))
         {
             error_logi(ERROR_MINOR, "pm_setPrimary(%u) returned error",
@@ -3195,8 +3195,7 @@ int sctp_getAssocStatus(unsigned int associationID,
     if (currentAssociation != NULL)
     {
         sctpInstance = currentAssociation->sctpInstance;
-        event_logi(VERBOSE, "sctp_getAssocStatus: channel_t %u",
-                associationID);
+        event_logi(VERBOSE, "sctp_getAssocStatus: channel_t %u", associationID);
         status->state = sci_getState();
         status->numberOfAddresses = currentAssociation->remote_addres_size;
         status->sourcePort = currentAssociation->localPort;
@@ -4077,8 +4076,8 @@ int mdi_send_message(geco_packet_t * message, unsigned int length,
 
     adl_sockunion2str(dest_ptr, hoststring, SCTP_MAX_IP_LEN);
     event_logiii(INTERNAL_EVENT_0,
-            "sent SCTP sctp_packet of %d bytes to %s, result was %d",
-            length, hoststring, txmit_len);
+            "sent SCTP sctp_packet of %d bytes to %s, result was %d", length,
+            hoststring, txmit_len);
 
     return (txmit_len == (int) length) ? 0 : -1;
 
@@ -5066,7 +5065,7 @@ void mdi_readLocalAddresses(union sockaddrunion laddresses[MAX_NUM_ADDRESSES],
     else if ((receivedFromPeer == FALSE) && (localHostFound == FALSE))
     {
         /* only add loopback, if sending to a loopback */
-        filterFlags = (hide_address_flag_t) (flag_Default | flag_HideLoopback);
+        filterFlags = (hide_address_flag_t)(flag_Default | flag_HideLoopback);
 
         /* if (receivedFromPeer == true) I got an INIT with addresses from the peer */
     }
@@ -5075,17 +5074,17 @@ void mdi_readLocalAddresses(union sockaddrunion laddresses[MAX_NUM_ADDRESSES],
         /* this is from a normal address, get all except loopback */
         if (linkLocalFound)
         {
-            filterFlags = (hide_address_flag_t) (flag_Default
-                    | flag_HideLoopback);
+            filterFlags = (hide_address_flag_t)(
+                    flag_Default | flag_HideLoopback);
         }
         else if (siteLocalFound)
         {
-            filterFlags = (hide_address_flag_t) (flag_Default
-                    | flag_HideLinkLocal | flag_HideLoopback);
+            filterFlags = (hide_address_flag_t)(
+                    flag_Default | flag_HideLinkLocal | flag_HideLoopback);
         }
         else
         {
-            filterFlags = (hide_address_flag_t) (flag_Default | flag_HideLocal);
+            filterFlags = (hide_address_flag_t)(flag_Default | flag_HideLocal);
         }
     }
     else /* if ((receivedFromPeer == true) && (localHostFound == true)) */

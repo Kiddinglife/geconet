@@ -376,7 +376,10 @@ struct transport_layer_t
     int icmp_socket_despt_; /* socket fd for ICMP messages */
 
     bool use_udp_; /* enable udp-based-impl */
-    geco_packet_fixed_t* udp_hdr_ptr_;
+    //geco_packet_fixed_t* udp_hdr_ptr_;
+#ifdef USE_UDP
+    udp_packet_fixed_t* udp_hdr_ptr_;
+#endif
     int dummy_ipv4_udp_despt_;
     int dummy_ipv6_udp_despt_;
 
@@ -405,6 +408,7 @@ struct transport_layer_t
         stat_recv_bytes_ = 0;
         stat_send_bytes_ = 0;
         poller_.nit_ptr_ = this;
+        poller_.dispatch_layer_.transport_layer_ = this;
     }
 
     void use_udp()

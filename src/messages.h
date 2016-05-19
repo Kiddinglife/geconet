@@ -57,23 +57,8 @@ typedef short chunk_id_t;
 #define DEFAULT_MTU_CEILING     1500
 #define IP_HDR_SIZE 20
 #define MAX_GECO_PACKET_SIZE  (MAX_MTU_SIZE - IP_HDR_SIZE)
-#ifdef USE_UDP
-#define GECO_PACKET_FIXED_SIZE  (4*sizeof(ushort))
-#define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_GECO_PACKET_SIZE - GECO_PACKET_FIXED_SIZE)
-/* #define SCTP_OVEREASON_UDP_UDPPORT 9899 */
-/* #warning Using SCTP over UDP! */
-struct geco_packet_fixed_t
-{
-    ushort src_port;
-    ushort dest_port;
-    ushort length;
-    ushort checksum;
-};
-#else
+
 #define GECO_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
-#define MAX_NETWORK_PACKET_VALUE_SIZE \
-(MAX_GECO_PACKET_SIZE - GECO_PACKET_FIXED_SIZE)
 struct geco_packet_fixed_t
 {
     ushort src_port;
@@ -81,7 +66,27 @@ struct geco_packet_fixed_t
     uint verification_tag;
     uint checksum;
 };
+
+#ifdef USE_UDP
+#define UDP_PACKET_FIXED_SIZE  (4*sizeof(ushort))
+#define MAX_NETWORK_PACKET_VALUE_SIZE \
+(MAX_GECO_PACKET_SIZE - UDP_PACKET_FIXED_SIZE - GECO_PACKET_FIXED_SIZE)
+/* #warning Using SCTP over UDP! */
+struct udp_packet_fixed_t
+{
+    ushort src_port;
+    ushort dest_port;
+    ushort length;
+    ushort checksum;
+};
+#else
+#define MAX_NETWORK_PACKET_VALUE_SIZE \
+(MAX_GECO_PACKET_SIZE - GECO_PACKET_FIXED_SIZE)
+#define UDP_PACKET_FIXED_SIZE 0
 #endif
+
+#define UDP_GECO_PACKET_FIXED_SIZES \
+(UDP_PACKET_FIXED_SIZE+GECO_PACKET_FIXED_SIZE)
 // A general struct for an SCTP-message
 struct geco_packet_t
 {
