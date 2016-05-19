@@ -1260,12 +1260,14 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     socklen_t opt_len;
     int tmp;
 
+    // len is total length of geco packet (udp hdr(MAYBE 0 length) + geco hdr + chunks) ,
+    size_t packet_total_length = len;
+
 #ifdef USE_UDP
-    // len is total length of geco packet (udp hdr + geco hdr + chunks) ,
     // len+GECO_PACKET_FIXED_SIZE is the length of the total packet
     // here we test if the default udp send buffer cannot hold this packet
     //size_t packet_total_length = len + GECO_PACKET_FIXED_SIZE;
-    size_t packet_total_length = len;
+    len -= UDP_PACKET_FIXED_SIZE;
     if (USE_UDP_BUFSZ < packet_total_length)
     {
         error_log(loglvl_fatal_error_exit, "msg is too large ! bye !\n");
@@ -1278,8 +1280,8 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     udp_hdr_ptr_->src_port = htons(USED_UDP_PORT);
     udp_hdr_ptr_->dest_port = htons(USED_UDP_PORT);
     udp_hdr_ptr_->length = htons(packet_total_length);
-    //udp_hdr_ptr_->checksum = 0x0000;
-    udp_hdr_ptr_->checksum = udp_checksum(udp_hdr_ptr_, packet_total_length);
+    udp_hdr_ptr_->checksum = 0x0000;
+    //udp_hdr_ptr_->checksum = udp_checksum(udp_hdr_ptr_, packet_total_length);
 #endif
 
     switch (saddr_family(dest))
@@ -1299,21 +1301,19 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
             return -1;
         }
         event_logiiiiii(verbose,
-                "AF_INET :: send_geco_msg : set IP_TOS %u, result=%d, sfd : %d, len %d, destination : %s::%u\n",
+                "AF_INET :: send_ip_packet : set IP_TOS %u, result=%d, sfd : %d, len %d, destination : %s::%u\n",
                 tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr),
                 ntohs(dest->sin.sin_port));
 
-#ifdef USE_UDP
         txmt_len = sendto(sfd, buf, packet_total_length,
-                0, (struct sockaddr *) &(dest->sin),
-                sizeof(struct sockaddr_in));
+            0, (struct sockaddr *) &(dest->sin),
+            sizeof(struct sockaddr_in));
+
+#ifdef USE_UDP
         if (txmt_len >= (int)UDP_PACKET_FIXED_SIZE)
         {
             txmt_len -= (int)UDP_PACKET_FIXED_SIZE;
         }
-#else
-        txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin),
-                sizeof(struct sockaddr_in));
 #endif
         break;
 
@@ -1327,21 +1327,20 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
             return -1;
         }
         event_logiiii(verbose,
-                "AF_INET6 :: send_geco_msg :sfd : %d, len %d, destination : %s::%u\n",
+                "AF_INET6 :: send_ip_packet :sfd : %d, len %d, destination : %s::%u\n",
                 sfd, len, hostname, ntohs(dest->sin6.sin6_port));
 
+        txmt_len = sendto(sfd, buf, packet_total_length, 0,
+            (struct sockaddr *) &(dest->sin6),
+            sizeof(struct sockaddr_in6));
+
 #ifdef USE_UDP
-        txmt_len = sendto(sfd, buf,packet_total_length, 0,
-                (struct sockaddr *) &(dest->sin6),
-                sizeof(struct sockaddr_in6));
         if (txmt_len >= (int)UDP_PACKET_FIXED_SIZE)
         {
             txmt_len -= (int)UDP_PACKET_FIXED_SIZE;
         }
-#else
-        txmt_len = sendto(sfd, buf, len, 0, (struct sockaddr *) &(dest->sin6),
-                sizeof(struct sockaddr_in6));
 #endif
+
         break;
     default:
         error_logi(loglvl_major_error_abort, "no such Adress Family %u !\n",
