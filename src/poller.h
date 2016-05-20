@@ -376,10 +376,10 @@ struct transport_layer_t
     int icmp_socket_despt_; /* socket fd for ICMP messages */
 
     bool use_udp_; /* enable udp-based-impl */
-    //geco_packet_fixed_t* udp_hdr_ptr_;
 #ifdef USE_UDP
     udp_packet_fixed_t* udp_hdr_ptr_;
 #endif
+
     int dummy_ipv4_udp_despt_;
     int dummy_ipv6_udp_despt_;
 
@@ -508,12 +508,13 @@ struct transport_layer_t
      * @param  sfd the socket file descriptor where data will be sent
      * @param  buf pointer to a buffer, where data to be sent is stored
      * @param  len number of bytes to be sent
+     * it is len of geco packet (udp hdr(MAYBE 0 length) + geco hdr + chunks) ,
      * @param  destination address, where data is to be sent
      * @param    dest_len size of the address
      * @return returns number of bytes actually sent, or error
      */
     int send_ip_packet(int sfd, char *buf, int len, sockaddrunion *dest,
-        char tos);
+        uchar tos);
 
     /**
      * function to be called when we get an sctp message. This function gives also

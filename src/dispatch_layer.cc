@@ -26,6 +26,9 @@ dispatch_layer_t::dispatch_layer_t()
     memset(completed_chunks_, 0, MAX_CHUNKS_SIZE);
 
     send_abort_for_oob_packet_ = true;
+    curr_ecc_code_ = 0;
+    curr_ecc_reason_ = NULL;
+
     transport_layer_ = NULL;
 }
 
@@ -228,8 +231,10 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
 
     /*9) fetch all chunk types contained in this packet value field for use in the folowing */
     int packet_value_len = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
+    uint total_chunks_count;
     uint chunk_types_arr = find_chunk_types(
-            ((geco_packet_t*) dctp_packet)->chunk, packet_value_len);
+            ((geco_packet_t*) dctp_packet)->chunk, packet_value_len,
+            &total_chunks_count);
 
     int i = 0;
     int retval = 0;
@@ -240,10 +245,27 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     /* 10) validate individual chunks
      * (see section 3.1 of RFC 4960 at line 931 init chunk MUST be the only chunk
      * in the SCTP packet carrying it)*/
-    if (contains_chunk((uchar) CHUNK_INIT, chunk_types_arr) == 2
-            || contains_chunk((uchar) CHUNK_INIT_ACK, chunk_types_arr) == 2
-            || contains_chunk((uchar) CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr)
-                    == 2)
+    int init_chunk_num = contains_chunk((uchar) CHUNK_INIT, chunk_types_arr);
+    if (init_chunk_num > 1 || (init_chunk_num == 1 && total_chunks_count > 1))
+    {
+        /* silently discard */
+        error_log(loglvl_minor_error,
+                "recv_geco_packet(): discarding illegal packet (init init ack or sdcomplete)\n");
+        clear();
+        return;
+    }
+    init_chunk_num = contains_chunk((uchar) CHUNK_INIT_ACK, chunk_types_arr);
+    if (init_chunk_num > 1 || (init_chunk_num == 1 && total_chunks_count > 1))
+    {
+        /* silently discard */
+        error_log(loglvl_minor_error,
+                "recv_geco_packet(): discarding illegal packet (init init ack or sdcomplete)\n");
+        clear();
+        return;
+    }
+    init_chunk_num = contains_chunk((uchar) CHUNK_SHUTDOWN_COMPLETE,
+            chunk_types_arr);
+    if (init_chunk_num > 1 || (init_chunk_num == 1 && total_chunks_count > 1))
     {
         /* silently discard */
         error_log(loglvl_minor_error,
@@ -258,9 +280,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     init_chunk_fixed_t* init_chunk_fixed = NULL;
     vlparam_fixed_t* vlparam_fixed = NULL;
 
-    /* 11)
-     * we need find if there are the setup chunks
-     * when no channel found for this packet */
+    /* 11) try to find an channel for this packet from setup chunks */
     if (curr_channel_ == NULL)
     {
         // it is init ack chunk
@@ -276,6 +296,11 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             {
                 curr_channel_ = find_channel_by_transport_addr(
                         &found_addres_[i], last_src_port_, last_dest_port_);
+                if (curr_channel_ != NULL)
+                {
+                    last_src_path_ = i;
+                    break;
+                }
             }
         }  //if (init_chunk != NULL) CHUNK_INIT_ACK
 
@@ -292,6 +317,11 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             {
                 curr_channel_ = find_channel_by_transport_addr(
                         &found_addres_[i], last_src_port_, last_dest_port_);
+                if (curr_channel_ != NULL)
+                {
+                    last_src_path_ = i;
+                    break;
+                }
             }
         }        //if (init_chunk != NULL) CHUNK_INIT
 
@@ -316,20 +346,283 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         }
     }
 
-    /* 13) If the association exists, both ports of the sctp_packet must be equal to the ports
-     of the association and the source address must be in the addresslist of the peer
-     of this association, this has been validated in find_channel_by_transport_addr() above*/
+    /* 13)
+     * filtering and pre-process non-OOB chunks that belong to a channel
+     * If the association exists, both ports of the sctp_packet must be equal to the ports
+     * of the association and the source address must be in the addresslist of the peer
+     * of this association, this has been validated in find_channel_by_transport_addr() above*/
+    bool init_found_with_channel_not_nil = false;
+    bool cookie_echo_found_with_channel_not_nil = false;
+    bool abort_found_with_channel_not_nil = false;
     if (curr_channel_ != NULL)
     {
         event_log(verbose,
                 "recv_geco_packet(): process packets with channel found");
-        // TODO DO ME
+
+        /*13.1 valdate curr_geco_instance_*/
+        if (curr_geco_instance_ == NULL)
+        {
+            curr_geco_instance_ = curr_channel_->dispatcher;
+            if (curr_geco_instance_ == NULL)
+                error_log(loglvl_major_error_abort,
+                        "We have an Association, but no Instance, FIXME !");
+        }
+        else
+        {
+            // we found a previously-connected channel in 12) from setup chunk
+            //  the instance it holds MUST == curr_geco_instance_
+            if (curr_channel_->dispatcher != curr_geco_instance_)
+            {
+                error_log(loglvl_warnning_error,
+                        "We have an curr_channel_, but its Instance != found instance !");
+                curr_geco_instance_ = curr_channel_->dispatcher;
+                if (curr_geco_instance_ == NULL)
+                    error_log(loglvl_major_error_abort,
+                            "We have an Association, but no Instance, FIXME !");
+            }
+        }
+
+        /*13.2
+         see RFC 4960
+         8.5.1.  Exceptions in Verification Tag Rules
+         A) Rules for packet carrying INIT:
+         The sender MUST set the Verification Tag of the packet to 0.
+         When an endpoint receives an SCTP packet with the Verification
+         Tag set to 0, it should verify that the packet contains only an
+         INIT chunk.  Otherwise, the receiver MUST silently discard the
+         packet.*/
+        if (init_chunk == NULL) // we MAY have found it from 11) at line 290
+            init_chunk = find_first_chunk(((geco_packet_t*) dctp_packet)->chunk,
+                    packet_value_len, (uchar) CHUNK_INIT);
+
+        // we have test it INIT, init-ack and shutdown complete is the only chunk above
+        // at 10) at line 240
+        if (init_chunk != NULL)
+        {
+            init_found_with_channel_not_nil = true;
+
+            // this should not happen ! if it happens, only reason is we forhot to clear()
+            if (last_init_tag_ != 0)
+            {
+                clear();
+                error_log(loglvl_major_error_abort,
+                        "found INIT chunk, but last_init_tag_ != 0, FIXME !");
+                return;
+            }
+
+            init_chunk_fixed = &(((init_chunk_t*) init_chunk)->init_fixed);
+            last_init_tag_ = ntohl(init_chunk_fixed->init_tag);
+
+            event_logi(verbose, "Got an INIT CHUNK with initiation-tag %u",
+                    last_init_tag_);
+
+            // make sure init chunk has zero ver tag
+            if (((geco_packet_fixed_t*) dctp_packet)->verification_tag != 0)
+            {
+                clear();
+                error_log(loglvl_warnning_error,
+                        "found an INIT chunk, but  verification_tag != 0 -> ABORT !");
+                send_abort = true;
+                curr_ecc_code_ = ECC_INIT_CHUNK_VER_TAG_NOT_ZERO;
+                curr_ecc_reason_ = "INIT chunk has non-zero verification tag!";
+                return;
+            }
+
+            vlparam_fixed =
+                    (vlparam_fixed_t*) find_vlparam_fixed_from_setup_chunk(
+                            init_chunk, packet_value_len,
+                            VLPARAM_HOST_NAME_ADDR);
+            if (vlparam_fixed != NULL)
+            {
+                event_log(loglvl_intevent, "found VLPARAM_HOST_NAME_ADDR  -> ");
+                // TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parameters
+                // need do DNS QUERY instead of simply ABORT
+                do_dns_query_for_host_name_ = true;
+            }
+
+        }
+
+        /*13.3
+         see RFC 4960
+         8.5.1.  Exceptions in Verification Tag Rules
+         B) Rules for packet carrying ABORT:
+         - The receiver of an ABORT MUST accept the packet if the
+         Verification Tag field of the packet matches its own tag and the
+         T bit is not set OR if it is set to its peer's tag and the T bit
+         is set in the Chunk Flags.  Otherwise, the receiver MUST silently
+         discard the packet and take no further action.
+
+         Reflecting tag T bit = 0
+         The T bit is set to 0 if the sender filled in the Verification Tag
+         expected by the peer. this is reflecting tag
+
+         Reflected tag T bit = 1
+         The T bit is set to 1 if the sender filled in the Verification Tag
+         of its own. this is reflected tag
+         */
+        if (contains_chunk((uchar) CHUNK_ABORT, chunk_types_arr) > 0)
+        {
+            if (init_found_with_channel_not_nil)
+            {
+                event_log(verbose,
+                        "Found ABORT with INIT chunk also presents-> discard!");
+                clear();
+                return;
+            }
+
+            event_log(verbose,
+                    "recv_geco_packet()::Found ABORT with channel found -> processing!");
+            abort_found_with_channel_not_nil = true;
+            uchar* abortchunk = find_first_chunk(
+                    ((geco_packet_t*) dctp_packet)->chunk, packet_value_len,
+                    (uchar) CHUNK_ABORT);
+            bool is_tbit_set = ((chunk_fixed_t*) abortchunk)->chunk_flags == 1;
+
+            if (!(is_tbit_set && last_init_tag_ == curr_channel_->remote_tag)
+                    && !(!is_tbit_set
+                            && last_init_tag_ == curr_channel_->local_tag))
+            {
+                clear();
+                event_log(verbose, " T-BIT illegal -> discard!");
+                return;
+            }
+            abort_found_with_channel_not_nil = true;
+        }
+
+        /*13.4
+         see RFC 4960
+         8.5.1.  Exceptions in Verification Tag Rules
+         C) Rules for packet carrying SHUTDOWN COMPLETE:
+         -   When sending a SHUTDOWN COMPLETE, if the receiver of the SHUTDOWN
+         ACK has a TCB, then the destination endpoint's tag MUST be used,
+         and the T bit MUST NOT be set.  Only where no TCB exists should
+         the sender use the Verification Tag from the SHUTDOWN ACK, and
+         MUST set the T bit.
+         -   The receiver of a SHUTDOWN COMPLETE shall accept the packet if
+         the Verification Tag field of the packet matches its own tag and
+         the T bit is not set OR if it is set to its peer's tag and the T
+         bit is set in the Chunk Flags.  Otherwise, the receiver MUST
+         silently discard the packet and take no further action.  An
+         endpoint MUST ignore the SHUTDOWN COMPLETE if it is not in the
+         SHUTDOWN-ACK-SENT state.*/
+        if (contains_chunk((uchar) CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr)
+                > 0)
+        {
+            event_log(verbose,
+                    "recv_geco_packet()::Found CHUNK_SHUTDOWN_COMPLETE with channel found -> processing!");
+            uchar* abortchunk = find_first_chunk(
+                    ((geco_packet_t*) dctp_packet)->chunk, packet_value_len,
+                    (uchar) CHUNK_SHUTDOWN_COMPLETE);
+            bool is_tbit_set = ((chunk_fixed_t*) abortchunk)->chunk_flags == 1;
+            if (!(is_tbit_set && last_init_tag_ == curr_channel_->remote_tag)
+                    && !(!is_tbit_set
+                            && last_init_tag_ == curr_channel_->local_tag))
+            {
+                clear();
+                event_log(verbose, " T-BIT illegal -> discard!");
+                return;
+            }
+
+            if (get_curr_channel_state() != SHUTDOWNACK_SENT)
+            {
+                clear();
+                event_log(verbose,
+                        " recv shutdown complete but not in SHUTDOWNACK_SENT state -> discard!");
+                return;
+            }
+        }
+
+        /*13.5
+         see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
+         see E) Rules for packet carrying a SHUTDOWN ACK
+         -   If the receiver is in COOKIE-ECHOED or COOKIE-WAIT state the
+         procedures in Section 8.4 SHOULD be followed; in other words, it
+         should be treated as an Out Of The Blue packet.*/
+        if (contains_chunk((uchar) CHUNK_SHUTDOWN_ACK, chunk_types_arr) > 0)
+        {
+            uint state = get_curr_channel_state();
+            if (state == COOKIE_ECHOED || state == COOKIE_WAIT)
+            {
+                uchar shutdown_complete_cid = alloc_simple_chunk(
+                        (uchar) CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
+                curr_simple_chunk_ptr_ = get_simple_chunk(
+                        shutdown_complete_cid);
+                // this method will internally send all bundled chunks if exceeding packet max
+                bundle_simple_chunk(curr_simple_chunk_ptr_);
+                // FIXME need more considerations about why locked or unlocked?
+                unlock_bundle_ctrl();
+                // explicitely call send to send this simple chunk
+                send_bundled_chunks();
+                // free this simple chunk
+                free_simple_chunk(shutdown_complete_cid);
+                clear();
+                event_log(verbose,
+                        "recv_geco_packet()::Found SHUTDOWN_ACK in non-packet at state cookie echoed or cookie wait state, will send SHUTDOWN_COMPLETE to the peer!");
+                return;
+            }
+            else
+            {
+                //we should ne shutdown-pending state
+                // this is normal shutdown pharse, give it to nomral precedures to
+                // handle this, we here just validate the state
+                if (state != SHUTDOWN_PENDING)
+                {
+                    event_log(loglvl_warnning_error,
+                            "recv_geco_packet()::Found SHUTDOWN_ACK in non-packet at illegal state -> discard!");
+                    return;
+                }
+
+            }
+        }
+
+        /*13.6
+         see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
+         D) Rules for packet carrying a COOKIE ECHO
+         -   When sending a COOKIE ECHO, the endpoint MUST use the value of
+         the Initiate Tag received in the INIT ACK.
+         -   The receiver of a COOKIE ECHO follows the procedures in Section
+         5..*/
+        if (contains_chunk((uchar) CHUNK_COOKIE_ECHO, chunk_types_arr) > 0)
+        {
+            // this is treated as normal init pharse, give it to nomral precedures
+            // in section 5 to handle this, now we do nothing here
+            cookie_echo_found_with_channel_not_nil = true;
+        }
+
+        /*13.6
+         5.2.3.  Unexpected INIT ACK
+         If an INIT ACK is received by an endpoint in any state other than the
+         COOKIE-WAIT state, the endpoint should discard the INIT ACK chunk.
+         An unexpected INIT ACK usually indicates the processing of an old or
+         duplicated INIT chunk.*/
+        if (contains_chunk((uchar) CHUNK_INIT_ACK, chunk_types_arr) > 0)
+        {
+            vlparam_fixed =
+                    (vlparam_fixed_t*) find_vlparam_fixed_from_setup_chunk(
+                            init_chunk, packet_value_len,
+                            VLPARAM_HOST_NAME_ADDR);
+            if (vlparam_fixed != NULL)
+            {
+                event_log(loglvl_intevent, "found VLPARAM_HOST_NAME_ADDR  -> ");
+                // TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parameters
+                // need do DNS QUERY instead of simply ABORT
+                do_dns_query_for_host_name_ = true;
+            }
+
+            if (((geco_packet_fixed_t*) dctp_packet)->verification_tag
+                    != curr_channel_->local_tag)
+            {
+
+            }
+        }
 
     }
-    /*14) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets
-     * curr_channel_ null means no channel found for this chunk */
-    else
+    else // (curr_channel_ == NULL)
     {
+        /* 14)
+         * filtering and pre-process OOB chunks that have no channel found
+         * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets*/
+
         event_log(verbose,
                 "recv_geco_packet()::current channel ==NULL, start process OOB packets!\n");
 
@@ -441,12 +734,13 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 send_abort = true;
             }
 
-            // debug init tag carried in this chunk
+            // update last_init_tag_ with value of init tag carried in this chunk
             init_chunk_fixed = &(((init_chunk_t*) init_chunk)->init_fixed);
             last_init_tag_ = ntohl(init_chunk_fixed->init_tag);
             event_logi(verbose, "setting last_init_tag_ to %u", last_init_tag_);
 
             // we have an instance up listenning on that port just validate params
+            // this is normal connection pharse
             if (curr_geco_instance_ != NULL)
             {
                 event_log(loglvl_intevent, "an instance found -> processing");
@@ -475,8 +769,6 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                     send_abort = true;
                 }
 
-                // validate fixme checkme if we need to see if there are ip4 or ip6 addres
-                // present in the packet, need check rfc 4060 to confirm that ?
                 vlparam_fixed =
                         (vlparam_fixed_t*) find_vlparam_fixed_from_setup_chunk(
                                 init_chunk, packet_value_len,
@@ -484,15 +776,22 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 if (vlparam_fixed != NULL)
                 {
                     event_log(loglvl_intevent,
-                            "found VLPARAM_HOST_NAME_ADDR  -> ABORT");
-                    send_abort = true;
+                            "found VLPARAM_HOST_NAME_ADDR  -> ");
+                    // TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parameters
+                    // need do DNS QUERY instead of simply ABORT
+                    do_dns_query_for_host_name_ = true;
                 }
             } // if (curr_geco_instance_ != NULL) at line 460
             else
             {
                 // we do not have an instance up listening on that port-> ABORT
+                // this may happen when a peer is connecting, ulp is not started
+                // todo tell ECC_GECO_INSTANCE_NOT_FOUND error to peer
                 event_log(loglvl_intevent,
                         "got INIT Message, but no instance found -> ABORT");
+                curr_ecc_code_ = ECC_PEER_INSTANCE_NOT_FOUND;
+                curr_ecc_reason_ =
+                        "cannot find the peer with the port you specified!";
                 send_abort = true;
             }
         } // if (init_chunk != NULL) at line 458
@@ -531,6 +830,9 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                     event_logii(loglvl_intevent,
                             "dest port (%u) != curr_geco_instance_ listenning local port (%u) -> ABORT",
                             last_dest_port_, curr_geco_instance_->local_port);
+                    curr_ecc_code_ = ECC_PEER_NOT_LISTENNING_PORT;
+                    curr_ecc_reason_ =
+                            "found peer but he is not listenning on the port you specified!";
                     send_abort = true;
                 }
             }
@@ -580,7 +882,16 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                         FLAG_NO_TCB) :
                         alloc_simple_chunk((uchar) CHUNK_ABORT, FLAG_NONE));
         curr_simple_chunk_ptr_ = get_simple_chunk(abort_cid);
-
+        if (curr_ecc_code_ != 0)
+        {
+            error_cause_t* curr_ecc_ptr_ =
+                    ((error_cause_t*) curr_simple_chunk_ptr_->chunk_value);
+            curr_ecc_ptr_->error_reason_code = curr_ecc_code_;
+            curr_ecc_ptr_->error_reason_length = 4 + strlen(curr_ecc_reason_);
+            curr_simple_chunk_ptr_->chunk_header.chunk_length +=
+                    curr_ecc_ptr_->error_reason_length;
+            strcpy((char*) curr_ecc_ptr_->error_reason, curr_ecc_reason_);
+        }
         // this method will internally send all bundled chunks if exceeding packet max
         bundle_simple_chunk(curr_simple_chunk_ptr_);
         // FIXME need more considerations about why locked or unlocked?
@@ -589,23 +900,25 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         send_bundled_chunks();
         // free this simple chunk
         free_simple_chunk(abort_cid);
+
+        event_logii(verbose,
+                "ecc %u:%s, \nsend_abort_for_oob_packet_==TRUE -> sending ABORT with veri-tag and T-Bit reflected",
+                curr_ecc_code_, curr_ecc_reason_);
+
         clear();
-
-        event_log(verbose,
-                "send_abort_for_oob_packet_==TRUE -> sending ABORT with veri-tag and T-Bit reflected");
         return;
-    }
+    } // 23 send_abort == true
 
-    // forward packet vlue  to bundling
-    handle_chunks_from_geco_packet(last_src_path_,
-            ((geco_packet_t*) dctp_packet)->chunk, packet_value_len);
+    // forward packet value to bundle ctrl module for disassemblings
+    disassemle_geco_packet(((geco_packet_t*) dctp_packet)->chunk,
+            packet_value_len);
 
     // no need to clear last_src_port_ and last_dest_port_ MAY be used by other functions
-    last_src_path_ = -1; /* only valid for functions called via recv_geco_packet */
+    last_src_path_ = -1;
+    do_dns_query_for_host_name_ = false;
 }
 
-int dispatch_layer_t::handle_chunks_from_geco_packet(uint address_index,
-        uchar * datagram, int len)
+int dispatch_layer_t::disassemle_geco_packet(uchar * datagram, int len)
 {
     //TODO add imple here
     return 0;
@@ -676,7 +989,6 @@ uchar* dispatch_layer_t::find_vlparam_fixed_from_setup_chunk(
 int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
         short destAddressIndex)
 {
-    // todo add impl here
     if (geco_packet == NULL)
     {
         error_log(loglvl_minor_error,
@@ -688,7 +1000,8 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
     simple_chunk_t* chunk = ((simple_chunk_t*) (geco_packet_ptr->chunk));
 
     /*1)
-     * possible when sending OOB chunk without channel found use last dest addres
+     * when sending OOB chunk without channel found, we use last_source_addr_
+     * carried in OOB packet as the sending dest addr
      * see recv_geco_packet() for details*/
     sockaddrunion dest_addr;
     sockaddrunion* dest_addr_ptr;
@@ -706,11 +1019,11 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
             return 1;
         }
 
-        /* only if the sctp-message received before contained an init-chunk */
         memcpy(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
         dest_addr_ptr = &dest_addr;
         geco_packet_ptr->pk_comm_hdr.verification_tag = htonl(last_init_tag_);
         last_init_tag_ = 0; //reset it
+        // swap port number
         geco_packet_ptr->pk_comm_hdr.src_port = htons(last_dest_port_);
         geco_packet_ptr->pk_comm_hdr.dest_port = htons(last_src_port_);
         curr_geco_instance_ == NULL ?
@@ -719,10 +1032,9 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
                 "dispatch_layer_t::send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
                 tos, last_init_tag_, last_dest_port_, last_src_port_);
     } // curr_channel_ == NULL
-    else
+    else // curr_channel_ != NULL
     {
         /*2) normal send with channel found*/
-
         if (destAddressIndex < -1
                 || destAddressIndex >= curr_channel_->remote_addres_size)
         {
@@ -739,7 +1051,6 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
         else
         {
             /*4) use last src addr*/
-
             if (last_source_addr_ == NULL)
             {
                 /*5) last src addr is NUll, we use primary path*/
@@ -820,10 +1131,13 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
         break;
     }
 
+#ifdef _DEBUG
     saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, NULL);
     event_logiiii(loglvl_intevent,
             "sent geco packet of %d bytes to %s:%u, sent bytes %d", length,
             hoststr_, geco_packet_ptr->pk_comm_hdr.dest_port, len);
+#endif
+
     return (len == (int) length) ? 0 : -1;
 }
 
@@ -975,7 +1289,7 @@ int dispatch_layer_t::send_bundled_chunks(uint * addr_idx)
             "send_bundled_chunks() : sending message len==%u to adress idx=%d",
             send_len, path_param_id);
 
-// need think abut UDP hdr
+    // send_len = udp hdr (if presents) + geco hdr + chunks
     ret = this->send_geco_packet(send_buffer, send_len, path_param_id);
 
     /* reset all positions */
@@ -1006,9 +1320,6 @@ int dispatch_layer_t::bundle_simple_chunk(simple_chunk_t * chunk,
 
     bool locked;
     ushort chunk_len = get_chunk_length((chunk_fixed_t* )chunk);
-// fixme  should use MAX_GECO_PACKET_SIZE
-//if (get_bundle_total_size(bundle_ctrl)
-//    + chunk_len >= MAX_NETWORK_PACKET_VALUE_SIZE)
     if (get_bundle_total_size(bundle_ctrl) + chunk_len >= MAX_GECO_PACKET_SIZE)
     {
         /*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
@@ -1370,7 +1681,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
 }
 
 uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
-        uint packet_val_len)
+        uint packet_val_len, uint* total_chunk_count)
 {
 // 0000 0000 ret = 0 at beginning
 // 0000 0001 1
@@ -1382,6 +1693,11 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
 // 1000 0110 ret
 // 192            chunktype shutdown
 // 1000 0000-byte0-byte0-1000 0110 ret
+
+    if (total_chunk_count != NULL)
+    {
+        *total_chunk_count = 0;
+    }
 
     uint result = 0;
     uint chunk_len = 0;
@@ -1423,6 +1739,11 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
                     Bitify(sizeof(result) * 8, (char* )&result));
         }
 
+        if (total_chunk_count != NULL)
+        {
+            *total_chunk_count++;
+        }
+
         read_len += chunk_len;
         padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
         read_len += padding_len;
@@ -1438,13 +1759,11 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a,
             "DEBUG: cmp_geco_instance()::comparing instance a port %u, instance b port %u",
             a.local_port, b.local_port);
 
-    if (a.local_port < b.local_port)
-        return false;
-    if (a.local_port > b.local_port)
+    if (a.local_port != b.local_port)
         return false;
 
-    if (!a.is_in6addr_any && !b.is_in6addr_any && a.is_inaddr_any
-            && b.is_inaddr_any)
+    if (!a.is_in6addr_any && !b.is_in6addr_any && !a.is_inaddr_any
+            && !b.is_inaddr_any)
     {
         int i, j;
         /*find if at least there is an ip addr thate quals*/
@@ -1456,7 +1775,7 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a,
                         &(b.local_addres_list[j])))
                 {
                     event_log(verbose,
-                            "find_dispatcher_by_port(): found TWO equal dispatchers !");
+                            "find_dispatcher_by_port(): found TWO equal instances !");
                     return true;
                 }
             }
@@ -1465,7 +1784,9 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a,
     }
     else
     {
-        /* one has IN(6)ADDR_ANY : return equal ! */
+        /* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
+        event_log(verbose,
+                "find_dispatcher_by_port(): found as IN_ADDR_ANY set !");
         return true;
     }
 }

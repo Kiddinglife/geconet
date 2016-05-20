@@ -1257,14 +1257,13 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
     return result;
 }
 int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
-        sockaddrunion *dest, char tos)
+        sockaddrunion *dest, uchar tos)
 {
     printf("%d\n", ntohs(dest->sin.sin_port));
     int txmt_len = 0;
-    char old_tos;
+    uchar old_tos;
     socklen_t opt_len;
     int tmp;
-    // len is total length of geco packet (udp hdr(MAYBE 0 length) + geco hdr + chunks) ,
 
 #ifdef USE_UDP
     // len+GECO_PACKET_FIXED_SIZE is the length of the total packet
@@ -1288,7 +1287,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
 
     switch (saddr_family(dest))
     {
-    case AF_INET:
+        case AF_INET:
         opt_len = sizeof(old_tos);
         tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, &old_tos, &opt_len);
         if (tmp < 0)
@@ -1318,10 +1317,10 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
 #endif
         break;
 
-    case AF_INET6:
+        case AF_INET6:
         char hostname[IFNAMSIZ];
         if (inet_ntop(AF_INET6, s6addr(dest), (char *) hostname,
-        IFNAMSIZ) == NULL)
+                        IFNAMSIZ) == NULL)
         {
             error_log(loglvl_major_error_abort,
                     "inet_ntop()  buffer is too small !\n");
@@ -1342,7 +1341,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
 #endif
 
         break;
-    default:
+        default:
         error_logi(loglvl_major_error_abort, "no such Adress Family %u !\n",
                 saddr_family(dest));
         return -1;
@@ -1373,9 +1372,9 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
 
     if (ip4_socket_despt_ > 0)
     {
-        //#ifdef USE_UDP
-        //len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from, &val);
-        //#else
+//        #ifdef USE_UDP
+//        len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from, &val);
+//        #else
         len = recv(sfd, dest, maxlen, 0);
         //#endif
         iph = (struct iphdr *) dest;

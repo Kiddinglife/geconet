@@ -2179,11 +2179,14 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       Set to 0 on transmit and ignored on receipt.
 
       T bit: 1 bit
-
+      
+      Reflecting tag T bit = 0
       The T bit is set to 0 if the sender filled in the Verification Tag
-      expected by the peer.  If the Verification Tag is reflected, the T
-      bit MUST be set to 1.  Reflecting means that the sent Verification
-      Tag is the same as the received one.
+      expected by the peer. this is reflecting tag
+     
+      Reflected tag T bit = 1
+      The T bit is set to 1 if the sender filled in the Verification Tag
+      of its own. this is reflected tag
 
       Note: Special rules apply to this chunk for verification; please
       see Section 8.5.1 for details.

@@ -482,6 +482,24 @@ struct error_cause_t
     uchar error_reason[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
+const char* ECC_STRS[32] = {
+        "ECC_INVALID_STREAM_ID",
+        "ECC_MISSING_MANDATORY_PARAM",
+        "ECC_STALE_COOKIE_ERROR",
+        "ECC_OUT_OF_RESOURCE_ERROR",
+        "ECC_UNRESOLVABLE_ADDRESS",
+        "ECC_UNRECOGNIZED_CHUNKTYPE",
+        "ECC_INVALID_MANDATORY_PARAM",
+        "ECC_UNRECOGNIZED_PARAMS",
+        "ECC_NO_USER_DATA",
+        "ECC_COOKIE_RECEIVED_DURING_SHUTDWN",
+        "ECC_RESTART_WITH_NEW_ADDRESSES",
+        "ECC_USER_INITIATED_ABORT",
+        "ECC_PROTOCOL_VIOLATION",
+        "ECC_PEER_INSTANCE_NOT_FOUND",
+        "ECC_PEER_NOT_LISTENNING_PORT"
+};
+
 // Error reson codes
 #define ECC_INVALID_STREAM_ID                   1
 #define ECC_MISSING_MANDATORY_PARAM             2
@@ -497,10 +515,13 @@ struct error_cause_t
 
 #define ECC_USER_INITIATED_ABORT                12
 #define ECC_PROTOCOL_VIOLATION                  13
+#define ECC_PEER_INSTANCE_NOT_FOUND        14
+#define ECC_PEER_NOT_LISTENNING_PORT        15
 
-#define ECC_DELETE_LAST_IP_FAILED       0xC
-#define ECC_OP_REFUSED_NO_RESOURCES     0xD
-#define ECC_DELETE_SOURCE_ADDRESS       0xE
+#define ECC_DELETE_LAST_IP_FAILED       16
+#define ECC_OP_REFUSED_NO_RESOURCES     17
+#define ECC_DELETE_SOURCE_ADDRESS       18
+#define ECC_INIT_CHUNK_VER_TAG_NOT_ZERO        19
 
 // Error REASON param defs
 struct stale_cookie_err_t
