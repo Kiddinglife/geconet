@@ -9,7 +9,17 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sctplib", "sctplib\sctplib.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docx", "docx", "{EB5B755E-C028-4DCF-B2E1-7AFAF9BFAB16}"
 	ProjectSection(SolutionItems) = preProject
+		..\..\docx\  Security Attacks Found Against.txt = ..\..\docx\  Security Attacks Found Against.txt
+		..\..\docx\ A New Data Chunk for SCTP.txt = ..\..\docx\ A New Data Chunk for SCTP.txt
+		..\..\docx\ Load Sharing in Stream Control Transmission Protocol.txt = ..\..\docx\ Load Sharing in Stream Control Transmission Protocol.txt
+		..\..\docx\ Mobile SCTP.txt = ..\..\docx\ Mobile SCTP.txt
+		..\..\docx\ Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt = ..\..\docx\ Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt
+		..\..\docx\ SCTP NAT Traversal Considerations.txt = ..\..\docx\ SCTP NAT Traversal Considerations.txt
+		..\..\docx\(SCTP) - Dynamic Address Reconfiguration.txt = ..\..\docx\(SCTP) - Dynamic Address Reconfiguration.txt
 		..\..\docx\4960-IMPLEMENTATION-NOTES.txt = ..\..\docx\4960-IMPLEMENTATION-NOTES.txt
+		..\..\docx\Cumulative ASCONF chunk.txt = ..\..\docx\Cumulative ASCONF chunk.txt
+		..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt = ..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt
+		..\..\docx\Quick Failover Algorithm in SCTP.txt = ..\..\docx\Quick Failover Algorithm in SCTP.txt
 		..\..\docx\rfc1191- ICMP Path MTU Discovery.txt = ..\..\docx\rfc1191- ICMP Path MTU Discovery.txt
 		..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt = ..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt
 		..\..\docx\rfc2246 - TLS.txt = ..\..\docx\rfc2246 - TLS.txt
@@ -26,6 +36,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docx", "docx", "{EB5B755E-C
 		..\..\docx\rfc4821-Packetization Layer Path MTU Discovery.txt = ..\..\docx\rfc4821-Packetization Layer Path MTU Discovery.txt
 		..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt = ..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt
 		..\..\docx\rfc4960.txt = ..\..\docx\rfc4960.txt
+		..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt = ..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt
+		..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt = ..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt
+		..\..\docx\SCTP NAT Transverse Considerations.txt = ..\..\docx\SCTP NAT Transverse Considerations.txt
+		..\..\docx\Secure SCTP.txt = ..\..\docx\Secure SCTP.txt
 	EndProjectSection
 EndProject
 Global

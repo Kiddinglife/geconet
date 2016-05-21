@@ -19,7 +19,7 @@
 #include "basic-type.h"
 
 typedef short chunk_id_t;
-#define MAX_CHUNKS_SIZE 8
+#define MAX_CHUNKS_SIZE 32
 
 /**
  * RC32为32bit的简单hash，MD5为128bit较复杂的hash算法。

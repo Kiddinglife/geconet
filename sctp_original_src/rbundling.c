@@ -385,7 +385,8 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
     current_position = datagram; /* points to the first chunk in this pdu */
     event_log(INTERNAL_EVENT_0, "Entered rbu_rcvDatagram()...... ");
     /* CHECKME : beim Empfangen leerer Chunks tritt im Bundling eine Endlosschleife auf ??? */
-    while (processed_len < len) {
+    while (processed_len < len)
+    {
 
         chunk = (SCTP_simple_chunk *) current_position;
         chunk_len = CHUNKP_LENGTH((SCTP_chunk_header *) chunk);
@@ -404,7 +405,8 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
          *          to do with the rest of the datagram (i.e. DISCARD after stale COOKIE_ECHO
          *          with tie tags that do not match the current ones)
          */
-        switch (chunk->chunk_header.chunk_id) {
+        switch (chunk->chunk_header.chunk_id) 
+        {
         case CHUNK_DATA:
             event_log(INTERNAL_EVENT_0, "*******************  Bundling received DATA chunk");
             rxc_data_chunk_rx((SCTP_data_chunk*) chunk, address_index);

@@ -180,6 +180,18 @@ if (current_error_loglvl >= x) error_log1((x), __FILE__, __LINE__, (y))
 #define IF_LOG(x, y)       \
 if (x <= current_error_loglvl) {y}
 
+#ifdef LIBRARY_DEBUG
+#define ENTER_LIBRARY(fname)	printf("Entering sctplib  (%s)\n", fname); fflush(stdout);
+#define LEAVE_LIBRARY(fname)	printf("Leaving  sctplib  (%s)\n", fname); fflush(stdout);
+#define ENTER_CALLBACK(fname)	printf("Entering callback (%s)\n", fname); fflush(stdout);
+#define LEAVE_CALLBACK(fname)	printf("Leaving  callback (%s)\n", fname); fflush(stdout);
+#else
+#define ENTER_LIBRARY(fname)
+#define LEAVE_LIBRARY(fname)
+#define ENTER_CALLBACK(fname)
+#define LEAVE_CALLBACK(fname)
+#endif
+
 #ifdef __DEBUG
 #define ENTER_TIMER_DISPATCHER printf("Entering timer dispatcher.\n"); fflush(stdout);
 #define LEAVE_TIMER_DISPATCHER printf("Leaving  timer dispatcher.\n"); fflush(stdout);

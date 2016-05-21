@@ -30,6 +30,7 @@
     <ClInclude Include="..\..\..\src\md5.h" />
     <ClInclude Include="..\..\..\src\messages.h" />
     <ClInclude Include="..\..\..\src\poller.h" />
+    <ClInclude Include="..\..\..\src\protoco-stack.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\dispatch_layer.cc" />
@@ -38,6 +39,9 @@
     <ClCompile Include="..\..\..\src\main.cc" />
     <ClCompile Include="..\..\..\src\md5.cc" />
     <ClCompile Include="..\..\..\src\poller.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BC88D1E1-2A21-4165-A5C2-9FBC87AFE852}</ProjectGuid>

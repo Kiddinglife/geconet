@@ -1,225 +1,32 @@
-﻿Build started 2016/5/19 20:21:50.
+﻿Build started 2016/5/20 18:13:10.
      1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\project\project.vcxproj" on node 2 (Build target(s)).
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(364,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../src /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\src\dispatch_layer.cc ..\..\..\src\main.cc ..\..\..\src\poller.cc
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../src /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\src\dispatch_layer.cc ..\..\..\src\gecotimer.cc ..\..\..\src\globals.cc ..\..\..\src\main.cc ..\..\..\src\poller.cc
          poller.cc
      1>..\..\..\src\poller.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(16): warning C4005: '_DEBUG' : macro redefinition
                  command-line arguments :  see previous definition of '_DEBUG'
      1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): warning C4346: '_Myvec::value_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(259) : see reference to class template instantiation 'std::_Vector_const_iterator<_Myvec>' being compiled
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): error C2923: 'std::_Iterator012' : '_Myvec::value_type' is not a valid template type argument for parameter '_Ty'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): warning C4346: '_Myvec::difference_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): error C2923: 'std::_Iterator012' : '_Myvec::difference_type' is not a valid template type argument for parameter '_Diff'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): warning C4346: '_Myvec::const_pointer' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): error C2923: 'std::_Iterator012' : '_Myvec::const_pointer' is not a valid template type argument for parameter '_Pointer'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): warning C4346: '_Myvec::const_reference' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(28): error C2923: 'std::_Iterator012' : '_Myvec::const_reference' is not a valid template type argument for parameter '_Reference'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(29): error C2955: 'std::_Iterator012' : use of class template requires template argument list
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xutility(354) : see declaration of 'std::_Iterator012'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(34): warning C4346: '_Myvec::value_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(34): error C2146: syntax error : missing ';' before identifier 'value_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(34): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(35): warning C4346: '_Myvec::difference_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(35): error C2146: syntax error : missing ';' before identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(35): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(36): warning C4346: '_Myvec::const_pointer' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(36): error C2146: syntax error : missing ';' before identifier 'pointer'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(36): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(37): warning C4346: '_Myvec::const_reference' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(37): error C2146: syntax error : missing ';' before identifier 'reference'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(37): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(38): warning C4346: '_Myvec::pointer' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(38): error C2146: syntax error : missing ';' before identifier '_Tptr'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(38): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(45): error C2061: syntax error : identifier '_Tptr'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(45): error C2535: 'std::_Vector_const_iterator<_Myvec>::_Vector_const_iterator(void)' : member function already defined or declared
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(40) : see declaration of 'std::_Vector_const_iterator<_Myvec>::_Vector_const_iterator'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(51): error C2146: syntax error : missing ';' before identifier '_Unchecked_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(51): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(51): error C2086: '_Myvec::pointer pointer' : redefinition
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(38) : see declaration of 'std::_Vector_const_iterator<_Myvec>::operator pointer'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(53): error C2061: syntax error : identifier '_Unchecked_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(59): error C2146: syntax error : missing ';' before identifier '_Unchecked'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(59): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(60): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(62): warning C4183: '_Unchecked': missing return type; assumed to be a member function returning 'int'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(64): error C2143: syntax error : missing ';' before '*'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(64): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(65): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(89): error C2143: syntax error : missing ';' before '->'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(89): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(90): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(152): error C2061: syntax error : identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(153): error C2805: binary 'operator +=' has too few parameters
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(153): error C2333: 'std::_Vector_const_iterator<_Myvec>::operator +=' : error in function declaration; skipping function body
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(174): error C2061: syntax error : identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(180): error C2061: syntax error : identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(181): error C2805: binary 'operator -=' has too few parameters
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(181): error C2333: 'std::_Vector_const_iterator<_Myvec>::operator -=' : error in function declaration; skipping function body
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(185): error C2061: syntax error : identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(191): error C2143: syntax error : missing ';' before '-'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(191): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(192): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(197): error C2143: syntax error : missing ';' before '['
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(197): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(197): error C2061: syntax error : identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(198): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(198): error C2805: binary 'operator [' has too few parameters
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(198): error C2333: 'std::_Vector_const_iterator<_Myvec>::operator []' : error in function declaration; skipping function body
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(258): error C2146: syntax error : missing ';' before identifier '_Ptr'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(258): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(263): warning C4346: 'std::_Vector_const_iterator<_Myvec>::_Unchecked_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(263): error C2146: syntax error : missing ';' before identifier '_Unchecked'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(263): error C2065: '_Myvec' : undeclared identifier
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(263): error C2923: 'std::_Vector_const_iterator' : '_Myvec' is not a valid template type argument for parameter '_Myvec'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(266): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(272): warning C4346: 'std::_Vector_const_iterator<_Myvec>::_Unchecked_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(272): error C2061: syntax error : identifier '_Unchecked_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(279): warning C4346: 'std::_Vector_const_iterator<_Myvec>::difference_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(279): error C2146: syntax error : missing ')' before identifier '_Off'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(279): error C2433: '+' : 'inline' not permitted on data declarations
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(279): error C2365: 'std::operator +' : redefinition; previous definition was 'function'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(280): error C2059: syntax error : ')'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393): error C2143: syntax error : missing ';' before '<'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393): error C2433: '_Vector_iterator' : 'inline' not permitted on data declarations
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393): error C2988: unrecognizable template declaration/definition
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393): error C2059: syntax error : '<'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393): error C2039: '_Unchecked_type' : is not a member of '`global namespace''
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(403): error C2039: '_Unchecked_type' : is not a member of '`global namespace''
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(404): error C2143: syntax error : missing ';' before '{'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(404): error C2447: '{' : missing function header (old-style formal list?)
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(409): error C2143: syntax error : missing ';' before '<'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(409): error C2433: '_Vector_iterator' : 'inline' not permitted on data declarations
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(409): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(409): error C2374: 'std::_Vector_iterator' : redefinition; multiple initialization
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(393) : see declaration of 'std::_Vector_iterator'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(409): error C2988: unrecognizable template declaration/definition
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(409): error C2059: syntax error : '<'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(410): error C2039: 'difference_type' : is not a member of '`global namespace''
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(443): warning C4346: 'std::_Wrap_alloc<_Other>::rebind<_Ty>::other' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(459) : see reference to class template instantiation 'std::_Vec_base_types<_Ty,_Alloc0>' being compiled
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(443): error C2146: syntax error : missing ';' before identifier '_Alty'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(443): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(446): error C2653: '_Alty' : is not a class or namespace name
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(446): error C2146: syntax error : missing ';' before identifier '_Tptr'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(446): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(447): error C2653: '_Alty' : is not a class or namespace name
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector(447): fatal error C1903: unable to recover from previous error(s); stopping compilation
+     1>d:\vs2013workspace\geco-sctp-cplus\src\dispatch_layer.h(26): fatal error C1083: Cannot open include file: 'geco-ip-stack.h': No such file or directory
          main.cc
      1>D:\VS2013WorkSpace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(16): warning C4005: '_DEBUG' : macro redefinition
                  command-line arguments :  see previous definition of '_DEBUG'
      1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>..\..\..\src\main.cc(28): warning C4267: 'argument' : conversion from 'size_t' to 'unsigned int', possible loss of data
      1>d:\vs2013workspace\geco-sctp-cplus\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(259): warning C4346: '_Traits::key_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(1046) : see reference to class template instantiation 'std::_Hash<_Traits>' being compiled
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(259): error C2146: syntax error : missing ';' before identifier 'key_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(259): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(260): warning C4346: '_Traits::key_compare' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(260): error C2146: syntax error : missing ';' before identifier 'key_compare'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(260): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(261): warning C4346: '_Traits::value_compare' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(261): error C2146: syntax error : missing ';' before identifier 'value_compare'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(261): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(268): warning C4346: '_Traits::value_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(268): error C2923: 'std::list' : '_Traits::value_type' is not a valid template type argument for parameter '_Ty'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(268): warning C4346: '_Traits::allocator_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(268): error C2923: 'std::list' : '_Traits::allocator_type' is not a valid template type argument for parameter '_Alloc'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(269): warning C4346: 'std::list<_Ty,_Alloc>::_Alty' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(269): error C2146: syntax error : missing ';' before identifier '_Alty'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(269): error C2838: '_Alty' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(269): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(271): warning C4346: 'std::list<_Ty,_Alloc>::value_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(271): error C2146: syntax error : missing ';' before identifier 'value_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(271): error C2838: 'value_type' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(271): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(272): warning C4346: 'std::list<_Ty,_Alloc>::allocator_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(272): error C2146: syntax error : missing ';' before identifier 'allocator_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(272): error C2838: 'allocator_type' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(272): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(273): warning C4346: 'std::list<_Ty,_Alloc>::size_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(273): error C2146: syntax error : missing ';' before identifier 'size_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(273): error C2838: 'size_type' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(273): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(274): warning C4346: 'std::list<_Ty,_Alloc>::difference_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(274): error C2146: syntax error : missing ';' before identifier 'difference_type'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(274): error C2838: 'difference_type' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(274): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(275): warning C4346: 'std::list<_Ty,_Alloc>::pointer' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(275): error C2146: syntax error : missing ';' before identifier 'pointer'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(275): error C2838: 'pointer' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(275): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(276): warning C4346: 'std::list<_Ty,_Alloc>::const_pointer' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(276): error C2146: syntax error : missing ';' before identifier 'const_pointer'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(276): error C2838: 'const_pointer' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(276): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(277): warning C4346: 'std::list<_Ty,_Alloc>::reference' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(277): error C2146: syntax error : missing ';' before identifier 'reference'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(277): error C2838: 'reference' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(277): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(278): warning C4346: 'std::list<_Ty,_Alloc>::const_reference' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(278): error C2146: syntax error : missing ';' before identifier 'const_reference'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(278): error C2838: 'const_reference' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(278): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(280): error C2065: 'value_type' : undeclared identifier
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(280): warning C4346: 'std::_Hash<_Traits>::operator key_type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(280): error C2923: 'std::is_same' : 'std::_Hash<_Traits>::operator key_type' is not a valid template type argument for parameter '_Ty1'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(280): error C2923: 'std::is_same' : 'value_type' is not a valid template type argument for parameter '_Ty2'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): warning C4346: 'std::list<_Ty,_Alloc>::const_iterator' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): error C2923: 'std::_If' : 'std::list<_Ty,_Alloc>::const_iterator' is not a valid template type argument for parameter '_Ty1'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): warning C4346: 'std::list<_Ty,_Alloc>::iterator' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): error C2923: 'std::_If' : 'std::list<_Ty,_Alloc>::iterator' is not a valid template type argument for parameter '_Ty2'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): warning C4346: 'std::_If<__formal,_Ty1,_Ty2>::type' : dependent name is not a type
-                 prefix with 'typename' to indicate a type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): error C2146: syntax error : missing ';' before identifier 'iterator'
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): error C2838: 'type' : illegal qualified name in member declaration
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): error C2208: 'std::iterator' : no members defined using this type
-     1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xhash(282): fatal error C1903: unable to recover from previous error(s); stopping compilation
+     1>d:\vs2013workspace\geco-sctp-cplus\src\dispatch_layer.h(26): fatal error C1083: Cannot open include file: 'geco-ip-stack.h': No such file or directory
          dispatch_layer.cc
      1>d:\vs2013workspace\geco-sctp-cplus\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(16): warning C4005: '_DEBUG' : macro redefinition
                  command-line arguments :  see previous definition of '_DEBUG'
      1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
@@ -424,8 +231,52 @@
      1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xtgmath.h(103): error C2146: syntax error : missing ')' before identifier '_Left'
      1>C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xtgmath.h(103): fatal error C1003: error count exceeds 100; stopping compilation
          Generating Code...
+         Compiling...
+         gecotimer.cc
+     1>d:\vs2013workspace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(16): warning C4005: '_DEBUG' : macro redefinition
+                 command-line arguments :  see previous definition of '_DEBUG'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+         Generating Code...
+         Compiling...
+         globals.cc
+     1>..\..\..\src\globals.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\src\config.h(16): warning C4005: '_DEBUG' : macro redefinition
+                 command-line arguments :  see previous definition of '_DEBUG'
+     1>d:\vs2013workspace\geco-sctp-cplus\src\messages.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>..\..\..\src\globals.cc(56): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>..\..\..\src\globals.cc(63): warning C4996: 'fscanf': This function or variable may be unsafe. Consider using fscanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(230) : see declaration of 'fscanf'
+     1>..\..\..\src\globals.cc(70): warning C4996: 'getpid': The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name: _getpid. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\process.h(222) : see declaration of 'getpid'
+     1>..\..\..\src\globals.cc(72): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+     1>..\..\..\src\globals.cc(73): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>..\..\..\src\globals.cc(121): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+     1>..\..\..\src\globals.cc(133): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\time.inl(112) : see declaration of 'localtime'
+     1>..\..\..\src\globals.cc(208): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+     1>..\..\..\src\globals.cc(214): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+     1>..\..\..\src\globals.cc(263): warning C4101: 'mi' : unreferenced local variable
+     1>..\..\..\src\globals.cc(359): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+     1>..\..\..\src\globals.cc(365): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+     1>..\..\..\src\globals.cc(317): warning C4101: 'mi' : unreferenced local variable
+     1>..\..\..\src\globals.cc(372): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(168) : see declaration of 'strerror'
+     1>..\..\..\src\globals.cc(637): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(112) : see declaration of 'strcpy'
+     1>..\..\..\src\globals.cc(644): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
+     1>..\..\..\src\globals.cc(672): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(112) : see declaration of 'strcpy'
+     1>..\..\..\src\globals.cc(679): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
+         Generating Code...
      1>Done Building Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\project\project\project.vcxproj" (Build target(s)) -- FAILED.
 
 Build FAILED.
 
-Time Elapsed 00:00:01.64
+Time Elapsed 00:00:03.56

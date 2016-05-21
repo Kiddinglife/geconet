@@ -12,6 +12,7 @@
     <ClInclude Include="..\..\..\src\geco-ds-config.h" />
     <ClInclude Include="..\..\..\src\geco-ds-malloc.h" />
     <ClInclude Include="..\..\..\src\geco-thread.h" />
+    <ClInclude Include="..\..\..\src\protoco-stack.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\dispatch_layer.cc" />
@@ -20,5 +21,8 @@
     <ClCompile Include="..\..\..\src\main.cc" />
     <ClCompile Include="..\..\..\src\md5.cc" />
     <ClCompile Include="..\..\..\src\poller.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>
