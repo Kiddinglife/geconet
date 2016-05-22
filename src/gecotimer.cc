@@ -6,7 +6,6 @@
  */
 
 #include "gecotimer.h"
-#include <algorithm>
 
 timer_mgr::timer_mgr()
 {
@@ -46,15 +45,15 @@ void timer_mgr::delete_timer(timer_id_t& timerptr)
 {
     if (this->timers.empty())
         return;
-    event_logi(verbose, "Before delete List Length : %u ",
+    EVENTLOG1(VERBOSE, "Before delete List Length : %u ",
         this->timers.size());
     this->timers.erase(timerptr);
-    event_logi(verbose, "After delete List Length : %u ",
+    EVENTLOG1(VERBOSE, "After delete List Length : %u ",
         this->timers.size());
 }
 int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 {
-    event_log(verbose, "reset timer\n");
+    EVENTLOG(VERBOSE, "reset timer\n");
     if (this->timers.empty())
         return -1;
     uint timer_type = timerptr->timer_type;
@@ -129,24 +128,24 @@ void timer_mgr::print_timer(short event_log_level, const timer& item)
             ttype = "Unknown Timer";
             break;
     }
-    event_logiiii(event_log_level,
+    EVENTLOG4(event_log_level,
         "TimerID: %u, Type : %s, action_time: {%ld sec, %ld us}\n",
         item.timer_id, ttype, item.action_time.tv_sec,
         item.action_time.tv_usec);
 }
 void timer_mgr::print(short event_log_level)
 {
-    event_log(event_log_level, "Enter timer_mgr::print_debug_list");
+    EVENTLOG(event_log_level, "Enter timer_mgr::print_debug_list");
     if (this->timers.size() == 0)
     {
-        event_log(event_log_level, "No timers!");
+        EVENTLOG(event_log_level, "No timers!");
         return;
     }
     print_time_now(event_log_level);
-    event_logi(event_log_level, "List Length : %ld ", this->timers.size());
+    EVENTLOG1(event_log_level, "List Length : %ld ", this->timers.size());
     for (auto& timer : this->timers)
     {
         this->print_timer(event_log_level, timer);
     }
-    event_log(event_log_level, "Leave timer_mgr::print_debug_list");
+    EVENTLOG(event_log_level, "Leave timer_mgr::print_debug_list");
 }

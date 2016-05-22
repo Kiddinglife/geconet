@@ -1,0 +1,11 @@
+gmock.a includes gtest, so no need to compile gtest again.
+
+do this to compile mock static library:
+go to googlemock directory.
+type:
+g++ -I ../googletest/include/ -I ../googletest/ -I include/ -I ./ -c ../googletest/src/gtest-all.cc 
+g++ -I ../googletest/include/ -I ../gtest/ -I include/ -I ./ -c src/gmock-all.cc       
+ar -rv libgmock.a gtest-all.o gmock-all.o 
+
+         
+
