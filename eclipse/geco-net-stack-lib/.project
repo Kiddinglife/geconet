@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>geco-net-stack-lib</name>
+	<name>protocol-stack-lib</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -28,22 +28,28 @@
 		<link>
 			<name>docx</name>
 			<type>2</type>
-			<locationURI>PARENT-2-PROJECT_LOC/docx</locationURI>
+			<locationURI>copy_PARENT/docx</locationURI>
 		</link>
 		<link>
 			<name>include</name>
 			<type>2</type>
-			<locationURI>PARENT-2-PROJECT_LOC/include</locationURI>
+			<locationURI>copy_PARENT/include</locationURI>
 		</link>
 		<link>
 			<name>sctp_original_src</name>
 			<type>2</type>
-			<locationURI>PARENT-2-PROJECT_LOC/sctp_original_src</locationURI>
+			<locationURI>copy_PARENT/sctp_original_src</locationURI>
 		</link>
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<locationURI>PARENT-2-PROJECT_LOC/src</locationURI>
+			<locationURI>copy_PARENT/src</locationURI>
 		</link>
 	</linkedResources>
+	<variableList>
+		<variable>
+			<name>copy_PARENT</name>
+			<value>$%7BPARENT-2-PROJECT_LOC%7D/2016209/geco-sctp-cplus</value>
+		</variable>
+	</variableList>
 </projectDescription>
