@@ -32,7 +32,7 @@
 
 #define clear_curr_channel()\
 delete_curr_channel();\
-on_connection_lost(CONNECTION_LOST_REASON::invalid_param);\
+on_connection_lost(ConnectionLostReason::invalid_param);\
 null_curr_channel_and_geco_instance()
 
 /*------------------- Functions called by the ULP -----------------------*/
@@ -141,7 +141,7 @@ struct bundle_controller_t
 /**
  * this struct contains all necessary data for
  * creating SACKs from received data chunks
- * both are closely connected
+ * both are closely Connected
  * as sack is created based on form recv data chunks
  */
 struct recv_controller_t //recv_ctrl
@@ -330,7 +330,7 @@ struct channel_t
 /**
  * this struct contains all necessary data for retransmissions
  * and processing of received SACKs,
- * both are closely connected as retrans is determined based on recv sacks
+ * both are closely Connected as retrans is determined based on recv sacks
  */
 struct retransmit_controller_t
 {
@@ -382,14 +382,36 @@ class dispatch_layer_t
 
     /* these one-shot state variables are so frequently used in recv_gco_packet()
      * to improve performances */
+    geco_packet_fixed_t* curr_geco_packet_fixed_;
+    geco_packet_t* curr_geco_packet_;
+    uint curr_geco_packet_value_len_;
+    uchar* curr_uchar_init_chunk_;
     sockaddrunion *last_source_addr_;
     sockaddrunion *last_dest_addr_;
+    sockaddrunion addr_from_init_or_ack_chunk_;
     short last_src_path_;
     ushort last_src_port_;
     ushort last_dest_port_;
     uint last_init_tag_;
     uint last_veri_tag_;
     bool do_dns_query_for_host_name_;
+    char src_addr_str_[MAX_IPADDR_STR_LEN];
+    char dest_addr_str_[MAX_IPADDR_STR_LEN];
+    bool init_found_with_channel_not_nil;
+    bool cookie_echo_found_with_channel_not_nil;
+    bool abort_found_with_channel_not_nil;
+    bool should_discard_curr_geco_packet_;
+    bool found_existed_channel_from_init_chunks_;
+    int address_type_;
+    int supported_addr_types_;
+    uint ip4_saddr_;
+    uint total_chunks_count_;
+    uint chunk_types_arr_;
+    int init_chunk_num_;
+    bool send_abort_;
+    bool found_init_chunk_;
+    init_chunk_fixed_t* init_chunk_fixed_;
+    vlparam_fixed_t* vlparam_fixed_;
 
     /* tmp variables used for looking up channel and geco instance*/
     channel_t tmp_channel_;
@@ -527,37 +549,37 @@ class dispatch_layer_t
         {
             /* error log */
             ERRLOG(MAJOR_ERROR, "get_curr_channel_state: NULL");
-            return CHANNELSTATE::closed;
+            return ChannelState::Closed;
         }
         switch (smctrl->channel_state)
         {
-            case CHANNELSTATE::closed:
+            case ChannelState::Closed:
                 EVENTLOG(VERBOSE, "Current state : CLOSED");
                 break;
-            case  CHANNELSTATE::cookie_wait:
+            case  ChannelState::CookieWait:
                 EVENTLOG(VERBOSE, "Current state :COOKIE_WAIT ");
                 break;
-            case  CHANNELSTATE::cookie_echoed:
+            case  ChannelState::CookieEchoed:
                 EVENTLOG(VERBOSE, "Current state : COOKIE_ECHOED");
                 break;
-            case  CHANNELSTATE::connected:
+            case  ChannelState::Connected:
                 EVENTLOG(VERBOSE, "Current state : ESTABLISHED");
                 break;
-            case  CHANNELSTATE::shutdown_pending:
+            case  ChannelState::ShutdownPending:
                 EVENTLOG(VERBOSE, "Current state : SHUTDOWNPENDING");
                 break;
-            case CHANNELSTATE::shutdown_received:
+            case ChannelState::ShutdownReceived:
                 EVENTLOG(VERBOSE, "Current state : SHUTDOWNRECEIVED");
                 break;
-            case CHANNELSTATE::shutdown_sent:
+            case ChannelState::ShutdownSent:
                 EVENTLOG(VERBOSE, "Current state : SHUTDOWNSENT");
                 break;
-            case CHANNELSTATE::shutdown_ack_sent:
+            case ChannelState::ShutdownAckSent:
                 EVENTLOG(VERBOSE, "Current state : SHUTDOWNACKSENT");
                 break;
             default:
-                EVENTLOG(VERBOSE, "Unknown state : return closed");
-                return CHANNELSTATE::closed;
+                EVENTLOG(VERBOSE, "Unknown state : return Closed");
+                return ChannelState::Closed;
                 break;
         }
         return smctrl->channel_state;
@@ -684,11 +706,12 @@ class dispatch_layer_t
      * SACK chunks to reliable_transfer, and data_chunks to RX_control.
      * Those modules must get a pointer to the start of a chunk and
      * information about its size (without padding).
-     * @param  address_index_  index of address on which this data arrived
-     * @param  datagram     pointer to first chunk of the newly received data
-     * @param  len          length of payload (i.e. len of the concatenation of chunks)
+     * @param  curr_source_path_  index of address on which this data arrived
+     * @param  curr_geco_packet_->chunk  pointer to first chunk of the newly received data
+     * @param  curr_geco_packet_value_len_
+     * length of payload (i.e. len of the concatenation of chunks)
      */
-    int disassemle_geco_packet(uchar * datagram, int len);
+    int disassemle_curr_geco_packet(void);
 
     /**
     * For now this function treats only one incoming data chunk' tsn
@@ -701,9 +724,9 @@ class dispatch_layer_t
     * an InitAck may be returned, alongside with a cookie chunk variable parameter.
     * The following data are created and included in the init acknowledgement:
     * a COOKIE parameter.
-    * @param init  pointer to the received init-chunk (including optional parameters)
+    * @param init_chunk_t  pointer to the received init-chunk (including optional parameters)
     */
-    int process_init_chunk(init_chunk_t * init);
+    int process_curr_init_chunk(init_chunk_t * init);
 
     /**
      *   deletes the current chanel.
@@ -854,7 +877,7 @@ class dispatch_layer_t
      * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
      * that have only variable length parameters like the error chunks
      */
-    uchar alloc_simple_chunk(uchar chunk_type, uchar flag)
+    uchar alloc_simple_chunk(uint chunk_type, uchar flag)
     {
         assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
@@ -1212,7 +1235,7 @@ class dispatch_layer_t
      * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
      * @pre: need call find_chunk_types() first
      */
-    inline int contains_chunk(uchar chunk_type, uint chunk_types)
+    inline int contains_chunk(uint chunk_type, uint chunk_types)
     {
         // 0000 0000 ret = 0 at beginning
         // 0000 0001 1
@@ -1251,7 +1274,7 @@ class dispatch_layer_t
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
     uchar* find_first_chunk(uchar * packet_value, uint packet_val_len,
-        uchar chunk_type);
+        uint chunk_type);
 
     /**
      * find_sockaddr: looks for address type parameters in INIT or INIT-ACKs

@@ -1,7 +1,7 @@
-﻿Build started 2016/5/22 20:05:05.
+﻿Build started 2016/5/23 19:05:39.
      1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\unit-tests\unit-tests.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /O2 /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\unittets\main.txt unit_tests.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /O2 /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\unittets\main.txt ..\..\..\..\unittets\unit_tests.cpp
          main.txt
      1>D:\VS2013WorkSpace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(81): warning C4005: 'POLLIN' : macro redefinition
@@ -15,9 +15,9 @@
      1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(598): warning C4018: '<' : signed/unsigned mismatch
-     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(741): warning C4018: '<' : signed/unsigned mismatch
-     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(920): warning C4244: '+=' : conversion from 'unsigned __int64' to 'uchar', possible loss of data
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(624): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(767): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(946): warning C4244: '+=' : conversion from 'unsigned __int64' to 'uchar', possible loss of data
      1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
                  C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(2238) : see declaration of 'gethostbyname'
      1>..\..\..\..\unittets\main.txt(358): warning C4305: 'initializing' : truncation from 'int' to 'uchar'
@@ -41,4 +41,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:05.00
+Time Elapsed 00:00:05.47

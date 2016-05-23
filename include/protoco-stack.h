@@ -21,39 +21,39 @@
 #define __INCLUDE_PROTOCOL_STACK_H
 
 /* the possible 7 states of an association */
-enum CHANNELSTATE
+enum ChannelState
 {
-    closed,
-    cookie_wait,
-    cookie_echoed,
-    connected,
-    shutdown_pending,
-    shutdown_received,
-    shutdown_sent,
-    shutdown_ack_sent,
-    unknown,
+    Closed,
+    CookieWait,
+    CookieEchoed,
+    Connected,
+    ShutdownPending,
+    ShutdownReceived,
+    ShutdownSent,
+    ShutdownAckSent,
+    Unknown,
 };
 
 /* Return codes for a number of functions that treat incoming chunks */
 /* these are used in  bundle controller !                          */
-enum CHUNK_PROCESS_RESULT
+enum ChunkProcessResult
 {
-    ok,
-    stop,
-    stop_deleted,
+    Good,
+    Stop,
+    StopAndDeleteChannel,
 };
 
 /* for COMMUNICATION LOST or COMMUNICATION UP callbacks */
-enum CONNECTION_LOST_REASON
+enum ConnectionLostReason
 {
-    aborted,
-    peer_endpoint_unreachable,
+    PeerAbortConnection,
+    PeerUnreachable,
     exceed_max_retrans_count,
     no_tcb,
     invalid_param,
     unknown_param,
     /* maybe some others............. */
-    reason_count, // number od reasons 
+    Unkown, // number od reasons 
 };
 
 #define SCTP_COMM_UP_RECEIVED_VALID_COOKIE       1

@@ -191,7 +191,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\unittets\main.txt" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
-    <ClCompile Include="unit_tests.cpp" />
+    <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\unittets\readme.md" />
