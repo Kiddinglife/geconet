@@ -30,6 +30,11 @@
 #include "gecotimer.h"
 #include "protoco-stack.h"
 
+#define clear_curr_channel()\
+delete_curr_channel();\
+on_connection_lost(CONNECTION_LOST_REASON::invalid_param);\
+null_curr_channel_and_geco_instance()
+
 /*------------------- Functions called by the ULP -----------------------*/
 /* This functions are defined in a seperate header file dctp.h
  * in order to seperate the interface to the ULP and the interface

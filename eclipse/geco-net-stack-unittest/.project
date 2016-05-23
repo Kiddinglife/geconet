@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>geco-sctp-cplus</name>
+	<name>geco-net-stack-unittest</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -26,30 +26,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>docx</name>
+			<name>unittets</name>
 			<type>2</type>
-			<locationURI>PARENT-1-PROJECT_LOC/docx</locationURI>
-		</link>
-		<link>
-			<name>sctp_original_src</name>
-			<type>2</type>
-			<locationURI>PARENT-1-PROJECT_LOC/sctp_original_src</locationURI>
-		</link>
-		<link>
-			<name>sctp_src</name>
-			<type>2</type>
-			<locationURI>PARENT-1-PROJECT_LOC/sctp_src</locationURI>
-		</link>
-		<link>
-			<name>src</name>
-			<type>2</type>
-			<locationURI>PARENT-1-PROJECT_LOC/src</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/unittets</locationURI>
 		</link>
 	</linkedResources>
-	<variableList>
-		<variable>
-			<name>copy_PARENT</name>
-			<value>$%7BPARENT-2-PROJECT_LOC%7D/2016209/geco-sctp-cplus</value>
-		</variable>
-	</variableList>
 </projectDescription>
