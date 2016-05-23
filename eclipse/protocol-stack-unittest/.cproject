@@ -45,7 +45,7 @@
 								</option>
 								<option id="gnu.cpp.link.option.paths.2072591557" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/jakez/2016209/geco-sctp-cplus/thirdparty/googlemock"/>
-									<listOptionValue builtIn="false" value="/home/jakez/2016209/geco-sctp-cplus/eclipse/geco-net-stack-lib/Debug"/>
+									<listOptionValue builtIn="false" value="/home/jakez/2016209/geco-sctp-cplus/eclipse/protocol-stack-lib/Debug"/>
 									<listOptionValue builtIn="false" value="/home/jakez/2016209/geco-sctp-cplus/thirdparty/libs"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.840670735" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -58,6 +58,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="docx|sctp_original_src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

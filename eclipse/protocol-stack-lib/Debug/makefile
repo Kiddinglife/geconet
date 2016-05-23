@@ -38,19 +38,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: libgeco-net-stack-lib.a
+all: libprotocol-stack-lib.a
 
 # Tool invocations
-libgeco-net-stack-lib.a: $(OBJS) $(USER_OBJS)
+libprotocol-stack-lib.a: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC Archiver'
-	ar -r  "libgeco-net-stack-lib.a" $(OBJS) $(USER_OBJS) $(LIBS)
+	ar -r  "libprotocol-stack-lib.a" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(CC_DEPS)$(C++_DEPS)$(ARCHIVES)$(C_UPPER_DEPS)$(CXX_DEPS)$(OBJS)$(CPP_DEPS)$(C_DEPS) libgeco-net-stack-lib.a
+	-$(RM) $(CC_DEPS)$(C++_DEPS)$(ARCHIVES)$(C_UPPER_DEPS)$(CXX_DEPS)$(OBJS)$(CPP_DEPS)$(C_DEPS) libprotocol-stack-lib.a
 	-@echo ' '
 
 .PHONY: all clean dependents

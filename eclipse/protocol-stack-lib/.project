@@ -26,24 +26,14 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>docx</name>
-			<type>2</type>
-			<locationURI>copy_PARENT/docx</locationURI>
-		</link>
-		<link>
 			<name>include</name>
 			<type>2</type>
-			<locationURI>copy_PARENT/include</locationURI>
-		</link>
-		<link>
-			<name>sctp_original_src</name>
-			<type>2</type>
-			<locationURI>copy_PARENT/sctp_original_src</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/include</locationURI>
 		</link>
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<locationURI>copy_PARENT/src</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/src</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
