@@ -1,0 +1,518 @@
+Network Working Group                                             Q. Xie
+Internet-Draft                                                  Motorola
+Expires: January 7, 2005                                      R. Stewart
+                                                     Cisco Systems, Inc.
+                                                             M. Holdrege
+                                                           Strix Systems
+                                                            July 9, 2004
+
+
+
+                   SCTP NAT Transverse Considerations
+                    draft-xie-tsvwg-sctp-nat-00.txt
+
+
+Status of this Memo
+
+
+   By submitting this Internet-Draft, I certify that any applicable
+   patent or other IPR claims of which I am aware have been disclosed,
+   and any of which I become aware will be disclosed, in accordance with
+   RFC 3668.
+
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups.  Note that
+   other groups may also distribute working documents as
+   Internet-Drafts.
+
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+
+   The list of current Internet-Drafts can be accessed at
+   http://www.ietf.org/ietf/1id-abstracts.txt.
+
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   http://www.ietf.org/shadow.html.
+
+
+   This Internet-Draft will expire on January 7, 2005.
+
+
+Copyright Notice
+
+
+   Copyright (C) The Internet Society (2004).  All Rights Reserved.
+
+
+Abstract
+
+
+   This document provides guidelines and solutions for dealing with SCTP
+   association transversing NAT and similar middleboxes.
+
+
+
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 1]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+Table of Contents
+
+
+   1.  Conventions  . . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+   3.  SCTP NAT Transverse Scenarios  . . . . . . . . . . . . . . . .  3
+     3.1   Single Point Transvers . . . . . . . . . . . . . . . . . .  3
+     3.2   Multi-point Traverse . . . . . . . . . . . . . . . . . . .  4
+   4.  Considerations for SCTP NAT transverse . . . . . . . . . . . .  4
+     4.1   Simple NAT enhancement to support singly-homed SCTP
+           associations . . . . . . . . . . . . . . . . . . . . . . .  4
+     4.2   NAT enhancement to support multi-homed SCTP
+           associations through a single traverse point . . . . . . .  5
+   5.  Security Considerations  . . . . . . . . . . . . . . . . . . .  5
+   6.  References . . . . . . . . . . . . . . . . . . . . . . . . . .  6
+   6.1   Normative References . . . . . . . . . . . . . . . . . . . .  6
+   6.2   Informative References . . . . . . . . . . . . . . . . . . .  6
+       Authors' Addresses . . . . . . . . . . . . . . . . . . . . . .  6
+       Intellectual Property and Copyright Statements . . . . . . . .  8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 2]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+1.  Conventions
+
+
+   The keywords MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD,
+   SHOULD NOT, RECOMMENDED, NOT RECOMMENDED, MAY, and OPTIONAL, when
+   they appear in this document, are to be interpreted as described in
+   [2].
+
+
+2.  Introduction
+
+
+   It is the job of Network Address Translators (NAT) [3] and
+   middleboxes [6] that utilize a NAT function to manipulate address and
+   port information in the IP header.  This poses a challenge for hosts
+   that attempt to use certain end-to-end protocols [5].  This issue has
+   drawn increasingly wide attention from the IP development and service
+   community and much work has been done to ameliorate the situation for
+   UDP, TCP and other protocols.
+
+
+   The same issue not only exists for SCTP [4], but also may become a
+   more difficult issue when SCTP associations are multi-homed.  This
+   document provides guidelines and solutions for dealing with SCTP and
+   NAT traversal.  In the following discussion, we will simply refer to
+   NAT as a function, but note that many types of middleboxes employ NAT
+   functions.
+
+
+3.  SCTP NAT Transverse Scenarios
+
+
+3.1  Single Point Transvers
+
+
+   In this case, all packets in the SCTP association go through a single
+   NAT, as shown below:
+
+
+      +------+          +-----+          +------+
+      |SCTP  |==========| NAT |==========|SCTP  |
+      |end A |          +-----+          |end B |
+      +------+                           +------+
+
+
+   A variation of this case is shown below, i.e., multiple NATs in a
+   single transverse path:
+
+
+      +------+      +-----+     +-----+       +------+
+      |SCTP  |======| NAT |=::==| NAT |=======|SCTP  |
+      |end A |      +-----+     +-----+       |end B |
+      +------+                                +------+
+
+
+   The two SCTP endpoints in this case can be either singly-homed or
+   multi-homed.  However, the important thing is that the NAT (or NATs)
+   in this case sees ALL the packets of the SCTP association.
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 3]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+   In this single traverse point scenario, we must acknowledge that
+   while one of the main benefits of SCTP multi-homing is redundant
+   paths, the NAT function represents a single point of failure in the
+   path of the SCTP multi-home association.  However, the rest of the
+   path may still benefit from path diversity provided by SCTP
+   multi-homing.
+
+
+3.2  Multi-point Traverse
+
+
+   This case involves multiple NATs and each NAT only sees some of the
+   packets in the SCTP association.  An example is shown below:
+
+
+                     +------+
+                /====|NAT A |====\
+      +------+ /     +------+     \ +------+
+      |SCTP  |/       ...          \|SCTP  |
+      |end A |\                    /|end B |
+      +------+ \     +------+     / +------+
+                \====|NAT B |====/
+                     +------+
+
+
+   This case does NOT apply to a singly-homed SCTP association (i.e.,
+   BOTH endpoints in the association use only one IP address).  The
+   advantage here is that the existance of multiple NAT traverse points
+   can preserve the path diversity of a multi-homed association for the
+   entire path.  This in turn can improve the robustness of the
+   communication.
+
+
+   To make this work, however, all the NATs involved must recognize the
+   packets they see as belonging to the same SCTP association and
+   perform address translation in a consistent way.  This can only be
+   possible if there exists some inter-NAT protocol which can provide
+   coordination amongst the NATs when the association is set up.
+   Further study is needed for this scenario.  In the rest of this
+   document, we will only discuss the single traverse point scenario.
+
+
+4.  Considerations for SCTP NAT transverse
+
+
+   In any type of traverse, the NAT must understand the SCTP protocol.
+   Since SCTP is relatively new (compared to UDP or TCP), some older
+   existing NATs that are capable of handling UDP or TCP traverse will
+   need to be enhanced for SCTP.  In this section we discuss what
+   considerations should be made for that NAT enhancement.
+
+
+4.1  Simple NAT enhancement to support singly-homed SCTP associations
+
+
+   In a singly-homed SCTP association, each endpoint uses only one IP
+   address and the association will always go through a single NAT
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 4]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+   traverse point.  In such cases, the enhancement needed for a NAT to
+   support SCTP is relatively simple: 1) recognize the protocol number
+   for SCTP, and 2) locate and change the transport ports (if needed).
+   The location of the transport port numbers are the same as both TCP
+   and UDP so these should be minor changes for NAT software.
+
+
+   It is important that the endpoints not to list the address again
+   within the INIT or INIT-ACK when setting up the association.
+
+
+   Note, the use of a single address by the endpoint may be the result
+   of either the endpoint only has a single address assigned to the host
+   or due to user of the SCTP stack only specifies to bind one address
+   to the endpoint.
+
+
+4.2  NAT enhancement to support multi-homed SCTP associations through a
+    single traverse point
+
+
+   At the association setup, the NAT needs to recognize and intercept
+   the INIT, or INIT-ACK chunk.  The NAT will look into the chunk and
+   find out all the listed IP addresses (including the source IP address
+   in the packet's IP header).  The NAT will map this address list to a
+   _list_ of external addresses.  Then, the NAT will reconstruct the
+   INIT or INIT-ACK chunk, fill it with external addresses, re-calculate
+   the checksum, and finally forward the packet on to the peer.  This
+   approach is transparent to the endpoints and can support
+   multi-homing.
+
+
+   The NAT function is capable of variety in translating one to many or
+   many to one addresses in the chunk.  Depending on network
+   architectural requirements, NAT administrators may choose to map many
+   internal addresses to a single external address.  It should be noted
+   that this will reduce path diversity in a portion of the network.
+   Alternatively, by mapping 1 internal address to many external
+   addresses can increase the path diversity in a portion of the
+   network.
+
+
+   Editor's Note: Add discussion about ASCONF handling by the NAT.
+
+
+   Editor's Note: Add some scenario examples.
+
+
+5.  Security Considerations
+
+
+   See RFC XXXX on SCTP security considerations.  See RFC XXXX on NAT
+   security considerations.  See RFC XXXX for IAB comments on NAT.
+
+
+6.  References
+
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 5]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+6.1  Normative References
+
+
+   [1]  Bradner, S., "The Internet Standards Process -- Revision 3", BCP
+        9, RFC 2026, October 1996.
+
+
+   [2]  Bradner, S., "Key words for use in RFCs to Indicate Requirement
+        Levels", BCP 14, RFC 2119, March 1997.
+
+
+6.2  Informative References
+
+
+   [3]  Srisuresh, P. and M. Holdrege, "IP Network Address Translator
+        (NAT) Terminology and Considerations", RFC 2663, August 1999.
+
+
+   [4]  Stewart, R., Xie, Q., Morneault, K., Sharp, C., Schwarzbauer,
+        H., Taylor, T., Rytina, I., Kalla, M., Zhang, L. and V. Paxson,
+        "Stream Control Transmission Protocol", RFC 2960, October 2000.
+
+
+   [5]  Holdrege, M. and P. Srisuresh, "Protocol Complications with the
+        IP Network Address  Translator", RFC 3027, January 2001.
+
+
+   [6]  Swale, R., Mart, P., Sijben, P., Brim, S. and M. Shore,
+        "Middlebox Communications (midcom) Protocol Requirements", RFC
+        3304, August 2002.
+
+
+
+Authors' Addresses
+
+
+   Qiaobing Xie
+   Motorola, Inc.
+   1501 W. Shure Drive, 2-F9
+   Arlington Heights, IL  60004
+   US
+
+
+   Phone: +1-847-632-3028
+   EMail: qxie1@email.mot.com
+
+
+
+   Randall R. Stewart
+   Cisco Systems, Inc.
+   8725 West Higgins Road
+   Suite 300
+   Chicago, IL  60631
+   USA
+
+
+   Phone: +1-815-477-2127
+   EMail: rrs@cisco.com
+
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 6]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+   Matt Holdrege
+   Strix Systems
+   Suite 110, 26610 Agoura Road
+   Calabasas, CA  91302
+   USA
+
+
+   EMail: matt@strixsystems.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 7]
+Internet-Draft     SCTP NAT Transverse Considerations          July 2004
+
+
+
+Intellectual Property Statement
+
+
+   The IETF takes no position regarding the validity or scope of any
+   Intellectual Property Rights or other rights that might be claimed to
+   pertain to the implementation or use of the technology described in
+   this document or the extent to which any license under such rights
+   might or might not be available; nor does it represent that it has
+   made any independent effort to identify any such rights.  Information
+   on the procedures with respect to rights in RFC documents can be
+   found in BCP 78 and BCP 79.
+
+
+   Copies of IPR disclosures made to the IETF Secretariat and any
+   assurances of licenses to be made available, or the result of an
+   attempt made to obtain a general license or permission for the use of
+   such proprietary rights by implementers or users of this
+   specification can be obtained from the IETF on-line IPR repository at
+   http://www.ietf.org/ipr.
+
+
+   The IETF invites any interested party to bring to its attention any
+   copyrights, patents or patent applications, or other proprietary
+   rights that may cover technology that may be required to implement
+   this standard.  Please address the information to the IETF at
+   ietf-ipr@ietf.org.
+
+
+
+Disclaimer of Validity
+
+
+   This document and the information contained herein are provided on an
+   "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS
+   OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY AND THE INTERNET
+   ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE
+   INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+   WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+
+Copyright Statement
+
+
+   Copyright (C) The Internet Society (2004).  This document is subject
+   to the rights, licenses and restrictions contained in BCP 78, and
+   except as set forth therein, the authors retain all their rights.
+
+
+
+Acknowledgment
+
+
+   Funding for the RFC Editor function is currently provided by the
+   Internet Society.
+
+
+
+
+
+Xie, et al.             Expires January 7, 2005                 [Page 8]

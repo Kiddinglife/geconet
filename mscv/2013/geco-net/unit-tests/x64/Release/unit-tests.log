@@ -1,0 +1,44 @@
+﻿Build started 2016/5/23 19:05:39.
+     1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\unit-tests\unit-tests.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /O2 /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\unittets\main.txt ..\..\..\..\unittets\unit_tests.cpp
+         main.txt
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(81): warning C4005: 'POLLIN' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(82): warning C4005: 'POLLPRI' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1618) : see previous definition of 'POLLPRI'
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(83): warning C4005: 'POLLOUT' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1621) : see previous definition of 'POLLOUT'
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(84): warning C4005: 'POLLERR' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(624): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(767): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(946): warning C4244: '+=' : conversion from 'unsigned __int64' to 'uchar', possible loss of data
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\poller.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(2238) : see declaration of 'gethostbyname'
+     1>..\..\..\..\unittets\main.txt(358): warning C4305: 'initializing' : truncation from 'int' to 'uchar'
+     1>..\..\..\..\unittets\main.txt(358): warning C4309: 'initializing' : truncation of constant value
+     1>..\..\..\..\unittets\main.txt(524): warning C4305: 'initializing' : truncation from 'int' to 'uchar'
+     1>..\..\..\..\unittets\main.txt(524): warning C4309: 'initializing' : truncation of constant value
+     1>..\..\..\..\unittets\main.txt(526): warning C4267: 'argument' : conversion from 'size_t' to 'int', possible loss of data
+         unit_tests.cpp
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1193,5): warning MSB8012: TargetPath(D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\unit-tests-ps-lib.exe) does not match the Linker's OutputFile property value (D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\geco-net_unit-tests-ps-lib_Releasex64.exe). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+     1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1195,5): warning MSB8012: TargetName(unit-tests-ps-lib) does not match the Linker's OutputFile property value (geco-net_unit-tests-ps-lib_Releasex64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\geco-net_unit-tests-ps-lib_Releasex64.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:../../../../thirdparty/googlemock/libs/ gmock_Releasex64.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\unit-tests-ps-lib.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\unit-tests-ps-lib.lib" /MACHINE:X64 x64\Release\main.obj
+         "x64\Release\test-main.obj"
+         x64\Release\unit_tests.obj
+         "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\geco-net_protocol-stack-lib_Releasex64.lib"
+         Generating code
+         Finished generating code
+         unit-tests.vcxproj -> D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Release\unit-tests-ps-lib.exe
+     1>Done Building Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\unit-tests\unit-tests.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:05.47
