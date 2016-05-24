@@ -31,7 +31,7 @@ enum ChannelState
     ShutdownReceived,
     ShutdownSent,
     ShutdownAckSent,
-    Unknown,
+    ChannelStateSize
 };
 
 /* Return codes for a number of functions that treat incoming chunks */
@@ -41,6 +41,7 @@ enum ChunkProcessResult
     Good,
     Stop,
     StopAndDeleteChannel,
+    ChunkProcessResultSize
 };
 
 /* for COMMUNICATION LOST or COMMUNICATION UP callbacks */
@@ -53,7 +54,7 @@ enum ConnectionLostReason
     invalid_param,
     unknown_param,
     /* maybe some others............. */
-    Unkown, // number od reasons 
+    ConnectionLostReasonSize // number od reasons 
 };
 
 #define SCTP_COMM_UP_RECEIVED_VALID_COOKIE       1

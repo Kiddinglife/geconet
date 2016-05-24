@@ -880,13 +880,16 @@ class dispatch_layer_t
     uchar alloc_simple_chunk(uint chunk_type, uchar flag)
     {
         assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
+
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
         simple_chunk_t* simple_chunk_ptr =
             (simple_chunk_t*)geco::ds::single_client_alloc::allocate(
             SIMPLE_CHUNK_SIZE);
+
         simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
         simple_chunk_ptr->chunk_header.chunk_flags = flag;
         simple_chunk_ptr->chunk_header.chunk_length = 0x0004;
+
         add2chunklist(simple_chunk_ptr, "create simple chunk %u");
         return simple_chunk_index_;
     }
@@ -894,7 +897,10 @@ class dispatch_layer_t
     uchar alloc_init_ack_chunk(uint initTag, uint rwnd,
         ushort noOutStreams, ushort noInStreams, uint initialTSN)
     {
+        assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
+
         init_chunk_t* initAckChunk = (init_chunk_t*)geco::ds::single_client_alloc::allocate(INIT_CHUNK_TOTAL_SIZE);
+
         initAckChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
         initAckChunk->chunk_header.chunk_flags = 0;
         initAckChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
@@ -903,6 +909,9 @@ class dispatch_layer_t
         initAckChunk->init_fixed.outbound_streams = htons(noOutStreams);
         initAckChunk->init_fixed.inbound_streams = htons(noInStreams);
         initAckChunk->init_fixed.initial_tsn = htonl(initialTSN);
+
+        add2chunklist((simple_chunk_t*)initAckChunk, "create init ack chunk %u");
+        return simple_chunk_index_;
     }
 
     /*
