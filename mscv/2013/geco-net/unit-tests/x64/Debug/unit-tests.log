@@ -1,8 +1,11 @@
-﻿Build started 2016/5/24 21:28:28.
+﻿Build started 2016/5/25 19:11:28.
      1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\unit-tests\unit-tests.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt "..\..\..\..\unittets\test-main.cc"
+         test-main.cc
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1193,5): warning MSB8012: TargetPath(D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\unit-tests-ps-lib.exe) does not match the Linker's OutputFile property value (D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\geco-net_unit-tests-ps-lib_Debugx64.exe). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1195,5): warning MSB8012: TargetName(unit-tests-ps-lib) does not match the Linker's OutputFile property value (geco-net_unit-tests-ps-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-     1>Link:
+       Link:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\geco-net_unit-tests-ps-lib_Debugx64.exe" /INCREMENTAL /NOLOGO /LIBPATH:../../../../thirdparty/libs/ gmock_Debugx64.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\unit-tests-ps-lib.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\unit-tests-ps-lib.lib" /MACHINE:X64 x64\Debug\main.obj
          "x64\Debug\test-main.obj"
          x64\Debug\unit_tests.obj
@@ -12,4 +15,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:01.28
+Time Elapsed 00:00:04.83

@@ -417,7 +417,8 @@ class dispatch_layer_t
     channel_t tmp_channel_;
     sockaddrunion tmp_addr_;
     geco_instance_t tmp_geco_instance_;
-    sockaddrunion found_addres_[MAX_NUM_ADDRESSES];
+    sockaddrunion tmp_found_addres_[MAX_NUM_ADDRESSES];
+    int found_addres_size_;
 
     /*related to simple chunk send */
     uchar write_cursors_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
@@ -1304,7 +1305,7 @@ class dispatch_layer_t
      * @return -1 prama error, >=0 number of the found addresses
      * */
     int find_sockaddres(uchar * init_chunk, uint chunk_len,
-        int supportedAddressTypes);
+        int supportedAddressTypes, bool ignore_dups = true, bool ignoreLast = false);
 
     /** NULL no params, otherwise have params*/
     uchar* find_vlparam_fixed_from_setup_chunk(uchar * setup_chunk,

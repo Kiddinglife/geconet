@@ -20,7 +20,8 @@ dispatch_layer_t::dispatch_layer_t()
     do_dns_query_for_host_name_ = false;
 
     channels_.reserve(DEFAULT_ENDPOINT_SIZE);
-    memset(found_addres_, 0, MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
+    memset(tmp_found_addres_, 0,
+        MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
 
     simple_chunk_index_ = 0;
     memset(simple_chunks_, 0, MAX_CHUNKS_SIZE);
@@ -116,13 +117,13 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 should_discard_curr_geco_packet_ = true;
             if (IN6_IS_ADDR_MULTICAST(dest_addr->sin6.sin6_addr.s6_addr))
                 should_discard_curr_geco_packet_ = true;
-            /* if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true; */
+            if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true; 
 
             if (IN6_IS_ADDR_UNSPECIFIED(source_addr->sin6.sin6_addr.s6_addr))
                 should_discard_curr_geco_packet_ = true;
             if (IN6_IS_ADDR_MULTICAST(source_addr->sin6.sin6_addr.s6_addr))
                 should_discard_curr_geco_packet_ = true;
-            /*  if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true; */
+            if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true; 
             /*
              if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
              IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
@@ -131,12 +132,12 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
 #else
             if (IN6_IS_ADDR_UNSPECIFIED(&dest_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
             if (IN6_IS_ADDR_MULTICAST(&dest_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
-            /* if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true; */
+            if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true;
 
             if (IN6_IS_ADDR_UNSPECIFIED(&source_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
             if (IN6_IS_ADDR_MULTICAST(&source_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
 
-            /* if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true; */
+            if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true;
             /*
              if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr))) &&
              IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr),
@@ -179,18 +180,20 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     /*4) find the endpoint for this packet */
     curr_channel_ = find_channel_by_transport_addr(last_source_addr_,
         last_src_port_, last_dest_port_);
-
     if (curr_channel_ != NULL)
     {
         EVENTLOG(INTERNAL_TRACE, "Found channel from this packet!");
         /*5) get the sctp instance for this packet from channel*/
-        supported_addr_types_ = 0;
         curr_geco_instance_ = curr_channel_->geco_inst;
         if (curr_geco_instance_ == NULL)
         {
             ERRLOG(FALTAL_ERROR_EXIT,
                 "Foundchannel, but no geo Instance, FIXME !");
             return;
+        }
+        else
+        {
+            supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
         }
     }
     /* 6) find dctp instancefor this packet
@@ -238,7 +241,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk,
         curr_geco_packet_value_len_, &total_chunks_count_);
 
-    int i = 0;
+    int found_addres_size_ = 0;
     int retval = 0;
     curr_uchar_init_chunk_ = NULL;
 
@@ -283,47 +286,47 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     /* 11) try to find an channel for this packet from setup chunks */
     if (curr_channel_ == NULL)
     {
-        // it is init ack chunk
         curr_uchar_init_chunk_ = find_first_chunk(curr_geco_packet_->chunk,
             curr_geco_packet_value_len_, CHUNK_INIT_ACK);
         if (curr_uchar_init_chunk_ != NULL)
         {
             EVENTLOG(VERBOSE,
                 "recv_geco_packet()::Looking for source address in CHUNK_INIT_ACK");
-            i = find_sockaddres(curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+            found_addres_size_ = find_sockaddres(curr_uchar_init_chunk_, curr_geco_packet_value_len_,
                 supported_addr_types_) - 1;
-            for (; i >= 0; i--)
+            for (; found_addres_size_ >= 0; found_addres_size_--)
             {
                 curr_channel_ = find_channel_by_transport_addr(
-                    &found_addres_[i], last_src_port_, last_dest_port_);
+                    &tmp_found_addres_[found_addres_size_], last_src_port_, last_dest_port_);
                 if (curr_channel_ != NULL)
                 {
-                    last_src_path_ = i;
+                    last_src_path_ = found_addres_size_;
                     break;
                 }
             }
-        }  //if (curr_uchar_init_chunk_ != NULL) CHUNK_INIT_ACK
-
-        // if it is init chunk
-        curr_uchar_init_chunk_ = find_first_chunk(curr_geco_packet_->chunk,
-            curr_geco_packet_value_len_, CHUNK_INIT);
-        if (curr_uchar_init_chunk_ != NULL)
+        }
+        else // as there is only one init chunk in an packet, we use else for efficiency
         {
-            EVENTLOG(VERBOSE,
-                "recv_geco_packet()::Looking for source address in INIT CHUNK");
-            i = find_sockaddres(curr_uchar_init_chunk_, curr_geco_packet_value_len_,
-                supported_addr_types_) - 1;
-            for (; i >= 0; i--)
+            curr_uchar_init_chunk_ = find_first_chunk(curr_geco_packet_->chunk,
+                curr_geco_packet_value_len_, CHUNK_INIT);
+            if (curr_uchar_init_chunk_ != NULL)
             {
-                curr_channel_ = find_channel_by_transport_addr(
-                    &found_addres_[i], last_src_port_, last_dest_port_);
-                if (curr_channel_ != NULL)
+                EVENTLOG(VERBOSE,
+                    "recv_geco_packet()::Looking for source address in INIT CHUNK");
+                found_addres_size_ = find_sockaddres(curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+                    supported_addr_types_) - 1;
+                for (; found_addres_size_ >= 0; found_addres_size_--)
                 {
-                    last_src_path_ = i;
-                    break;
+                    curr_channel_ = find_channel_by_transport_addr(
+                        &tmp_found_addres_[found_addres_size_], last_src_port_, last_dest_port_);
+                    if (curr_channel_ != NULL)
+                    {
+                        last_src_path_ = found_addres_size_;
+                        break;
+                    }
                 }
-            }
-        }        //if (curr_uchar_init_chunk_ != NULL) CHUNK_INIT
+            }        //if (curr_uchar_init_chunk_ != NULL) CHUNK_INIT
+        }
 
         /* 12)
          * this may happen when a previously-connected endpoint re-connect to us
@@ -368,6 +371,10 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 clear();
                 ERRLOG(MAJOR_ERROR,
                     "We have an Association, but no Instance, FIXME !");
+            }
+            else
+            {
+                supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
             }
         }
         else
@@ -1159,7 +1166,13 @@ int dispatch_layer_t::process_curr_init_chunk(init_chunk_t * init)
         uint init_tag = generate_init_tag();
         alloc_init_ack_chunk(init_tag, curr_geco_instance_->default_myRwnd,
             outbound_stream, inbound_stream, init_tag);
-        suppoted_addr_types = curr_geco_instance_->supportedAddressTypes;
+        assert(supported_addr_types_ != 0);
+        found_addres_size_ = find_sockaddres((uchar*)init, curr_geco_packet_value_len_,
+            supported_addr_types_) - 1;
+        for (; found_addres_size_ >= 0; found_addres_size_--)
+        {
+
+        }
     }
     return ret;
 }
@@ -1711,7 +1724,7 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
 }
 
 int dispatch_layer_t::find_sockaddres(uchar * chunk, uint chunk_len,
-    int supportedAddressTypes)
+    int supportedAddressTypes, bool ignore_dups, bool ignoreLast)
 {
     /*1) validate method input params*/
     uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
@@ -1764,28 +1777,59 @@ int dispatch_layer_t::find_sockaddres(uchar * chunk, uint chunk_len,
             case VLPARAM_IPV4_ADDRESS:
                 if ((supportedAddressTypes & SUPPORT_ADDRESS_TYPE_IPV4))
                 {
-                    addres = (ip_address_t*)curr_pos;
-                    found_addres_[found_addr_number].sa.sa_family = AF_INET;
-                    found_addres_[found_addr_number].sin.sin_port = 0;
-                    found_addres_[found_addr_number].sin.sin_addr.s_addr =
-                        addres->dest_addr_un.ipv4_addr;
-                    found_addr_number++;
+                    if (found_addr_number < MAX_NUM_ADDRESSES)
+                    {
+                        addres = (ip_address_t*)curr_pos;
+                        if (IS_IPV4_ADDRESS_PTR_HBO(addres))
+                        {
+                            uint ip4_saddr = ntohl(addres->dest_addr_un.ipv4_addr);
+                            if (!IN_CLASSD(ip4_saddr) &&
+                                !IN_EXPERIMENTAL(ip4_saddr) &&
+                                !IN_BADCLASS(ip4_saddr) &&
+                                !INADDR_ANY == ip4_saddr &&
+                                !INADDR_BROADCAST == ip4_saddr)
+                            {
+                                tmp_found_addres_[found_addr_number].sa.sa_family = AF_INET;
+                                tmp_found_addres_[found_addr_number].sin.sin_port = 0;
+                                tmp_found_addres_[found_addr_number].sin.sin_addr.s_addr =
+                                    addres->dest_addr_un.ipv4_addr;
+                                found_addr_number++;
+                            }
+                        }
+                    }
                 }
                 break;
             case VLPARAM_IPV6_ADDRESS:
                 if ((supportedAddressTypes & VLPARAM_IPV6_ADDRESS))
                 {
-                    addres = (ip_address_t*)curr_pos;
-                    found_addres_[found_addr_number].sa.sa_family = AF_INET6;
-                    found_addres_[found_addr_number].sin6.sin6_port = 0;
-                    found_addres_[found_addr_number].sin6.sin6_flowinfo = 0;
+                    if (found_addr_number < MAX_NUM_ADDRESSES)
+                    {
+                        addres = (ip_address_t*)curr_pos;
+                        if (IS_IPV6_ADDRESS_PTR_HBO(addres))
+                        {
+                            if (!IN6_IS_ADDR_UNSPECIFIED(&(addres->dest_addr_un.ipv6_addr))
+                                && !IN6_IS_ADDR_MULTICAST(&(addres->dest_addr_un.ipv6_addr))
+                                && !IN6_IS_ADDR_V4COMPAT(&(addres->dest_addr_un.ipv6_addr))
+                                && !IN6_IS_ADDR_UNSPECIFIED(
+                                &(addres->dest_addr_un.ipv6_addr))
+                                && !IN6_IS_ADDR_MULTICAST(&(addres->dest_addr_un.ipv6_addr))
+                                && !IN6_IS_ADDR_V4COMPAT(&(addres->dest_addr_un.ipv6_addr)))
+                            {
+                                ERRLOG(MINOR_ERROR, "Too many addresses found during IPv4 reading");
+
+                                tmp_found_addres_[found_addr_number].sa.sa_family = AF_INET6;
+                                tmp_found_addres_[found_addr_number].sin6.sin6_port = 0;
+                                tmp_found_addres_[found_addr_number].sin6.sin6_flowinfo = 0;
 #ifdef HAVE_SIN6_SCOPE_ID
-                    foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
+                                foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
 #endif
-                    memcpy(found_addres_[found_addr_number].sin6.sin6_addr.s6_addr,
-                        addres->dest_addr_un.ipv6_addr,
-                        sizeof(struct in6_addr));
-                    found_addr_number++;
+                                memcpy(tmp_found_addres_[found_addr_number].sin6.sin6_addr.s6_addr,
+                                    &(addres->dest_addr_un.ipv6_addr),
+                                    sizeof(struct in6_addr));
+                                found_addr_number++;
+                            }
+                        }
+                    }
                 }
                 break;
         }
@@ -1794,6 +1838,7 @@ int dispatch_layer_t::find_sockaddres(uchar * chunk, uint chunk_len,
         read_len += padding_len;
         curr_pos += read_len;
     } // while
+
     return found_addr_number;
 }
 int dispatch_layer_t::find_sockaddres(uchar * chunk, uint chunk_len, uint n,
@@ -1882,7 +1927,7 @@ int dispatch_layer_t::find_sockaddres(uchar * chunk, uint chunk_len, uint n,
                         foundAddress->sin6.sin6_scope_id = 0;
 #endif
                         memcpy(foundAddress->sin6.sin6_addr.s6_addr,
-                            addres->dest_addr_un.ipv6_addr,
+                            &(addres->dest_addr_un.ipv6_addr),
                             sizeof(struct in6_addr));
                         return 0;
                     }

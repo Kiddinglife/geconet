@@ -227,7 +227,8 @@ setIPAddresses(unsigned char *mstring, guint16 length, union sockunion addresses
 
             address = (SCTP_ip_address *) & mstring[cursabs + cursrel];
 
-            if (IS_IPV4_ADDRESS_PTR_NBO(address)) {
+            if (IS_IPV4_ADDRESS_PTR_NBO(address)) 
+            {
                 discard  = FALSE;
                 /* FIXME : either NBO or HBO -- do not mix these */
                 if (IN_CLASSD(ntohl(address->dest_addr.sctp_ipv4))) discard = TRUE;
@@ -251,12 +252,14 @@ setIPAddresses(unsigned char *mstring, guint16 length, union sockunion addresses
                     tmpAddr.sin.sin_port = 0;
                     tmpAddr.sin.sin_addr.s_addr = address->dest_addr.sctp_ipv4;
 
-                    if (ignore_dups == TRUE) {
+                    if (ignore_dups == TRUE) 
+                    {
                         for (idx = 0; idx < v4found; idx++)
                              if (adl_equal_address(&tmpAddr, &addresses[idx]) == TRUE) new_found = FALSE;
                     }
 
-                    if (new_found == TRUE) {
+                    if (new_found == TRUE) 
+                    {
                         addresses[v4found].sa.sa_family = AF_INET;
                         addresses[v4found].sin.sin_port = 0;
                         addresses[v4found].sin.sin_addr.s_addr = address->dest_addr.sctp_ipv4;

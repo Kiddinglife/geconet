@@ -236,7 +236,7 @@ struct ip_address_t
     union
     {
         uint ipv4_addr;
-        uint ipv6_addr[4];
+        in6_addr ipv6_addr;
     } dest_addr_un;
 };
 /* Supported Addresstypes */
