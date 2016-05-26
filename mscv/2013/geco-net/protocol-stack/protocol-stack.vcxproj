@@ -193,7 +193,7 @@
     <ClInclude Include="..\..\..\..\include\globals.h" />
     <ClInclude Include="..\..\..\..\include\auth.h" />
     <ClInclude Include="..\..\..\..\include\messages.h" />
-    <ClInclude Include="..\..\..\..\include\poller.h" />
+    <ClInclude Include="..\..\..\..\include\transport_layer.h" />
     <ClInclude Include="..\..\..\..\include\protoco-stack.h" />
   </ItemGroup>
   <ItemGroup>
@@ -201,7 +201,7 @@
     <ClCompile Include="..\..\..\..\src\gecotimer.cc" />
     <ClCompile Include="..\..\..\..\src\globals.cc" />
     <ClCompile Include="..\..\..\..\src\auth.cc" />
-    <ClCompile Include="..\..\..\..\src\poller.cc" />
+    <ClCompile Include="..\..\..\..\src\transport_layer.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -247,7 +247,7 @@ static void test_add_sub_time()
     assert(result.tv_usec == 0);
 }
 
-#include "poller.h"
+#include "transport_layer.h"
 static void test_saddr_functions()
 {
     sockaddrunion saddr;
@@ -286,7 +286,7 @@ static void test_saddr_functions()
 static void test_open_socket()
 {
     int ret;
-    transport_layer_t nit;
+    network_interface_t nit;
     ret = nit.open_ipproto_geco_socket(AF_INET);
     assert(ret > 0);
     ret = nit.open_ipproto_geco_socket(AF_INET6);
@@ -302,7 +302,7 @@ static void test_open_socket()
 static void test_send_udp_msg()
 {
 
-    transport_layer_t nit;
+    network_interface_t nit;
 
     int geco_sdespt = nit.open_ipproto_geco_socket(AF_INET);
     assert(geco_sdespt > 0);
@@ -324,7 +324,7 @@ static void test_send_udp_msg()
 
 static void test_send_geco_msg()
 {
-    transport_layer_t nit;
+    network_interface_t nit;
 
     int geco_sdespt = nit.open_ipproto_geco_socket(AF_INET);
     assert(geco_sdespt > 0);
@@ -342,14 +342,14 @@ static void test_send_geco_msg()
 static void test_init_poller()
 {
     int rcwnd = 1234567;
-    transport_layer_t nit;
+    network_interface_t nit;
     nit.init(&rcwnd, true);
 }
 
 static void test_recv_geco_msg()
 {
     int rcwnd = 123;
-    transport_layer_t nit;
+    network_interface_t nit;
     nit.init(&rcwnd, true);
 
     sockaddrunion saddr;
@@ -373,7 +373,7 @@ static void test_recv_geco_msg()
 static void test_send_recv_udp_msg()
 {
     int rcwnd = 1234;
-    transport_layer_t nit;
+    network_interface_t nit;
     nit.init(&rcwnd, true);
 
     sockaddrunion saddr;
@@ -410,7 +410,7 @@ static void test_add_remove_fd()
 {
     // !!! comment wsaselect() in poller::set_event_on_win32_sdespt() 
     // if you run this unit test
-    poller_t poller;
+    reactor_t poller;
     poller.cbunion_.socket_cb_fun = fd_action_sctp;
     poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN, poller.cbunion_,
         (void*)1);
@@ -505,7 +505,7 @@ static void test_add_remove_fd()
     printf("ALl Done\n");
 }
 
-static transport_layer_t nit;
+static network_interface_t nit;
 static bool flag = true;
 
 static void process_stdin(char* data, size_t datalen)
@@ -558,7 +558,7 @@ static void test_pollsss()
 static void test_getlocaladdr()
 {
     int rcwnd = 512;
-    transport_layer_t nit;
+    network_interface_t nit;
     nit.init(&rcwnd, true);
 
     sockaddrunion* saddr = 0;

@@ -208,9 +208,9 @@ struct socket_despt_t
 
 #include "gecotimer.h"
 #include "dispatch_layer.h"
-struct transport_layer_t;
+struct network_interface_t;
 
-struct poller_t
+struct reactor_t
 {
 #ifdef _WIN32
     HANDLE win32events_[MAX_FD_SIZE];
@@ -226,7 +226,7 @@ struct poller_t
     timer_mgr timer_mgr_;
     timer_id_t curr_timer_id_;
 
-    transport_layer_t* nit_ptr_;
+    network_interface_t* nit_ptr_;
     char* internal_udp_buffer_;
     char* internal_dctp_buffer;
 
@@ -241,7 +241,7 @@ struct poller_t
     dispatch_layer_t dispatch_layer_;
     cbunion_t cbunion_;
 
-    poller_t()
+    reactor_t()
     {
         internal_udp_buffer_ = (char*)malloc(USE_UDP_BUFSZ);
         internal_dctp_buffer = (char*)malloc(MAX_MTU_SIZE + 20);
@@ -259,7 +259,7 @@ struct poller_t
         }
     }
 
-    ~poller_t()
+    ~reactor_t()
     {
         free(internal_udp_buffer_);
         free(internal_dctp_buffer);
@@ -368,7 +368,7 @@ struct poller_t
     }
 };
 
-struct transport_layer_t
+struct network_interface_t
 {
     int ip4_socket_despt_; /* socket fd for standard SCTP port....      */
     int ip6_socket_despt_; /* socket fd for standard SCTP port....      */
@@ -388,10 +388,10 @@ struct transport_layer_t
     uint stat_recv_bytes_;
     uint stat_send_bytes_;
 
-    poller_t poller_;
+    reactor_t poller_;
     cbunion_t cbunion_;
 
-    transport_layer_t()
+    network_interface_t()
     {
         ip4_socket_despt_ = -1;
         ip6_socket_despt_ = -1;
@@ -413,7 +413,7 @@ struct transport_layer_t
         poller_.dispatch_layer_.transport_layer_ = this;
     }
 
-    ~transport_layer_t()
+    ~network_interface_t()
     {
 #ifdef _WIN32
         WSACleanup();

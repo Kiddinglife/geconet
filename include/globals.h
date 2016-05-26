@@ -253,7 +253,7 @@ extern void perr_abort(const char *infostring);
  @author     H�zlwimmer
  */
 extern void event_log1(short event_loglvl, const char *module_name,
-        const char *log_info, ...);
+    const char *log_info, ...);
 
 /* This function logs errors.
  Parameters:
@@ -264,7 +264,7 @@ extern void event_log1(short event_loglvl, const char *module_name,
  @author     H�zlwimmer
  */
 extern void error_log1(short error_loglvl, const char *module_name, int line_no,
-        const char *log_info, ...);
+    const char *log_info, ...);
 
 /* This function logs system call errors.
  This function calls ERRLOG.
@@ -277,7 +277,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
  @author     H�zlwimmer
  */
 extern void error_log_sys1(short error_loglvl, const char *module_name,
-        int line_no, short errnumber);
+    int line_no, short errnumber);
 
 //<---------------- time-------------------->
 typedef uint TimerID;
@@ -390,10 +390,10 @@ extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
  */
 extern ushort in_check(uchar *buf, int sz);
 int sort_ssn(const internal_stream_data_t& one,
-        const internal_stream_data_t& two);
+    const internal_stream_data_t& two);
 // function that correctly sorts TSN values, minding wrapround
 extern int sort_tsn(const internal_data_chunk_t& one,
-        const internal_data_chunk_t& two);
+    const internal_data_chunk_t& two);
 
 /*=========== help functions =================*/
 #define BITS_TO_BYTES(x) (((x)+7)>>3)
@@ -425,13 +425,13 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 // USE MINIMUM_DELAY AS TOS
 #define IPTOS_DEFAULT (0xe0|0x1000) // Precedence 111 + TOS 1000 + MBZ 0
 
-enum hide_address_flag_t
+enum hide_address_flag_t :uint
 {
     flag_HideLoopback = (1 << 0),
     flag_HideLinkLocal = (1 << 1),
     flag_HideSiteLocal = (1 << 2),
     flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-            | flag_HideSiteLocal,
+    | flag_HideSiteLocal,
     flag_HideAnycast = (1 << 3),
     flag_HideMulticast = (1 << 4),
     flag_HideBroadcast = (1 << 5),
@@ -457,9 +457,9 @@ union sockaddrunion
  *  default  is IPv4
  *  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
-        bool ip4 = true);
+    bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len,
-        ushort* portnum);
+    ushort* portnum);
 extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
@@ -507,8 +507,8 @@ struct applicaton_layer_cbs_t
      *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
      *  @param 8 pointer to ULP data
      */
-    void (*dataArriveNotif)(unsigned int, unsigned short, unsigned int,
-            unsigned short, unsigned int, unsigned int, unsigned int, void*);
+    void(*dataArriveNotif)(unsigned int, unsigned short, unsigned int,
+        unsigned short, unsigned int, unsigned int, unsigned int, void*);
     /**
      * indicates a send failure (chapter 10.2.B).
      *  @param 1 associationID
@@ -517,8 +517,8 @@ struct applicaton_layer_cbs_t
      *  @param 4 pointer to context from sendChunk
      *  @param 5 pointer to ULP data
      */
-    void (*sendFailureNotif)(unsigned int, unsigned char *, unsigned int,
-            unsigned int *, void*);
+    void(*sendFailureNotif)(unsigned int, unsigned char *, unsigned int,
+        unsigned int *, void*);
     /**
      * indicates a change of network status (chapter 10.2.C).
      *  @param 1 associationID
@@ -526,8 +526,8 @@ struct applicaton_layer_cbs_t
      *  @param 3 newState
      *  @param 4 pointer to ULP data
      */
-    void (*networkStatusChangeNotif)(unsigned int, short, unsigned short,
-            void*);
+    void(*networkStatusChangeNotif)(unsigned int, short, unsigned short,
+        void*);
     /**
      * indicates that a association is established (chapter 10.2.D).
      *  @param 1 associationID
@@ -540,14 +540,14 @@ struct applicaton_layer_cbs_t
      *  @return the callback is to return a pointer, that will be transparently returned with every callback
      */
     void* (*communicationUpNotif)(unsigned int, int, unsigned int,
-            unsigned short, unsigned short, int, void*);
+        unsigned short, unsigned short, int, void*);
     /**
      * indicates that communication was lost to peer (chapter 10.2.E).
      *  @param 1 associationID
      *  @param 2 status, type of event
      *  @param 3 pointer to ULP data
      */
-    void (*communicationLostNotif)(unsigned int, unsigned short, void*);
+    void(*communicationLostNotif)(unsigned int, unsigned short, void*);
     /**
      * indicates that communication had an error. (chapter 10.2.F)
      * Currently not implemented !?
@@ -555,13 +555,13 @@ struct applicaton_layer_cbs_t
      *  @param 2 status, type of error
      *  @param 3 pointer to ULP data
      */
-    void (*communicationErrorNotif)(unsigned int, unsigned short, void*);
+    void(*communicationErrorNotif)(unsigned int, unsigned short, void*);
     /**
      * indicates that a RESTART has occurred. (chapter 10.2.G)
      *  @param 1 associationID
      *  @param 2 pointer to ULP data
      */
-    void (*restartNotif)(unsigned int, void*);
+    void(*restartNotif)(unsigned int, void*);
     /**
      * indicates that a SHUTDOWN has been received by the peer. Tells the
      * application to stop sending new data.
@@ -569,14 +569,14 @@ struct applicaton_layer_cbs_t
      *  @param 1 associationID
      *  @param 2 pointer to ULP data
      */
-    void (*peerShutdownReceivedNotif)(unsigned int, void*);
+    void(*peerShutdownReceivedNotif)(unsigned int, void*);
     /**
      * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
      *  @param 0 instanceID
      *  @param 1 associationID
      *  @param 2 pointer to ULP data
      */
-    void (*shutdownCompleteNotif)(unsigned int, void*);
+    void(*shutdownCompleteNotif)(unsigned int, void*);
     /**
      * indicates that a queue length has exceeded (or length has dropped
      * below) a previously determined limit
@@ -586,7 +586,7 @@ struct applicaton_layer_cbs_t
      *  @param 3 queue length (either bytes or messages - depending on type)
      *  @param 4 pointer to ULP data
      */
-    void (*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
+    void(*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
     /**
      * indicates that a ASCONF request from the ULP has succeeded or failed.
      *  @param 0 associationID
@@ -595,7 +595,7 @@ struct applicaton_layer_cbs_t
      *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
      *  @param 4 pointer to ULP data
      */
-    void (*asconfStatusNotif)(unsigned int, unsigned int, int, void*, void*);
+    void(*asconfStatusNotif)(unsigned int, unsigned int, int, void*, void*);
     /* @} */
 };
 

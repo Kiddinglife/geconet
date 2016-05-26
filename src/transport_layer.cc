@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include "poller.h"
+#include "transport_layer.h"
 #define STD_INPUT_FD 0
 
 static void safe_close_soket(int sfd)
@@ -234,7 +234,7 @@ bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
     }
 }
 
-void poller_t::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
+void reactor_t::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
 {
     if (fd_index > MAX_FD_SIZE)
         ERRLOG(FALTAL_ERROR_EXIT, "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
@@ -293,7 +293,7 @@ void poller_t::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
 #endif
 }
 
-int poller_t::remove_socket_despt(int sfd)
+int reactor_t::remove_socket_despt(int sfd)
 {
     int counter = 0;
     int i, j;
@@ -354,12 +354,12 @@ int poller_t::remove_socket_despt(int sfd)
     EVENTLOG2(VERBOSE, "remove %d sfd(%d)\n", counter, sfd);
     return counter;
 }
-int poller_t::remove_event_handler(int sfd)
+int reactor_t::remove_event_handler(int sfd)
 {
     safe_close_soket(sfd);
     return remove_socket_despt(sfd);
 }
-void poller_t::set_expected_event_on_fd(int sfd, int eventcb_type,
+void reactor_t::set_expected_event_on_fd(int sfd, int eventcb_type,
         int event_mask, cbunion_t action, void* userData)
 {
 
@@ -383,7 +383,7 @@ void poller_t::set_expected_event_on_fd(int sfd, int eventcb_type,
     event_callbacks[index].action = action;
     event_callbacks[index].userData = userData;
 }
-int poller_t::poll_timers()
+int reactor_t::poll_timers()
 {
     if (this->timer_mgr_.empty())
         return -1;
@@ -398,7 +398,7 @@ int poller_t::poll_timers()
     return result;
 }
 
-void poller_t::fire_event(int num_of_events)
+void reactor_t::fire_event(int num_of_events)
 {
 #ifdef _WIN32
     if (num_of_events == socket_despts_size_ && stdin_input_data_.len > 0)
@@ -610,7 +610,7 @@ static DWORD fdwMode, fdwOldMode;
 HANDLE hStdIn;
 HANDLE stdin_thread_handle;
 #endif
-void poller_t::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
+void reactor_t::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 {
     stdin_input_data_.stdin_cb_ = stdincb;
     cbunion_.user_cb_fun = read_stdin;
@@ -634,7 +634,7 @@ void poller_t::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 #endif
 }
 
-int poller_t::remove_stdin_cb()
+int reactor_t::remove_stdin_cb()
 {
     // restore console mode when exit
 #ifdef WIN32
@@ -644,7 +644,7 @@ int poller_t::remove_stdin_cb()
     return remove_event_handler(STD_INPUT_FD);
 }
 
-int poller_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
+int reactor_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
         void* data)
 {
     if (lock != NULL)
@@ -665,7 +665,7 @@ int poller_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
     return poll_fds(socket_despts, &socket_despts_size_, msecs, lock, unlock,
             data);
 }
-int transport_layer_t::init(int * myRwnd, bool ip4)
+int network_interface_t::init(int * myRwnd, bool ip4)
 {
     // create handles for stdin fd and socket fd
 #ifdef WIN32
@@ -757,7 +757,7 @@ int transport_layer_t::init(int * myRwnd, bool ip4)
     return 0;
 }
 
-int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
+int reactor_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
         void (*lock)(void* data), void (*unlock)(void* data), void* data)
 {
     int i;
@@ -934,7 +934,7 @@ int poller_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
 #endif
 }
 
-int transport_layer_t::set_sockdespt_recvbuffer_size(int sfd, int new_size)
+int network_interface_t::set_sockdespt_recvbuffer_size(int sfd, int new_size)
 {
     int new_sizee = 0;
     socklen_t opt_size = sizeof(int);
@@ -963,7 +963,7 @@ int transport_layer_t::set_sockdespt_recvbuffer_size(int sfd, int new_size)
     return new_sizee;
 }
 
-int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
+int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
 {
     int sockdespt;
     int optval;
@@ -1100,7 +1100,7 @@ int transport_layer_t::open_ipproto_geco_socket(int af, int* rwnd)
             sockdespt, *rwnd);
     return (sockdespt);
 }
-int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
+int network_interface_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
 {
     char buf[MAX_IPADDR_STR_LEN];
     int ch, sfd;
@@ -1193,7 +1193,7 @@ int transport_layer_t::open_ipproto_udp_socket(sockaddrunion* me, int* rwnd)
     return (sfd);
 }
 
-int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
+int network_interface_t::send_udp_packet(int sfd, char* buf, int length,
         sockaddrunion* destsu)
 {
     if (sfd <= 0)
@@ -1243,7 +1243,7 @@ int transport_layer_t::send_udp_packet(int sfd, char* buf, int length,
     EVENTLOG1(VERBOSE, "send_udp_msg(%d bytes data)", result);
     return result;
 }
-int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
+int network_interface_t::send_ip_packet(int sfd, char *buf, int len,
         sockaddrunion *dest, uchar tos)
 {
     printf("%d\n", ntohs(dest->sin.sin_port));
@@ -1344,7 +1344,7 @@ int transport_layer_t::send_ip_packet(int sfd, char *buf, int len,
     return txmt_len;
 }
 
-int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
+int network_interface_t::recv_ip_packet(int sfd, char *dest, int maxlen,
         sockaddrunion *from, sockaddrunion *to)
 {
     if ((dest == NULL) || (from == NULL) || (to == NULL))
@@ -1468,7 +1468,7 @@ int transport_layer_t::recv_ip_packet(int sfd, char *dest, int maxlen,
     EVENTLOG1(VERBOSE, "recv_geco_msg():: recv %u bytes od data\n", len);
     return len;
 }
-int transport_layer_t::recv_udp_packet(int sfd, char *dest, int maxlen,
+int network_interface_t::recv_udp_packet(int sfd, char *dest, int maxlen,
         sockaddrunion *from, socklen_t *from_len)
 {
     int len;
@@ -1477,7 +1477,7 @@ int transport_layer_t::recv_udp_packet(int sfd, char *dest, int maxlen,
         ERRLOG(MAJOR_ERROR, "recvfrom  failed in get_message(), aborting !\n");
     return len;
 }
-int transport_layer_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
+int network_interface_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
         socket_cb_fun_t scb)
 {
 #ifdef _WIN32
@@ -1516,7 +1516,7 @@ int transport_layer_t::add_udpsock_ulpcb(const char* addr, ushort my_port,
             new_sfd);
     return new_sfd;
 }
-void transport_layer_t::add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
+void network_interface_t::add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
         short int eventMask)
 {
 #ifdef _WIN32
@@ -1531,7 +1531,7 @@ void transport_layer_t::add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
             eventMask);
 }
 
-bool transport_layer_t::get_local_addresses(union sockaddrunion **addresses,
+bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
         int *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
         const hide_address_flag_t flags)
 {
@@ -1991,7 +1991,7 @@ bool transport_layer_t::get_local_addresses(union sockaddrunion **addresses,
 #endif
 }
 
-bool transport_layer_t::filter_address(union sockaddrunion* newAddress,
+bool network_interface_t::filter_address(union sockaddrunion* newAddress,
         hide_address_flag_t flags)
 {
     switch (saddr_family(newAddress))
