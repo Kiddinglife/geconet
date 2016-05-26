@@ -23,7 +23,7 @@
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.476850777" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.level.1993457296" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.dialect.std.664781119" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.c11" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.include.paths.849886968" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath"/>
+								<option id="gnu.c.compiler.option.include.paths.849886968" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.559495131" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.770210783" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler">
@@ -59,6 +59,19 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="cdt.managedbuild.config.gnu.cross.exe.debug.1853752798.1304971806" name="/" resourcePath="docx">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.cross.exe.debug.1935970772" name="Cross GCC" superClass="cdt.managedbuild.toolchain.gnu.cross.exe.debug" unusedChildren="">
+							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.2036738048" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler.1480931801"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.816809763" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler.770210783"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.957743765" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker.1021595831"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.1175552571" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker.198628198"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.1688403099" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver.611822967"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.1031255292" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler.37163165"/>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry excluding="docx|sctp_original_src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -128,5 +141,12 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/protocol-stack-uinttests"/>
+		</configuration>
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/protocol-stack-uinttests"/>
+		</configuration>
+	</storageModule>
 </cproject>

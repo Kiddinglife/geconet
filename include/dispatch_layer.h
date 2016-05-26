@@ -363,7 +363,7 @@ struct retransmit_controller_t
 struct transport_layer_t;
 class dispatch_layer_t
 {
-    public:
+public:
     bool dispatch_layer_initialized;
 
     /* many diferent channels belongs to a same geco instance*/
@@ -371,14 +371,18 @@ class dispatch_layer_t
     std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
 
     /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
-    * contain the addressed geco instance. This pointer must be reset to null after the event
-    * has been handled.*/
+     * contain the addressed geco instance. This pointer must be reset to null after the event
+     * has been handled.*/
     geco_instance_t *curr_geco_instance_;
 
     /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
      * contain the addressed channel. This pointer must be reset to null after the event
      * has been handled.*/
     channel_t *curr_channel_;
+
+    /* inits along with library inits*/
+    uint glocal_host_addres_size_;
+    sockaddrunion* glocal_host_addres_;
 
     /* these one-shot state variables are so frequently used in recv_gco_packet()
      * to improve performances */
@@ -425,7 +429,7 @@ class dispatch_layer_t
     simple_chunk_t* simple_chunks_[MAX_CHUNKS_SIZE]; /* simple ctrl chunks to send*/
     bool completed_chunks_[MAX_CHUNKS_SIZE];/*if a chunk is completely constructed*/
     uchar simple_chunk_index_; /* current simple chunk index */
-    simple_chunk_t* simple_chunk_t_ptr_;  /* current simple chunk ptr */
+    simple_chunk_t* simple_chunk_t_ptr_; /* current simple chunk ptr */
 
     /* used if no bundlecontroller has been allocated and initialized yet */
     bundle_controller_t default_bundle_ctrl_;
@@ -458,7 +462,7 @@ class dispatch_layer_t
      *  @param portnum            bogus port number
      */
     void recv_geco_packet(int socket_fd, char *buffer, uint bufferLength,
-        sockaddrunion * source_addr, sockaddrunion * dest_addr);
+            sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
     /*------------------- Functions called by the SCTP bundling --------------------------------------*/
 
@@ -483,18 +487,19 @@ class dispatch_layer_t
      *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
      */
     int send_geco_packet(char* geco_packet, uint length,
-        short destAddressIndex);
+            short destAddressIndex);
 
-    private:
+private:
 
     /**
-    * generates a random tag value for a new association, but not 0
-    * @return   generates a random tag value for a new association, but not 0
-    */
+     * generates a random tag value for a new association, but not 0
+     * @return   generates a random tag value for a new association, but not 0
+     */
     uint generate_init_tag(void)
     {
         unsigned int tag;
-        while ((tag = generate_random_uint32()) == 0);
+        while ((tag = generate_random_uint32()) == 0)
+            ;
         return tag;
     }
 
@@ -510,12 +515,12 @@ class dispatch_layer_t
         return NULL;
     }
     /**
-    * returns the number of incoming streams that this instance is willing to handle !
-    * @return maximum number of in-streams or 0 error
-    * @pre this only works when curr channel presens, curr geco instance presents or
-    * it will search grco instance by instance name
-    *
-    */
+     * returns the number of incoming streams that this instance is willing to handle !
+     * @return maximum number of in-streams or 0 error
+     * @pre this only works when curr channel presens, curr geco instance presents or
+     * it will search grco instance by instance name
+     *
+     */
     ushort get_local_inbound_stream(uint* geco_inst_id = NULL);
     ushort get_local_outbound_stream(uint* geco_inst_id = NULL);
 
@@ -527,8 +532,7 @@ class dispatch_layer_t
     {
         if (curr_channel_ == NULL)
         {
-            ERRLOG(MINOR_ERROR,
-                "get_path_controller: curr_channel_ is NULL");
+            ERRLOG(MINOR_ERROR, "get_path_controller: curr_channel_ is NULL");
             return NULL;
         }
         else
@@ -545,7 +549,7 @@ class dispatch_layer_t
     uint get_curr_channel_state()
     {
         state_machine_controller_t* smctrl =
-            (state_machine_controller_t*)get_state_machine_controller();
+                (state_machine_controller_t*) get_state_machine_controller();
         if (smctrl == NULL)
         {
             /* error log */
@@ -554,34 +558,34 @@ class dispatch_layer_t
         }
         switch (smctrl->channel_state)
         {
-            case ChannelState::Closed:
-                EVENTLOG(VERBOSE, "Current state : CLOSED");
-                break;
-            case  ChannelState::CookieWait:
-                EVENTLOG(VERBOSE, "Current state :COOKIE_WAIT ");
-                break;
-            case  ChannelState::CookieEchoed:
-                EVENTLOG(VERBOSE, "Current state : COOKIE_ECHOED");
-                break;
-            case  ChannelState::Connected:
-                EVENTLOG(VERBOSE, "Current state : ESTABLISHED");
-                break;
-            case  ChannelState::ShutdownPending:
-                EVENTLOG(VERBOSE, "Current state : SHUTDOWNPENDING");
-                break;
-            case ChannelState::ShutdownReceived:
-                EVENTLOG(VERBOSE, "Current state : SHUTDOWNRECEIVED");
-                break;
-            case ChannelState::ShutdownSent:
-                EVENTLOG(VERBOSE, "Current state : SHUTDOWNSENT");
-                break;
-            case ChannelState::ShutdownAckSent:
-                EVENTLOG(VERBOSE, "Current state : SHUTDOWNACKSENT");
-                break;
-            default:
-                EVENTLOG(VERBOSE, "Unknown state : return Closed");
-                return ChannelState::Closed;
-                break;
+        case ChannelState::Closed:
+            EVENTLOG(VERBOSE, "Current state : CLOSED");
+            break;
+        case ChannelState::CookieWait:
+            EVENTLOG(VERBOSE, "Current state :COOKIE_WAIT ");
+            break;
+        case ChannelState::CookieEchoed:
+            EVENTLOG(VERBOSE, "Current state : COOKIE_ECHOED");
+            break;
+        case ChannelState::Connected:
+            EVENTLOG(VERBOSE, "Current state : ESTABLISHED");
+            break;
+        case ChannelState::ShutdownPending:
+            EVENTLOG(VERBOSE, "Current state : SHUTDOWNPENDING");
+            break;
+        case ChannelState::ShutdownReceived:
+            EVENTLOG(VERBOSE, "Current state : SHUTDOWNRECEIVED");
+            break;
+        case ChannelState::ShutdownSent:
+            EVENTLOG(VERBOSE, "Current state : SHUTDOWNSENT");
+            break;
+        case ChannelState::ShutdownAckSent:
+            EVENTLOG(VERBOSE, "Current state : SHUTDOWNACKSENT");
+            break;
+        default:
+            EVENTLOG(VERBOSE, "Unknown state : return Closed");
+            return ChannelState::Closed;
+            break;
         }
         return smctrl->channel_state;
     }
@@ -591,8 +595,7 @@ class dispatch_layer_t
         path_controller_t* path_ctrl = get_path_controller();
         if (path_ctrl == NULL)
         {
-            ERRLOG(MAJOR_ERROR,
-                "set_path_chunk_sent_on: GOT path_ctrl NULL");
+            ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
             return -1;
         }
         return path_ctrl->primary_path;
@@ -605,8 +608,7 @@ class dispatch_layer_t
     {
         if (curr_channel_ == NULL)
         {
-            ERRLOG(MINOR_ERROR,
-                "get_path_controller: curr_channel_ is NULL");
+            ERRLOG(MINOR_ERROR, "get_path_controller: curr_channel_ is NULL");
             return NULL;
         }
         else
@@ -623,28 +625,25 @@ class dispatch_layer_t
         path_controller_t* path_ctrl = get_path_controller();
         if (path_ctrl == NULL)
         {
-            ERRLOG(MAJOR_ERROR,
-                "set_path_chunk_sent_on: GOT path_ctrl NULL");
+            ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
             return;
         }
         if (path_ctrl->path_params == NULL)
         {
             ERRLOG1(MAJOR_ERROR,
-                "set_path_chunk_sent_on(%d): path_params NULL !",
-                path_param_id);
+                    "set_path_chunk_sent_on(%d): path_params NULL !",
+                    path_param_id);
             return;
         }
         if (!(path_param_id >= 0 && path_param_id < path_ctrl->path_num))
         {
-            ERRLOG1(MAJOR_ERROR,
-                "set_path_chunk_sent_on: invalid path ID: %d",
-                path_param_id);
+            ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on: invalid path ID: %d",
+                    path_param_id);
             return;
         }
-        EVENTLOG1(VERBOSE, "Calling set_path_chunk_sent_on(%d)",
-            path_param_id);
+        EVENTLOG1(VERBOSE, "Calling set_path_chunk_sent_on(%d)", path_param_id);
         path_ctrl->path_params[path_param_id].data_chunks_sent_in_last_rto =
-            true;
+                true;
     }
 
     void free_internal_data_chunk(internal_data_chunk_t* item)
@@ -682,7 +681,7 @@ class dispatch_layer_t
         if (rctrl == NULL)
         {
             ERRLOG(MINOR_ERROR,
-                "stop_sack_timer()::recv_controller_t instance not set !");
+                    "stop_sack_timer()::recv_controller_t instance not set !");
             return;
         }
         /*also make sure free all received duplicated data chunks */
@@ -715,18 +714,18 @@ class dispatch_layer_t
     int disassemle_curr_geco_packet(void);
 
     /**
-    * For now this function treats only one incoming data chunk' tsn
-    * @param chunk the data chunk that was received by the bundling
-    */
+     * For now this function treats only one incoming data chunk' tsn
+     * @param chunk the data chunk that was received by the bundling
+     */
     int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx);
 
     /**
-    * sctlr_init is called by bundling when a init message is received from the peer.
-    * an InitAck may be returned, alongside with a cookie chunk variable parameter.
-    * The following data are created and included in the init acknowledgement:
-    * a COOKIE parameter.
-    * @param init_chunk_t  pointer to the received init-chunk (including optional parameters)
-    */
+     * sctlr_init is called by bundling when a init message is received from the peer.
+     * an InitAck may be returned, alongside with a cookie chunk variable parameter.
+     * The following data are created and included in the init acknowledgement:
+     * a COOKIE parameter.
+     * @param init_chunk_t  pointer to the received init-chunk (including optional parameters)
+     */
     int process_curr_init_chunk(init_chunk_t * init);
 
     /**
@@ -738,21 +737,21 @@ class dispatch_layer_t
     void delete_curr_channel(void);
 
     /**
-    * indicates that communication was lost to peer (chapter 10.2.E).
-    * Calls the respective ULP callback function.
-    * @param  status  type of event, that has caused the association to be terminated
-    */
+     * indicates that communication was lost to peer (chapter 10.2.E).
+     * Calls the respective ULP callback function.
+     * @param  status  type of event, that has caused the association to be terminated
+     */
     void on_connection_lost(uint status);
 
     /**
-    * Clear the global association data.
-    *  This function must be called after the association retrieved from the list
-    *  with setAssociationData is no longer needed. This is the case after a time
-    *  event has been handled.
-    *
-    *  @param  associationID    the ID of the association
-    *  @return  0 if successful, 1 if association data has not been set, 2 wrong associationID
-    */
+     * Clear the global association data.
+     *  This function must be called after the association retrieved from the list
+     *  with setAssociationData is no longer needed. This is the case after a time
+     *  event has been handled.
+     *
+     *  @param  associationID    the ID of the association
+     *  @return  0 if successful, 1 if association data has not been set, 2 wrong associationID
+     */
     void null_curr_channel_and_geco_instance(void)
     {
         curr_channel_ = NULL;
@@ -760,17 +759,16 @@ class dispatch_layer_t
     }
 
     /**
-    pm_disableHB is called to disable heartbeat for one specific path id.
-    @param  pathID index of  address, where HBs should not be sent anymore
-    @return error code: 0 for success, 1 for error (i.e. pathID too large)
-    */
+     pm_disableHB is called to disable heartbeat for one specific path id.
+     @param  pathID index of  address, where HBs should not be sent anymore
+     @return error code: 0 for success, 1 for error (i.e. pathID too large)
+     */
     int stop_heart_beat_timer(short pathID)
     {
         path_controller_t* pathctrl = get_path_controller();
         if (pathctrl == NULL)
         {
-            ERRLOG(MAJOR_ERROR,
-                "pm_disableHB: get_path_controller() failed");
+            ERRLOG(MAJOR_ERROR, "pm_disableHB: get_path_controller() failed");
             return -1;
         }
         if (pathctrl->path_params == NULL)
@@ -788,34 +786,35 @@ class dispatch_layer_t
             timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
             pathctrl->path_params[pathID].hb_timer_id = timer_mgr_.timers.end();
             pathctrl->path_params[pathID].hb_enabled = false;
-            EVENTLOG1(INTERNAL_TRACE, "stop_heart_beat_timer: path %d disabled", pathID);
+            EVENTLOG1(INTERNAL_TRACE, "stop_heart_beat_timer: path %d disabled",
+                    pathID);
         }
         return 0;
     }
 
     /* sctlr_initAck is called by bundling when a init acknowledgement was received from the peer.
-    The following data are retrieved from the init-data and saved for this association:
-    - remote tag from the initiate tag field
-    - receiver window credit of the peer
-    - # of send streams of the peer, must be lower or equal the # of receive streams this host
-    has 'announced' with the init-chunk.
-    - # of receive streams the peer allows the receiver of this initAck to use.
+     The following data are retrieved from the init-data and saved for this association:
+     - remote tag from the initiate tag field
+     - receiver window credit of the peer
+     - # of send streams of the peer, must be lower or equal the # of receive streams this host
+     has 'announced' with the init-chunk.
+     - # of receive streams the peer allows the receiver of this initAck to use.
 
-    The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
+     The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
 
-    Params: initAck: data of initAck-chunk including optional parameters without chunk header
-    */
+     Params: initAck: data of initAck-chunk including optional parameters without chunk header
+     */
     int process_init_ack_chunk(init_chunk_t * initAck);
 
     /**
-      * this is called by bundling, when a SACK needs to be processed.This is a LONG function !
-      * FIXME : check correct update of rtx->lowest_tsn !
-      * FIXME : handling of out - of - order SACKs
-      * CHECK : did SACK ack lowest outstanding tsn, restart t3 timer(section 7.2.4.4) )
-      * @param  adr_index   index of the address where we got that sack
-      * @param  sack_chunk  pointer to the sack chunk
-      * @return -1 on error, 0 if okay.
-      */
+     * this is called by bundling, when a SACK needs to be processed.This is a LONG function !
+     * FIXME : check correct update of rtx->lowest_tsn !
+     * FIXME : handling of out - of - order SACKs
+     * CHECK : did SACK ack lowest outstanding tsn, restart t3 timer(section 7.2.4.4) )
+     * @param  adr_index   index of the address where we got that sack
+     * @param  sack_chunk  pointer to the sack chunk
+     * @return -1 on error, 0 if okay.
+     */
     int process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen);
 
     void clear()
@@ -841,13 +840,13 @@ class dispatch_layer_t
      * @return true is chunk_type exists in SCTP datagram, false if it is not in there
      */
     bool contains_error_chunk(uchar * packet_value, uint packet_val_len,
-        ushort error_cause);
+            ushort error_cause);
 
     uint get_bundle_total_size(bundle_controller_t* buf)
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
         return ((buf)->ctrl_position + (buf)->sack_position
-            + (buf)->data_position - 2 * UDP_GECO_PACKET_FIXED_SIZES);
+                + (buf)->data_position - 2 * UDP_GECO_PACKET_FIXED_SIZES);
     }
 
     // fixme 
@@ -857,7 +856,7 @@ class dispatch_layer_t
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
         return ((buf)->ctrl_position + (buf)->data_position
-            - UDP_GECO_PACKET_FIXED_SIZES);
+                - UDP_GECO_PACKET_FIXED_SIZES);
     }
 
     /**
@@ -884,8 +883,8 @@ class dispatch_layer_t
 
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
         simple_chunk_t* simple_chunk_ptr =
-            (simple_chunk_t*)geco::ds::single_client_alloc::allocate(
-            SIMPLE_CHUNK_SIZE);
+                (simple_chunk_t*) geco::ds::single_client_alloc::allocate(
+                SIMPLE_CHUNK_SIZE);
 
         simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
         simple_chunk_ptr->chunk_header.chunk_flags = flag;
@@ -895,12 +894,14 @@ class dispatch_layer_t
         return simple_chunk_index_;
     }
     /* makes an initAck and initializes the the fixed part of initAck */
-    uchar alloc_init_ack_chunk(uint initTag, uint rwnd,
-        ushort noOutStreams, ushort noInStreams, uint initialTSN)
+    uchar alloc_init_ack_chunk(uint initTag, uint rwnd, ushort noOutStreams,
+            ushort noInStreams, uint initialTSN)
     {
         assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
 
-        init_chunk_t* initAckChunk = (init_chunk_t*)geco::ds::single_client_alloc::allocate(INIT_CHUNK_TOTAL_SIZE);
+        init_chunk_t* initAckChunk =
+                (init_chunk_t*) geco::ds::single_client_alloc::allocate(
+                        INIT_CHUNK_TOTAL_SIZE);
 
         initAckChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
         initAckChunk->chunk_header.chunk_flags = 0;
@@ -911,17 +912,19 @@ class dispatch_layer_t
         initAckChunk->init_fixed.inbound_streams = htons(noInStreams);
         initAckChunk->init_fixed.initial_tsn = htonl(initialTSN);
 
-        add2chunklist((simple_chunk_t*)initAckChunk, "create init ack chunk %u");
+        add2chunklist((simple_chunk_t*) initAckChunk,
+                "create init ack chunk %u");
         return simple_chunk_index_;
     }
 
     /*
-    * swaps length INSIDE the packet and enters chunk into the current list
-    * DO NOT need call  free_simple_chunk() !
-    */
+     * swaps length INSIDE the packet and enters chunk into the current list
+     * DO NOT need call  free_simple_chunk() !
+     */
     uchar alloc_simple_chunk(simple_chunk_t* chunk)
     {
-        chunk->chunk_header.chunk_length = ntohs(chunk->chunk_header.chunk_length);
+        chunk->chunk_header.chunk_length = ntohs(
+                chunk->chunk_header.chunk_length);
         add2chunklist(chunk, "created chunk from string %u ");
         return simple_chunk_index_;
     }
@@ -938,7 +941,8 @@ class dispatch_layer_t
     }
 
     /** append ecc vlp into CHUNK_ERROR OR CHUNK_ABORT*/
-    void append_ecc(uint chunkID, uint code, uint length = 0, uchar* data = NULL)
+    void append_ecc(uint chunkID, uint code, uint length = 0,
+            uchar* data = NULL)
     {
         if (simple_chunks_[chunkID] == NULL)
         {
@@ -947,21 +951,22 @@ class dispatch_layer_t
         }
         if (completed_chunks_[chunkID])
         {
-            ERRLOG(MAJOR_ERROR,
-                " append_ecc() : chunk already completed");
+            ERRLOG(MAJOR_ERROR, " append_ecc() : chunk already completed");
             return;
         }
-        if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ERROR && simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ABORT)
+        if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ERROR
+                && simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ABORT)
         {
-            ERRLOG(MAJOR_ERROR,
-                " append_ecc() : Wrong chunk type");
+            ERRLOG(MAJOR_ERROR, " append_ecc() : Wrong chunk type");
             return;
         }
 
         uint index = write_cursors_[chunkID];
-        error_cause_t* ecc = (error_cause_t*)(simple_chunks_[chunkID]->chunk_value + index);
+        error_cause_t* ecc =
+                (error_cause_t*) (simple_chunks_[chunkID]->chunk_value + index);
         ecc->error_reason_code = htons(code);
-        ecc->error_reason_length = htons((ushort)(length + VLPARAM_FIXED_SIZE));
+        ecc->error_reason_length = htons(
+                (ushort) (length + VLPARAM_FIXED_SIZE));
         if (length > 0)
         {
             memcpy(&ecc->error_reason, data, length);
@@ -970,7 +975,9 @@ class dispatch_layer_t
         index = 4 - write_cursors_[chunkID] % 4;
         if (index < 4) // padding 
         {
-            memset(simple_chunks_[chunkID]->chunk_value + write_cursors_[chunkID], 0, index);
+            memset(
+                    simple_chunks_[chunkID]->chunk_value
+                            + write_cursors_[chunkID], 0, index);
             write_cursors_[chunkID] += index;
         }
     }
@@ -988,12 +995,12 @@ class dispatch_layer_t
         uint chunkid = scptr->chunk_header.chunk_id;
         if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
         {
-            return ntohs(((init_chunk_t*)scptr)->init_fixed.outbound_streams);
+            return ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                "read_outbound_stream(): chunk type not init or initAck");
+                    "read_outbound_stream(): chunk type not init or initAck");
             return 0;
         }
     }
@@ -1011,12 +1018,12 @@ class dispatch_layer_t
         uint chunkid = scptr->chunk_header.chunk_id;
         if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
         {
-            return ntohs(((init_chunk_t*)scptr)->init_fixed.inbound_streams);
+            return ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                "read_inbound_stream(): chunk type not init or initAck");
+                    "read_inbound_stream(): chunk type not init or initAck");
             return -1;
         }
     }
@@ -1033,12 +1040,12 @@ class dispatch_layer_t
         uint chunkid = scptr->chunk_header.chunk_id;
         if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
         {
-            return ntohl(((init_chunk_t*)scptr)->init_fixed.init_tag);
+            return ntohl(((init_chunk_t*) scptr)->init_fixed.init_tag);
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                "read_init_tag(): chunk type not init or initAck");
+                    "read_init_tag(): chunk type not init or initAck");
             return -1;
         }
     }
@@ -1054,7 +1061,7 @@ class dispatch_layer_t
         {
             EVENTLOG1(INTERNAL_TRACE, "freed simple chunk %u", cid);
             geco::ds::single_client_alloc::deallocate(simple_chunks_[chunkID],
-                SIMPLE_CHUNK_SIZE);
+            SIMPLE_CHUNK_SIZE);
             simple_chunks_[chunkID] = NULL;
         }
         else
@@ -1064,14 +1071,14 @@ class dispatch_layer_t
     }
 
     /**
-    removes the chunk from the array of simple_chunks_ without freeing the
-    memory allocated for that chunk.
-    Used in the following 2 cases:
-    1) the caller wants to keep the chunk for retransmissions.
-    2) the chunk was created with uchar alloc_simple_chunk(simple_chunk_t* chunk)
-    and the pointer to the chunk points into an geco packet from recv_geco_packet(),
-    which was allocated as a whole. In this case the chunk can not be freed here.
-    */
+     removes the chunk from the array of simple_chunks_ without freeing the
+     memory allocated for that chunk.
+     Used in the following 2 cases:
+     1) the caller wants to keep the chunk for retransmissions.
+     2) the chunk was created with uchar alloc_simple_chunk(simple_chunk_t* chunk)
+     and the pointer to the chunk points into an geco packet from recv_geco_packet(),
+     which was allocated as a whole. In this case the chunk can not be freed here.
+     */
     void remove_simple_chunk(uchar chunkID)
     {
         uchar cid = chunkID;
@@ -1107,8 +1114,8 @@ class dispatch_layer_t
         }
 
         simple_chunks_[chunkID]->chunk_header.chunk_length = htons(
-            (simple_chunks_[chunkID]->chunk_header.chunk_length
-            + write_cursors_[chunkID]));
+                (simple_chunks_[chunkID]->chunk_header.chunk_length
+                        + write_cursors_[chunkID]));
         completed_chunks_[chunkID] = true;
         return simple_chunks_[chunkID];
     }
@@ -1161,13 +1168,13 @@ class dispatch_layer_t
     inline void unlock_bundle_ctrl(uint* ad_idx = NULL)
     {
         bundle_controller_t* bundle_ctrl =
-            (bundle_controller_t*)get_bundle_controller(curr_channel_);
+                (bundle_controller_t*) get_bundle_controller(curr_channel_);
 
         /*1) no channel exists, it is NULL, so we take the global bundling buffer */
         if (bundle_ctrl == NULL)
         {
             EVENTLOG(VERBOSE,
-                "unlock_bundle_ctrl()::Setting global bundling buffer ");
+                    "unlock_bundle_ctrl()::Setting global bundling buffer ");
             bundle_ctrl = &default_bundle_ctrl_;
         }
 
@@ -1176,8 +1183,8 @@ class dispatch_layer_t
             send_bundled_chunks(ad_idx);
 
         EVENTLOG1(VERBOSE,
-            "unlock_bundle_ctrl() was called..and got %s send request -> processing",
-            (bundle_ctrl->got_send_request == true) ? "A" : "NO");
+                "unlock_bundle_ctrl() was called..and got %s send request -> processing",
+                (bundle_ctrl->got_send_request == true) ? "A" : "NO");
     }
 
     /**
@@ -1187,13 +1194,13 @@ class dispatch_layer_t
     inline void lock_bundle_ctrl()
     {
         bundle_controller_t* bundle_ctrl =
-            (bundle_controller_t*)get_bundle_controller(curr_channel_);
+                (bundle_controller_t*) get_bundle_controller(curr_channel_);
 
         /*1) no channel exists, it is NULL, so we take the global bundling buffer */
         if (bundle_ctrl == NULL)
         {
             EVENTLOG(VERBOSE,
-                "lock_bundle_ctrl()::Setting global bundling buffer ");
+                    "lock_bundle_ctrl()::Setting global bundling buffer ");
             bundle_ctrl = &default_bundle_ctrl_;
         }
 
@@ -1217,14 +1224,14 @@ class dispatch_layer_t
      *   TODO hash(src_addr, src_port, dest_port) as key for channel to improve the performaces
      */
     channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
-        ushort src_port, ushort dest_port);
+            ushort src_port, ushort dest_port);
     bool cmp_channel(const channel_t& a, const channel_t& b);
 
     /**
      *   @return pointer to the retrieved association, or NULL
      */
     geco_instance_t* find_geco_instance_by_transport_addr(
-        sockaddrunion* dest_addr, uint address_type);
+            sockaddrunion* dest_addr, uint address_type);
     bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b);
 
     /**
@@ -1235,7 +1242,15 @@ class dispatch_layer_t
     bool validate_dest_addr(sockaddrunion * dest_addr);
 
     /**returns a value indicating which chunks are in the packet.*/
-    uint find_chunk_types(uchar* packet_value, uint len, uint* total_chunk_count = NULL);
+    uint find_chunk_types(uchar* packet_value, uint len,
+            uint* total_chunk_count = NULL);
+
+    /**
+     * check if local addr is found
+     * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
+     * */
+    inline bool contains_local_host_addr(sockaddrunion* addr_list,
+            uint addr_list_num);
 
     /**
      * contains_chunk: looks for chunk_type in a newly received geco packet
@@ -1284,7 +1299,7 @@ class dispatch_layer_t
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
     uchar* find_first_chunk(uchar * packet_value, uint packet_val_len,
-        uint chunk_type);
+            uint chunk_type);
 
     /**
      * find_sockaddr: looks for address type parameters in INIT or INIT-ACKs
@@ -1300,15 +1315,16 @@ class dispatch_layer_t
      *             that many addresses in the chunk.
      */
     int find_sockaddres(uchar * init_chunk, uint chunk_len, uint n,
-        sockaddrunion* foundAddress, int supportedAddressTypes);
+            sockaddrunion* foundAddress, int supportedAddressTypes);
     /**
      * @return -1 prama error, >=0 number of the found addresses
      * */
     int find_sockaddres(uchar * init_chunk, uint chunk_len,
-        int supportedAddressTypes, bool ignore_dups = true, bool ignoreLast = false);
+            int* supportedAddressTypes, bool ignore_dups = true,
+            bool ignore_last_src_addr = false);
 
     /** NULL no params, otherwise have params*/
     uchar* find_vlparam_fixed_from_setup_chunk(uchar * setup_chunk,
-        uint chunk_len, ushort param_type);
+            uint chunk_len, ushort param_type);
 };
 #endif

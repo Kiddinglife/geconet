@@ -618,6 +618,12 @@ struct transport_layer_t
         return idx - j;
     }
 
+    /**
+     * An address filtering function
+     * @param newAddress  a pointer to a sockunion address
+     * @param flags       bit mask hiding (i.e. filtering) address classes
+     * returns TRUE flag NOT present ans address is not filtered, else FALSE flag present ans is filtered by mask
+     */
     bool filter_address(union sockaddrunion* newAddress, hide_address_flag_t  flags);
 };
 #endif
