@@ -1,1 +1,1 @@
-c++ implementation of sctp stack
+c++ implementation of network library for geco game engine
