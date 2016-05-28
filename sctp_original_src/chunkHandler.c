@@ -762,7 +762,6 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[],
             address->dest_addr.sctp_ipv4 = sock2ip(&(sock_addresses[i]));
             length += 8;
             break;
-#ifdef HAVE_IPV6
             case AF_INET6:
             address->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
             address->vlparam_header.param_length = htons(20);
@@ -770,7 +769,6 @@ int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[],
                     &(sock2ip6(&(sock_addresses[i]))), sizeof(struct in6_addr));
             length += 20;
             break;
-#endif
         default:
             error_logi(ERROR_MAJOR, "Unsupported Address Family %d",
                     sockunion_family(&(sock_addresses[i])));

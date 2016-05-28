@@ -20,12 +20,14 @@ dispatch_layer_t::dispatch_layer_t()
     do_dns_query_for_host_name_ = false;
 
     channels_.reserve(DEFAULT_ENDPOINT_SIZE);
-    memset(tmp_found_addres_, 0,
+    memset(tmp_local_addreslist_, 0,
+        MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
+    memset(tmp_peer_addreslist_, 0,
         MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
 
     simple_chunk_index_ = 0;
     memset(simple_chunks_, 0, MAX_CHUNKS_SIZE);
-    memset(write_cursors_, 0, MAX_CHUNKS_SIZE);
+    memset(curr_write_pos_, 0, MAX_CHUNKS_SIZE);
     memset(completed_chunks_, 0, MAX_CHUNKS_SIZE);
 
     send_abort_for_oob_packet_ = true;
@@ -244,7 +246,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk,
         curr_geco_packet_value_len_, &total_chunks_count_);
 
-    int found_addres_size_ = 0;
+    tmp_peer_addreslist_size_ = 0;
     int retval = 0;
     curr_uchar_init_chunk_ = NULL;
 
@@ -297,17 +299,17 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         {
             EVENTLOG(VERBOSE,
                 "recv_geco_packet()::Looking for source address in CHUNK_INIT_ACK");
-            found_addres_size_ = get_peer_addreslist
-                (curr_uchar_init_chunk_,
+            tmp_peer_addreslist_size_ = read_peer_addreslist
+                (tmp_peer_addreslist_, curr_uchar_init_chunk_,
                 curr_geco_packet_value_len_, my_supported_addr_types_) - 1;
-            for (; found_addres_size_ >= 0; found_addres_size_--)
+            for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
             {
                 curr_channel_ = find_channel_by_transport_addr(
-                    &tmp_found_addres_[found_addres_size_], last_src_port_,
+                    &tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
                     last_dest_port_);
                 if (curr_channel_ != NULL)
                 {
-                    last_src_path_ = found_addres_size_;
+                    last_src_path_ = tmp_peer_addreslist_size_;
                     break;
                 }
             }
@@ -320,18 +322,18 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             {
                 EVENTLOG(VERBOSE,
                     "recv_geco_packet()::Looking for source address in INIT CHUNK");
-                found_addres_size_ = get_peer_addreslist
-                    (curr_uchar_init_chunk_,
+                tmp_peer_addreslist_size_ = read_peer_addreslist
+                    (tmp_peer_addreslist_, curr_uchar_init_chunk_,
                     curr_geco_packet_value_len_, my_supported_addr_types_)
                     - 1;
-                for (; found_addres_size_ >= 0; found_addres_size_--)
+                for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
                 {
                     curr_channel_ = find_channel_by_transport_addr(
-                        &tmp_found_addres_[found_addres_size_],
+                        &tmp_peer_addreslist_[tmp_peer_addreslist_size_],
                         last_src_port_, last_dest_port_);
                     if (curr_channel_ != NULL)
                     {
-                        last_src_path_ = found_addres_size_;
+                        last_src_path_ = tmp_peer_addreslist_size_;
                         break;
                     }
                 }
@@ -1159,9 +1161,6 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     ushort inbound_stream = 0;
     ushort outbound_stream = 0;
     uchar init_ack_cid;
-    uint peer_supported_types;
-    uint peer_addres_size;
-    uint my_addres_size;
 
     /* 4) refers to RFC 4060 - 5.1.Normal Establishment of an Association - (B)
     "Z" shall respond immediately with an INIT ACK chunk.
@@ -1193,19 +1192,36 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
         /*4.3) read and validate addrlist carried in the received init chunk*/
         assert(my_supported_addr_types_ != 0);
-        peer_addres_size = get_peer_addreslist((uchar*)init,
-            curr_geco_packet_value_len_, my_supported_addr_types_, &peer_supported_types);
-        if ((my_supported_addr_types_ & peer_supported_types) == 0)
+        tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
+            (uchar*)init, curr_geco_packet_value_len_, my_supported_addr_types_,
+            &tmp_peer_supported_types_);
+        if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
             ERRLOG(FALTAL_ERROR_EXIT,
             "BAKEOFF: Program error, no common address types in process_init_chunk()");
 
-        /*4.4) get local addr list and write them to INIT ACK*/
-        uint local_addres_size = get_local_addreslist(tmp_found_addres_, last_source_addr_, 1, peer_supported_types, true);
+        /*4.4) get local addr list and append them to INIT ACK*/
+        tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_, last_source_addr_, 1, tmp_peer_supported_types_, true);
+        write_local_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
-
+        /*4.5) append cookie to INIT ACK*/
+        write_cookie(init_cid, init_ack_cid,
+            get_init_fixed(init_cid), get_init_fixed(init_ack_cid),
+            get_cookie_lifespan(init_cid),
+            0, 0, /* normal case: no existing channel found, set both zero*/
+            tmp_local_addreslist_, tmp_local_addreslist_size_,
+            tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
     }
     return ret;
+}
+
+int dispatch_layer_t::write_cookie(uint initCID, uint initAckID,
+    init_chunk_fixed_t* init_fixed, init_chunk_fixed_t* initAck_fixed,
+    uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
+    sockaddrunion local_Addresses[], uint num_local_Addresses,
+    sockaddrunion peer_Addresses[], uint num_peer_Addresses)
+{
+    return 0;
 }
 
 ushort dispatch_layer_t::get_local_inbound_stream(uint* geco_inst_id)
@@ -1984,7 +2000,71 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     return 0;
 }
 
-int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
+int dispatch_layer_t::write_local_addrlist(uint chunkid,
+    sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
+    int local_addreslist_size)
+{
+    if (local_addreslist_size <= 0)
+    {
+        return 0;
+    }
+
+    if (simple_chunks_[chunkid] == NULL)
+    {
+        ERRLOG(WARNNING_ERROR, "write_local_addrlist()::Invalid chunk ID");
+        return -1;
+    }
+    if (completed_chunks_[chunkid] == true)
+    {
+        ERRLOG(WARNNING_ERROR, "write_local_addrlist()::chunk already completed !");
+        return -1;
+    }
+
+    ip_address_t* ip_addr;
+    int i, length = 0;
+    uchar* vlp;
+
+    if (simple_chunks_[chunkid]->chunk_header.chunk_id != CHUNK_ASCONF)
+    {
+        vlp = &((init_chunk_t *)simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+    }
+    else
+    {
+        vlp = &((asconfig_chunk_t*)simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+    }
+
+    for (i = 0; i < local_addreslist_size; i++)
+    {
+        ip_addr = (ip_address_t*)(vlp + length);
+        switch (saddr_family(&(local_addreslist[i])))
+        {
+            case AF_INET:
+                ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
+                ip_addr->vlparam_header.param_length = htons(
+                    sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
+                ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
+                length += 8;
+                break;
+            case AF_INET6:
+                ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
+                ip_addr->vlparam_header.param_length = htons(
+                    sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
+                memcpy(&ip_addr->dest_addr_un.ipv6_addr,
+                    &(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
+                length += 20;
+                break;
+            default:
+                ERRLOG1(MAJOR_ERROR, "dispatch_layer_t::write_local_addrlist()::Unsupported Address Family %d", saddr_family(&(local_addreslist[i])));
+                break;
+        } // switch 
+    } // for loop
+    curr_write_pos_[chunkid] += length;
+    return 0;
+}
+
+int dispatch_layer_t::read_peer_addreslist(
+    sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+    uchar * chunk, uint chunk_len,
     uint my_supported_addr_types,
     uint* peer_supported_addr_types,
     bool ignore_dups, bool ignore_last_src_addr)
@@ -2022,7 +2102,7 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
     /*3) parse all vlparams in this chunk*/
     while (read_len < len)
     {
-        EVENTLOG2(VERBOSE, "get_peer_addreslist() : len==%u, processed_len == %u",
+        EVENTLOG2(VERBOSE, "read_peer_addreslist() : len==%u, processed_len == %u",
             len, read_len);
 
         if (len - read_len < VLPARAM_FIXED_SIZE)
@@ -2059,11 +2139,11 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                                 && !INADDR_ANY == ip4_saddr
                                 && !INADDR_BROADCAST == ip4_saddr)
                             {
-                                tmp_found_addres_[found_addr_number].sa.sa_family =
+                                peer_addreslist[found_addr_number].sa.sa_family =
                                     AF_INET;
-                                tmp_found_addres_[found_addr_number].sin.sin_port =
+                                peer_addreslist[found_addr_number].sin.sin_port =
                                     0;
-                                tmp_found_addres_[found_addr_number].sin.sin_addr.s_addr =
+                                peer_addreslist[found_addr_number].sin.sin_addr.s_addr =
                                     addres->dest_addr_un.ipv4_addr;
                                 //current addr duplicated with a previous found addr?
                                 is_new_addr = true; // default as new addr
@@ -2072,8 +2152,8 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                                     for (idx = 0; idx < found_addr_number; idx++)
                                     {
                                         if (saddr_equals(
-                                            &tmp_found_addres_[found_addr_number],
-                                            &tmp_found_addres_[idx]))
+                                            &peer_addreslist[found_addr_number],
+                                            &peer_addreslist[idx]))
                                         {
                                             is_new_addr = false;
                                         }
@@ -2088,7 +2168,7 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                                         SUPPORT_ADDRESS_TYPE_IPV4;
 #ifdef _DEBUG
                                     saddr2str(
-                                        &tmp_found_addres_[found_addr_number - 1],
+                                        &peer_addreslist[found_addr_number - 1],
                                         hoststr_, sizeof(hoststr_), 0);
                                     EVENTLOG1(VERBOSE,
                                         "Found NEW IPv4 Address = %s",
@@ -2162,22 +2242,22 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                             {
 
                                 // fillup addrr
-                                tmp_found_addres_[found_addr_number].sa.sa_family =
+                                peer_addreslist[found_addr_number].sa.sa_family =
                                     AF_INET6;
-                                tmp_found_addres_[found_addr_number].sin6.sin6_port =
+                                peer_addreslist[found_addr_number].sin6.sin6_port =
                                     0;
-                                tmp_found_addres_[found_addr_number].sin6.sin6_flowinfo =
+                                peer_addreslist[found_addr_number].sin6.sin6_flowinfo =
                                     0;
 #ifdef HAVE_SIN6_SCOPE_ID
                                 foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
 #endif
                                 memcpy(
-                                    tmp_found_addres_[found_addr_number].sin6.sin6_addr.s6_addr,
+                                    peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr,
                                     &(addres->dest_addr_un.ipv6_addr),
                                     sizeof(struct in6_addr));
 
                                 if (!transport_layer_->typeofaddr(
-                                    &tmp_found_addres_[found_addr_number],
+                                    &peer_addreslist[found_addr_number],
                                     flags)) // NOT contains the addr type of [flags]
                                 {
                                     // current addr duplicated with a previous found addr?
@@ -2188,8 +2268,8 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                                             idx++)
                                         {
                                             if (saddr_equals(
-                                                &tmp_found_addres_[found_addr_number],
-                                                &tmp_found_addres_[idx]))
+                                                &peer_addreslist[found_addr_number],
+                                                &peer_addreslist[idx]))
                                             {
                                                 is_new_addr = false;
                                             }
@@ -2204,7 +2284,7 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                                             SUPPORT_ADDRESS_TYPE_IPV6;
 #ifdef _DEBUG
                                         saddr2str(
-                                            &tmp_found_addres_[found_addr_number
+                                            &peer_addreslist[found_addr_number
                                             - 1], hoststr_,
                                             sizeof(hoststr_), 0);
                                         EVENTLOG1(VERBOSE,
@@ -2241,7 +2321,7 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
         is_new_addr = true;
         for (idx = 0; idx < found_addr_number; idx++)
         {
-            if (saddr_equals(last_source_addr_, &tmp_found_addres_[idx]))
+            if (saddr_equals(last_source_addr_, &peer_addreslist[idx]))
             {
                 is_new_addr = false;
             }
@@ -2257,7 +2337,7 @@ int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
                 found_addr_number = MAX_NUM_ADDRESSES - 1;
 
             }
-            memcpy(&tmp_found_addres_[found_addr_number], last_source_addr_,
+            memcpy(&peer_addreslist[found_addr_number], last_source_addr_,
                 sizeof(sockaddrunion));
             switch (saddr_family(last_source_addr_))
             {
@@ -2315,8 +2395,8 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
             default:
                 ERRLOG(MAJOR_ERROR, "no such addr family!");
                 ret = false;
-                }
-                }
+        }
+    }
     /*2) otherwise try to find from local addr list stored in curr geco instance*/
     if (curr_geco_instance_ != NULL)
     {
@@ -2358,9 +2438,9 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
     EVENTLOG1(VERBOSE, "Found loopback address returns %s",
         (ret == true) ? "TRUE" : "FALSE");
     return ret;
-        }
+}
 
-int dispatch_layer_t::read_an_ip_addr_from_setup_chunk(uchar * chunk, uint chunk_len, uint n,
+int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
     sockaddrunion* foundAddress, int supportedAddressTypes)
 {
     /*1) validate method input params*/
@@ -2399,7 +2479,7 @@ int dispatch_layer_t::read_an_ip_addr_from_setup_chunk(uchar * chunk, uint chunk
     /*3) parse all vlparams in this chunk*/
     while (read_len < len)
     {
-        EVENTLOG2(VERBOSE, "get_peer_addreslist() : len==%u, processed_len == %u",
+        EVENTLOG2(VERBOSE, "read_peer_addreslist() : len==%u, processed_len == %u",
             len, read_len);
 
         if (len - read_len < VLPARAM_FIXED_SIZE)

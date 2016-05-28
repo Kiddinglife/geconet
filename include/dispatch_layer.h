@@ -407,7 +407,6 @@ class dispatch_layer_t
     bool should_discard_curr_geco_packet_;
     bool found_existed_channel_from_init_chunks_;
     int address_type_;
-    int my_supported_addr_types_;
     uint ip4_saddr_;
     uint total_chunks_count_;
     uint chunk_types_arr_;
@@ -421,11 +420,15 @@ class dispatch_layer_t
     channel_t tmp_channel_;
     sockaddrunion tmp_addr_;
     geco_instance_t tmp_geco_instance_;
-    sockaddrunion tmp_found_addres_[MAX_NUM_ADDRESSES];
-    int found_addres_size_;
+    sockaddrunion tmp_local_addreslist_[MAX_NUM_ADDRESSES];
+    int tmp_local_addreslist_size_;
+    int my_supported_addr_types_;
+    sockaddrunion tmp_peer_addreslist_[MAX_NUM_ADDRESSES];
+    int tmp_peer_addreslist_size_;
+    uint tmp_peer_supported_types_;
 
     /*related to simple chunk send */
-    uchar write_cursors_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
+    uchar curr_write_pos_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
     simple_chunk_t* simple_chunks_[MAX_CHUNKS_SIZE]; /* simple ctrl chunks to send*/
     bool completed_chunks_[MAX_CHUNKS_SIZE];/*if a chunk is completely constructed*/
     uchar simple_chunk_index_; /* current simple chunk index */
@@ -974,7 +977,7 @@ class dispatch_layer_t
             return;
         }
 
-        uint index = write_cursors_[chunkID];
+        uint index = curr_write_pos_[chunkID];
         error_cause_t* ecc =
             (error_cause_t*)(simple_chunks_[chunkID]->chunk_value + index);
         ecc->error_reason_code = htons(code);
@@ -984,14 +987,14 @@ class dispatch_layer_t
         {
             memcpy(&ecc->error_reason, data, length);
         }
-        write_cursors_[chunkID] += (length + VLPARAM_FIXED_SIZE);
-        index = 4 - write_cursors_[chunkID] % 4;
+        curr_write_pos_[chunkID] += (length + VLPARAM_FIXED_SIZE);
+        index = 4 - curr_write_pos_[chunkID] % 4;
         if (index < 4) // padding 
         {
             memset(
                 simple_chunks_[chunkID]->chunk_value
-                + write_cursors_[chunkID], 0, index);
-            write_cursors_[chunkID] += index;
+                + curr_write_pos_[chunkID], 0, index);
+            curr_write_pos_[chunkID] += index;
         }
     }
 
@@ -1113,7 +1116,7 @@ class dispatch_layer_t
         cid = simple_chunk_index_;
         EVENTLOG1(INTERNAL_TRACE, log_text, cid);
         simple_chunks_[simple_chunk_index_] = chunk;
-        write_cursors_[simple_chunk_index_] = 0;
+        curr_write_pos_[simple_chunk_index_] = 0;
         completed_chunks_[simple_chunk_index_] = false;
     }
 
@@ -1128,7 +1131,7 @@ class dispatch_layer_t
 
         simple_chunks_[chunkID]->chunk_header.chunk_length = htons(
             (simple_chunks_[chunkID]->chunk_header.chunk_length
-            + write_cursors_[chunkID]));
+            + curr_write_pos_[chunkID]));
         completed_chunks_[chunkID] = true;
         return simple_chunks_[chunkID];
     }
@@ -1315,7 +1318,7 @@ class dispatch_layer_t
         uint chunk_type);
 
     /**
-     * find_sockaddr: looks for address type parameters in INIT or INIT-ACKs
+     * @breif looks for address type parameters in INIT or INIT-ACKs.
      * All parameters within the chunk are looked at, and the n-th supported address is
      * copied into the provided buffer pointed to by the foundAddress parameter.
      * If there are less than n addresses, an appropriate error is
@@ -1324,18 +1327,67 @@ class dispatch_layer_t
      * @param  n                get the n-th address
      * @param  foundAddress
      * pointer to a buffer where an address, if found, will be copied
-     * @return -1  for parameter problem, 0 for success (i.e. address found), 1 if there are not
-     *             that many addresses in the chunk.
+     * @return -1  for parameter problem, 0 for success (i.e. address found),
+     * 1 if there are not that many addresses in the chunk.
      */
-    int read_an_ip_addr_from_setup_chunk(uchar * init_chunk, uint chunk_len, uint n,
+    int read_peer_addr(uchar * init_chunk, uint chunk_len, uint n,
         sockaddrunion* foundAddress, int supportedAddressTypes);
+
     /**
      * @return -1 prama error, >=0 number of the found addresses
-     * */
-    int get_peer_addreslist(uchar * init_chunk, uint chunk_len,
+     */
+    int read_peer_addreslist(
+        sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+        uchar * init_chunk, uint chunk_len,
         uint supportedAddressTypes, uint* peer_supported_type = NULL,
         bool ignore_dups = true, bool ignore_last_src_addr = false);
 
+    /**
+     * @brief appends local IP addresses to a chunk, usually an init, initAck or asconf.
+     * @param [out] chunkid addres wrriten to this chunk
+     * @param [in] local_addreslist  the addres that will be written to chunk
+     */
+    int write_local_addrlist(uint chunkid,
+        sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
+        int local_addreslist_size);
+
+
+    /* @brief append the variable length cookie param to an initAck. */
+    /* ch_initFixed reads the fixed part of an init or initAck as complete structure */
+    int write_cookie(uint initCID, uint initAckID,
+        init_chunk_fixed_t* init_fixed, init_chunk_fixed_t* initAck_fixed,
+        uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
+        sockaddrunion local_Addresses[], uint num_local_Addresses,
+        sockaddrunion peer_Addresses[], uint num_peer_Addresses);
+
+    init_chunk_fixed_t* get_init_fixed(uint chunkID)
+    {
+        if (simple_chunks_[chunkID] == NULL)
+        {
+            ERRLOG(MAJOR_ERROR, "get_init_fixed()::Invalid chunk ID");
+            return NULL;
+        }
+
+        if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
+            || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+        {
+            return &((init_chunk_t *)simple_chunks_[chunkID])->init_fixed;
+        }
+        else
+        {
+            ERRLOG(MAJOR_ERROR, "get_init_fixed()::chunk type not init or initAck");
+            return NULL;
+        }
+    }
+
+    /**
+    *  @brief returns the suggested cookie lifespan increment if a cookie
+    *  preservative is present in a init chunk.
+    */
+    uint get_cookie_lifespan(uint chunkID)
+    {
+        return 0;
+    }
 
     /** NULL no params, otherwise have params, return vlp fixed*/
     uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk,
