@@ -1310,7 +1310,7 @@ class dispatch_layer_t
      * All chunks within the datagram are looked at, until one is found
      * that equals the parameter chunk_type.
      * @param  datagram     pointer to the newly received data
-     * @param  len          stop after this many bytes
+     * @param  vlparams_len          stop after this many bytes
      * @param  chunk_type   chunk type to look for
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
@@ -1341,6 +1341,25 @@ class dispatch_layer_t
         uchar * init_chunk, uint chunk_len,
         uint supportedAddressTypes, uint* peer_supported_type = NULL,
         bool ignore_dups = true, bool ignore_last_src_addr = false);
+
+    /**
+     * @brief scans for a parameter of a certain type in a message string.
+     * The message string must point to a parameter header.
+     * The function can also be used to find parameters within a parameter
+     * (e.g. addresses within a cookie).
+     * @param [in] vlp_type type of paramter to scan for,
+     * @param [in]
+     * vlp_fixed pointer to the first parameter header, from which we start scanning
+     * @param [in] vlp_len    maximum length of parameter field, that may be scanned.
+     * @return
+     * position of first parameter occurence, relative to where mstring pointed to
+     * i.e. 0 returned, when mstring points to the parameter we scan for.
+     * OR -1 if not found !!!!!!!
+     */
+    uint find_vlparam(uint vlp_type, uchar* vlp_fixed, uint vlp_len)
+    {
+        return 0;
+    }
 
     /**
      * @brief appends local IP addresses to a chunk, usually an init, initAck or asconf.
@@ -1386,10 +1405,60 @@ class dispatch_layer_t
     */
     uint get_cookie_lifespan(uint chunkID)
     {
+        if (simple_chunks_[chunkID] == NULL)
+        {
+            ERRLOG(MAJOR_ERROR, "Invalid chunk ID");
+            return 0;
+        }
+
+        if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_INIT)
+        {
+            ERRLOG(MAJOR_ERROR, "get_cookie_lifespan()::chunk type not init");
+            return 0;
+        }
+
+        uint curr_pos;
+        uint vlparams_len;
+        cookie_preservative_t* preserv;
+        init_chunk_t* init = ((init_chunk_t*)simple_chunks_[chunkID]);
+        vlparams_len = init->chunk_header.chunk_length - CHUNK_FIXED_SIZE -
+            INIT_CHUNK_FIXED_SIZE;
+        curr_pos = find_vlparam(VLPARAM_COOKIE_PRESEREASONV,
+            init->variableParams, vlparams_len);
+        if (curr_pos >= 0)
+        {
+            /* found cookie preservative */
+            preserv = (cookie_preservative_t*)(init->variableParams + curr_pos);
+            return (ntohl(preserv->cookieLifetimeInc) +
+                get_cookielifespan_from_statectrl());
+        }
+        else
+        {
+            /* return default cookie life span*/
+            return get_cookielifespan_from_statectrl();
+        }
         return 0;
     }
 
-    /** NULL no params, otherwise have params, return vlp fixed*/
+    /**
+    * get current parameter value for cookieLifeTime
+    * @return current value, -1 on error
+    */
+    int get_cookielifespan_from_statectrl(void)
+    {
+        state_machine_controller_t* old_data = get_state_machine_controller();
+        if (old_data == NULL)
+        {
+            ERRLOG(MINOR_ERROR,
+                "get_cookielifespan_from_statectrl():  get state machine ctrl failed");
+            return -1;
+        }
+        return  old_data->cookie_lifetime;
+    }
+
+    /**
+     * only used for finding some vlparam in init or init ack chunks
+     * NULL no params, otherwise have params, return vlp fixed*/
     uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk,
         uint chunk_len, ushort param_type);
 };
