@@ -324,33 +324,33 @@ static gint32 setIPAddresses(unsigned char *mstring, guint16 length,
 
         localHostFound = mdi_addressListContainsLocalhost(1, lastSource);
         linkLocalFound =
-                !(adl_filterInetAddress(lastSource, flag_HideLinkLocal));
+                !(adl_filterInetAddress(lastSource, LinkLocalAddrType));
         siteLocalFound =
-                !(adl_filterInetAddress(lastSource, flag_HideSiteLocal));
+                !(adl_filterInetAddress(lastSource, SiteLocalAddrType));
 
         if (localHostFound == FALSE)
         {
             /* this is from a normal address, get all except loopback */
             if (linkLocalFound)
             {
-                filterFlags = (AddressScopingFlags) (flag_Default
-                        | flag_HideLoopback);
+                filterFlags = (AddressScopingFlags) (AllCastAddrTypes
+                        | LoopBackAddrType);
             }
             else if (siteLocalFound)
             {
-                filterFlags = (AddressScopingFlags) (flag_Default
-                        | flag_HideLinkLocal | flag_HideLoopback);
+                filterFlags = (AddressScopingFlags) (AllCastAddrTypes
+                        | LinkLocalAddrType | LoopBackAddrType);
             }
             else
             {
-                filterFlags = (AddressScopingFlags) (flag_Default
-                        | flag_HideLocal);
+                filterFlags = (AddressScopingFlags) (AllCastAddrTypes
+                        | AllLocalAddrTypes);
             }
         }
         else /* if localHostFound == TRUE) */
         {
             /* this is from a loopback, get all */
-            filterFlags = flag_Default;
+            filterFlags = AllCastAddrTypes;
         }
         event_logiii(VERBOSE,
                 "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d",

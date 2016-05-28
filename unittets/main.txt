@@ -6,7 +6,6 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 //
-
 #include <iostream>
 #include <cassert>
 #include "globals.h"
@@ -602,4 +601,3 @@ static void test_alloc_pool()
     geco::ds::single_client_alloc::destroy();
     geco::ds::alloc::destroy();
 }
-

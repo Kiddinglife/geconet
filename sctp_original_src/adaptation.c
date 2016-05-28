@@ -2096,12 +2096,12 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
         case AF_INET :
             event_log(VERBOSE, "Trying IPV4 address");
             if (
-                (IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideMulticast)) ||
-                (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideReserved)) ||
-                (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideReserved)) ||
-                ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideBroadcast))||
-                ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideLoopback)) ||
-                ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & flag_HideAllExceptLoopback))||
+                (IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & MulticastAddrType)) ||
+                (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & ReservedAddrType)) ||
+                (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & ReservedAddrType)) ||
+                ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & BroadcastAddrType))||
+                ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & LoopBackAddrType)) ||
+                ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & AllExceptLoopbackAddrTypes))||
       (ntohl(newAddress->sin.sin_addr.s_addr) == INADDR_ANY)
                 ) {
             event_log(VERBOSE, "Filtering IPV4 address");
@@ -2112,13 +2112,13 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
       case AF_INET6 :
  #if defined (LINUX)
         if (
-            (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptLoopback)) ||
-            (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideLoopback)) ||
-            (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideLinkLocal)) ||
-            (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptLinkLocal)) ||
-            (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideAllExceptSiteLocal)) ||
-            (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideSiteLocal)) ||
-            (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & flag_HideMulticast)) ||
+            (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & AllExceptLoopbackAddrTypes)) ||
+            (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & LoopBackAddrType)) ||
+            (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & LinkLocalAddrType)) ||
+            (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & AllExceptLinkLocalAddrTypes)) ||
+            (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & ExceptSiteLocalAddrTypes)) ||
+            (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & SiteLocalAddrType)) ||
+            (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr.s6_addr)) && (flags & MulticastAddrType)) ||
              IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr.s6_addr))
                  ) {
             event_log(VERBOSE, "Filtering IPV6 address");
@@ -2126,13 +2126,13 @@ gboolean adl_filterInetAddress(union sockunion* newAddress, AddressScopingFlags 
         }
  #else
         if (
-            (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptLoopback)) ||
-            (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideLoopback)) ||
-            (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptLinkLocal)) ||
-            (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptSiteLocal)) ||
-            (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideLinkLocal)) ||
-            (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideSiteLocal)) ||
-            (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideMulticast)) ||
+            (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLoopbackAddrTypes)) ||
+            (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & LoopBackAddrType)) ||
+            (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLinkLocalAddrTypes)) ||
+            (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & ExceptSiteLocalAddrTypes)) ||
+            (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & LinkLocalAddrType)) ||
+            (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & SiteLocalAddrType)) ||
+            (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & MulticastAddrType)) ||
              IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr))
                  ) {
             event_log(VERBOSE, "Filtering IPV6 address");
@@ -2496,14 +2496,14 @@ gboolean adl_gatherLocalAddresses(union sockunion **addresses,
         }
 
 
-        if (flags & flag_HideLoopback){
-            if (adl_filterInetAddress((union sockunion*)toUse, flag_HideLoopback) == FALSE){
+        if (flags & LoopBackAddrType){
+            if (adl_filterInetAddress((union sockunion*)toUse, LoopBackAddrType) == FALSE){
                 /* skip the loopback */
                 event_logi(VERBOSE, "Interface %d, skipping loopback",ii);
                 continue;
             }
         }
-        if (adl_filterInetAddress((union sockunion*)toUse, flag_HideReserved) == FALSE) {
+        if (adl_filterInetAddress((union sockunion*)toUse, ReservedAddrType) == FALSE) {
             /* skip reserved */
             event_logi(VERBOSE, "Interface %d, skipping reserved",ii);
             continue;

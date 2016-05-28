@@ -18,9 +18,6 @@
     <ClCompile Include="..\..\..\..\unittets\test-main.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\unittets\main.txt">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

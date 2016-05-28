@@ -297,7 +297,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         {
             EVENTLOG(VERBOSE,
                 "recv_geco_packet()::Looking for source address in CHUNK_INIT_ACK");
-            found_addres_size_ = read_all_ip_addres_from_setup_chunk
+            found_addres_size_ = get_peer_addreslist
                 (curr_uchar_init_chunk_,
                 curr_geco_packet_value_len_, my_supported_addr_types_) - 1;
             for (; found_addres_size_ >= 0; found_addres_size_--)
@@ -320,7 +320,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             {
                 EVENTLOG(VERBOSE,
                     "recv_geco_packet()::Looking for source address in INIT CHUNK");
-                found_addres_size_ = read_all_ip_addres_from_setup_chunk
+                found_addres_size_ = get_peer_addreslist
                     (curr_uchar_init_chunk_,
                     curr_geco_packet_value_len_, my_supported_addr_types_)
                     - 1;
@@ -1062,7 +1062,7 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
                 break;
             case CHUNK_INIT:
                 EVENTLOG(INTERNAL_TRACE, "***** Bundling received CHUNK_INIT");
-                handle_ret = process_curr_init_chunk((init_chunk_t *)chunk);
+                handle_ret = process_init_chunk((init_chunk_t *)chunk);
                 break;
             case CHUNK_INIT_ACK:
                 EVENTLOG(INTERNAL_TRACE, "***** Bundling received CHUNK_INIT_ACK");
@@ -1103,16 +1103,16 @@ int dispatch_layer_t::process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
     return 0;
 }
-int dispatch_layer_t::process_curr_init_chunk(init_chunk_t * init)
+int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 {
-    EVENTLOG(VERBOSE, "process_curr_init_chunk() is executed");
+    EVENTLOG(VERBOSE, "process_init_chunk() is executed");
 
     /*1) put init chunk into chunk  array */
     uint ret = ChunkProcessResult::Good;
     uchar init_cid = alloc_simple_chunk((simple_chunk_t*)init);
     if (get_simple_chunk_id(init_cid) != CHUNK_INIT)
     {
-        ERRLOG(MAJOR_ERROR, "process_curr_init_chunk: wrong chunk type");
+        ERRLOG(MAJOR_ERROR, "process_init_chunk: wrong chunk type");
         remove_simple_chunk(init_cid);
         return ret;
     }
@@ -1127,14 +1127,14 @@ int dispatch_layer_t::process_curr_init_chunk(init_chunk_t * init)
         EVENTLOG(EXTERNAL_TRACE,
             "event: received init with zero number of streams, or zero init TAG");
 
-        // make and send ABORT with error cause setup
+        /*2.1) make and send ABORT with error cause setup*/
         abortcid = alloc_simple_chunk(CHUNK_ABORT, FLAG_NONE);
         append_ecc(abortcid, ECC_INVALID_MANDATORY_PARAM);
         bundle_ctrl_chunk(get_simple_chunk(abortcid));
         send_bundled_chunks();
         free_simple_chunk(abortcid);
 
-        //delete all data of this channel, channel MUST exist at this moment
+        /*2.2) delete all data of this channel, channel MUST exist at this moment*/
         if (smctrl != NULL)
         {
             ret = ChunkProcessResult::StopAndDeleteChannel;
@@ -1156,9 +1156,6 @@ int dispatch_layer_t::process_curr_init_chunk(init_chunk_t * init)
         memcpy(&tmp_addr_, last_source_addr_, sizeof(sockaddrunion));
     }
 
-    /* 4)
-     refers to RFC 4060 - 5.1.Normal Establishment of an Association - (B)
-     "Z" shall respond immediately with an INIT ACK chunk.*/
     ushort inbound_stream = 0;
     ushort outbound_stream = 0;
     uchar init_ack_cid;
@@ -1166,43 +1163,44 @@ int dispatch_layer_t::process_curr_init_chunk(init_chunk_t * init)
     uint peer_addres_size;
     uint my_addres_size;
 
+    /* 4) refers to RFC 4060 - 5.1.Normal Establishment of an Association - (B)
+    "Z" shall respond immediately with an INIT ACK chunk.
+    smctrl == NULL means this is normal connection pharse (no connection yet)
+    -The destination IP address of the INIT ACK MUST be set to the source
+    IP address of the INIT to which this INIT ACK is responding.
+    -In the response, besides filling in other parameters, "Z" must set
+    the Verification Tag field to Tag_A, and also provide its own
+    Verification Tag (Tag_Z) in the Initiate Tag field.
+    -Moreover, "Z" MUST generate and send along with the INIT ACK a
+    State Cookie.  See Section 5.1.3 for State Cookie generation.
+    -Note: After sending out INIT ACK with the State Cookie parameter,
+    "Z" MUST NOT allocate any resources or keep any states for the new
+    association.  Otherwise, "Z" will be vulnerable to resource
+    attacks. */
     if (smctrl == NULL)
     {
-        /*
-         The destination IP address of the INIT ACK MUST be set to the source
-         IP address of the INIT to which this INIT ACK is responding.
-
-         In the response, besides filling in other parameters, "Z" must set
-         the Verification Tag field to Tag_A, and also provide its own
-         Verification Tag (Tag_Z) in the Initiate Tag field.
-
-         Moreover, "Z" MUST generate and send along with the INIT ACK a
-         State Cookie.  See Section 5.1.3 for State Cookie generation.
-
-         Note: After sending out INIT ACK with the State Cookie parameter,
-         "Z" MUST NOT allocate any resources or keep any states for the new
-         association.  Otherwise, "Z" will be vulnerable to resource
-         attacks.
-         */
-        // get in out stream number
+        /*4.1) get in out stream number*/
         inbound_stream = std::min(read_outbound_stream(init_cid),
             get_local_inbound_stream());
         outbound_stream = std::min(read_inbound_stream(init_cid),
             get_local_outbound_stream());
 
+        /* 4.2) alloc init ack chunk, init tag used as init tsn */
         // todo use safe generate_init_tag from libcat
-        /*also use init tag as init tsn */
         uint init_tag = generate_init_tag();
         init_ack_cid = alloc_init_ack_chunk(init_tag, curr_geco_instance_->default_myRwnd,
             outbound_stream, inbound_stream, init_tag);
 
-        /* read and validate addrlist from received init chunk*/
+        /*4.3) read and validate addrlist carried in the received init chunk*/
         assert(my_supported_addr_types_ != 0);
-        peer_addres_size = read_all_ip_addres_from_setup_chunk((uchar*)init,
+        peer_addres_size = get_peer_addreslist((uchar*)init,
             curr_geco_packet_value_len_, my_supported_addr_types_, &peer_supported_types);
         if ((my_supported_addr_types_ & peer_supported_types) == 0)
             ERRLOG(FALTAL_ERROR_EXIT,
-            "BAKEOFF: Program error, no common address types in process_curr_init_chunk()");
+            "BAKEOFF: Program error, no common address types in process_init_chunk()");
+
+        /*4.4) get local addr list and write them to INIT ACK*/
+        uint local_addres_size = get_local_addreslist(tmp_found_addres_, last_source_addr_, 1, peer_supported_types, true);
 
 
 
@@ -1262,6 +1260,236 @@ ushort dispatch_layer_t::get_local_outbound_stream(uint* geco_inst_id)
     }
     return 0;
 }
+
+uint dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist, sockaddrunion *peerAddress, uint numPeerAddresses, uint addressTypes, bool receivedFromPeer)
+{
+    /*1) make sure either curr channel or curr geco instance presents */
+    if (curr_channel_ == NULL && curr_geco_instance_ == NULL)
+    {
+        ERRLOG(FALTAL_ERROR_EXIT, "dispatch_layer_t::get_local_addreslist()::neither assoc nor instance set - error !");
+        return 0;
+    }
+    if (curr_geco_instance_ == NULL)
+    {
+        ERRLOG(MAJOR_ERROR,
+            "get_local_addreslist():: curr_geco_instance_ not set - program error");
+        curr_geco_instance_ = curr_channel_->geco_inst;
+    }
+
+    /* 2) Determine address type of peer addres
+     * localHostFound == false:
+     * localhost not found means we are NOT sending msg to ourselves
+     * this is from a normal address, so we need filter out except loopback
+     * and cast addres
+     * localHostFound == true:
+     * localhost Found means we are sending msg to ourselves
+     * peer addr is actually our local address, so we need filter out
+     * all illegal addres */
+    uint count, tmp;
+    IPAddrType filterFlags = (IPAddrType)0;
+    bool localHostFound = false, linkLocalFound = false, siteLocalFound = false;
+    for (count = 0; count < numPeerAddresses; count++)
+    {
+        localHostFound = contains_local_host_addr(peerAddress + count, 1);
+        linkLocalFound = transport_layer_->typeofaddr(
+            peerAddress + count, LinkLocalAddrType);
+        siteLocalFound = transport_layer_->typeofaddr(
+            peerAddress + count, SiteLocalAddrType);
+    }
+
+    /* 3) Should we add @param peerAddress to @param local_addrlist ?
+     * receivedFromPeer == FALSE:
+     * I send an INIT with my addresses to the peer
+     * receivedFromPeer == TRUE:
+     * I got an INIT with addresses from the peer */
+    if (receivedFromPeer == false && localHostFound == true)
+    {
+        /* 3.1) this means:
+         * I sent an INIT with my addresses to myself
+         * should filter out all illgal addres from geco instance's local addr list
+         * and then addall legal ones to @param local_addrlist of my own. */
+        filterFlags = AllCastAddrTypes;
+    }
+    else if (receivedFromPeer == false && localHostFound == false)
+    {
+        /* 3.2) this means:
+        * I sent an INIT with my addresses to other hosts
+        * however, this 'other hosts' MAY also include myself
+        * in the case that:
+        * I use my loop back local host of 127.0.0.1 to initilize geco instance,
+        * then I send INIT with my loop back local host of 127.0.0.1 to myself,
+        * but this addr is automatically put and changed to ethernet addr
+        * 192.168.1.107 if I am in LAN or public addr 222.12,123 if i am in LAN
+        * (both are my local addr) by IP layer.
+        *
+        * at this moment, the received peer addr is 192.168.1.107 or  222.12,123
+        * when contains_local_host_addr() called,
+        * it CANNOT match peer addr of 192.168.1.107 or or  222.12,123.
+        * So localHostFound will be set to FASLE, but actually I am sending to myself.
+        *
+        * Action to take for such case is that:
+        * when we send msg to a loopback addr (127.0.0.1) in the case above,
+        * should filter out 127.0.0.1 from geco instance's local addr list
+        * and then add all other legal ones to @param local_addrlist of my own. */
+        filterFlags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
+    }
+    else if (receivedFromPeer == true && localHostFound == false)
+    {
+        /* 3.3) this means:
+         * I received an INIT with addresses from others which is a normal case.
+         * should filter out all illgal addres from geco instance's local addr list
+         * and then addall legal ones to @param local_addrlist of my own. */
+        if (linkLocalFound)
+        {
+            filterFlags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
+        }
+        else if (siteLocalFound)
+        {
+            filterFlags = (IPAddrType)(AllCastAddrTypes | LinkLocalAddrType |
+                LoopBackAddrType);
+        }
+        else
+        {
+            filterFlags = (IPAddrType)(AllCastAddrTypes | AllLocalAddrTypes);
+        }
+    }
+    else // (receivedFromPeer == true && localHostFound == true)
+    {
+        /* 3.4) this means:
+         * I received an INIT with addresses from myself
+         * should filter out all illgal addres from geco instance's local addr list
+         * and then add all legal ones to @param local_addrlist of my own. */
+        filterFlags = AllCastAddrTypes;
+    }
+
+    /*4) filter local addres and copy them to @param local_addrlist of my own*/
+    count = 0;
+    uint af;
+    if (curr_geco_instance_->is_inaddr_any)
+    {
+        /* 4.1) geco instance has any addr 4 setup,
+         * we use @param defaultlocaladdrlist_*/
+        for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
+        {
+            if (saddr_family(&(defaultlocaladdrlist_[tmp])) == AF_INET)
+            {
+                if (addressTypes & SUPPORT_ADDRESS_TYPE_IPV4)
+                {
+                    if (!transport_layer_->typeofaddr(&(defaultlocaladdrlist_[tmp]),
+                        filterFlags))
+                    {
+                        // addr looks good copy it
+                        memcpy(&(local_addrlist[count]), &(defaultlocaladdrlist_[tmp]),
+                            sizeof(sockaddrunion));
+                        count++;
+                    }
+                }
+            }
+            else
+            {
+                EVENTLOG(WARNNING_ERROR, "get_local_addreslist(): no such af !");
+            }
+        }
+        EVENTLOG2(VERBOSE,
+            "get_local_addreslist(): found %u local addresses from INADDR_ANY (from %u)",
+            count, defaultlocaladdrlistsize_);
+    }
+    else if (curr_geco_instance_->is_in6addr_any)
+    {
+        /* 4.2) geco instance has any addr 6 setup,
+        * we use @param defaultlocaladdrlist_*/
+        for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
+        {
+            af = saddr_family(&(defaultlocaladdrlist_[tmp]));
+            if (af == AF_INET)
+            {
+                if (addressTypes & SUPPORT_ADDRESS_TYPE_IPV4)
+                {
+                    if (!transport_layer_->typeofaddr(&(defaultlocaladdrlist_[tmp]),
+                        filterFlags))
+                    {
+                        // addr looks good copy it
+                        memcpy(&(local_addrlist[count]), &(defaultlocaladdrlist_[tmp]),
+                            sizeof(sockaddrunion));
+                        count++;
+                    }
+                }
+            }
+            else if (af == AF_INET6)
+            {
+                if (addressTypes & SUPPORT_ADDRESS_TYPE_IPV6)
+                {
+                    if (!transport_layer_->typeofaddr(&(defaultlocaladdrlist_[tmp]),
+                        filterFlags))
+                    {
+                        // addr looks good copy it
+                        memcpy(&(local_addrlist[count]), &(defaultlocaladdrlist_[tmp]),
+                            sizeof(sockaddrunion));
+                        count++;
+                    }
+                }
+            }
+            else
+            {
+                EVENTLOG(WARNNING_ERROR, "get_local_addreslist(): no such af !");
+            }
+        }
+        EVENTLOG2(VERBOSE,
+            "get_local_addreslist(): found %u local addresses from INADDR_6ANY (from %u)",
+            count, defaultlocaladdrlistsize_);
+    }
+    else
+    {
+        /* 4.3) geco instance has NO any addr (6) setup,
+         * search from local addr list of geco instance*/
+        for (tmp = 0; tmp < curr_geco_instance_->local_addres_size; tmp++)
+        {
+            af = saddr_family(&(curr_geco_instance_->local_addres_list[tmp]));
+            if (af == AF_INET)
+            {
+                if (addressTypes & SUPPORT_ADDRESS_TYPE_IPV4)
+                {
+                    if (!transport_layer_->typeofaddr(&(defaultlocaladdrlist_[tmp]),
+                        filterFlags))
+                    {
+                        // addr looks good copy it
+                        memcpy(&(local_addrlist[count]), &(curr_geco_instance_->local_addres_list[tmp]),
+                            sizeof(sockaddrunion));
+                        count++;
+                    }
+                }
+            }
+            else if (af == AF_INET6)
+            {
+                if (addressTypes & SUPPORT_ADDRESS_TYPE_IPV6)
+                {
+                    if (!transport_layer_->typeofaddr(&(curr_geco_instance_->local_addres_list[tmp]),
+                        filterFlags))
+                    {
+                        // addr looks good copy it
+                        memcpy(&(local_addrlist[count]), &(curr_geco_instance_->local_addres_list[tmp]),
+                            sizeof(sockaddrunion));
+                        count++;
+                    }
+                }
+            }
+            else
+            {
+                EVENTLOG(WARNNING_ERROR, "get_local_addreslist(): no such af !");
+            }
+        }
+        EVENTLOG2(VERBOSE,
+            "get_local_addreslist(): found %u local addresses from INADDR_6ANY (from %u)",
+            count, defaultlocaladdrlistsize_);
+    }
+
+    EVENTLOG1(INTERNAL_TRACE,
+        "get_local_addreslist() : returning %u addresses !", count);
+    if (count == 0)
+        EVENTLOG(FALTAL_ERROR_EXIT, "get_local_addreslist(): found no addres!");
+    return count;
+}
+
 void dispatch_layer_t::delete_curr_channel(void)
 {
     uint path_id;
@@ -1756,7 +1984,7 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     return 0;
 }
 
-int dispatch_layer_t::read_all_ip_addres_from_setup_chunk(uchar * chunk, uint chunk_len,
+int dispatch_layer_t::get_peer_addreslist(uchar * chunk, uint chunk_len,
     uint my_supported_addr_types,
     uint* peer_supported_addr_types,
     bool ignore_dups, bool ignore_last_src_addr)
@@ -1789,12 +2017,12 @@ int dispatch_layer_t::read_all_ip_addres_from_setup_chunk(uchar * chunk, uint ch
     uint found_addr_number = 0;
     bool is_new_addr;
     uint idx;
-    hide_address_flag_t flags;
+    IPAddrType flags;
 
     /*3) parse all vlparams in this chunk*/
     while (read_len < len)
     {
-        EVENTLOG2(VERBOSE, "read_all_ip_addres_from_setup_chunk() : len==%u, processed_len == %u",
+        EVENTLOG2(VERBOSE, "get_peer_addreslist() : len==%u, processed_len == %u",
             len, read_len);
 
         if (len - read_len < VLPARAM_FIXED_SIZE)
@@ -1893,26 +2121,26 @@ int dispatch_layer_t::read_all_ip_addres_from_setup_chunk(uchar * chunk, uint ch
                     {
                         /* this is from a normal address,
                          * furtherly filter out except loopbacks */
-                        if (!(b2 = transport_layer_->filter_address(
-                            last_source_addr_, flag_HideLinkLocal))) //
+                        if (b2 = transport_layer_->typeofaddr(
+                            last_source_addr_, LinkLocalAddrType)) //
                         {
-                            flags = (hide_address_flag_t)(flag_Default | flag_HideLoopback);
+                            flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
                         }
-                        else if (!(b3 = transport_layer_->filter_address(
-                            last_source_addr_, flag_HideSiteLocal))) // filtered
+                        else if (b3 = transport_layer_->typeofaddr(
+                            last_source_addr_, SiteLocalAddrType)) // filtered
                         {
-                            flags = (hide_address_flag_t)(flag_Default | flag_HideLoopback |
-                                flag_HideLinkLocal);
+                            flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType |
+                                LinkLocalAddrType);
                         }
                         else
                         {
-                            flags = (hide_address_flag_t)(flag_Default | flag_HideLocal);
+                            flags = (IPAddrType)(AllCastAddrTypes | AllLocalAddrTypes);
                         }
                     }
                     else
                     {
                         /* this is from a loopback, use default flag*/
-                        flags = flag_Default;
+                        flags = AllCastAddrTypes;
                     }
                     EVENTLOG3(VERBOSE,
                         "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d",
@@ -1948,9 +2176,9 @@ int dispatch_layer_t::read_all_ip_addres_from_setup_chunk(uchar * chunk, uint ch
                                     &(addres->dest_addr_un.ipv6_addr),
                                     sizeof(struct in6_addr));
 
-                                if (transport_layer_->filter_address(
+                                if (!transport_layer_->typeofaddr(
                                     &tmp_found_addres_[found_addr_number],
-                                    flags)) // this addr passes by the validation tests shown in flags
+                                    flags)) // NOT contains the addr type of [flags]
                                 {
                                     // current addr duplicated with a previous found addr?
                                     is_new_addr = true; // default as new addr
@@ -2087,9 +2315,9 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
             default:
                 ERRLOG(MAJOR_ERROR, "no such addr family!");
                 ret = false;
-        }
-    }
-    /*2) find from local addr list stored in curr geco instance*/
+                }
+                }
+    /*2) otherwise try to find from local addr list stored in curr geco instance*/
     if (curr_geco_instance_ != NULL)
     {
         if (curr_geco_instance_->local_addres_size > 0)
@@ -2103,12 +2331,12 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
                 }
             }
         }
-        /*3 find from global local host addres list if geco instace local_addres_size is 0*/
+        /*3 otherwise try to find from global local host addres list if geco instace local_addres_size is 0*/
         else
         {
-            for (idx = 0; idx < glocal_host_addres_size_; idx++)
+            for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
             {
-                if (saddr_equals(addr_list + idx, glocal_host_addres_ + idx))
+                if (saddr_equals(addr_list + idx, defaultlocaladdrlist_ + idx))
                 {
                     ret = true;
                 }
@@ -2118,9 +2346,9 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
     /*4 find from global local host addres list if geco instance NULL*/
     else
     {
-        for (idx = 0; idx < glocal_host_addres_size_; idx++)
+        for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
         {
-            if (saddr_equals(addr_list + idx, glocal_host_addres_ + idx))
+            if (saddr_equals(addr_list + idx, defaultlocaladdrlist_ + idx))
             {
                 ret = true;
             }
@@ -2130,7 +2358,7 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
     EVENTLOG1(VERBOSE, "Found loopback address returns %s",
         (ret == true) ? "TRUE" : "FALSE");
     return ret;
-}
+        }
 
 int dispatch_layer_t::read_an_ip_addr_from_setup_chunk(uchar * chunk, uint chunk_len, uint n,
     sockaddrunion* foundAddress, int supportedAddressTypes)
@@ -2171,7 +2399,7 @@ int dispatch_layer_t::read_an_ip_addr_from_setup_chunk(uchar * chunk, uint chunk
     /*3) parse all vlparams in this chunk*/
     while (read_len < len)
     {
-        EVENTLOG2(VERBOSE, "read_all_ip_addres_from_setup_chunk() : len==%u, processed_len == %u",
+        EVENTLOG2(VERBOSE, "get_peer_addreslist() : len==%u, processed_len == %u",
             len, read_len);
 
         if (len - read_len < VLPARAM_FIXED_SIZE)

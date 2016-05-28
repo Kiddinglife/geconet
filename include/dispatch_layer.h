@@ -381,8 +381,8 @@ class dispatch_layer_t
     channel_t *curr_channel_;
 
     /* inits along with library inits*/
-    uint glocal_host_addres_size_;
-    sockaddrunion* glocal_host_addres_;
+    uint defaultlocaladdrlistsize_;
+    sockaddrunion* defaultlocaladdrlist_;
 
     /* these one-shot state variables are so frequently used in recv_gco_packet()
      * to improve performances */
@@ -514,15 +514,28 @@ class dispatch_layer_t
         }
         return NULL;
     }
+
     /**
+     * @brief
      * returns the number of incoming streams that this instance is willing to handle !
      * @return maximum number of in-streams or 0 error
      * @pre this only works when curr channel presens, curr geco instance presents or
      * it will search grco instance by instance name
-     *
      */
     ushort get_local_inbound_stream(uint* geco_inst_id = NULL);
     ushort get_local_outbound_stream(uint* geco_inst_id = NULL);
+
+    /**
+     * @brief Copies local addresses of this instance into the array passed as parameter.
+     * @param [out] local_addrlist
+     * array that will hold the local host's addresses after returning.
+     * @return numlocalAddres
+     * number of addresses that local host/current channel has.
+     * @pre either of current channel and current geco instance MUST present.
+     */
+    uint get_local_addreslist(sockaddrunion* local_addrlist,
+        sockaddrunion *peerAddress, uint numPeerAddresses,
+        uint addressTypes, bool receivedFromPeer);
 
     /**
      * function to return a pointer to the state machine controller of this association
@@ -726,7 +739,7 @@ class dispatch_layer_t
      * a COOKIE parameter.
      * @param init_chunk_t  pointer to the received init-chunk (including optional parameters)
      */
-    int process_curr_init_chunk(init_chunk_t * init);
+    int process_init_chunk(init_chunk_t * init);
 
     /**
      *   deletes the current chanel.
@@ -1319,9 +1332,10 @@ class dispatch_layer_t
     /**
      * @return -1 prama error, >=0 number of the found addresses
      * */
-    int read_all_ip_addres_from_setup_chunk(uchar * init_chunk, uint chunk_len,
+    int get_peer_addreslist(uchar * init_chunk, uint chunk_len,
         uint supportedAddressTypes, uint* peer_supported_type = NULL,
         bool ignore_dups = true, bool ignore_last_src_addr = false);
+
 
     /** NULL no params, otherwise have params, return vlp fixed*/
     uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk,

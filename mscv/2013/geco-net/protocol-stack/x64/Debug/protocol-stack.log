@@ -1,7 +1,99 @@
-﻿Build started 2016/5/26 20:36:25.
-     1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\protocol-stack\protocol-stack.vcxproj" on node 2 (Build target(s)).
+﻿Build started 2016/5/28 13:26:05.
+     1>Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\protocol-stack\protocol-stack.vcxproj" on node 2 (Rebuild target(s)).
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\src\dispatch_layer.cc
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\src\dispatch_layer.cc ..\..\..\..\src\gecotimer.cc ..\..\..\..\src\globals.cc ..\..\..\..\src\auth.cc ..\..\..\..\src\transport_layer.cc
+         transport_layer.cc
+     1>..\..\..\..\src\transport_layer.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(81): warning C4005: 'POLLIN' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(82): warning C4005: 'POLLPRI' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1618) : see previous definition of 'POLLPRI'
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(83): warning C4005: 'POLLOUT' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1621) : see previous definition of 'POLLOUT'
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(84): warning C4005: 'POLLERR' : macro redefinition
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
+     1>d:\vs2013workspace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+                 command-line arguments :  see previous definition of '_DEBUG'
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(651): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(792): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\vs2013workspace\geco-sctp-cplus\include\dispatch_layer.h(987): warning C4244: '+=' : conversion from 'unsigned __int64' to 'uchar', possible loss of data
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(2238) : see declaration of 'gethostbyname'
+     1>..\..\..\..\src\transport_layer.cc(77): warning C4244: 'argument' : conversion from 'SOCKET' to 'int', possible loss of data
+     1>..\..\..\..\src\transport_layer.cc(120): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1850) : see declaration of 'inet_addr'
+     1>..\..\..\..\src\transport_layer.cc(170): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(195) : see declaration of 'strncpy'
+     1>..\..\..\..\src\transport_layer.cc(170): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1868) : see declaration of 'inet_ntoa'
+     1>..\..\..\..\src\transport_layer.cc(202): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(118) : see declaration of 'strcat'
+     1>..\..\..\..\src\transport_layer.cc(203): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(118) : see declaration of 'strcat'
+     1>..\..\..\..\src\transport_layer.cc(763): warning C4101: 'i' : unreferenced local variable
+     1>..\..\..\..\src\transport_layer.cc(984): warning C4244: '=' : conversion from 'SOCKET' to 'int', possible loss of data
+     1>..\..\..\..\src\transport_layer.cc(1135): warning C4244: '=' : conversion from 'SOCKET' to 'int', possible loss of data
+     1>..\..\..\..\src\transport_layer.cc(1157): warning C4002: too many actual parameters for macro 'ERRLOG1'
+     1>..\..\..\..\src\transport_layer.cc(1294): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1868) : see declaration of 'inet_ntoa'
+     1>..\..\..\..\src\transport_layer.cc(1568): warning C4305: 'return' : truncation from 'int' to 'bool'
+     1>..\..\..\..\src\transport_layer.cc(1579): warning C4305: 'return' : truncation from 'int' to 'bool'
+     1>..\..\..\..\src\transport_layer.cc(1586): warning C4305: 'return' : truncation from 'int' to 'bool'
+     1>..\..\..\..\src\transport_layer.cc(1608): warning C4305: 'return' : truncation from 'int' to 'bool'
+     1>..\..\..\..\src\transport_layer.cc(1619): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1850) : see declaration of 'inet_addr'
+     1>..\..\..\..\src\transport_layer.cc(1629): warning C4305: 'return' : truncation from 'int' to 'bool'
+         auth.cc
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>C:\Program Files (x86)\Windows Kits\8.1\Include\um\winnt.h(18582): warning C4005: 'KEY_READ' : macro redefinition
+                 D:\VS2013WorkSpace\geco-sctp-cplus\include\auth.h(86) : see previous definition of 'KEY_READ'
+     1>d:\vs2013workspace\geco-sctp-cplus\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+                 command-line arguments :  see previous definition of '_DEBUG'
+     1>..\..\..\..\src\auth.cc(112): warning C4267: 'argument' : conversion from 'size_t' to 'MD5::size_type', possible loss of data
+     1>..\..\..\..\src\auth.cc(341): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+         globals.cc
+     1>..\..\..\..\src\globals.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+                 command-line arguments :  see previous definition of '_DEBUG'
+     1>..\..\..\..\src\globals.cc(56): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>..\..\..\..\src\globals.cc(63): warning C4996: 'fscanf': This function or variable may be unsafe. Consider using fscanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(230) : see declaration of 'fscanf'
+     1>..\..\..\..\src\globals.cc(70): warning C4996: 'getpid': The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name: _getpid. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\process.h(222) : see declaration of 'getpid'
+     1>..\..\..\..\src\globals.cc(72): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+     1>..\..\..\..\src\globals.cc(73): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>..\..\..\..\src\globals.cc(121): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+     1>..\..\..\..\src\globals.cc(133): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\time.inl(112) : see declaration of 'localtime'
+     1>..\..\..\..\src\globals.cc(208): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+     1>..\..\..\..\src\globals.cc(214): warning C4244: '=' : conversion from 'time_t' to 'long', possible loss of data
+     1>..\..\..\..\src\globals.cc(263): warning C4101: 'mi' : unreferenced local variable
+     1>..\..\..\..\src\globals.cc(359): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+     1>..\..\..\..\src\globals.cc(365): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(356) : see declaration of 'sprintf'
+     1>..\..\..\..\src\globals.cc(317): warning C4101: 'mi' : unreferenced local variable
+     1>..\..\..\..\src\globals.cc(372): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(168) : see declaration of 'strerror'
+     1>..\..\..\..\src\globals.cc(467): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(112) : see declaration of 'strcpy'
+     1>..\..\..\..\src\globals.cc(474): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
+     1>..\..\..\..\src\globals.cc(502): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(112) : see declaration of 'strcpy'
+     1>..\..\..\..\src\globals.cc(509): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
+         gecotimer.cc
+     1>d:\vs2013workspace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+     1>d:\vs2013workspace\geco-sctp-cplus\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
+                 command-line arguments :  see previous definition of '_DEBUG'
          dispatch_layer.cc
      1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
@@ -9,9 +101,9 @@
                  command-line arguments :  see previous definition of '_DEBUG'
      1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-sctp-cplus\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h(638): warning C4018: '<' : signed/unsigned mismatch
-     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h(779): warning C4018: '<' : signed/unsigned mismatch
-     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h(974): warning C4244: '+=' : conversion from 'unsigned __int64' to 'uchar', possible loss of data
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h(651): warning C4018: '<' : signed/unsigned mismatch
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h(792): warning C4018: '<' : signed/unsigned mismatch
+     1>D:\VS2013WorkSpace\geco-sctp-cplus\include\dispatch_layer.h(987): warning C4244: '+=' : conversion from 'unsigned __int64' to 'uchar', possible loss of data
      1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(81): warning C4005: 'POLLIN' : macro redefinition
                  C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
      1>D:\VS2013WorkSpace\geco-sctp-cplus\include\transport_layer.h(82): warning C4005: 'POLLPRI' : macro redefinition
@@ -26,13 +118,14 @@
      1>..\..\..\..\src\dispatch_layer.cc(958): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(112) : see declaration of 'strcpy'
      1>..\..\..\..\src\dispatch_layer.cc(1015): warning C4101: 'padding_len' : unreferenced local variable
-     1>..\..\..\..\src\dispatch_layer.cc(1167): warning C4101: 'my_addres_size' : unreferenced local variable
+     1>..\..\..\..\src\dispatch_layer.cc(1164): warning C4101: 'my_addres_size' : unreferenced local variable
      1>..\..\..\..\src\dispatch_layer.cc(1121): warning C4101: 'suppoted_addr_types' : unreferenced local variable
-     1>..\..\..\..\src\dispatch_layer.cc(1418): warning C4305: '=' : truncation from 'int' to 'uchar'
-     1>..\..\..\..\src\dispatch_layer.cc(1418): warning C4309: '=' : truncation of constant value
-     1>..\..\..\..\src\dispatch_layer.cc(1427): warning C4018: '>=' : signed/unsigned mismatch
-     1>..\..\..\..\src\dispatch_layer.cc(1450): warning C4018: '>=' : signed/unsigned mismatch
-     1>..\..\..\..\src\dispatch_layer.cc(1832): warning C4805: '==' : unsafe mix of type 'bool' and type 'uint' in operation
+     1>..\..\..\..\src\dispatch_layer.cc(1646): warning C4305: '=' : truncation from 'int' to 'uchar'
+     1>..\..\..\..\src\dispatch_layer.cc(1646): warning C4309: '=' : truncation of constant value
+     1>..\..\..\..\src\dispatch_layer.cc(1655): warning C4018: '>=' : signed/unsigned mismatch
+     1>..\..\..\..\src\dispatch_layer.cc(1678): warning C4018: '>=' : signed/unsigned mismatch
+     1>..\..\..\..\src\dispatch_layer.cc(2060): warning C4805: '==' : unsafe mix of type 'bool' and type 'uint' in operation
+         Generating Code...
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1361,5): warning MSB8012: TargetPath(D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\geco-net_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1363,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-net_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
        Lib:
@@ -44,8 +137,8 @@
      1>Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored
      1>Ws2_32.lib(WS2_32.dll) : warning LNK4221: This object file does not define any previously undefined public symbols, so it will not be used by any link operation that consumes this library
          protocol-stack.vcxproj -> D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\x64\Debug\protocol-stack-lib.lib
-     1>Done Building Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\protocol-stack\protocol-stack.vcxproj" (Build target(s)).
+     1>Done Building Project "D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2013\geco-net\protocol-stack\protocol-stack.vcxproj" (Rebuild target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:01.17
+Time Elapsed 00:00:03.66

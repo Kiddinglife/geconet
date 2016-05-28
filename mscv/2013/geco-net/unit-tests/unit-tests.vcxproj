@@ -189,7 +189,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\unittets\main.txt" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
     <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
   </ItemGroup>

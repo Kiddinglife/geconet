@@ -425,21 +425,20 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 // USE MINIMUM_DELAY AS TOS
 #define IPTOS_DEFAULT (0xe0|0x1000) // Precedence 111 + TOS 1000 + MBZ 0
 
-enum hide_address_flag_t :uint
+enum IPAddrType :uint
 {
-    flag_HideLoopback = (1 << 0),
-    flag_HideLinkLocal = (1 << 1),
-    flag_HideSiteLocal = (1 << 2),
-    flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-    | flag_HideSiteLocal,
-    flag_HideAnycast = (1 << 3),
-    flag_HideMulticast = (1 << 4),
-    flag_HideBroadcast = (1 << 5),
-    flag_HideReserved = (1 << 6),
-    flag_Default = flag_HideBroadcast | flag_HideMulticast | flag_HideAnycast,
-    flag_HideAllExceptLoopback = (1 << 7),
-    flag_HideAllExceptLinkLocal = (1 << 8),
-    flag_HideAllExceptSiteLocal = (1 << 9)
+    LoopBackAddrType = (1 << 0),
+    LinkLocalAddrType = (1 << 1),
+    SiteLocalAddrType = (1 << 2),
+    AnyCastAddrType = (1 << 3),
+    MulticastAddrType = (1 << 4),
+    BroadcastAddrType = (1 << 5),
+    ReservedAddrType = (1 << 6),
+    AllExceptLoopbackAddrTypes = (1 << 7),
+    AllExceptLinkLocalAddrTypes = (1 << 8),
+    ExceptSiteLocalAddrTypes = (1 << 9),
+    AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
+    AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
 };
 
 /* union for handling either type of addresses: ipv4 and ipv6 */

@@ -1533,7 +1533,7 @@ void network_interface_t::add_user_cb(int fd, user_cb_fun_t cbfun, void* userDat
 
 bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
         int *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
-        const hide_address_flag_t flags)
+        const IPAddrType flags)
 {
 #ifdef WIN32
     union sockaddrunion *localAddresses = NULL;
@@ -1885,18 +1885,18 @@ bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
             continue;
         }
 
-        if (flags & flag_HideLoopback)
+        if (flags & LoopBackAddrType)
         {
-            if (!this->filter_address((union sockaddrunion*) toUse,
-                    flag_HideLoopback))
+            if (!this->typeofaddr((union sockaddrunion*) toUse,
+                    LoopBackAddrType))
             {
                 /* skip the loopback */
                 EVENTLOG1(VERBOSE, "Interface %d, skipping loopback", ii);
                 continue;
             }
         }
-        if (!this->filter_address((union sockaddrunion*) toUse,
-                flag_HideReserved))
+        if (!this->typeofaddr((union sockaddrunion*) toUse,
+                ReservedAddrType))
         {
             /* skip reserved */
             EVENTLOG1(VERBOSE, "Interface %d, skipping reserved", ii);
@@ -1991,76 +1991,76 @@ bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
 #endif
 }
 
-bool network_interface_t::filter_address(union sockaddrunion* newAddress,
-        hide_address_flag_t flags)
+bool network_interface_t::typeofaddr(union sockaddrunion* newAddress,
+        IPAddrType flags)
 {
     switch (saddr_family(newAddress))
     {
     case AF_INET:
         EVENTLOG(VERBOSE, "Trying IPV4 address\n");
         if ((IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr))
-                && (flags & flag_HideMulticast))
+                && (flags & MulticastAddrType))
                 || (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr))
-                        && (flags & flag_HideReserved))
+                        && (flags & ReservedAddrType))
                 || (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr))
-                        && (flags & flag_HideReserved))
+                        && (flags & ReservedAddrType))
                 || ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr))
-                        && (flags & flag_HideBroadcast))
+                        && (flags & BroadcastAddrType))
                 || ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr))
-                        && (flags & flag_HideLoopback))
+                        && (flags & LoopBackAddrType))
                 || ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr))
-                        && (flags & flag_HideAllExceptLoopback))
+                        && (flags & AllExceptLoopbackAddrTypes))
                 || (ntohl(newAddress->sin.sin_addr.s_addr) == INADDR_ANY))
         {
             EVENTLOG(VERBOSE, "Filtering IPV4 address\n");
-            return false;
+            return true;
         }
         break;
     case AF_INET6:
 #if defined (__linux__)
         if ((!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr))
-                && (flags & flag_HideAllExceptLoopback))
+                && (flags & AllExceptLoopbackAddrTypes))
                 || (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr))
-                        && (flags & flag_HideLoopback))
+                        && (flags & LoopBackAddrType))
                 || (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr))
-                        && (flags & flag_HideLinkLocal))
+                        && (flags & LinkLocalAddrType))
                 || (!IN6_IS_ADDR_LINKLOCAL(
                         &(newAddress->sin6.sin6_addr.s6_addr))
-                        && (flags & flag_HideAllExceptLinkLocal))
+                        && (flags & AllExceptLinkLocalAddrTypes))
                 || (!IN6_IS_ADDR_SITELOCAL(
                         &(newAddress->sin6.sin6_addr.s6_addr))
-                        && (flags & flag_HideAllExceptSiteLocal))
+                        && (flags & ExceptSiteLocalAddrTypes))
                 || (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr))
-                        && (flags & flag_HideSiteLocal))
+                        && (flags & SiteLocalAddrType))
                 || (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr.s6_addr))
-                        && (flags & flag_HideMulticast))
+                        && (flags & MulticastAddrType))
                 || IN6_IS_ADDR_UNSPECIFIED(
                         &(newAddress->sin6.sin6_addr.s6_addr)))
         {
             EVENTLOG(VERBOSE, "Filtering IPV6 address");
-            return false;
+            return true;
         }
 #else
         if (
-                (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptLoopback)) ||
-                (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideLoopback)) ||
-                (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptLinkLocal)) ||
-                (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideAllExceptSiteLocal)) ||
-                (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideLinkLocal)) ||
-                (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideSiteLocal)) ||
-                (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & flag_HideMulticast)) ||
+                (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLoopbackAddrTypes)) ||
+                (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & LoopBackAddrType)) ||
+                (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLinkLocalAddrTypes)) ||
+                (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & ExceptSiteLocalAddrTypes)) ||
+                (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & LinkLocalAddrType)) ||
+                (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & SiteLocalAddrType)) ||
+                (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & MulticastAddrType)) ||
                 IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr))
         )
         {
             EVENTLOG(VERBOSE, "Filtering IPV6 address");
-            return false;
+            return true;
         }
 #endif
         break;
     default:
         EVENTLOG(VERBOSE, "Default : Filtering Address");
-        return false;
+        return true;
         break;
     }
-    return true;
+    return false;
 }

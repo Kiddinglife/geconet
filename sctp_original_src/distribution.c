@@ -5043,9 +5043,9 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         localHostFound |= mdi_addressListContainsLocalhost(1,
                 &peerAddress[count]);
         linkLocalFound |= !(adl_filterInetAddress(&peerAddress[count],
-                flag_HideLinkLocal));
+                LinkLocalAddrType));
         siteLocalFound |= !(adl_filterInetAddress(&peerAddress[count],
-                flag_HideSiteLocal));
+                SiteLocalAddrType));
     }
 
     /* if (receivedFromPeer == FALSE) I send an INIT with my addresses to the peer */
@@ -5057,7 +5057,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
     else if ((receivedFromPeer == FALSE) && (localHostFound == FALSE))
     {
         /* only add loopback, if sending to a loopback */
-        filterFlags = (AddressScopingFlags) (flag_Default | flag_HideLoopback);
+        filterFlags = (AddressScopingFlags) (flag_Default | LoopBackAddrType);
 
         /* if (receivedFromPeer == TRUE) I got an INIT with addresses from the peer */
     }
@@ -5067,16 +5067,16 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         if (linkLocalFound)
         {
             filterFlags = (AddressScopingFlags) (flag_Default
-                    | flag_HideLoopback);
+                    | LoopBackAddrType);
         }
         else if (siteLocalFound)
         {
             filterFlags = (AddressScopingFlags) (flag_Default
-                    | flag_HideLinkLocal | flag_HideLoopback);
+                    | LinkLocalAddrType | LoopBackAddrType);
         }
         else
         {
-            filterFlags = (AddressScopingFlags) (flag_Default | flag_HideLocal);
+            filterFlags = (AddressScopingFlags) (flag_Default | AllLocalAddrTypes);
         }
     }
     else /* if ((receivedFromPeer == TRUE) && (localHostFound == TRUE)) */
@@ -5131,7 +5131,6 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                     }
                 }
                 break;
-#ifdef HAVE_IPV6
                 case AF_INET6 :
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV6) != 0)
                 {
@@ -5142,7 +5141,6 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                     }
                 }
                 break;
-#endif
             default:
                 break;
             }

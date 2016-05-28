@@ -584,7 +584,7 @@ struct network_interface_t
         int sctp_fd,
         bool with_ipv6,
         int *max_mtu,
-        const hide_address_flag_t  flags);
+        const IPAddrType  flags);
     int  get_local_ip_addresses(sockaddrunion addresses[MAX_COUNT_LOCAL_IP_ADDR])
     {
         memset(addresses, 0,
@@ -621,9 +621,10 @@ struct network_interface_t
     /**
      * An address filtering function
      * @param newAddress  a pointer to a sockunion address
-     * @param flags       bit mask hiding (i.e. filtering) address classes
-     * returns TRUE flag NOT present ans address is not filtered, else FALSE flag present ans is filtered by mask
+     * @param flags  bit mask hiding (i.e. filtering) address classes
+     * @return TRUE  address type is found in newAddress
+     * else FALSE  address type NOT found in newAddress
      */
-    bool filter_address(union sockaddrunion* newAddress, hide_address_flag_t  flags);
+    bool typeofaddr(union sockaddrunion* newAddress, IPAddrType  flags);
 };
 #endif
