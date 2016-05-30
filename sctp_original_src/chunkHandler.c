@@ -160,7 +160,7 @@ static gint32 retrieveVLParamFromString(guint16 paramType, guchar * mstring,
                 || pType == VLPARAM_COOKIE || pType == VLPARAM_COOKIE_PRESERV
                 || pType == ECC_STALE_COOKIE_ERROR
                 || pType == VLPARAM_SUPPORTED_ADDR_TYPES
-                || pType == VLPARAM_PRSCTP || pType == VLPARAM_SET_PRIMARY
+                || pType == VLPARAM_PartialReliability || pType == VLPARAM_SET_PRIMARY
                 || pType == VLPARAM_ADAPTATION_LAYER_IND)
         {
             curs += ntohs(param_header->param_length);
@@ -712,10 +712,12 @@ void ch_enterCookiePreservative(ChunkID chunkID, unsigned int lifespanIncrement)
     }
 }
 
-/**
+/** 
+ * write_addrlist() DONE
  *  ch_enterIPaddresses appends local IP addresses to a chunk, usually an init or initAck
  */
-int ch_enterIPaddresses(ChunkID chunkID, union sockunion sock_addresses[],
+int ch_enterIPaddresses(ChunkID chunkID,
+union sockunion sock_addresses[],
         int noOfAddresses)
 {
     unsigned char *mstring;
@@ -822,7 +824,7 @@ gboolean ch_getPRSCTPfromCookie(ChunkID cookieCID)
         if (pLen < 4)
             return FALSE;
 
-        if (pType == VLPARAM_PRSCTP)
+        if (pType == VLPARAM_PartialReliability)
         {
             /* ha, we got one ! */
 
@@ -878,7 +880,7 @@ gboolean ch_getPRSCTPfromInitAck(ChunkID initAckCID)
                 "Scan variable parameters: Got type %u, len: %u, position %u",
                 pType, pLen, curs);
 
-        if (pType == VLPARAM_PRSCTP)
+        if (pType == VLPARAM_PartialReliability)
         {
             /* ha, we got one ! */
 
@@ -933,7 +935,7 @@ int ch_enterPRSCTPfromInit(ChunkID initAckCID, ChunkID initCID)
                 "Scan variable parameters: Got type %u, len: %u, position %u",
                 pType, pLen, curs);
 
-        if (pType == VLPARAM_PRSCTP)
+        if (pType == VLPARAM_PartialReliability)
         {
             /* ha, we got one ! */
 
@@ -1098,7 +1100,7 @@ int ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
         /* if both support PRSCTP, enter our PRSCTP parameter to INIT ACK chunk */
         if ((result >= 0) && (mdi_supportsPRSCTP() == TRUE))
         {
-            ch_addParameterToInitChunk(initAckID, VLPARAM_PRSCTP, 0, NULL);
+            ch_addParameterToInitChunk(initAckID, VLPARAM_PartialReliability, 0, NULL);
         }
 
     }
@@ -1180,7 +1182,7 @@ int ch_enterUnrecognizedParameters(ChunkID initCID, ChunkID AckCID,
         if (pType == VLPARAM_COOKIE_PRESERV
                 || pType == VLPARAM_SUPPORTED_ADDR_TYPES
                 || pType == VLPARAM_IPV4_ADDRESS
-                || pType == VLPARAM_IPV6_ADDRESS || pType == VLPARAM_PRSCTP)
+                || pType == VLPARAM_IPV6_ADDRESS || pType == VLPARAM_PartialReliability)
         {
 
             curs += pLen;
@@ -1316,7 +1318,7 @@ int ch_enterUnrecognizedErrors(ChunkID initAckID, unsigned int supportedTypes,
             oType = ntohs(vl_optionsPtr->param_type);
             oLen = ntohs(vl_optionsPtr->param_length);
 
-            if (oType == VLPARAM_PRSCTP)
+            if (oType == VLPARAM_PartialReliability)
             {
                 *peerSupportsPRSCTP = FALSE;
                 curs += pLen;
@@ -1456,7 +1458,7 @@ int ch_enterUnrecognizedErrors(ChunkID initAckID, unsigned int supportedTypes,
                 curs++;
 
         }
-        else if (pType == VLPARAM_PRSCTP)
+        else if (pType == VLPARAM_PartialReliability)
         {
             event_log(EXTERNAL_EVENT, "found PRSCTP parameter - skipping it !");
             *peerSupportsPRSCTP = TRUE;

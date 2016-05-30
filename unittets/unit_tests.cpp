@@ -52,13 +52,11 @@ TEST(test_case_malloc, test_alloc_dealloc)
     {
         times++;
         char* intptr = (char*)single_client_alloc::allocate(j);
-        char* intptr1 = (char*)single_client_alloc::allocate(j);
         int mod = 0;
         int i;
         if (intptr != NULL)
             memset(intptr, 0, j); //3000ms
-        //single_client_alloc::deallocate(intptr, j);
-        single_client_alloc::deallocate(intptr1, j);
+        single_client_alloc::deallocate(intptr, j);
         if (j >= 5120) j = 0;
         if (times >= 1000000) break;
     }

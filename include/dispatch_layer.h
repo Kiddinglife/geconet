@@ -20,7 +20,7 @@
 #ifndef __INCLUDE_DISPATCH_LAYER_H
 #define __INCLUDE_DISPATCH_LAYER_H
 
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <vector>
 #include <list>
 #include <array>
@@ -445,7 +445,7 @@ class dispatch_layer_t
     uint tmp_peer_supported_types_;
 
     /*related to simple chunk send */
-    uchar curr_write_pos_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
+    uint curr_write_pos_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
     simple_chunk_t* simple_chunks_[MAX_CHUNKS_SIZE]; /* simple ctrl chunks to send*/
     bool completed_chunks_[MAX_CHUNKS_SIZE];/*if a chunk is completely constructed*/
     uchar simple_chunk_index_; /* current simple chunk index */
@@ -1323,7 +1323,7 @@ class dispatch_layer_t
     }
 
     /**
-     * find_first_chunk: looks for chunk_type in a newly received datagram
+     * find_first_chunk_of: looks for chunk_type in a newly received datagram
      * All chunks within the datagram are looked at, until one is found
      * that equals the parameter chunk_type.
      * @param  datagram     pointer to the newly received data
@@ -1331,7 +1331,7 @@ class dispatch_layer_t
      * @param  chunk_type   chunk type to look for
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
-    uchar* find_first_chunk(uchar * packet_value, uint packet_val_len,
+    uchar* find_first_chunk_of(uchar * packet_value, uint packet_val_len,
         uint chunk_type);
 
     /**
@@ -1367,15 +1367,48 @@ class dispatch_layer_t
      * @param [in] vlp_type type of paramter to scan for,
      * @param [in]
      * vlp_fixed pointer to the first parameter header, from which we start scanning
-     * @param [in] vlp_len    maximum length of parameter field, that may be scanned.
+     * @param [in] len    maximum length of parameter field, that may be scanned.
      * @return
-     * position of first parameter occurence, relative to where mstring pointed to
-     * i.e. 0 returned, when mstring points to the parameter we scan for.
-     * OR -1 if not found !!!!!!!
+     * position of first parameter occurence
+     * i.e.  NULL returned  if not found !!!!!!!
+     * supports all vlp type EXCEPT of
+     * VLPARAM_ECN_CAPABLE andVLPARAM_HOST_NAME_ADDR)
      */
-    uint find_vlparam(uint vlp_type, uchar* vlp_fixed, uint vlp_len)
+    uchar* find_first_vlparam_of(uint vlp_type, uchar* vlp_fixed, uint len)
     {
-        return 0;
+        ushort vlp_len;
+        uint padding_len;
+        uint read_len = 0;
+        uint vlptype;
+        vlparam_fixed_t* vlp;
+
+        while (read_len < len)
+        {
+            /*1) validate reset of space of packet*/
+            if (len - read_len < VLPARAM_FIXED_SIZE)
+            {
+                EVENTLOG(WARNNING_ERROR,
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+                return NULL;
+            }
+
+            vlp = (vlparam_fixed_t*)vlp_fixed;
+            vlptype = ntohs(vlp->param_type);
+            vlp_len = ntohs(vlp->param_length);
+            if (len < VLPARAM_FIXED_SIZE || len + read_len > len)
+                return NULL;
+
+            if (vlptype == vlp_type)
+            {
+                return vlp_fixed;
+            }
+
+            read_len += vlp_len;
+            padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
+            read_len += padding_len;
+            vlp_fixed += read_len;
+        }
+        return NULL;
     }
 
     /**
@@ -1383,7 +1416,7 @@ class dispatch_layer_t
      * @param [out] chunkid addres wrriten to this chunk
      * @param [in] local_addreslist  the addres that will be written to chunk
      */
-    int write_local_addrlist(uint chunkid,
+    int write_addrlist(uint chunkid,
         sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
         int local_addreslist_size);
 
@@ -1393,6 +1426,7 @@ class dispatch_layer_t
     int write_cookie(uint initCID, uint initAckID,
         init_chunk_fixed_t* init_fixed, init_chunk_fixed_t* initAck_fixed,
         uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
+        ushort last_dest_port, ushort last_src_port,
         sockaddrunion local_Addresses[], uint num_local_Addresses,
         sockaddrunion peer_Addresses[], uint num_peer_Addresses);
 
@@ -1434,20 +1468,16 @@ class dispatch_layer_t
             return 0;
         }
 
-        uint curr_pos;
-        uint vlparams_len;
-        cookie_preservative_t* preserv;
         init_chunk_t* init = ((init_chunk_t*)simple_chunks_[chunkID]);
-        vlparams_len = init->chunk_header.chunk_length - CHUNK_FIXED_SIZE -
+        uint vlparams_len = init->chunk_header.chunk_length - CHUNK_FIXED_SIZE -
             INIT_CHUNK_FIXED_SIZE;
-        curr_pos = find_vlparam(VLPARAM_COOKIE_PRESEREASONV,
+        uchar* curr_pos = find_first_vlparam_of(VLPARAM_COOKIE_PRESEREASONV,
             init->variableParams, vlparams_len);
-        if (curr_pos >= 0)
+        if (curr_pos != NULL)
         {
             /* found cookie preservative */
-            preserv = (cookie_preservative_t*)(init->variableParams + curr_pos);
-            return (ntohl(preserv->cookieLifetimeInc) +
-                get_cookielifespan_from_statectrl());
+            return ntohl(((cookie_preservative_t*)curr_pos)->cookieLifetimeInc)
+                + get_cookielifespan_from_statectrl();
         }
         else
         {

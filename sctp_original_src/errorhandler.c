@@ -118,7 +118,7 @@ int eh_recv_chunk(SCTP_simple_chunk * errchunk)
     case ECC_UNRECOGNIZED_PARAMS:
         event_logi(EXTERNAL_EVENT, "Unrecognized Params Error with Len %u ", cause_len);
         header = (SCTP_vlparam_header*)data;
-        if (ntohs(header->param_type) == VLPARAM_PRSCTP) {
+        if (ntohs(header->param_type) == VLPARAM_PartialReliability) {
             /* set peer does not understand PRSCTP - do not use it in this ASSOC ! */
             event_log(EXTERNAL_EVENT, "Unrecognized Parameter: PR_SCTP ");
         }

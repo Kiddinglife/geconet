@@ -660,7 +660,7 @@ public:
         }
 
         pool_num = 0;
-        memset(free_list, 0, NFREELISTS);
+        memset((void**)free_list, 0, NFREELISTS);
         start_free = end_free = 0;
         heap_size = 0;
     }

@@ -215,13 +215,13 @@ struct data_chunk_nossntsn_t
 #define VLPARAM_HOST_NAME_ADDR          0x000B
 #define VLPARAM_SUPPORTED_ADDR_TYPES    0x000C
 
-#define VLPARAM_PRSCTP                  0xC000
+#define VLPARAM_PartialReliability                  0xC000
 #define VLPARAM_ADDIP                   0xC001
 #define VLPARAM_DELIP                   0xC002
 #define VLPARAM_EREASONROR_CAUSE_INDICATION  0xC003
 #define VLPARAM_SET_PRIMARY             0xC004
 #define VLPARAM_SUCCESS_REPORT          0xC005
-#define VLPARAM_ADAPTATION_LAYEREASON_IND    0xC006
+#define VLPARAM_ADAPTATION_LAYER_IND    0xC006
 
 #define VLPARAM_FIXED_SIZE  (2 * sizeof(ushort))
 /* Header of variable length parameters */
@@ -402,8 +402,8 @@ struct forward_tsn_chunk_t
 #endif
 struct cookie_fixed_t
 {
-    init_chunk_fixed_t z_side_initAck;
-    init_chunk_fixed_t a_side_init;
+    init_chunk_fixed_t local_initack;
+    init_chunk_fixed_t peer_init;
     ushort src_port;
     ushort dest_port;
     uint local_tie_tag;
@@ -432,6 +432,8 @@ struct cookie_echo_chunk_t
     cookie_fixed_t cookie;
     uchar vlparams[MAX_COOKIE_VLPARAMS_SIZE];
 };
+#define COOKIE_PARAM_SIZE \
+(COOKIE_FIXED_SIZE+VLPARAM_FIXED_SIZE)
 /* the variable parameters should be appended in thatsame order to the cookie*/
 struct cookie_param_t
 {
