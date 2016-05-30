@@ -530,7 +530,7 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 
 }
 
-inline unsigned int sockaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunion* peer_sa)
+unsigned int sockaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunion* peer_sa)
 {
     ushort local_saaf = saddr_family(local_sa);
     ushort peer_saaf = saddr_family(peer_sa);
