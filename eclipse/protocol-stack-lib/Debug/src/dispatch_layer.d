@@ -11,7 +11,7 @@ src/dispatch_layer.d: \
  /home/jakez/2016209/geco-sctp-cplus/include/gecotimer.h \
  /home/jakez/2016209/geco-sctp-cplus/include/protoco-stack.h \
  /home/jakez/2016209/geco-sctp-cplus/include/geco-ds-malloc.h \
- /home/jakez/2016209/geco-sctp-cplus/include/poller.h \
+ /home/jakez/2016209/geco-sctp-cplus/include/transport_layer.h \
  /home/jakez/2016209/geco-sctp-cplus/include/dispatch_layer.h \
  /home/jakez/2016209/geco-sctp-cplus/include/auth.h
 
@@ -37,7 +37,7 @@ src/dispatch_layer.d: \
 
 /home/jakez/2016209/geco-sctp-cplus/include/geco-ds-malloc.h:
 
-/home/jakez/2016209/geco-sctp-cplus/include/poller.h:
+/home/jakez/2016209/geco-sctp-cplus/include/transport_layer.h:
 
 /home/jakez/2016209/geco-sctp-cplus/include/dispatch_layer.h:
 

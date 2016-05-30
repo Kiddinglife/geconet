@@ -20,7 +20,7 @@
 #ifndef __INCLUDE_DISPATCH_LAYER_H
 #define __INCLUDE_DISPATCH_LAYER_H
 
-#include <unordered_map>
+#include <tr1/unordered_map>
 #include <vector>
 #include <list>
 #include <array>
@@ -360,6 +360,22 @@ struct retransmit_controller_t
     std::vector<data_chunk_t*> prChunks;  //fixme what is the type used ?
 };
 
+struct transportaddr_hash_functor  //hash 函数
+{
+    size_t operator()(transport_addr_t &addr) const
+    {
+        return  sockaddr2hashcode(&(addr.local_saddr), &(addr.peer_saddr));
+    }
+};
+
+struct transportaddr_cmp_functor //比较函数 ==
+{
+    bool operator()(transport_addr_t &addr1, transport_addr_t &addr2) const
+    {
+        return saddr_equals(&(addr1.local_saddr), &(addr2.local_saddr)) && saddr_equals(&(addr1.peer_saddr), &(addr2.peer_saddr));
+    }
+};
+
 struct network_interface_t;
 class dispatch_layer_t
 {
@@ -367,6 +383,7 @@ class dispatch_layer_t
     bool dispatch_layer_initialized;
 
     /* many diferent channels belongs to a same geco instance*/
+    std::tr1::unordered_map<transport_addr_t, channel_t*, transportaddr_hash_functor, transportaddr_cmp_functor> channels1_;
     std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
     std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
 

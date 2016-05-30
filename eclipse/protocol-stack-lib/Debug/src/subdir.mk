@@ -8,21 +8,21 @@ CC_SRCS += \
 /home/jakez/2016209/geco-sctp-cplus/src/dispatch_layer.cc \
 /home/jakez/2016209/geco-sctp-cplus/src/gecotimer.cc \
 /home/jakez/2016209/geco-sctp-cplus/src/globals.cc \
-/home/jakez/2016209/geco-sctp-cplus/src/poller.cc 
+/home/jakez/2016209/geco-sctp-cplus/src/transport_layer.cc 
 
 CC_DEPS += \
 ./src/auth.d \
 ./src/dispatch_layer.d \
 ./src/gecotimer.d \
 ./src/globals.d \
-./src/poller.d 
+./src/transport_layer.d 
 
 OBJS += \
 ./src/auth.o \
 ./src/dispatch_layer.o \
 ./src/gecotimer.o \
 ./src/globals.o \
-./src/poller.o 
+./src/transport_layer.o 
 
 
 # Each subdirectory must supply rules for building sources it contributes
@@ -54,7 +54,7 @@ src/globals.o: /home/jakez/2016209/geco-sctp-cplus/src/globals.cc
 	@echo 'Finished building: $<'
 	@echo ' '
 
-src/poller.o: /home/jakez/2016209/geco-sctp-cplus/src/poller.cc
+src/transport_layer.o: /home/jakez/2016209/geco-sctp-cplus/src/transport_layer.cc
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -std=c++0x -I"/home/jakez/2016209/geco-sctp-cplus/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

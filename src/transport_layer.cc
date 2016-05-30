@@ -210,29 +210,7 @@ int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum)
     }
     return 0;
 }
-bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
-{
-    switch (saddr_family(a))
-    {
-    case AF_INET:
-        return
-        saddr_family(b) == AF_INET &&
-        s4addr(&a->sin) == s4addr(&b->sin)
-                && a->sin.sin_port == b->sin.sin_port;
-        break;
-    case AF_INET6:
-        return saddr_family(b) == AF_INET6
-                && a->sin6.sin6_port == b->sin6.sin6_port
-                && memcmp(s6addr(&a->sin6), s6addr(&b->sin6),
-                        sizeof(s6addr(&a->sin6)) == 0);
-        break;
-    default:
-        ERRLOG1(MAJOR_ERROR, "Address family %d not supported",
-                saddr_family(a));
-        return false;
-        break;
-    }
-}
+
 
 void reactor_t::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
 {
