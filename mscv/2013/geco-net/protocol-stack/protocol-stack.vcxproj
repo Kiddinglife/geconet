@@ -119,8 +119,8 @@
     </Link>
     <Lib>
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common.lib;Crypt.lib;Math.lib;Tunnel.lib;</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../../../thirdparty/cat/lib/release/;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common_Debugx64.lib;Crypt_Debugx64.lib;Math_Debugx64.lib;Tunnel_Debugx64.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -176,7 +176,7 @@
       <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common.lib;Crypt.lib;Math.lib;Tunnel.lib;</AdditionalDependencies>
     </Lib>
     <Lib>
-      <AdditionalLibraryDirectories>../../../../thirdparty/cat/lib/release/;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -193,7 +193,7 @@
     <ClInclude Include="..\..\..\..\include\globals.h" />
     <ClInclude Include="..\..\..\..\include\auth.h" />
     <ClInclude Include="..\..\..\..\include\messages.h" />
-    <ClInclude Include="..\..\..\..\include\poller.h" />
+    <ClInclude Include="..\..\..\..\include\transport_layer.h" />
     <ClInclude Include="..\..\..\..\include\protoco-stack.h" />
   </ItemGroup>
   <ItemGroup>
@@ -201,7 +201,7 @@
     <ClCompile Include="..\..\..\..\src\gecotimer.cc" />
     <ClCompile Include="..\..\..\..\src\globals.cc" />
     <ClCompile Include="..\..\..\..\src\auth.cc" />
-    <ClCompile Include="..\..\..\..\src\poller.cc" />
+    <ClCompile Include="..\..\..\..\src\transport_layer.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

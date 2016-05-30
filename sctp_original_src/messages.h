@@ -218,7 +218,7 @@ SCTP_data_chunk;
 #define VLPARAM_HOST_NAME_ADDR          0x000B
 #define VLPARAM_SUPPORTED_ADDR_TYPES    0x000C
 
-#define VLPARAM_PRSCTP                  0xC000
+#define VLPARAM_PartialReliability                  0xC000
 #define VLPARAM_ADDIP                   0xC001
 #define VLPARAM_DELIP                   0xC002
 #define VLPARAM_ERROR_CAUSE_INDICATION  0xC003

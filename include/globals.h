@@ -281,14 +281,14 @@ extern void error_log_sys1(short error_loglvl, const char *module_name,
 
 //<---------------- time-------------------->
 typedef uint TimerID;
-#define TIMER_TYPE_INIT       0
+#define   TIMER_TYPE_INIT       0
 #define   TIMER_TYPE_SHUTDOWN   1
 #define   TIMER_TYPE_RTXM       3
 #define   TIMER_TYPE_SACK       2
 #define   TIMER_TYPE_CWND       4
 #define   TIMER_TYPE_HEARTBEAT  5
 #define   TIMER_TYPE_USER       6
-#define MAX(a,b) (a>b)?(a):(b)
+#define   MAX(a,b) (a>b)?(a):(b)
 #define fills_timeval(timeval_ptr, time_t_inteval)\
 (timeval_ptr)->tv_sec = (time_t_inteval) / 1000;\
 (timeval_ptr)->tv_usec = ((time_t_inteval) % 1000) * 1000;
@@ -425,21 +425,21 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 // USE MINIMUM_DELAY AS TOS
 #define IPTOS_DEFAULT (0xe0|0x1000) // Precedence 111 + TOS 1000 + MBZ 0
 
-enum hide_address_flag_t
-{
-    flag_HideLoopback = (1 << 0),
-    flag_HideLinkLocal = (1 << 1),
-    flag_HideSiteLocal = (1 << 2),
-    flag_HideLocal = flag_HideLoopback | flag_HideLinkLocal
-            | flag_HideSiteLocal,
-    flag_HideAnycast = (1 << 3),
-    flag_HideMulticast = (1 << 4),
-    flag_HideBroadcast = (1 << 5),
-    flag_HideReserved = (1 << 6),
-    flag_Default = flag_HideBroadcast | flag_HideMulticast | flag_HideAnycast,
-    flag_HideAllExceptLoopback = (1 << 7),
-    flag_HideAllExceptLinkLocal = (1 << 8),
-    flag_HideAllExceptSiteLocal = (1 << 9)
+enum IPAddrType
+    :uint
+    {
+        LoopBackAddrType = (1 << 0),
+    LinkLocalAddrType = (1 << 1),
+    SiteLocalAddrType = (1 << 2),
+    AnyCastAddrType = (1 << 3),
+    MulticastAddrType = (1 << 4),
+    BroadcastAddrType = (1 << 5),
+    ReservedAddrType = (1 << 6),
+    AllExceptLoopbackAddrTypes = (1 << 7),
+    AllExceptLinkLocalAddrTypes = (1 << 8),
+    ExceptSiteLocalAddrTypes = (1 << 9),
+    AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
+    AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
 };
 
 /* union for handling either type of addresses: ipv4 and ipv6 */
@@ -448,6 +448,13 @@ union sockaddrunion
     struct sockaddr sa;
     struct sockaddr_in sin;
     struct sockaddr_in6 sin6;
+};
+
+// key of channel
+struct transport_addr_t
+{
+    sockaddrunion local_saddr;
+    sockaddrunion peer_saddr;
 };
 
 /* converts address-string
@@ -460,7 +467,41 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
         bool ip4 = true);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len,
         ushort* portnum);
-extern bool saddr_equals(sockaddrunion *one, sockaddrunion *two);
+inline extern bool saddr_equals(sockaddrunion *a, sockaddrunion *b)
+{
+    switch (saddr_family(a))
+    {
+    case AF_INET:
+        return
+        saddr_family(b) == AF_INET &&
+        s4addr(&a->sin) == s4addr(&b->sin)
+                && a->sin.sin_port == b->sin.sin_port;
+        break;
+    case AF_INET6:
+        return saddr_family(b) == AF_INET6
+                && a->sin6.sin6_port == b->sin6.sin6_port
+                && memcmp(s6addr(&a->sin6), s6addr(&b->sin6),
+                        sizeof(s6addr(&a->sin6)) == 0);
+        break;
+    default:
+        ERRLOG1(MAJOR_ERROR, "Address family %d not supported",
+                saddr_family(a));
+        return false;
+        break;
+    }
+}
+
+//! From http://www.azillionmonkeys.com/qed/hash.html
+//! Author of main code is Paul Hsieh. I just added some convenience functions
+//! Also note http://burtleburtle.net/bob/hash/doobs.html, which shows that this is 20%
+//! faster than the one on that page but has more collisions
+extern unsigned long SuperFastHash(const char * data, int length);
+extern unsigned long SuperFastHashIncremental(const char * data, int len,
+        unsigned int lastHash);
+extern unsigned long SuperFastHashFile(const char * filename);
+extern unsigned long SuperFastHashFilePtr(FILE *fp);
+extern unsigned int sockaddr2hashcode(const sockaddrunion* local_sa,
+        const sockaddrunion* peer_sa);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10

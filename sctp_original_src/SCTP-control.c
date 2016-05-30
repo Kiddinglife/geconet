@@ -377,7 +377,7 @@ union sockunion* destinationList,
             event_logi(VERBOSE, "1: supportedTypes : %u", supportedTypes);
 
             if (withPRSCTP) {
-                ch_addParameterToInitChunk(initCID, VLPARAM_PRSCTP, 0, NULL);
+                ch_addParameterToInitChunk(initCID, VLPARAM_PartialReliability, 0, NULL);
             }
 
 #ifdef BAKEOFF
@@ -706,7 +706,7 @@ int sctlr_init(SCTP_init * init)
         /* free abort chunk */
         ch_deleteChunk(abortCID);
         /* delete all data of this association */
-        if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) != NULL) 
+        if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) != NULL)
         {
             bu_unlock_sender(NULL);
             mdi_deleteCurrentAssociation();
@@ -719,15 +719,15 @@ int sctlr_init(SCTP_init * init)
     }
 
     result = mdi_readLastFromAddress(&last_source);
-    if (result != 0) 
+    if (result != 0)
     {
-        if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL) 
+        if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
         {
             mdi_clearAssociationData();
             return_state = STATE_STOP_PARSING_REMOVED;
             return return_state;
         }
-        if (localData->initTimer != 0) 
+        if (localData->initTimer != 0)
         {
             sctp_stopTimer(localData->initTimer);
             localData->initTimer = 0;
@@ -762,7 +762,7 @@ int sctlr_init(SCTP_init * init)
         supportedTypes = mdi_getSupportedAddressTypes();
 
         nrAddresses = ch_IPaddresses(initCID, supportedTypes, rAddresses, &peerSupportedTypes, &last_source);
-        
+
 
         if ((supportedTypes & peerSupportedTypes) == 0)
             error_log(ERROR_FATAL, "BAKEOFF: Program error, no common address types in sctlr_init()");
