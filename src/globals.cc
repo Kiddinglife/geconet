@@ -533,14 +533,7 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 unsigned int sockaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunion* peer_sa)
 {
     ushort local_saaf = saddr_family(local_sa);
-    ushort peer_saaf = saddr_family(peer_sa);
-    if (local_saaf != peer_saaf)
-    {
-        ERRLOG(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::local_saaf != peer_saaf !");
-    }
-
-    unsigned int lastHash = SuperFastHashIncremental((const char*)&local_saaf, sizeof(local_saaf), sizeof(local_saaf));
-    lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_port, sizeof(local_sa->sin.sin_port), lastHash);
+    unsigned int lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_port, sizeof(local_sa->sin.sin_port), local_saaf);
     if (local_saaf == AF_INET)
     {
         lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_addr.s_addr,
@@ -555,9 +548,9 @@ unsigned int sockaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunio
     {
         ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", local_saaf);
     }
-
-    lastHash = SuperFastHashIncremental((const char*)&peer_saaf, sizeof(peer_saaf), lastHash);
-    lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin.sin_port, sizeof(peer_sa->sin.sin_port), lastHash);
+    ushort peer_saaf = saddr_family(peer_sa);
+    lastHash =  SuperFastHashIncremental((const char*)&peer_sa->sin.sin_port,
+        sizeof(peer_sa->sin.sin_port), lastHash);
     if (peer_saaf == AF_INET)
     {
         return SuperFastHashIncremental((const char*)&peer_sa->sin.sin_addr.s_addr,

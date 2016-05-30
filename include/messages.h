@@ -215,7 +215,7 @@ struct data_chunk_nossntsn_t
 #define VLPARAM_HOST_NAME_ADDR          0x000B
 #define VLPARAM_SUPPORTED_ADDR_TYPES    0x000C
 
-#define VLPARAM_PartialReliability                  0xC000
+#define VLPARAM_UNRELIABILITY                  0xC000
 #define VLPARAM_ADDIP                   0xC001
 #define VLPARAM_DELIP                   0xC002
 #define VLPARAM_EREASONROR_CAUSE_INDICATION  0xC003

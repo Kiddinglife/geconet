@@ -377,7 +377,7 @@ union sockunion* destinationList,
             event_logi(VERBOSE, "1: supportedTypes : %u", supportedTypes);
 
             if (withPRSCTP) {
-                ch_addParameterToInitChunk(initCID, VLPARAM_PartialReliability, 0, NULL);
+                ch_addParameterToInitChunk(initCID, VLPARAM_UNRELIABILITY, 0, NULL);
             }
 
 #ifdef BAKEOFF

@@ -1297,7 +1297,7 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID,
         num_local_Addresses, num_peer_Addresses);
     write_addrlist(initAckID, local_Addresses, num_local_Addresses);
     write_addrlist(initAckID, peer_Addresses, num_peer_Addresses);
-    VLPARAM_PartialReliability;
+    VLPARAM_UNRELIABILITY;
     return 0;
 }
 
