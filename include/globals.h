@@ -457,6 +457,7 @@ struct transport_addr_t
     sockaddrunion peer_saddr;
 };
 
+
 /* converts address-string
  * (hex for ipv6, dotted decimal for ipv4 to a sockaddrunion structure)
  *  str == NULL will bitzero saddr used as 'ANY ADRESS 0.0.0.0'
