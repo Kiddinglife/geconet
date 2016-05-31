@@ -780,7 +780,8 @@ int sctlr_init(SCTP_init * init)
             0, lAddresses, nlAddresses, rAddresses, nrAddresses);
 
 
-        process_further = ch_enterUnrecognizedParameters(initCID, initAckCID, supportedTypes);
+        process_further = ch_enterUnrecognizedParameters(initCID, initAckCID,
+                supportedTypes);
 
         if (process_further == -1) {
             /*   ch_deleteChunk(initAckCID);
