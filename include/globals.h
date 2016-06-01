@@ -75,7 +75,7 @@
 
 #include "config.h"
 #include "messages.h"
-
+const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 #define GRANULARITY 1 /*ms default interval to timeout when no timers in poll*/
 
 /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
@@ -501,8 +501,9 @@ extern unsigned long SuperFastHashIncremental(const char * data, int len,
         unsigned int lastHash);
 extern unsigned long SuperFastHashFile(const char * filename);
 extern unsigned long SuperFastHashFilePtr(FILE *fp);
-extern unsigned int sockaddr2hashcode(const sockaddrunion* local_sa,
+extern unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
         const sockaddrunion* peer_sa);
+extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10

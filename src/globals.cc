@@ -28,21 +28,10 @@ static char traced_modules[TRACE_MUDULE_SIZE][70];
 static int error_trace_levels[TRACE_MUDULE_SIZE];
 static int event_trace_levels[TRACE_MUDULE_SIZE];
 static const char* error_loglvls_str[4] =
-{
-    "fatal_error_exit",
-    "major_error_abort",
-    "minor_error",
-    "lwarnning_error"
-};
+{ "fatal_error_exit", "major_error_abort", "minor_error", "lwarnning_error" };
 static const char* event_loglvls_str[6] =
-{
-    "extevent_unexpected",
-    "extevent",
-    "intevent_important",
-    "intevent",
-    "VERBOSE",
-    "lvverbos"
-};
+{ "extevent_unexpected", "extevent", "intevent_important", "intevent",
+        "VERBOSE", "lvverbos" };
 
 void read_trace_levels(void)
 {
@@ -60,16 +49,16 @@ void read_trace_levels(void)
         for (i = 0; i < TRACE_MUDULE_SIZE; i++)
         {
             ret = fscanf(fptr, "%s%d%d", traced_modules[i],
-                &error_trace_levels[i], &event_trace_levels[i]);
+                    &error_trace_levels[i], &event_trace_levels[i]);
             if (ret >= 1)
             {
                 if (strcmp(traced_modules[i], "LOGFILE") == 0)
                 {
                     printf(
-                        "Logging all errors and events to file ./tmp%d.log\n",
-                        (int)getpid());
+                            "Logging all errors and events to file ./tmp%d.log\n",
+                            (int) getpid());
                     fileTrace = true;
-                    sprintf(filename, "./tmp%d.log", (int)getpid());
+                    sprintf(filename, "./tmp%d.log", (int) getpid());
                     logfile = fopen(filename, "w+");
                     return;
                 }
@@ -94,14 +83,14 @@ void read_trace_levels(void)
         globalTrace = true;
     }
     printf("globalTrace '%s', modules size '%d'\n",
-        globalTrace ? "TRUE" : "FALSE", noOftracedModules);
+            globalTrace ? "TRUE" : "FALSE", noOftracedModules);
     for (i = 0; i < noOftracedModules; i++)
         printf("%20s %2d %2d\n", traced_modules[i], error_trace_levels[i],
-        event_trace_levels[i]);
+                event_trace_levels[i]);
 }
 
 // -1 not found, >0 = module index
-static  int is_module_traced(const char* modulename)
+static int is_module_traced(const char* modulename)
 {
     for (int i = 0; i < TRACE_MUDULE_SIZE; i++)
     {
@@ -129,7 +118,7 @@ int gettimenow(struct timeval *tv, struct tm *the_time)
 {
     if (gettimenow(tv) > -1)
     {
-        time_t tt = (time_t)tv->tv_sec;
+        time_t tt = (time_t) tv->tv_sec;
         *the_time = *(localtime(&tt));
         return 0;
     }
@@ -144,8 +133,8 @@ int gettimenow_ms(time_t* ret)
     if (gettimenow(&now) > -1)
     {
         EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec,
-            now.tv_usec);
-        *ret = ((time_t)now.tv_sec) * 1000 + ((time_t)now.tv_usec) / 1000;
+                now.tv_usec);
+        *ret = ((time_t) now.tv_sec) * 1000 + ((time_t) now.tv_usec) / 1000;
         return 0;
     }
     else
@@ -159,8 +148,8 @@ int gettimenow_us(time_t* ret)
     if (gettimenow(&now) > -1)
     {
         EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec,
-            now.tv_usec);
-        *ret = ((time_t)now.tv_sec) * 1000000 + (time_t)now.tv_usec;
+                now.tv_usec);
+        *ret = ((time_t) now.tv_sec) * 1000000 + (time_t) now.tv_usec;
         return 0;
     }
     else
@@ -169,8 +158,7 @@ int gettimenow_us(time_t* ret)
     }
 }
 
-
-void  sum_time(timeval* a, timeval* b, timeval* result)
+void sum_time(timeval* a, timeval* b, timeval* result)
 {
 
     result->tv_sec = (a)->tv_sec + (b)->tv_sec;
@@ -202,7 +190,7 @@ int subtract_time(timeval* a, timeval* b)
     return ((retval < 0) ? -1 : retval);
 }
 
-void  sum_time(timeval* a, time_t inteval, timeval* result)
+void sum_time(timeval* a, time_t inteval, timeval* result)
 {
     timeval tv;
     fills_timeval(&tv, inteval);
@@ -219,8 +207,7 @@ void print_time_now(ushort level)
 {
     struct timeval now;
     gettimenow(&now);
-    EVENTLOG2(level, "Time now: %ld sec, %ld usec \n", now.tv_sec,
-        now.tv_usec);
+    EVENTLOG2(level, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
 }
 void print_timeval(timeval* tv)
 {
@@ -235,8 +222,8 @@ static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
     {
         // write fixed log header
         if (fprintf(fd, "%02d:%02d:%02d.%03d - ", the_time.tm_hour,
-            the_time.tm_min, the_time.tm_sec, (int)(tv.tv_usec / 1000))
-            < 1) // change to  ms
+                the_time.tm_min, the_time.tm_sec, (int) (tv.tv_usec / 1000))
+                < 1) // change to  ms
             return -1;
         // then write log msg
         if (vfprintf(fd, formate, ap) < 1)
@@ -258,18 +245,18 @@ void debug_print(FILE * fd, const char *f, ...)
 }
 
 extern void event_log1(short event_log_level, const char *module_name,
-    const char *log_info, ...)
+        const char *log_info, ...)
 {
     int mi;
-    struct timeval  tv;
-    struct tm  the_time;
+    struct timeval tv;
+    struct tm the_time;
 
     va_list va;
     va_start(va, log_info);
     bool f1 = globalTrace == true && event_log_level <= CURR_EVENT_LOG_LEVEL;
     int moduleindex = is_module_traced(module_name);
     bool f2 = globalTrace == false && moduleindex > 0
-        && event_log_level <= event_trace_levels[moduleindex];
+            && event_log_level <= event_trace_levels[moduleindex];
     if (f1 || f2)
     {
         if (event_log_level < VERBOSE)
@@ -277,33 +264,29 @@ extern void event_log1(short event_log_level, const char *module_name,
             if (fileTrace == true)
             {
                 debug_print(logfile, "Event in Module: %s............\n",
-                    module_name);
+                        module_name);
             }
             else
             {
                 debug_print(stdout, "Event in Module: %s............\n",
-                    module_name);
+                        module_name);
             }
         }
         gettimenow(&tv, &the_time);
         if (fileTrace == true)
         {
-            fprintf(logfile, "%02d:%02d:%02d.%03d - ",
-                the_time.tm_hour,
-                the_time.tm_min,
-                the_time.tm_sec,
-                (int)(tv.tv_usec / 1000));
+            fprintf(logfile, "%02d:%02d:%02d.%03d - ", the_time.tm_hour,
+                    the_time.tm_min, the_time.tm_sec,
+                    (int) (tv.tv_usec / 1000));
             vfprintf(logfile, log_info, va);
             fprintf(logfile, "\n");
             fflush(logfile);
         }
         else
         {
-            fprintf(stdout, "%02d:%02d:%02d.%03d - ",
-                the_time.tm_hour,
-                the_time.tm_min,
-                the_time.tm_sec,
-                (int)(tv.tv_usec / 1000));
+            fprintf(stdout, "%02d:%02d:%02d.%03d - ", the_time.tm_hour,
+                    the_time.tm_min, the_time.tm_sec,
+                    (int) (tv.tv_usec / 1000));
             vfprintf(stdout, log_info, va);
             fprintf(stdout, "\n");
             fflush(stdout);
@@ -312,7 +295,7 @@ extern void event_log1(short event_log_level, const char *module_name,
     va_end(va);
 }
 extern void error_log1(short error_loglvl, const char *module_name, int line_no,
-    const char *log_info, ...)
+        const char *log_info, ...)
 {
     int mi;
     va_list va;
@@ -321,23 +304,23 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
     bool f1 = globalTrace == true && error_loglvl <= CURR_EVENT_LOG_LEVEL;
     int moduleindex = is_module_traced(module_name);
     bool f2 = globalTrace == false && moduleindex > 0
-        && error_loglvl <= event_trace_levels[moduleindex];
+            && error_loglvl <= event_trace_levels[moduleindex];
     if (f1 || f2)
     {
         if (fileTrace == true)
         {
-            debug_print(logfile,
-                "Error[%2d,%s] in %s at line %d\n",
-                error_loglvl, error_loglvls_str[error_loglvl - 1], module_name, line_no);
+            debug_print(logfile, "Error[%2d,%s] in %s at line %d\n",
+                    error_loglvl, error_loglvls_str[error_loglvl - 1],
+                    module_name, line_no);
             /*   fprintf(logfile, "Error Info: ");*/
             vfprintf(logfile, log_info, va);
             fprintf(logfile, "\n");
         }
         else
         {
-            debug_print(stderr,
-                "Error[%2d,%s] in %s at line %d, ",
-                error_loglvl, error_loglvls_str[error_loglvl - 1], module_name, line_no);
+            debug_print(stderr, "Error[%2d,%s] in %s at line %d, ",
+                    error_loglvl, error_loglvls_str[error_loglvl - 1],
+                    module_name, line_no);
             /*   fprintf(logfile, "Error Info: ");*/
             vfprintf(stderr, log_info, va);
             fprintf(stderr, "\n");
@@ -367,7 +350,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
     }
 }
 void error_log_sys1(short error_log_level, const char *module_name, int line_no,
-    short errnumber)
+        short errnumber)
 {
     error_log1(error_log_level, module_name, line_no, strerror(errnumber));
 }
@@ -395,26 +378,26 @@ bool safe_before(uint seq1, uint seq2)
     // Ҳ����С��0�� �������ǵ���Ҫ
     // ʵ�������ǻ����Է���һ���ȱȽϵ����͸�������ͣ���֯�������Ĳ���
     // ����   return (uint64) (seq1 - seq2) < 0;
-    return ((int)(seq1 - seq2)) < 0;
+    return ((int) (seq1 - seq2)) < 0;
 }
 bool safe_after(uint seq1, uint seq2)
 {
-    return ((int)(seq2 - seq1)) < 0;
+    return ((int) (seq2 - seq1)) < 0;
 }
 bool safe_before(ushort seq1, ushort seq2)
 {
-    return ((short)(seq1 - seq2)) < 0;
+    return ((short) (seq1 - seq2)) < 0;
 }
 bool safe_after(ushort seq1, ushort seq2)
 {
-    return ((short)(seq2 - seq1)) < 0;
+    return ((short) (seq2 - seq1)) < 0;
 }
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
 bool safe_between(uint seq1, uint seq2, uint seq3)
 {
     return safe_before(seq1, seq3) ?
-        seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
+            seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
 }
 // @pre make sure seq1 <= seq3
 bool unsafe_between(uint seq1, uint seq2, uint seq3)
@@ -427,8 +410,7 @@ bool unsafe_between(uint seq1, uint seq2, uint seq3)
  * @param  two pointer to other chunk data
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
-int sort_tsn(const internal_data_chunk_t& one,
-    const internal_data_chunk_t& two)
+int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two)
 {
     if (safe_before(one.chunk_tsn, two.chunk_tsn))
         return -1;
@@ -438,7 +420,7 @@ int sort_tsn(const internal_data_chunk_t& one,
         return 0; /* one==two */
 }
 int sort_ssn(const internal_stream_data_t& one,
-    const internal_stream_data_t& two)
+        const internal_stream_data_t& two)
 {
     if (one.stream_id < two.stream_id)
     {
@@ -529,42 +511,76 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
     out[strIndex++] = 0;
 
 }
-
-unsigned int sockaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunion* peer_sa)
+unsigned int sockaddr2hashcode(const sockaddrunion* sa)
 {
-    ushort local_saaf = saddr_family(local_sa);
-    unsigned int lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_port, sizeof(local_sa->sin.sin_port), local_saaf);
+    ushort local_saaf = saddr_family(sa);
+    unsigned int lastHash = SuperFastHashIncremental(
+            (const char*) &sa->sin.sin_port, sizeof(sa->sin.sin_port),
+            local_saaf);
     if (local_saaf == AF_INET)
     {
-        lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_addr.s_addr,
-            sizeof(in_addr), lastHash);
+        lastHash = SuperFastHashIncremental(
+                (const char*) &sa->sin.sin_addr.s_addr, sizeof(in_addr),
+                lastHash);
     }
     else if (local_saaf == AF_INET6)
     {
-        lastHash = SuperFastHashIncremental((const char*)&local_sa->sin6.sin6_addr.s6_addr,
-            sizeof(in6_addr), lastHash);
+        lastHash = SuperFastHashIncremental(
+                (const char*) &sa->sin6.sin6_addr.s6_addr, sizeof(in6_addr),
+                lastHash);
     }
     else
     {
-        ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", local_saaf);
+        ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)",
+                local_saaf);
+    }
+    return lastHash;
+}
+unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
+        const sockaddrunion* peer_sa)
+{
+    ushort local_saaf = saddr_family(local_sa);
+    unsigned int lastHash = SuperFastHashIncremental(
+            (const char*) &local_sa->sin.sin_port,
+            sizeof(local_sa->sin.sin_port), local_saaf);
+    if (local_saaf == AF_INET)
+    {
+        lastHash = SuperFastHashIncremental(
+                (const char*) &local_sa->sin.sin_addr.s_addr, sizeof(in_addr),
+                lastHash);
+    }
+    else if (local_saaf == AF_INET6)
+    {
+        lastHash = SuperFastHashIncremental(
+                (const char*) &local_sa->sin6.sin6_addr.s6_addr,
+                sizeof(in6_addr), lastHash);
+    }
+    else
+    {
+        ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)",
+                local_saaf);
     }
     ushort peer_saaf = saddr_family(peer_sa);
-    lastHash =  SuperFastHashIncremental((const char*)&peer_sa->sin.sin_port,
-        sizeof(peer_sa->sin.sin_port), lastHash);
+    lastHash = SuperFastHashIncremental((const char*) &peer_sa->sin.sin_port,
+            sizeof(peer_sa->sin.sin_port), lastHash);
     if (peer_saaf == AF_INET)
     {
-        return SuperFastHashIncremental((const char*)&peer_sa->sin.sin_addr.s_addr,
-            sizeof(in_addr), lastHash);
+        lastHash = SuperFastHashIncremental(
+                (const char*) &peer_sa->sin.sin_addr.s_addr, sizeof(in_addr),
+                lastHash);
     }
     else if (peer_saaf == AF_INET6)
     {
-        return SuperFastHashIncremental((const char*)&peer_sa->sin6.sin6_addr.s6_addr,
-            sizeof(in6_addr), lastHash);
+        lastHash = SuperFastHashIncremental(
+                (const char*) &peer_sa->sin6.sin6_addr.s6_addr,
+                sizeof(in6_addr), lastHash);
     }
     else
     {
-        ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", peer_saaf);
+        ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)",
+                peer_saaf);
     }
+    return lastHash;
 }
 
 #undef get16bits
@@ -577,7 +593,7 @@ unsigned int sockaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunio
 #endif
 
 static const int INCREMENTAL_READ_BLOCK = 65536;
-unsigned long  SuperFastHash(const char * data, int length)
+unsigned long SuperFastHash(const char * data, int length)
 {
     // All this is necessary or the hash does not match SuperFastHashIncremental
     int bytesRemaining = length;
@@ -585,25 +601,29 @@ unsigned long  SuperFastHash(const char * data, int length)
     int offset = 0;
     while (bytesRemaining >= INCREMENTAL_READ_BLOCK)
     {
-        lastHash = SuperFastHashIncremental(data + offset, INCREMENTAL_READ_BLOCK, lastHash);
+        lastHash = SuperFastHashIncremental(data + offset,
+                INCREMENTAL_READ_BLOCK, lastHash);
         bytesRemaining -= INCREMENTAL_READ_BLOCK;
         offset += INCREMENTAL_READ_BLOCK;
     }
     if (bytesRemaining > 0)
     {
-        lastHash = SuperFastHashIncremental(data + offset, bytesRemaining, lastHash);
+        lastHash = SuperFastHashIncremental(data + offset, bytesRemaining,
+                lastHash);
     }
     return lastHash;
 
     //	return SuperFastHashIncremental(data,len,len);
 }
-unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int lastHash)
+unsigned long SuperFastHashIncremental(const char * data, int len,
+        unsigned int lastHash)
 {
-    unsigned int hash = (unsigned int)lastHash;
+    unsigned int hash = (unsigned int) lastHash;
     unsigned int tmp;
     int rem;
 
-    if (len <= 0 || data == NULL) return 0;
+    if (len <= 0 || data == NULL)
+        return 0;
 
     rem = len & 3;
     len >>= 2;
@@ -621,18 +641,21 @@ unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int 
     /* Handle end cases */
     switch (rem)
     {
-        case 3: hash += get16bits(data);
-            hash ^= hash << 16;
-            hash ^= data[sizeof(unsigned short)] << 18;
-            hash += hash >> 11;
-            break;
-        case 2: hash += get16bits(data);
-            hash ^= hash << 11;
-            hash += hash >> 17;
-            break;
-        case 1: hash += *data;
-            hash ^= hash << 10;
-            hash += hash >> 1;
+    case 3:
+        hash += get16bits(data);
+        hash ^= hash << 16;
+        hash ^= data[sizeof(unsigned short)] << 18;
+        hash += hash >> 11;
+        break;
+    case 2:
+        hash += get16bits(data);
+        hash ^= hash << 11;
+        hash += hash >> 17;
+        break;
+    case 1:
+        hash += *data;
+        hash ^= hash << 10;
+        hash += hash >> 1;
     }
 
     /* Force "avalanching" of final 127 bits */
@@ -643,7 +666,7 @@ unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int 
     hash ^= hash << 25;
     hash += hash >> 6;
 
-    return (unsigned int)hash;
+    return (unsigned int) hash;
 
 }
 unsigned long SuperFastHashFile(const char * filename)
@@ -666,17 +689,18 @@ unsigned long SuperFastHashFilePtr(FILE *fp)
     while (bytesRemaining >= (int) sizeof(readBlock))
     {
         fread(readBlock, sizeof(readBlock), 1, fp);
-        lastHash = SuperFastHashIncremental(readBlock, (int) sizeof(readBlock), lastHash);
+        lastHash = SuperFastHashIncremental(readBlock, (int) sizeof(readBlock),
+                lastHash);
         bytesRemaining -= (int) sizeof(readBlock);
     }
     if (bytesRemaining > 0)
     {
         fread(readBlock, bytesRemaining, 1, fp);
-        lastHash = SuperFastHashIncremental(readBlock, bytesRemaining, lastHash);
+        lastHash = SuperFastHashIncremental(readBlock, bytesRemaining,
+                lastHash);
     }
     return lastHash;
 }
-
 
 char* Itoa(int value, char* result, int base)
 {
@@ -706,7 +730,8 @@ char* Itoa(int value, char* result, int base)
     } while (quotient);
 
     // Only apply negative sign for base 10
-    if (value < 0 && base == 10) *out++ = '-';
+    if (value < 0 && base == 10)
+        *out++ = '-';
 
     // KevinJ - get rid of this dependency
     // std::reverse( result, out );

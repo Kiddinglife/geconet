@@ -3363,7 +3363,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    should be used to verify the MAC.
 
    An implementation SHOULD make the cookie as small as possible to
-   ensure interoperability.
+   ensure interoperability (互操作性).
 
 
 

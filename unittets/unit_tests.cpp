@@ -70,11 +70,11 @@ TEST(test_case_hash, test_sockaddr2hashcode)
     str2saddr(&localsu, "192.168.1.107", 36000);
     sockaddrunion peersu;
     str2saddr(&peersu, "192.168.1.107", 36000);
-    ret = sockaddr2hashcode(&localsu, &peersu);
+    ret = transportaddr2hashcode(&localsu, &peersu);
     EVENTLOG2(VERBOSE, "hash(addr pair { localsu: 192.168.1.107:36001 peersu: 192.168.1.107:36000 }) = %u, %u", ret, ret % 100000);
 
     str2saddr(&localsu, "192.168.1.107", 1234);
     str2saddr(&peersu, "192.168.1.107", 360);
-    ret = sockaddr2hashcode(&localsu, &peersu);
+    ret = transportaddr2hashcode(&localsu, &peersu);
     EVENTLOG2(VERBOSE, "hash(addr pair { localsu: 192.168.1.107:36001 peersu: 192.168.1.107:36000 }) = %u, %u", ret, ret % 100000);
 }

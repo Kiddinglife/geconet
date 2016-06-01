@@ -57,11 +57,11 @@ documentation and/or software.
 // F, G, H and I are basic MD5 functions.
 inline MD5::uint4 MD5::F(uint4 x, uint4 y, uint4 z)
 {
-    return x&y | ~x&z;
+    return ((x&y) | ()~x&z));
 }
 
 inline MD5::uint4 MD5::G(uint4 x, uint4 y, uint4 z) {
-    return x&z | y&~z;
+    return ((x&z) | (y&~z));
 }
 
 inline MD5::uint4 MD5::H(uint4 x, uint4 y, uint4 z) {
@@ -489,7 +489,7 @@ int set_crc32_checksum(char *buffer, int length)
     message->pk_comm_hdr.checksum = htonl(crc32c);
     return 0;
 }
-uchar* key_operation(int operation_code)
+uchar* get_secre_key(int operation_code)
 {
     static uchar *secret_key = NULL;
     uint              count = 0, tmp;
