@@ -195,6 +195,18 @@ struct data_chunk_nossntsn_t
 /*************************** variable length parameter definitions ***************************/
 // See RFC4960 Section 3.2.1 Optional/Variable-Length Parameter Format From Page 19
 // vl params only appear in control chunks
+enum ActionWhenUnknownVlpOrChunkType
+    : int
+    {
+        STOP_PROCESS_CHUNK,
+    STOP_PROCESS_CHUNK_REPORT_EREASON,
+    SKIP_CHUNK,
+    SKIP_CHUNK_REPORT_EREASON,
+    STOP_PROCESS_PARAM,
+    STOP_PROCES_PARAM_REPORT_EREASON,
+    SKIP_PARAM,
+    SKIP_PARAM_REPORT_EREASON
+};
 #define STOP_PROCESS_PARAM(param_type)   \
 (((ushort)param_type & 0xC000)==0x0000)
 #define STOP_PROCES_PARAM_REPORT_EREASON(param_type)    \
@@ -451,31 +463,23 @@ struct error_chunk_t
     chunk_fixed_t chunk_header;
     uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
+#define ERR_CAUSE_FIXED_SIZE (2*sizeof(ushort))
 struct error_cause_t
 {
-    unsigned short error_reason_code;
-    unsigned short error_reason_length;
+    ushort error_reason_code;
+    ushort error_reason_length;
     uchar error_reason[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 const static char* ECCSTRS[32] =
-{
-    "ECC_INVALID_STREAM_ID",
-    "ECC_MISSING_MANDATORY_PARAM",
-    "ECC_STALE_COOKIE_ERROR",
-    "ECC_OUT_OF_RESOURCE_ERROR",
-    "ECC_UNRESOLVABLE_ADDRESS",
-    "ECC_UNRECOGNIZED_CHUNKTYPE",
-    "ECC_INVALID_MANDATORY_PARAM",
-    "ECC_UNRECOGNIZED_PARAMS",
-    "ECC_NO_USER_DATA",
-    "ECC_COOKIE_RECEIVED_DURING_SHUTDWN",
-    "ECC_RESTART_WITH_NEW_ADDRESSES",
-    "ECC_USER_INITIATED_ABORT",
-    "ECC_PROTOCOL_VIOLATION",
-    "ECC_PEER_INSTANCE_NOT_FOUND",
-    "ECC_PEER_NOT_LISTENNING_PORT"
-};
+{ "ECC_INVALID_STREAM_ID", "ECC_MISSING_MANDATORY_PARAM",
+        "ECC_STALE_COOKIE_ERROR", "ECC_OUT_OF_RESOURCE_ERROR",
+        "ECC_UNRESOLVABLE_ADDRESS", "ECC_UNRECOGNIZED_CHUNKTYPE",
+        "ECC_INVALID_MANDATORY_PARAM", "ECC_UNRECOGNIZED_PARAMS",
+        "ECC_NO_USER_DATA", "ECC_COOKIE_RECEIVED_DURING_SHUTDWN",
+        "ECC_RESTART_WITH_NEW_ADDRESSES", "ECC_USER_INITIATED_ABORT",
+        "ECC_PROTOCOL_VIOLATION", "ECC_PEER_INSTANCE_NOT_FOUND",
+        "ECC_PEER_NOT_LISTENNING_PORT" };
 
 // Error reson codes
 #define ECC_INVALID_STREAM_ID                   1

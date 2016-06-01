@@ -1546,7 +1546,7 @@ private:
      * that is returned then. Returns -1 if unrecognized chunk forces termination of chunk parsing
      * without any further action, 1 for an error that stops chunk parsing, but returns error to
      * the peer and 0 for normal continuation */
-    int process_unrecognized_params_of_init_chunk(uint initCID, uint AckCID,
+    int process_unknown_params_from_init_chunk(uint initCID, uint AckCID,
             uint supportedAddressTypes);
 
     /**
@@ -1652,6 +1652,22 @@ private:
         }
     }
 
+    void write_unknown_param_error(uchar* pos, uint cid, ushort length, uchar* data)
+    {
+        error_cause_t* ec;
+        if (pos == NULL)
+        {
+            ERRLOG(FALTAL_ERROR_EXIT, "write_unknown_param()::pos gets NULL !");
+        }
+        ec = (error_cause_t*) pos;
+        ec->error_reason_code = htons(VLPARAM_UNRECOGNIZED_PARAM);
+        ec->error_reason_length = htons(length + ERR_CAUSE_FIXED_SIZE);
+        if (length > 0)
+            memcpy(&ec->error_reason, data, length);
+        curr_write_pos_[cid] +=length + ERR_CAUSE_FIXED_SIZE;
+        while ((curr_write_pos_[cid] % 4) != 0)
+            curr_write_pos_[cid]++;
+    }
     /**
      *  @brief returns the suggested cookie lifespan increment if a cookie
      *  preservative is present in a init chunk.

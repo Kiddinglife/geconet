@@ -1218,12 +1218,125 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                 tmp_peer_addreslist_size_);
 
         /* 4.6) check unrecognized params*/
-        process_unrecognized_params_of_init_chunk(init_cid, init_ack_cid,
-                suppor);
+        int rett = process_unknown_params_from_init_chunk(init_cid,
+                init_ack_cid, my_supported_addr_types_);
+        if (rett < 0)
+        {
+            ret = ChunkProcessResult::Stop;
+        }
+        else
+        {
+            // send INIT ACK
+            ret = rett;
+            bundle_ctrl_chunk(get_simple_chunk(init_ack_cid));
+            send_bundled_chunks();
+            free_simple_chunk(init_ack_cid);
+            EVENTLOG(INTERNAL_EVENT, "event: initAck sent");
+        }
     }
+
+    /* 5) current channel is NOT NULL.
+     * save a-sides init-tag from init-chunk to be used as a verification tag of
+     * the geco packet carrying the initAck (required since peer may have changed
+     * the verification tag). mdi_writeLastInitiateTag(ch_initiateTag(initCID)); */
+    else
+    {
+
+    }
+
+    /*6) remove NOT free INIT CHUNK*/
+    remove_simple_chunk(init_cid);
     return ret;
 }
+int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID,
+        uint AckCID, uint supportedAddressTypes)
+{
+    if (simple_chunks_[initCID] == NULL || simple_chunks_[AckCID] == NULL)
+    {
+        ERRLOG(FALTAL_ERROR_EXIT, "write_cookie()::Invalid chunk ID");
+        return -1;
+    }
+//    /* scan init chunk for unrecognized parameters ! */
+//    bool with_ipv4 = false, with_ipv6 = false;
+//    supportedAddressTypes & SUPPORT_ADDRESS_TYPE_IPV4 ?
+//            with_ipv4 = true : with_ipv4 = false;
+//    supportedAddressTypes & SUPPORT_ADDRESS_TYPE_IPV6 ?
+//            with_ipv6 = true : with_ipv6 = false;
+//    EVENTLOG3(VERBOSE,
+//            "Scan initk for Errors -- supported types = %u, IPv4: %s, IPv6: %s",
+//            supportedAddressTypes, with_ipv4 ? "TRUE" : "FALSE",
+//            with_ipv6 ? "TRUE" : "FALSE");
 
+    init_chunk_t* chunk = ((init_chunk_t*) simple_chunks_[initCID]);
+    uchar* curr_vlp_start = chunk->variableParams;
+    uint total_len_vlps = chunk->chunk_header.chunk_length
+            - INIT_CHUNK_FIXED_SIZES;
+    chunk = ((init_chunk_t*) simple_chunks_[AckCID]);
+
+    uint read_len = 0;
+    ushort pType;
+    ushort pLen;
+    ushort padding_len;
+    vlparam_fixed_t* vlparam_fixed;
+    uchar* init_ack_str;
+
+    while (read_len < total_len_vlps)
+    {
+        if (total_len_vlps - read_len < VLPARAM_FIXED_SIZE)
+        {
+            EVENTLOG(WARNNING_ERROR,
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+            return -1;
+        }
+        init_ack_str = chunk->variableParams + curr_write_pos_[AckCID];
+        vlparam_fixed = (vlparam_fixed_t*) curr_vlp_start;
+        pType = ntohs(vlparam_fixed->param_type);
+        pLen = ntohs(vlparam_fixed->param_length);
+        // vlp length too short or patial vlp problem
+        if (pLen < VLPARAM_FIXED_SIZE || pLen + read_len > total_len_vlps)
+            return -1;
+
+        EVENTLOG3(VERBOSE,
+                "Scan variable parameters: type %u, len: %u, position %u",
+                pType, pLen, curr_vlp_start);
+
+        /* handle unrecognized params */
+        if (pType != VLPARAM_COOKIE_PRESEREASONV
+                && pType != VLPARAM_SUPPORTED_ADDR_TYPES
+                && pType != VLPARAM_IPV4_ADDRESS
+                && pType != VLPARAM_IPV6_ADDRESS
+                && pType != VLPARAM_UNRELIABILITY)
+        {
+            EVENTLOG2(VERBOSE,
+                    "found unknown parameter type %u len %u in message", pType,
+                    pLen);
+            if (STOP_PROCESS_PARAM(pType))
+            {
+                write_unknown_param_error(init_ack_str, AckCID, pLen,
+                        curr_vlp_start);
+                return STOP_PROCESS_PARAM;
+            }
+            if (STOP_PROCES_PARAM_REPORT_EREASON(pType))
+            {
+                write_unknown_param_error(init_ack_str, AckCID, pLen,
+                        curr_vlp_start);
+                return STOP_PROCES_PARAM_REPORT_EREASON;
+            }
+            if (SKIP_PARAM_REPORT_EREASON(pType))
+            {
+                write_unknown_param_error(init_ack_str, AckCID, pLen,
+                        curr_vlp_start);
+            }
+            // if(STOP_PARAM_REPORT_EREASON){} DO NOTHING FOR THIS BRANCH
+        }
+
+        read_len += pLen;
+        padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
+        read_len += padding_len;
+        curr_vlp_start += read_len;
+    }
+    return 0;
+}
 int dispatch_layer_t::write_cookie(uint initCID, uint initAckID,
         init_chunk_fixed_t* peer_init, init_chunk_fixed_t* local_initack,
         uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
@@ -1674,7 +1787,7 @@ void dispatch_layer_t::delete_curr_channel(void)
         {
             stop_heart_beat_timer(path_id);
         }
-        // fc_stop_timers();         // TODO
+// fc_stop_timers();         // TODO
         stop_sack_timer();
 
         /* mark channel as deleted, it will be deleted
@@ -1813,11 +1926,12 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
         dest_addr_ptr = &dest_addr;
         geco_packet_ptr->pk_comm_hdr.verification_tag = htonl(last_init_tag_);
         last_init_tag_ = 0; //reset it
-        // swap port number
+// swap port number
         geco_packet_ptr->pk_comm_hdr.src_port = htons(last_dest_port_);
         geco_packet_ptr->pk_comm_hdr.dest_port = htons(last_src_port_);
         curr_geco_instance_ == NULL ?
-                tos = IPTOS_DEFAULT : curr_geco_instance_->default_ipTos;
+                tos = (uchar) IPTOS_DEFAULT :
+                tos = curr_geco_instance_->default_ipTos;
         EVENTLOG4(VERBOSE,
                 "dispatch_layer_t::send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
                 tos, last_init_tag_, last_dest_port_, last_src_port_);
@@ -1849,7 +1963,8 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
                         "dispatch_layer::send_geco_packet():sending to primary with index %u (with %u paths)",
                         primary_path, curr_channel_->remote_addres_size);
                 if (primary_path < 0
-                        || primary_path >= curr_channel_->remote_addres_size)
+                        || primary_path
+                                >= (int) (curr_channel_->remote_addres_size))
                 {
                     ERRLOG(MAJOR_ERROR,
                             "dispatch_layer::send_geco_packet(): could not get primary address");
@@ -1936,7 +2051,7 @@ int dispatch_layer_t::send_bundled_chunks(uint * addr_idx)
     bundle_controller_t* bundle_ctrl =
             (bundle_controller_t*) get_bundle_controller(curr_channel_);
 
-    // no channel exists, so we take the global bundling buffer
+// no channel exists, so we take the global bundling buffer
     if (bundle_ctrl == NULL)
     {
         EVENTLOG(VERBOSE, "Copying Control Chunk to global bundling buffer ");
@@ -1980,7 +2095,7 @@ int dispatch_layer_t::send_bundled_chunks(uint * addr_idx)
         }
         else
         {
-            path_param_id = -1; // use last src path
+            path_param_id = -1; // use last src path OR primary path
         }
     }
     EVENTLOG1(VERBOSE, "send_bundled_chunks : send to path %d ", path_param_id);
@@ -1996,8 +2111,8 @@ int dispatch_layer_t::send_bundled_chunks(uint * addr_idx)
          * from which data arrived*/
         send_buffer = bundle_ctrl->sack_buf;
 
-        // at least sizeof(geco_packet_fixed_t)
-        // at most pointing to the end of SACK chunk
+// at least sizeof(geco_packet_fixed_t)
+// at most pointing to the end of SACK chunk
         send_len = bundle_ctrl->sack_position;
         EVENTLOG1(VERBOSE, "send_bundled_chunks(sack) : send_len == %d ",
                 send_len);
@@ -2078,7 +2193,7 @@ int dispatch_layer_t::send_bundled_chunks(uint * addr_idx)
             "send_bundled_chunks() : sending message len==%u to adress idx=%d",
             send_len, path_param_id);
 
-    // send_len = udp hdr (if presents) + geco hdr + chunks
+// send_len = udp hdr (if presents) + geco hdr + chunks
     ret = this->send_geco_packet(send_buffer, send_len, path_param_id);
 
     /* reset all positions */
@@ -2218,7 +2333,7 @@ int dispatch_layer_t::write_addrlist(uint chunkid,
                     "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
                     saddr_family(&(local_addreslist[i])));
             break;
-        } // switch 
+        } // switch
     } // for loop
     curr_write_pos_[chunkid] += length; // no need to align because MUST be aliged
     return 0;
@@ -2276,7 +2391,7 @@ int dispatch_layer_t::read_peer_addreslist(
 
         vlp = (vlparam_fixed_t*) curr_pos;
         vlp_len = ntohs(vlp->param_length);
-        // vlp length too short or patial vlp problem
+// vlp length too short or patial vlp problem
         if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
             return -1;
 
@@ -2477,7 +2592,7 @@ int dispatch_layer_t::read_peer_addreslist(
         curr_pos += read_len;
     } // while
 
-    // we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
+// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
     if (!ignore_last_src_addr)
     {
         is_new_addr = true;
@@ -2816,16 +2931,16 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
 uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
         uint packet_val_len, uint* total_chunk_count)
 {
-    // 0000 0000 ret = 0 at beginning
-    // 0000 0001 1
-    // 1                chunktype init
-    // 0000 0010 ret
-    // 2                chunktype init ack
-    // 0000 0110 ret
-    // 7                chunktype shutdown
-    // 1000 0110 ret
-    // 192            chunktype shutdown
-    // 1000 0000-byte0-byte0-1000 0110 ret
+// 0000 0000 ret = 0 at beginning
+// 0000 0001 1
+// 1                chunktype init
+// 0000 0010 ret
+// 2                chunktype init ack
+// 0000 0110 ret
+// 7                chunktype shutdown
+// 1000 0110 ret
+// 192            chunktype shutdown
+// 1000 0000-byte0-byte0-1000 0110 ret
 
     if (total_chunk_count != NULL)
     {

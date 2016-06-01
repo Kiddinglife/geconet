@@ -312,6 +312,7 @@ unsigned short ch_chunkLength(ChunkID chunkID);
 
 /* returns a pointer to the beginning of a simple chunk.
 */
+//get_simple_chunk() done
 SCTP_simple_chunk *ch_chunkString(ChunkID chunkID);
 
 
