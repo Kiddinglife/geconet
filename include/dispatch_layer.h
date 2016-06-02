@@ -36,11 +36,6 @@
 #include "protoco-stack.h"
 #include "auth.h"
 
-#define clear_curr_channel()\
-delete_curr_channel();\
-on_connection_lost(ConnectionLostReason::invalid_param);\
-null_curr_channel_and_geco_instance()
-
 /*------------------- Functions called by the ULP -----------------------*/
 /* This functions are defined in a seperate header file dctp.h
  * in order to seperate the interface to the ULP and the interface
@@ -252,7 +247,7 @@ struct state_machine_controller_t
     /** Counter for init and cookie retransmissions */
     uint init_retrans_count;
     /** pointer to the init chunk data structure (for retransmissions) */
-    init_chunk_t *init_chunk;
+    init_chunk_t *my_init_chunk; //!< init chunk sent by me
     /** pointer to the cookie chunk data structure (for retransmissions) */
     cookie_echo_chunk_t *cookieChunk;
     /** my tie tag for cross initialization and other sick cases */
@@ -579,6 +574,52 @@ private:
     ushort get_local_inbound_stream(uint* geco_inst_id = NULL);
     ushort get_local_outbound_stream(uint* geco_inst_id = NULL);
 
+    /* ch_receiverWindow reads the remote receiver window from an init or initAck */
+    uint get_rwnd(uint chunkID)
+    {
+        if (simple_chunks_[chunkID] == NULL)
+        {
+            ERRLOG(MAJOR_ERROR, "Invalid chunk ID");
+            return 0;
+        }
+
+        if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
+                || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+        {
+            return ntohl(
+                    ((init_chunk_t*) simple_chunks_[chunkID])->init_fixed.rwnd);
+        }
+        else
+        {
+            ERRLOG(MAJOR_ERROR,
+                    "get_rwnd: chunk type not init or initAck");
+            return 0;
+        }
+        return 0;
+    }
+    /* ch_receiverWindow reads the remote receiver window from an init or initAck */
+    uint get_init_tsn(uint chunkID)
+    {
+        if (simple_chunks_[chunkID] == NULL)
+        {
+            ERRLOG(MAJOR_ERROR, "Invalid chunk ID");
+            return 0;
+        }
+
+        if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
+                || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+        {
+            return ntohl(
+                    ((init_chunk_t*) simple_chunks_[chunkID])->init_fixed.initial_tsn);
+        }
+        else
+        {
+            ERRLOG(MAJOR_ERROR,
+                    "get_init_tsn: chunk type not init or initAck");
+            return 0;
+        }
+        return 0;
+    }
     /**
      * @brief Copies local addresses of this instance into the array passed as parameter.
      * @param [out] local_addrlist
@@ -815,11 +856,8 @@ private:
      *  This function must be called after the association retrieved from the list
      *  with setAssociationData is no longer needed. This is the case after a time
      *  event has been handled.
-     *
-     *  @param  associationID    the ID of the association
-     *  @return  0 if successful, 1 if association data has not been set, 2 wrong associationID
      */
-    void null_curr_channel_and_geco_instance(void)
+    void clear_current_channel(void)
     {
         curr_channel_ = NULL;
         curr_geco_instance_ = NULL;
@@ -1172,7 +1210,7 @@ private:
     }
 
     /** returns a pointer to the beginning of a simple chunk.*/
-    simple_chunk_t *get_simple_chunk(uchar chunkID)
+    simple_chunk_t *complete_simple_chunk(uchar chunkID)
     {
         if (simple_chunks_[chunkID] == NULL)
         {
@@ -1652,7 +1690,8 @@ private:
         }
     }
 
-    void write_unknown_param_error(uchar* pos, uint cid, ushort length, uchar* data)
+    void write_unknown_param_error(uchar* pos, uint cid, ushort length,
+            uchar* data)
     {
         error_cause_t* ec;
         if (pos == NULL)
@@ -1664,7 +1703,7 @@ private:
         ec->error_reason_length = htons(length + ERR_CAUSE_FIXED_SIZE);
         if (length > 0)
             memcpy(&ec->error_reason, data, length);
-        curr_write_pos_[cid] +=length + ERR_CAUSE_FIXED_SIZE;
+        curr_write_pos_[cid] += length + ERR_CAUSE_FIXED_SIZE;
         while ((curr_write_pos_[cid] % 4) != 0)
             curr_write_pos_[cid]++;
     }

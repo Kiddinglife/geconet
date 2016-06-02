@@ -45,11 +45,8 @@ void timer_mgr::delete_timer(timer_id_t& timerptr)
 {
     if (this->timers.empty())
         return;
-    EVENTLOG1(VERBOSE, "Before delete List Length : %u ",
-        this->timers.size());
     this->timers.erase(timerptr);
-    EVENTLOG1(VERBOSE, "After delete List Length : %u ",
-        this->timers.size());
+    timerptr->timer_id = 0;
 }
 int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 {

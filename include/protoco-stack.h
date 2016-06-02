@@ -40,6 +40,8 @@ enum ChunkProcessResult
 {
     Good,
     Stop,
+    SkipProcessInitChunkUnkownParam,
+    StopProcessInitChunkUnkownParam,
     StopAndDeleteChannel,
     ChunkProcessResultSize
 };
