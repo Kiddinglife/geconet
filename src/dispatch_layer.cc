@@ -646,6 +646,14 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
          duplicated INIT chunk.*/
         if (contains_chunk(CHUNK_INIT_ACK, chunk_types_arr_) > 0)
         {
+            if (get_curr_channel_state() != ChannelState::CookieWait)
+            {
+                EVENTLOG(WARNNING_ERROR,
+                        "found CHUNK_INIT_ACK in non-packet in state other than COOKIE-WAIT -> should_discard_curr_geco_packet_!");
+                clear();
+                return;
+            }
+
             vlparam_fixed_ = (vlparam_fixed_t*) find_vlparam_from_setup_chunk(
                     curr_uchar_init_chunk_, curr_geco_packet_value_len_,
                     VLPARAM_HOST_NAME_ADDR);
@@ -666,22 +674,13 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 clear();
                 return;
             }
-
-            if (get_curr_channel_state() != ChannelState::CookieWait)
-            {
-                EVENTLOG(WARNNING_ERROR,
-                        "found CHUNK_INIT_ACK in non-packet in state other than COOKIE-WAIT -> should_discard_curr_geco_packet_!");
-                clear();
-                return;
-            }
         }
     }
     else // (curr_channel_ == NULL)
     {
         /* 14)
          * filtering and pre-process OOB chunks that have no channel found
-         * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets*/
-
+         * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets */
         EVENTLOG(VERBOSE,
                 "recv_geco_packet()::current channel ==NULL, start process OOB packets!\n");
 
@@ -1250,12 +1249,12 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             if (rett != 0)
             {
                 /* param type has stop prcessing set, so we just stop */
-                ret = ChunkProcessResult::StopProcessInitChunkUnkownParam;
+                ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
             }
             else
             {
                 /* param type has  skip prcessing set, so we just skip it*/
-                ret = ChunkProcessResult::SkipProcessInitChunkUnkownParam;
+                ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                 // bundle INIT ACK if full will send and empty bundle and then copy init ack
                 bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));
             }
@@ -1324,6 +1323,30 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
              its Tie-Tags within both the association TCB and inside the State
              Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
 
+            /*6.1) validate no new addr aaded from the newly received INIT */
+            /* 6.1.1 read and validate peer addrlist carried in the received init chunk*/
+            assert(my_supported_addr_types_ != 0);
+            tmp_peer_addreslist_size_ = read_peer_addreslist(
+                    tmp_peer_addreslist_, (uchar*) init,
+                    curr_geco_packet_value_len_, my_supported_addr_types_,
+                    &tmp_peer_supported_types_);
+            if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
+                ERRLOG(FALTAL_ERROR_EXIT,
+                        "BAKEOFF: Program error, no common address types in process_init_chunk()");
+            /* 6.1.2 compare if there is new addr presenting*/
+            for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
+            {
+                for (uint inner = 0; inner < tmp_peer_addreslist_size_; inner++)
+                {
+                    if (!saddr_equals(curr_channel_->remote_addres + idx,
+                            tmp_peer_addreslist_ + inner))
+                    {
+                        EVENTLOG(VERBOSE,
+                                "new addr found in received INIT at CookieEchoed state -> discard !");
+                        return ChunkProcessResult::StopProcessInitChunk_NewAddrAddedError;
+                    }
+                }
+            }
             /* 6.1) validate tie tags NOT zeros */
             if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
             {
@@ -1359,16 +1382,6 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             complete_simple_chunk(init_i_sent_cid);
             remove_simple_chunk(init_i_sent_cid);
 
-            /*6.5) read and validate peer addrlist carried in the received init chunk*/
-            assert(my_supported_addr_types_ != 0);
-            tmp_peer_addreslist_size_ = read_peer_addreslist(
-                    tmp_peer_addreslist_, (uchar*) init,
-                    curr_geco_packet_value_len_, my_supported_addr_types_,
-                    &tmp_peer_supported_types_);
-            if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
-                ERRLOG(FALTAL_ERROR_EXIT,
-                        "BAKEOFF: Program error, no common address types in process_init_chunk()");
-
             /*6.6) get local addr list and append them to INIT ACK*/
             tmp_local_addreslist_size_ = get_local_addreslist(
                     tmp_local_addreslist_, last_source_addr_, 1,
@@ -1398,11 +1411,11 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             {
                 if (rett != 0)
                 {
-                    ret = ChunkProcessResult::StopProcessInitChunkUnkownParam;
+                    ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
                 }
                 else
                 {
-                    ret = ChunkProcessResult::SkipProcessInitChunkUnkownParam;
+                    ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                 }
                 // bundle INIT ACK if full will send and empty bundle and then copy init ack
                 bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));

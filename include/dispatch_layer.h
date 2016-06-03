@@ -237,7 +237,7 @@ struct state_machine_controller_t
 {
     /*@{ */
     /** the state of this state machine */
-    uint channel_state;
+    ChannelState channel_state;
     /** stores timer-ID of init/cookie-timer, used to stop this timer */
     timer_id_t init_timer_id;
     /** */
@@ -591,8 +591,7 @@ private:
         }
         else
         {
-            ERRLOG(MAJOR_ERROR,
-                    "get_rwnd: chunk type not init or initAck");
+            ERRLOG(MAJOR_ERROR, "get_rwnd: chunk type not init or initAck");
             return 0;
         }
         return 0;
@@ -614,8 +613,7 @@ private:
         }
         else
         {
-            ERRLOG(MAJOR_ERROR,
-                    "get_init_tsn: chunk type not init or initAck");
+            ERRLOG(MAJOR_ERROR, "get_init_tsn: chunk type not init or initAck");
             return 0;
         }
         return 0;
@@ -1194,7 +1192,7 @@ private:
         }
         else
         {
-            ERRLOG(MINOR_ERROR, "chunk already forgotten");
+            ERRLOG(WARNNING_ERROR, "chunk already forgotten");
         }
     }
 
