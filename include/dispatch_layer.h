@@ -248,6 +248,8 @@ struct state_machine_controller_t
     uint init_retrans_count;
     /** pointer to the init chunk data structure (for retransmissions) */
     init_chunk_t *my_init_chunk; //!< init chunk sent by me
+    int addr_my_init_chunk_sent_to;
+
     /** pointer to the cookie chunk data structure (for retransmissions) */
     cookie_echo_chunk_t *cookieChunk;
     /** my tie tag for cross initialization and other sick cases */
@@ -973,7 +975,7 @@ private:
      *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
      *  @param   ad_idx     pointer to address index or NULL if data is to be sent to default address
      */
-    int send_bundled_chunks(uint * ad_idx = NULL);
+    int send_bundled_chunks(int * ad_idx = NULL);
 
     /**
      * creates a simple chunk except of DATA chunk. It can be used for parameterless
@@ -1229,7 +1231,7 @@ private:
      * @param chunk pointer to chunk, that is to be put in the bundling buffer
      * @return TODO : error value, 0 on success
      */
-    int bundle_ctrl_chunk(simple_chunk_t * chunk, uint * dest_index = NULL);
+    int bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
 
     /**
      * function to return a pointer to the bundling module of this association

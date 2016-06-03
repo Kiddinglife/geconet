@@ -781,15 +781,17 @@ int sctlr_init(SCTP_init * init)
 
 
         process_further = ch_enterUnrecognizedParameters(initCID, initAckCID,
-                supportedTypes);
+            supportedTypes);
 
-        if (process_further == -1) {
+        if (process_further == -1)
+        {
             /*   ch_deleteChunk(initAckCID);
                ch_forgetChunk(initCID); */
             return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
             /* return return_state; */
         }
-        else {
+        else
+        {
             if (process_further == 1)
             {
                 return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
