@@ -27,15 +27,15 @@ typedef uint64_t ulonglong;
 typedef char int8;
 typedef unsigned char uint8;
 typedef short int16;
-typedef unsigned short ushort;
+typedef unsigned short uint16;
 typedef __int32 int32;
-typedef unsigned __int32 uint;
+typedef unsigned __int32 uint32;
 #   if defined(_MSC_VER) && _MSC_VER < 1300
-typedef unsigned __int64 longlong;
-typedef signed __int64 ulonglong;
+typedef unsigned __int64 uint64;
+typedef signed __int64 int64;
 #  else
-typedef long long longlong;
-typedef unsigned long long ulonglong;
+typedef long long int64;
+typedef unsigned long long uint64;
 #  endif
 #endif
 

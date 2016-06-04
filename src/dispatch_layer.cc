@@ -1150,21 +1150,21 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             delete_curr_channel();
             on_connection_lost(ConnectionLostReason::invalid_param);
             clear_current_channel();
-            ret = ChunkProcessResult::StopAndDeleteChannel;
         }
+        ret = ChunkProcessResult::
+            StopAndDeleteChannel_ValidateInitParamFailedError;
         return ret;
     }
 
     /*3) validate source addr */
     if (last_source_addr_ == NULL)
     {
-        EVENTLOG(INTERNAL_TRACE, "last_source_addr_ == NULL -> return !");
         /* 3.1) delete all data of this channel,
          * smctrl != NULL means current channel MUST exist at this moment */
         if (smctrl == NULL)
         {
             clear_current_channel();
-            ret = ChunkProcessResult::StopAndDeleteChannel;
+            ret = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
             return ret;
         }
         else
@@ -1177,7 +1177,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             delete_curr_channel();
             on_connection_lost(ConnectionLostReason::invalid_param);
             clear_current_channel();
-            ret = ChunkProcessResult::StopAndDeleteChannel;
+            ret = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
             return ret;
         }
     }
@@ -1189,7 +1189,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     ushort inbound_stream = 0;
     ushort outbound_stream = 0;
     uchar init_ack_cid;
-
+    uint init_tag;
     /* 4) this branch handles the cases below:
      * 1) RFC 4960 - 5.2.1.INIT Received in COOKIE-WAIT or COOKIE-ECHOED State - (B)
      * Both sides are trying to initialize the association at about the same time.
@@ -1198,6 +1198,9 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
      * "Z" shall respond immediately with an INIT ACK chunk.*/
     if (smctrl == NULL)
     {
+        EVENTLOG(INTERNAL_TRACE,
+            "come into branch at process_init_chunk() -> if(smctrl == NULL)!");
+
         /*4.1) get in out stream number*/
         inbound_stream = std::min(read_outbound_stream(init_cid),
             get_local_inbound_stream());
@@ -1206,7 +1209,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
         /* 4.2) alloc init ack chunk, init tag used as init tsn */
         // todo use safe generate_init_tag from libcat
-        uint init_tag = generate_init_tag();
+        init_tag = generate_init_tag();
         init_ack_cid = alloc_init_ack_chunk(init_tag,
             curr_geco_instance_->default_myRwnd, outbound_stream,
             inbound_stream, init_tag);
@@ -1228,8 +1231,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
         /*4.5) generate and append cookie to INIT ACK*/
         write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid),
-            get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid), 0,
-            0, /* normal case: no existing channel found, set both zero*/
+            get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
+            0, 0, /* normal case: no existing channel, set both zero*/
             last_dest_port_, last_src_port_, tmp_local_addreslist_,
             tmp_local_addreslist_size_, tmp_peer_addreslist_,
             tmp_peer_addreslist_size_);
@@ -1249,19 +1252,25 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             {
                 /* as specified in rfc 4960, when the init from peer hasunkown params,
                 * we should discard peer's connection by not bunding init ack*/
-                ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
                 ERRLOG(WARNNING_ERROR, "peer init has unknown params -> discard !");
+                free_simple_chunk(init_ack_cid);
+                remove_simple_chunk(init_cid);
+                return ChunkProcessResult::
+                    StopProcessInitChunk_UnkownParamError;
             }
             else
             {
                 /* param type has  skip prcessing set, so we just skip it*/
                 ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
-                /* bundle INIT ACK if full will send, may empty bundle and copy init ack*/
-                bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));
-                /* trying to send bundle to become more responsive
-                * unlock bundle to send init ack as single chunk in the whole geco packet */
+
+                /* send all bundled chunks to ensure init ack is the only chunk sent
+                * in the whole geco packet*/
                 unlock_bundle_ctrl();
                 send_bundled_chunks();
+
+                /* bundle INIT ACK if full will send, may empty bundle and copy init ack*/
+                bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));
+                send_bundled_chunks(); // send init ack
                 free_simple_chunk(init_ack_cid);
                 EVENTLOG(INTERNAL_EVENT, "event: initAck sent");
             }
@@ -1275,31 +1284,175 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
      * 2) RFC 4960 - 5.2.4.  Handle a COOKIE ECHO when a TCB Exists */
     else
     {
+        EVENTLOG(INTERNAL_TRACE,
+            "come into branch at process_init_chunk() -> if(smctrl != NULL)!");
+
         ChannelState channel_state = smctrl->channel_state;
         EVENTLOG1(EXTERNAL_TRACE, "received INIT chunk in state %02u",
             channel_state);
         int primary_path = get_primary_path();
         my_supported_addr_types_;
+        uint init_i_sent_cid;
+        int rett;
         switch (channel_state)
         {
-            /* 5) RFC 4960 - 5.2.1. INIT Received in COOKIE-WAIT or COOKIE-ECHOED State
-             * (Item B)
-             When responding in either state (COOKIE-WAIT or COOKIE-ECHOED) with
-             an INIT ACK, the original parameters are combined with those from the
-             newly received INIT chunk.  The endpoint shall also generate a State
-             Cookie with the INIT ACK.  The endpoint uses the parameters sent in
-             its INIT to calculate the State Cookie.
-             After that, the endpoint MUST NOT change its state, the T1-init timer
-             shall be left running, and the corresponding TCB MUST NOT be
-             destroyed.  The normal procedures for handling State Cookies when a
-             TCB exists will resolve the duplicate INITs to a single association. */
+            /* 5)
+               RFC 4960-5.2.1.INIT Received in COOKIE-WAIT or COOKIE-ECHOED State
+               (Item B)
+               When responding in either state (COOKIE-WAIT or COOKIE-ECHOED) with
+               an INIT ACK, the original parameters are combined with those from the
+               newly received INIT chunk.  The endpoint shall also generate a State
+               Cookie with the INIT ACK.  The endpoint uses the parameters sent in
+               its INIT to calculate the State Cookie.
+               After that, the endpoint MUST NOT change its state, the T1-init timer
+               shall be left running, and the corresponding TCB MUST NOT be
+               destroyed.  The normal procedures for handling State Cookies when a
+               TCB exists will resolve the duplicate INITs to a single association. */
+            case ChannelState::CookieEchoed:
+                /* 5.1)
+                 - Upon receipt of an INIT in the COOKIE-ECHOED state, an endpoint MUST
+                 respond with an INIT ACK using the same parameters it sent in its
+                 original INIT chunk (including its Initiate Tag, unchanged), provided
+                 that no NEW address has been added to the forming association.  If
+                 the INIT message indicates that a new address has been added to the
+                 association, then the entire INIT MUST be discarded, and NO changes
+                 should be made to the existing association.  An ABORT SHOULD be sent
+                 in response that MAY include the error 'Restart of an association
+                 with new addresses'.  The error SHOULD list the addresses that were
+                 added to the restarting association.
+                 - For an endpoint that is in the COOKIE-ECHOED state, it MUST populate
+                 its Tie-Tags within both the association TCB and inside the State
+                 Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
+
+                /* 5.2) validate tie tags NOT zeros */
+                if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
+                {
+                    ERRLOG2(FALTAL_ERROR_EXIT,
+                        "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
+                        smctrl->local_tie_tag, smctrl->peer_tie_tag);
+                }
+
+                /*5.2) validate no new addr aaded from the newly received INIT */
+                /* read and validate peer addrlist carried in the received init chunk*/
+                assert(my_supported_addr_types_ != 0);
+                tmp_peer_addreslist_size_ = read_peer_addreslist(
+                    tmp_peer_addreslist_, (uchar*)init,
+                    curr_geco_packet_value_len_, my_supported_addr_types_,
+                    &tmp_peer_supported_types_);
+                if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
+                    ERRLOG(FALTAL_ERROR_EXIT,
+                    "BAKEOFF: Program error, no common address types in process_init_chunk()");
+
+                /*compare if there is new addr presenting*/
+                for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
+                {
+                    for (uint inner = 0; inner < tmp_peer_addreslist_size_; inner++)
+                    {
+                        if (!saddr_equals(curr_channel_->remote_addres + idx,
+                            tmp_peer_addreslist_ + inner))
+                        {
+                            EVENTLOG(VERBOSE,
+                                "new addr found in received INIT at CookieEchoed state -> discard !");
+                            /* remove NOT free INIT CHUNK before return */
+                            remove_simple_chunk(init_cid);
+                            return ChunkProcessResult::
+                                StopProcessInitChunk_NewAddrAddedError;
+                        }
+                    }
+                }
+
+                /* 5.3)
+                 * For an endpoint that is in the COOKIE-ECHOED state it MUST populate
+                 * its Tie-Tags with random values so that possible attackers cannot guess
+                 * real tag values of the association (see Implementer's Guide > version 10)*/
+                smctrl->local_tie_tag = generate_init_tag();
+                smctrl->peer_tie_tag = generate_init_tag();
+
+                /*5.4) get in out stream number*/
+                inbound_stream = std::min(read_outbound_stream(init_cid),
+                    get_local_inbound_stream());
+                outbound_stream = std::min(read_inbound_stream(init_cid),
+                    get_local_outbound_stream());
+
+                /*5.5) an INIT ACK using the same parameters it sent in its
+                 original INIT chunk (including its Initiate Tag, unchanged) */
+                if (smctrl->my_init_chunk == NULL)
+                    ERRLOG(FALTAL_ERROR_EXIT, "smctrl->my_init_chunk == NULL !");
+
+                /* make and fills init ack*/
+                init_ack_cid = alloc_init_ack_chunk(
+                    smctrl->my_init_chunk->init_fixed.init_tag,
+                    smctrl->my_init_chunk->init_fixed.rwnd,
+                    smctrl->my_init_chunk->init_fixed.outbound_streams,
+                    smctrl->my_init_chunk->init_fixed.inbound_streams,
+                    smctrl->my_init_chunk->init_fixed.initial_tsn);
+
+                /*5.6) get local addr list and append them to INIT ACK*/
+                tmp_local_addreslist_size_ = get_local_addreslist(
+                    tmp_local_addreslist_, last_source_addr_, 1,
+                    tmp_peer_supported_types_, true);
+                write_addrlist(init_ack_cid, tmp_local_addreslist_,
+                    tmp_local_addreslist_size_);
+
+                /*5.7) generate and append cookie to INIT ACK*/
+                write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid),
+                    get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
+                    /* unexpected case: existing channel found, set both NOT zero*/
+                    smctrl->local_tie_tag, smctrl->peer_tie_tag,
+                    last_dest_port_, last_src_port_, tmp_local_addreslist_,
+                    tmp_local_addreslist_size_, tmp_peer_addreslist_,
+                    tmp_peer_addreslist_size_);
+
+                /* 5.8) check unrecognized params */
+                rett = process_unknown_params_from_init_chunk(init_cid,
+                    init_ack_cid, my_supported_addr_types_);
+                if (rett < 0)
+                {
+                    /* 5.9) peer's init chunk has icorrect chunk length,
+                     * discard peer's connection by not bunding init ack*/
+                    free_simple_chunk(init_ack_cid);
+                    ret = ChunkProcessResult::Stop;
+                }
+                else
+                {
+                    /* 5.10) MUST send INIT ACK caried unknown params to the peer
+                    * if he has unknown params in its init chunk
+                    * as we SHOULD let peer's imple to finish the
+                    * unnormal connection handling precedures*/
+
+                    if (rett != 0)
+                    {
+                        free_simple_chunk(init_ack_cid);
+                        remove_simple_chunk(init_cid);
+                        return ChunkProcessResult::
+                            StopProcessInitChunk_UnkownParamError;
+                    }
+                    else
+                    {
+                        ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
+                    }
+
+                    /* send all bundled chunks to ensure init ack is the only chunk sent
+                    * in the whole geco packet*/
+                    unlock_bundle_ctrl();
+                    send_bundled_chunks();
+                    // bundle INIT ACK if full will send and empty bundle then copy init ack
+                    bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid)); 
+                    send_bundled_chunks(); // send init ack 
+                    free_simple_chunk(init_ack_cid);
+                    EVENTLOG(INTERNAL_EVENT, 
+                        "event: initAck sent at state of cookie echoed");
+                }
+                break;
 
             case ChannelState::CookieWait:
-                /*Upon receipt of an INIT in the COOKIE-WAIT state, an endpoint MUST
-                 respond with an INIT ACK using the same parameters it sent in its
-                 original INIT chunk (including its Initiate Tag, unchanged).  When
-                 responding, the endpoint MUST send the INIT ACK back to the same
-                 address that the original INIT (sent by this endpoint) was sent.*/
+                /* 6.1)
+                Upon receipt of an INIT in the COOKIE-WAIT state, an endpoint MUST
+                respond with an INIT ACK using the same parameters it sent in its
+                original INIT chunk (including its Initiate Tag, unchanged).  When
+                responding, the endpoint MUST send the INIT ACK back to the same
+                address that the original INIT (sent by this endpoint) was sent.*/
+
                 if (smctrl->local_tie_tag != 0 || smctrl->peer_tie_tag != 0)
                 {
                     ERRLOG2(FALTAL_ERROR_EXIT,
@@ -1310,17 +1463,15 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                 /* reassign to zeros means no existing channel founs in this state */
                 smctrl->local_tie_tag = 0;
                 smctrl->peer_tie_tag = 0;
-                // TODO send init ack to the peer
 
-                /*chage length to host order*/
-                uint init_i_sent_cid = alloc_simple_chunk(
-                    (simple_chunk_t*)(smctrl->my_init_chunk));
-                init_ack_cid = alloc_init_ack_chunk(read_init_tag(init_i_sent_cid),
-                    get_rwnd(init_i_sent_cid), outbound_stream, inbound_stream,
-                    get_init_tsn(init_i_sent_cid));
-                /*reset length to network order*/
-                complete_simple_chunk(init_i_sent_cid);
-                remove_simple_chunk(init_i_sent_cid);
+                /* make and fills init ack*/
+                init_ack_cid = alloc_init_ack_chunk(
+                    smctrl->my_init_chunk->init_fixed.init_tag,
+                    smctrl->my_init_chunk->init_fixed.rwnd,
+                    smctrl->my_init_chunk->init_fixed.outbound_streams,
+                    smctrl->my_init_chunk->init_fixed.inbound_streams,
+                    smctrl->my_init_chunk->init_fixed.initial_tsn);
+
                 /*6.6) get local addr list and append them to INIT ACK*/
                 tmp_local_addreslist_size_ = get_local_addreslist(
                     tmp_local_addreslist_, last_source_addr_, 1,
@@ -1338,8 +1489,130 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                     tmp_peer_addreslist_size_);
 
                 /* 6.8) check unrecognized params*/
-                int rett = process_unknown_params_from_init_chunk(init_cid,
+                rett = process_unknown_params_from_init_chunk(init_cid,
                     init_ack_cid, my_supported_addr_types_);
+                if (rett < 0)
+                {
+                    /* 6.9) peer's init chunk has icorrect chunk length,
+                    * discard peer's connection by not bunding init ack*/
+                    free_simple_chunk(init_ack_cid);
+                    remove_simple_chunk(init_cid);
+                    return ChunkProcessResult::Stop;
+                }
+                else
+                {
+                    /* 6.10) MUST send INIT ACK caried unknown params to the peer
+                    * if he has unknown params in its init chunk
+                    * as we SHOULD let peer's imple to finish the
+                    * unnormal connection handling precedures*/
+                    if (rett != 0)
+                    {
+                        ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
+                    }
+                    else
+                    {
+                        ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
+                    }
+
+                    /* send all bundled chunks to ensure init ack is the only chunk sent
+                     * in the whole geco packet*/
+                    unlock_bundle_ctrl();
+                    send_bundled_chunks();
+
+                    // bundle INIT ACK if full will send and empty bundle then copy init ack
+                    bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));
+                    send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
+                    free_simple_chunk(init_ack_cid);
+                    EVENTLOG(INTERNAL_EVENT,
+                        "event: initAck sent at state of cookie wait");
+                }
+
+                /* 7) see RFC 4960 - Section 5.2.2
+                 Unexpected INIT in States Other than CLOSED, COOKIE-ECHOED,
+                 COOKIE-WAIT, and SHUTDOWN-ACK-SENT
+                 Unless otherwise stated, upon receipt of an unexpected INIT for this
+                 association, the endpoint shall generate an INIT ACK with a State
+                 Cookie.  Before responding, the endpoint MUST check to see if the
+                 unexpected INIT adds new addresses to the association.*/
+            case ChannelState::Connected:
+            case ChannelState::ShutdownPending:
+            case ChannelState::ShutdownSent:
+                /* 7.1) validate tie tags NOT zeros */
+                if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
+                {
+                    ERRLOG2(FALTAL_ERROR_EXIT,
+                        "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
+                        smctrl->local_tie_tag, smctrl->peer_tie_tag);
+                }
+
+                /*7.2) validate no new addr aaded from the newly received INIT */
+                /* read and validate peer addrlist carried in the received init chunk*/
+                assert(my_supported_addr_types_ != 0);
+                tmp_peer_addreslist_size_ = read_peer_addreslist(
+                    tmp_peer_addreslist_, (uchar*)init,
+                    curr_geco_packet_value_len_, my_supported_addr_types_,
+                    &tmp_peer_supported_types_);
+                if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
+                    ERRLOG(FALTAL_ERROR_EXIT,
+                    "BAKEOFF: Program error, no common address types in process_init_chunk()");
+
+                /*compare if there is new addr presenting*/
+                for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
+                {
+                    for (uint inner = 0; inner < tmp_peer_addreslist_size_; inner++)
+                    {
+                        if (!saddr_equals(curr_channel_->remote_addres + idx,
+                            tmp_peer_addreslist_ + inner))
+                        {
+                            EVENTLOG(VERBOSE,
+                                "new addr found in received INIT at CookieEchoed state -> discard !");
+                            /* remove NOT free INIT CHUNK before return */
+                            remove_simple_chunk(init_cid);
+                            return ChunkProcessResult::
+                                StopProcessInitChunk_NewAddrAddedError;
+                        }
+                    }
+                }
+
+                /*7.2) get in out stream number*/
+                inbound_stream = std::min(read_outbound_stream(init_cid),
+                    get_local_inbound_stream());
+                outbound_stream = std::min(read_inbound_stream(init_cid),
+                    get_local_outbound_stream());
+
+                /* 7.3) prepare init ack
+                -the INIT ACK MUST contain a new Initiate Tag(randomly generated;
+                see Section 5.3.1).
+                -Other parameters for the endpoint SHOULD be copied from the existing
+                parameters of the association (e.g., number of outbound streams) into
+                the INIT ACK and cookie.*/
+                init_tag = generate_init_tag(); // todo use safe generate_init_tag 
+                init_ack_cid = alloc_init_ack_chunk(init_tag,
+                    curr_channel_->receive_control->curr_rwnd,
+                    curr_channel_->deliverman_control->numSendStreams,
+                    curr_channel_->deliverman_control->numReceiveStreams,
+                    smctrl->my_init_chunk->init_fixed.initial_tsn);
+
+                /*7.4) get local addr list and append them to INIT ACK*/
+                tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_,
+                    last_source_addr_, 1, tmp_peer_supported_types_, true);
+                write_addrlist(init_ack_cid, tmp_local_addreslist_,
+                    tmp_local_addreslist_size_);
+
+
+                /*6.7) generate and append cookie to INIT ACK*/
+                write_cookie(init_cid, init_ack_cid,
+                    get_init_fixed(init_cid), get_init_fixed(init_ack_cid),
+                    get_cookie_lifespan(init_cid),
+                    /* unexpected case:  channel existing, set both NOT zero*/
+                    smctrl->local_tie_tag, smctrl->peer_tie_tag,
+                    last_dest_port_, last_src_port_,
+                    tmp_local_addreslist_, tmp_local_addreslist_size_,
+                    tmp_peer_addreslist_, tmp_peer_addreslist_size_);
+
+                /* 6.8) check unrecognized params*/
+                rett = process_unknown_params_from_init_chunk(init_cid, init_ack_cid,
+                    my_supported_addr_types_);
                 if (rett < 0)
                 {
                     /* 6.9) peer's init chunk has icorrect chunk length,
@@ -1362,145 +1635,43 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                     {
                         ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                     }
-                    // bundle INIT ACK if full will send and empty bundle then copy init ack
-                    bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));
-                    /* trying to send bundle to become more responsive
-                     * unlock bundle to send init ack as single chunk in the
-                     * whole geco packet */
+                    /*send all bundled chunks to ensure init ack is the only chunk sent*/
                     unlock_bundle_ctrl();
-                    send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
-                    free_simple_chunk(init_ack_cid);
-                    EVENTLOG(INTERNAL_EVENT, "event: initAck sent");
-                }
-                break;
-            case ChannelState::CookieEchoed:
-                /* 6)
-                 - Upon receipt of an INIT in the COOKIE-ECHOED state, an endpoint MUST
-                 respond with an INIT ACK using the same parameters it sent in its
-                 original INIT chunk (including its Initiate Tag, unchanged), provided
-                 that no NEW address has been added to the forming association.  If
-                 the INIT message indicates that a new address has been added to the
-                 association, then the entire INIT MUST be discarded, and NO changes
-                 should be made to the existing association.  An ABORT SHOULD be sent
-                 in response that MAY include the error 'Restart of an association
-                 with new addresses'.  The error SHOULD list the addresses that were
-                 added to the restarting association.
-                 - For an endpoint that is in the COOKIE-ECHOED state, it MUST populate
-                 its Tie-Tags within both the association TCB and inside the State
-                 Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
-
-                /*6.1) validate no new addr aaded from the newly received INIT */
-                /*6.1.1 read and validate peer addrlist carried in the received init chunk*/
-                assert(my_supported_addr_types_ != 0);
-                tmp_peer_addreslist_size_ = read_peer_addreslist(
-                    tmp_peer_addreslist_, (uchar*)init,
-                    curr_geco_packet_value_len_, my_supported_addr_types_,
-                    &tmp_peer_supported_types_);
-                if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
-                    ERRLOG(FALTAL_ERROR_EXIT,
-                    "BAKEOFF: Program error, no common address types in process_init_chunk()");
-                /* 6.1.2 compare if there is new addr presenting*/
-                for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
-                {
-                    for (uint inner = 0; inner < tmp_peer_addreslist_size_; inner++)
-                    {
-                        if (!saddr_equals(curr_channel_->remote_addres + idx,
-                            tmp_peer_addreslist_ + inner))
-                        {
-                            EVENTLOG(VERBOSE,
-                                "new addr found in received INIT at CookieEchoed state -> discard !");
-                            return ChunkProcessResult::StopProcessInitChunk_NewAddrAddedError;
-                        }
-                    }
-                }
-
-                /* 6.2) validate tie tags NOT zeros */
-                if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
-                {
-                    ERRLOG2(FALTAL_ERROR_EXIT,
-                        "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
-                        smctrl->local_tie_tag, smctrl->peer_tie_tag);
-                }
-
-                /* 6.3)
-                 * For an endpoint that is in the COOKIE-ECHOED state it MUST populate
-                 * its Tie-Tags with random values so that possible attackers cannot guess
-                 * real tag values of the association (see Implementer's Guide > version 10)*/
-                smctrl->local_tie_tag = generate_init_tag();
-                smctrl->peer_tie_tag = generate_init_tag();
-
-                /*6.4) get in out stream number*/
-                inbound_stream = std::min(read_outbound_stream(init_cid),
-                    get_local_inbound_stream());
-                outbound_stream = std::min(read_inbound_stream(init_cid),
-                    get_local_outbound_stream());
-
-                /*6.5) an INIT ACK using the same parameters it sent in its
-                 original INIT chunk (including its Initiate Tag, unchanged) */
-                if (smctrl->my_init_chunk == NULL)
-                    ERRLOG(FALTAL_ERROR_EXIT, "smctrl->my_init_chunk == NULL !");
-
-                /*chage length to host order*/
-                uint init_i_sent_cid = alloc_simple_chunk(
-                    (simple_chunk_t*)(smctrl->my_init_chunk));
-                init_ack_cid = alloc_init_ack_chunk(read_init_tag(init_i_sent_cid),
-                    get_rwnd(init_i_sent_cid), outbound_stream, inbound_stream,
-                    get_init_tsn(init_i_sent_cid));
-                /*reset length to network order*/
-                complete_simple_chunk(init_i_sent_cid);
-                remove_simple_chunk(init_i_sent_cid);
-
-                /*6.6) get local addr list and append them to INIT ACK*/
-                tmp_local_addreslist_size_ = get_local_addreslist(
-                    tmp_local_addreslist_, last_source_addr_, 1,
-                    tmp_peer_supported_types_, true);
-                write_addrlist(init_ack_cid, tmp_local_addreslist_,
-                    tmp_local_addreslist_size_);
-
-                /*6.7) generate and append cookie to INIT ACK*/
-                write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid),
-                    get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
-                    /* unexpected case: existing channel found, set both NOT zero*/
-                    smctrl->local_tie_tag, smctrl->peer_tie_tag,
-                    last_dest_port_, last_src_port_, tmp_local_addreslist_,
-                    tmp_local_addreslist_size_, tmp_peer_addreslist_,
-                    tmp_peer_addreslist_size_);
-
-                /* 6.8) check unrecognized params */
-                int rett = process_unknown_params_from_init_chunk(init_cid,
-                    init_ack_cid, my_supported_addr_types_);
-                if (rett < 0)
-                {
-                    /* 6.9) peer's init chunk has icorrect chunk length,
-                     * discard peer's connection by not bunding init ack*/
-                    free_simple_chunk(init_ack_cid);
-                    ret = ChunkProcessResult::Stop;
-                }
-                else
-                {
-                    /* 6.10) MUST send INIT ACK caried unknown params to the peer
-                    * if he has unknown params in its init chunk
-                    * as we SHOULD let peer's imple to finish the
-                    * unnormal connection handling precedures*/
-
-                    if (rett != 0)
-                    {
-                        ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
-                    }
-                    else
-                    {
-                        ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
-                    }
+                    send_bundled_chunks();
                     // bundle INIT ACK if full will send and empty bundle then copy init ack
                     bundle_ctrl_chunk(complete_simple_chunk(init_ack_cid));
                     /* trying to send bundle to become more responsive
                     * unlock bundle to send init ack as single chunk in the
                     * whole geco packet */
-                    unlock_bundle_ctrl();
-                    send_bundled_chunks();
+                    send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
                     free_simple_chunk(init_ack_cid);
-                    EVENTLOG(INTERNAL_EVENT, "event: initAck sent");
+                    EVENTLOG(INTERNAL_EVENT,
+                        "event: initAck sent at state of ShutdownSent");
                 }
+                break;
+            case ChannelState::ShutdownAckSent:
+                /* RFC 4960 (section 9.2 starting from line 6146)
+                We are supposed to discard the Init, and retransmit SHUTDOWN_ACK
+                If an endpoint is in the SHUTDOWN-ACK-SENT state and receives an INIT
+                chunk (e.g., if the SHUTDOWN COMPLETE was lost) with source and
+                destination transport addresses (either in the IP addresses or in the
+                INIT chunk) that belong to this association, it should discard the
+                INIT chunk and retransmit the SHUTDOWN ACK chunk.
+
+                Note: Receipt of an INIT with the same source and destination IP
+                addresses as used in transport addresses assigned to an endpoint but
+                with a different port number indicates the initialization of a
+                separate association.*/
+                uint shutdownackcid =
+                    alloc_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
+                /*send all bundled chunks to ensure init ack is the only chunk sent*/
+                unlock_bundle_ctrl();
+                send_bundled_chunks();
+                bundle_ctrl_chunk(complete_simple_chunk(shutdownackcid));
+                send_bundled_chunks(); //send init ack
+                free_simple_chunk(shutdownackcid);
+                EVENTLOG(INTERNAL_EVENT,
+                    "event: initAck sent at state of ShutdownAckSent");
                 break;
         }
     }
@@ -2929,8 +3100,8 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
             default:
                 ERRLOG(MAJOR_ERROR, "no such addr family!");
                 ret = false;
-                }
-                }
+        }
+    }
     /*2) otherwise try to find from local addr list stored in curr geco instance*/
     if (curr_geco_instance_ != NULL)
     {
@@ -2972,7 +3143,7 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
     EVENTLOG1(VERBOSE, "Found loopback address returns %s",
         (ret == true) ? "TRUE" : "FALSE");
     return ret;
-        }
+}
 
 int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
     sockaddrunion* foundAddress, int supportedAddressTypes)

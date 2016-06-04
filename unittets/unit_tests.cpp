@@ -78,3 +78,23 @@ TEST(test_case_hash, test_sockaddr2hashcode)
     ret = transportaddr2hashcode(&localsu, &peersu);
     EVENTLOG2(VERBOSE, "hash(addr pair { localsu: 192.168.1.107:36001 peersu: 192.168.1.107:36000 }) = %u, %u", ret, ret % 100000);
 }
+
+TEST(TEST_SWITCH, SWITCH)
+{
+    int a = 6;
+    switch (a)
+    {
+        case 1:
+            EVENTLOG(VERBOSE, "1");
+        case 4:
+        case 5:
+        case 6:
+            EVENTLOG(VERBOSE, "6");
+            break;
+        case 7:
+            EVENTLOG(VERBOSE, "2");
+            break;
+        default:
+            break;
+    }
+}

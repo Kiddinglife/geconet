@@ -161,7 +161,7 @@ struct recv_controller_t //recv_ctrl
     uint sack_flag; /* 1 (sack each data chunk) or 2 (sack every second chunk)*/
     uint last_address;
     uint channel_id;
-    uint rwnd;
+    uint curr_rwnd;
     uint delay; /* delay for delayed ACK in msecs */
     uint num_of_addresses; /* number of dest addresses */
     std::list<data_chunk_t*> fragmented_data_chunks_list;
@@ -314,7 +314,7 @@ struct channel_t
     void *flow_control;
     void *reliable_transfer_control;
     recv_controller_t *receive_control;
-    void *stream_control;
+    deliver_controller_t *deliverman_control;
     path_controller_t *path_control;
     bundle_controller_t *bundle_control;
     state_machine_controller_t *state_machine_control;
@@ -363,6 +363,64 @@ struct retransmit_controller_t
     std::vector<data_chunk_t*> prChunks;  //fixme what is the type used ?
 };
 
+
+struct receives_t //ReceiveStream
+{
+    /* list of PDUs waiting for pickup (after notification has been called) */
+    std::list<delivery_pdu_t*>   pduList;
+    /* list of PDUs waiting for transfer to pduList and doing mdi arrive notification */
+    std::list<delivery_pdu_t*>   prePduList;
+    /* used to detect Protocol violations in se_searchReadyPdu */
+    ushort  highestSSN;
+    ushort  nextSSN;
+    bool highestSSNused;
+    int index;
+};
+
+struct sends_t //SendStream
+{
+    unsigned int nextSSN;
+};
+
+struct deliver_controller_t //StreamEngine
+{
+    uint    numSendStreams;
+    uint    numReceiveStreams;
+    receives_t*  receives;
+    sends_t*     sends;
+    bool*       recvStreamActivated;
+    uint    queuedBytes;
+    bool        unreliable;
+    //fixme is delivery_data_t* used?
+    std::list<delivery_data_t*>	 packets; //!< list for all packets 
+};
+
+/*this stores all the data need to be delivered to the user*/
+struct delivery_data_t
+{
+    uchar  chunk_flags;
+    uint data_length;
+    uint tsn;
+    ushort stream_id;
+    ushort stream_sn;
+    uint protocolId;
+    uint fromAddressIndex;
+    uchar  data[MAX_DATA_CHUNK_VALUE_SIZE];
+};
+
+
+/*stores several chunks that can be delivered to the user as one message*/
+struct delivery_pdu_t
+{
+    uint  number_of_chunks;
+    uint  read_position;
+    uint  read_chunk;
+    uint  chunk_position;
+    uint  total_length;
+    /* one chunk pointer or an array of these */
+    delivery_data_t** ddata;
+};
+
 struct transportaddr_hash_functor  //hash 函数
 {
     size_t operator()(transport_addr_t &addr) const
@@ -376,7 +434,7 @@ struct transportaddr_cmp_functor //比较函数 ==
     bool operator()(transport_addr_t &addr1, transport_addr_t &addr2) const
     {
         return saddr_equals(&(addr1.local_saddr), &(addr2.local_saddr))
-                && saddr_equals(&(addr1.peer_saddr), &(addr2.peer_saddr));
+            && saddr_equals(&(addr1.peer_saddr), &(addr2.peer_saddr));
     }
 };
 struct sockaddr_hash_functor  //hash 函数
@@ -397,21 +455,21 @@ struct sockaddr_cmp_functor //比较函数 ==
 struct network_interface_t;
 class dispatch_layer_t
 {
-public:
+    public:
     bool dispatch_layer_initialized;
 
 #ifdef _WIN32
     std::unordered_map<transport_addr_t, channel_t*,
-    transportaddr_hash_functor, transportaddr_cmp_functor>
-    channel_map_;
+        transportaddr_hash_functor, transportaddr_cmp_functor>
+        channel_map_;
     std::unordered_map<sockaddrunion, geco_instance_t*,
-    sockaddr_hash_functor, sockaddr_cmp_functor>
-    instance_map_;
+        sockaddr_hash_functor, sockaddr_cmp_functor>
+        instance_map_;
 #else
-    std::tr1::unordered_map<transport_addr_t, channel_t*,
-            transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
+    std::tr1::unordered_map < transport_addr_t, channel_t*,
+        transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
     std::tr1::unordered_map<sockaddrunion, geco_instance_t*,
-            sockaddr_hash_functor, sockaddr_cmp_functor> instance_map_;
+        sockaddr_hash_functor, sockaddr_cmp_functor> instance_map_;
 #endif
 
     /* many diferent channels belongs to a same geco instance*/
@@ -513,7 +571,7 @@ public:
      *  @param portnum            bogus port number
      */
     void recv_geco_packet(int socket_fd, char *buffer, uint bufferLength,
-            sockaddrunion * source_addr, sockaddrunion * dest_addr);
+        sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
     /*------------------- Functions called by the SCTP bundling --------------------------------------*/
 
@@ -538,9 +596,9 @@ public:
      *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
      */
     int send_geco_packet(char* geco_packet, uint length,
-            short destAddressIndex);
+        short destAddressIndex);
 
-private:
+    private:
 
     /**
      * generates a random tag value for a new association, but not 0
@@ -586,10 +644,10 @@ private:
         }
 
         if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
-                || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+            || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
         {
             return ntohl(
-                    ((init_chunk_t*) simple_chunks_[chunkID])->init_fixed.rwnd);
+                ((init_chunk_t*)simple_chunks_[chunkID])->init_fixed.rwnd);
         }
         else
         {
@@ -608,10 +666,10 @@ private:
         }
 
         if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
-                || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+            || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
         {
             return ntohl(
-                    ((init_chunk_t*) simple_chunks_[chunkID])->init_fixed.initial_tsn);
+                ((init_chunk_t*)simple_chunks_[chunkID])->init_fixed.initial_tsn);
         }
         else
         {
@@ -629,8 +687,8 @@ private:
      * @pre either of current channel and current geco instance MUST present.
      */
     uint get_local_addreslist(sockaddrunion* local_addrlist,
-            sockaddrunion *peerAddress, uint numPeerAddresses,
-            uint addressTypes, bool receivedFromPeer);
+        sockaddrunion *peerAddress, uint numPeerAddresses,
+        uint addressTypes, bool receivedFromPeer);
 
     /**
      * function to return a pointer to the state machine controller of this association
@@ -657,7 +715,7 @@ private:
     uint get_curr_channel_state()
     {
         state_machine_controller_t* smctrl =
-                (state_machine_controller_t*) get_state_machine_controller();
+            (state_machine_controller_t*)get_state_machine_controller();
         if (smctrl == NULL)
         {
             /* error log */
@@ -666,34 +724,34 @@ private:
         }
         switch (smctrl->channel_state)
         {
-        case ChannelState::Closed:
-            EVENTLOG(VERBOSE, "Current state : CLOSED");
-            break;
-        case ChannelState::CookieWait:
-            EVENTLOG(VERBOSE, "Current state :COOKIE_WAIT ");
-            break;
-        case ChannelState::CookieEchoed:
-            EVENTLOG(VERBOSE, "Current state : COOKIE_ECHOED");
-            break;
-        case ChannelState::Connected:
-            EVENTLOG(VERBOSE, "Current state : ESTABLISHED");
-            break;
-        case ChannelState::ShutdownPending:
-            EVENTLOG(VERBOSE, "Current state : SHUTDOWNPENDING");
-            break;
-        case ChannelState::ShutdownReceived:
-            EVENTLOG(VERBOSE, "Current state : SHUTDOWNRECEIVED");
-            break;
-        case ChannelState::ShutdownSent:
-            EVENTLOG(VERBOSE, "Current state : SHUTDOWNSENT");
-            break;
-        case ChannelState::ShutdownAckSent:
-            EVENTLOG(VERBOSE, "Current state : SHUTDOWNACKSENT");
-            break;
-        default:
-            EVENTLOG(VERBOSE, "Unknown state : return Closed");
-            return ChannelState::Closed;
-            break;
+            case ChannelState::Closed:
+                EVENTLOG(VERBOSE, "Current state : CLOSED");
+                break;
+            case ChannelState::CookieWait:
+                EVENTLOG(VERBOSE, "Current state :COOKIE_WAIT ");
+                break;
+            case ChannelState::CookieEchoed:
+                EVENTLOG(VERBOSE, "Current state : COOKIE_ECHOED");
+                break;
+            case ChannelState::Connected:
+                EVENTLOG(VERBOSE, "Current state : ESTABLISHED");
+                break;
+            case ChannelState::ShutdownPending:
+                EVENTLOG(VERBOSE, "Current state : SHUTDOWNPENDING");
+                break;
+            case ChannelState::ShutdownReceived:
+                EVENTLOG(VERBOSE, "Current state : SHUTDOWNRECEIVED");
+                break;
+            case ChannelState::ShutdownSent:
+                EVENTLOG(VERBOSE, "Current state : SHUTDOWNSENT");
+                break;
+            case ChannelState::ShutdownAckSent:
+                EVENTLOG(VERBOSE, "Current state : SHUTDOWNACKSENT");
+                break;
+            default:
+                EVENTLOG(VERBOSE, "Unknown state : return Closed");
+                return ChannelState::Closed;
+                break;
         }
         return smctrl->channel_state;
     }
@@ -739,19 +797,19 @@ private:
         if (path_ctrl->path_params == NULL)
         {
             ERRLOG1(MAJOR_ERROR,
-                    "set_path_chunk_sent_on(%d): path_params NULL !",
-                    path_param_id);
+                "set_path_chunk_sent_on(%d): path_params NULL !",
+                path_param_id);
             return;
         }
         if (!(path_param_id >= 0 && path_param_id < path_ctrl->path_num))
         {
             ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on: invalid path ID: %d",
-                    path_param_id);
+                path_param_id);
             return;
         }
         EVENTLOG1(VERBOSE, "Calling set_path_chunk_sent_on(%d)", path_param_id);
         path_ctrl->path_params[path_param_id].data_chunks_sent_in_last_rto =
-                true;
+            true;
     }
 
     void free_internal_data_chunk(internal_data_chunk_t* item)
@@ -789,7 +847,7 @@ private:
         if (rctrl == NULL)
         {
             ERRLOG(MINOR_ERROR,
-                    "stop_sack_timer()::recv_controller_t instance not set !");
+                "stop_sack_timer()::recv_controller_t instance not set !");
             return;
         }
         /*also make sure free all received duplicated data chunks */
@@ -892,7 +950,7 @@ private:
             pathctrl->path_params[pathID].hb_timer_id = timer_mgr_.timers.end();
             pathctrl->path_params[pathID].hb_enabled = false;
             EVENTLOG1(INTERNAL_TRACE, "stop_heart_beat_timer: path %d disabled",
-                    pathID);
+                pathID);
         }
         return 0;
     }
@@ -945,13 +1003,13 @@ private:
      * @return true is chunk_type exists in SCTP datagram, false if it is not in there
      */
     bool contains_error_chunk(uchar * packet_value, uint packet_val_len,
-            ushort error_cause);
+        ushort error_cause);
 
     uint get_bundle_total_size(bundle_controller_t* buf)
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
         return ((buf)->ctrl_position + (buf)->sack_position
-                + (buf)->data_position - 2 * UDP_GECO_PACKET_FIXED_SIZES);
+            + (buf)->data_position - 2 * UDP_GECO_PACKET_FIXED_SIZES);
     }
 
     // fixme 
@@ -961,7 +1019,7 @@ private:
     {
         assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
         return ((buf)->ctrl_position + (buf)->data_position
-                - UDP_GECO_PACKET_FIXED_SIZES);
+            - UDP_GECO_PACKET_FIXED_SIZES);
     }
 
     /**
@@ -988,8 +1046,8 @@ private:
 
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
         simple_chunk_t* simple_chunk_ptr =
-                (simple_chunk_t*) geco::ds::single_client_alloc::allocate(
-                SIMPLE_CHUNK_SIZE);
+            (simple_chunk_t*)geco::ds::single_client_alloc::allocate(
+            SIMPLE_CHUNK_SIZE);
 
         simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
         simple_chunk_ptr->chunk_header.chunk_flags = flag;
@@ -1000,13 +1058,13 @@ private:
     }
     /* makes an initAck and initializes the the fixed part of initAck */
     uchar alloc_init_ack_chunk(uint initTag, uint rwnd, ushort noOutStreams,
-            ushort noInStreams, uint initialTSN)
+        ushort noInStreams, uint initialTSN)
     {
         assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
 
         init_chunk_t* initAckChunk =
-                (init_chunk_t*) geco::ds::single_client_alloc::allocate(
-                INIT_CHUNK_TOTAL_SIZE);
+            (init_chunk_t*)geco::ds::single_client_alloc::allocate(
+            INIT_CHUNK_TOTAL_SIZE);
 
         initAckChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
         initAckChunk->chunk_header.chunk_flags = 0;
@@ -1017,8 +1075,8 @@ private:
         initAckChunk->init_fixed.inbound_streams = htons(noInStreams);
         initAckChunk->init_fixed.initial_tsn = htonl(initialTSN);
 
-        add2chunklist((simple_chunk_t*) initAckChunk,
-                "create init ack chunk %u");
+        add2chunklist((simple_chunk_t*)initAckChunk,
+            "create init ack chunk %u");
         return simple_chunk_index_;
     }
 
@@ -1029,7 +1087,7 @@ private:
     uchar alloc_simple_chunk(simple_chunk_t* chunk)
     {
         chunk->chunk_header.chunk_length = ntohs(
-                chunk->chunk_header.chunk_length);
+            chunk->chunk_header.chunk_length);
         add2chunklist(chunk, "created chunk from string %u ");
         return simple_chunk_index_;
     }
@@ -1047,7 +1105,7 @@ private:
 
     /** append ecc vlp into CHUNK_ERROR OR CHUNK_ABORT*/
     void append_ecc(uint chunkID, uint code, uint length = 0,
-            uchar* data = NULL)
+        uchar* data = NULL)
     {
         if (simple_chunks_[chunkID] == NULL)
         {
@@ -1060,7 +1118,7 @@ private:
             return;
         }
         if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ERROR
-                && simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ABORT)
+            && simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ABORT)
         {
             ERRLOG(MAJOR_ERROR, " append_ecc() : Wrong chunk type");
             return;
@@ -1068,10 +1126,10 @@ private:
 
         uint index = curr_write_pos_[chunkID];
         error_cause_t* ecc =
-                (error_cause_t*) (simple_chunks_[chunkID]->chunk_value + index);
+            (error_cause_t*)(simple_chunks_[chunkID]->chunk_value + index);
         ecc->error_reason_code = htons(code);
         ecc->error_reason_length = htons(
-                (ushort) (length + VLPARAM_FIXED_SIZE));
+            (ushort)(length + VLPARAM_FIXED_SIZE));
         if (length > 0)
         {
             memcpy(&ecc->error_reason, data, length);
@@ -1081,8 +1139,8 @@ private:
         if (index < 4) // padding 
         {
             memset(
-                    simple_chunks_[chunkID]->chunk_value
-                            + curr_write_pos_[chunkID], 0, index);
+                simple_chunks_[chunkID]->chunk_value
+                + curr_write_pos_[chunkID], 0, index);
             curr_write_pos_[chunkID] += index;
         }
     }
@@ -1100,12 +1158,12 @@ private:
         uint chunkid = scptr->chunk_header.chunk_id;
         if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
         {
-            return ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
+            return ntohs(((init_chunk_t*)scptr)->init_fixed.outbound_streams);
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                    "read_outbound_stream(): chunk type not init or initAck");
+                "read_outbound_stream(): chunk type not init or initAck");
             return 0;
         }
     }
@@ -1123,12 +1181,12 @@ private:
         uint chunkid = scptr->chunk_header.chunk_id;
         if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
         {
-            return ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
+            return ntohs(((init_chunk_t*)scptr)->init_fixed.inbound_streams);
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                    "read_inbound_stream(): chunk type not init or initAck");
+                "read_inbound_stream(): chunk type not init or initAck");
             return -1;
         }
     }
@@ -1145,12 +1203,12 @@ private:
         uint chunkid = scptr->chunk_header.chunk_id;
         if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
         {
-            return ntohl(((init_chunk_t*) scptr)->init_fixed.init_tag);
+            return ntohl(((init_chunk_t*)scptr)->init_fixed.init_tag);
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                    "read_init_tag(): chunk type not init or initAck");
+                "read_init_tag(): chunk type not init or initAck");
             return -1;
         }
     }
@@ -1166,7 +1224,7 @@ private:
         {
             EVENTLOG1(INTERNAL_TRACE, "freed simple chunk %u", cid);
             geco::ds::single_client_alloc::deallocate(simple_chunks_[chunkID],
-            SIMPLE_CHUNK_SIZE);
+                SIMPLE_CHUNK_SIZE);
             simple_chunks_[chunkID] = NULL;
         }
         else
@@ -1219,8 +1277,8 @@ private:
         }
 
         simple_chunks_[chunkID]->chunk_header.chunk_length = htons(
-                (simple_chunks_[chunkID]->chunk_header.chunk_length
-                        + curr_write_pos_[chunkID]));
+            (simple_chunks_[chunkID]->chunk_header.chunk_length
+            + curr_write_pos_[chunkID]));
         completed_chunks_[chunkID] = true;
         return simple_chunks_[chunkID];
     }
@@ -1270,16 +1328,16 @@ private:
     /**
      * Enable sending again - wait after received chunks have been diassembled completely.
      */
-    inline void unlock_bundle_ctrl(uint* ad_idx = NULL)
+    inline void unlock_bundle_ctrl(int* ad_idx = NULL)
     {
         bundle_controller_t* bundle_ctrl =
-                (bundle_controller_t*) get_bundle_controller(curr_channel_);
+            (bundle_controller_t*)get_bundle_controller(curr_channel_);
 
         /*1) no channel exists, it is NULL, so we take the global bundling buffer */
         if (bundle_ctrl == NULL)
         {
             EVENTLOG(VERBOSE,
-                    "unlock_bundle_ctrl()::Setting global bundling buffer ");
+                "unlock_bundle_ctrl()::Setting global bundling buffer ");
             bundle_ctrl = &default_bundle_ctrl_;
         }
 
@@ -1288,8 +1346,8 @@ private:
             send_bundled_chunks(ad_idx);
 
         EVENTLOG1(VERBOSE,
-                "unlock_bundle_ctrl() was called..and got %s send request -> processing",
-                (bundle_ctrl->got_send_request == true) ? "A" : "NO");
+            "unlock_bundle_ctrl() was called..and got %s send request -> processing",
+            (bundle_ctrl->got_send_request == true) ? "A" : "NO");
     }
 
     /**
@@ -1299,13 +1357,13 @@ private:
     inline void lock_bundle_ctrl()
     {
         bundle_controller_t* bundle_ctrl =
-                (bundle_controller_t*) get_bundle_controller(curr_channel_);
+            (bundle_controller_t*)get_bundle_controller(curr_channel_);
 
         /*1) no channel exists, it is NULL, so we take the global bundling buffer */
         if (bundle_ctrl == NULL)
         {
             EVENTLOG(VERBOSE,
-                    "lock_bundle_ctrl()::Setting global bundling buffer ");
+                "lock_bundle_ctrl()::Setting global bundling buffer ");
             bundle_ctrl = &default_bundle_ctrl_;
         }
 
@@ -1329,14 +1387,14 @@ private:
      *   TODO hash(src_addr, src_port, dest_port) as key for channel to improve the performaces
      */
     channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
-            ushort src_port, ushort dest_port);
+        ushort src_port, ushort dest_port);
     bool cmp_channel(const channel_t& a, const channel_t& b);
 
     /**
      *   @return pointer to the retrieved association, or NULL
      */
     geco_instance_t* find_geco_instance_by_transport_addr(
-            sockaddrunion* dest_addr, uint address_type);
+        sockaddrunion* dest_addr, uint address_type);
     bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b);
 
     /**
@@ -1348,14 +1406,14 @@ private:
 
     /**returns a value indicating which chunks are in the packet.*/
     uint find_chunk_types(uchar* packet_value, uint len,
-            uint* total_chunk_count = NULL);
+        uint* total_chunk_count = NULL);
 
     /**
      * check if local addr is found
      * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
      * */
     inline bool contains_local_host_addr(sockaddrunion* addr_list,
-            uint addr_list_num);
+        uint addr_list_num);
 
     /**
      * contains_chunk: looks for chunk_type in a newly received geco packet
@@ -1404,7 +1462,7 @@ private:
      * @return pointer to first chunk of chunk_type in SCTP datagram, else NULL
      */
     uchar* find_first_chunk_of(uchar * packet_value, uint packet_val_len,
-            uint chunk_type);
+        uint chunk_type);
 
     /**
      * @breif looks for address type parameters in INIT or INIT-ACKs.
@@ -1420,15 +1478,15 @@ private:
      * 1 if there are not that many addresses in the chunk.
      */
     int read_peer_addr(uchar * init_chunk, uint chunk_len, uint n,
-            sockaddrunion* foundAddress, int supportedAddressTypes);
+        sockaddrunion* foundAddress, int supportedAddressTypes);
 
     /**
      * @return -1 prama error, >=0 number of the found addresses
      */
     int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
-            uchar * init_chunk, uint chunk_len, uint supportedAddressTypes,
-            uint* peer_supported_type = NULL, bool ignore_dups = true,
-            bool ignore_last_src_addr = false);
+        uchar * init_chunk, uint chunk_len, uint supportedAddressTypes,
+        uint* peer_supported_type = NULL, bool ignore_dups = true,
+        bool ignore_last_src_addr = false);
 
     /**
      * @brief scans for a parameter of a certain type in a message string.
@@ -1459,11 +1517,11 @@ private:
             if (len - read_len < VLPARAM_FIXED_SIZE)
             {
                 EVENTLOG(WARNNING_ERROR,
-                        "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
                 return NULL;
             }
 
-            vlp = (vlparam_fixed_t*) vlp_fixed;
+            vlp = (vlparam_fixed_t*)vlp_fixed;
             vlptype = ntohs(vlp->param_type);
             vlp_len = ntohs(vlp->param_length);
             if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
@@ -1488,8 +1546,8 @@ private:
      * @param [in] local_addreslist  the addres that will be written to chunk
      */
     int write_addrlist(uint chunkid,
-            sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
-            int local_addreslist_size);
+        sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
+        int local_addreslist_size);
 
     /** check if endpoint is ADD-IP capable, store result, and put HIS chunk in cookie */
     int write_add_ip_chunk(uint initAckCID, uint initCID)
@@ -1503,8 +1561,8 @@ private:
     }
     int write_vlp_unreliability(uint initAckCID, uint initCID)
     {
-        init_chunk_t* init = (init_chunk_t*) (simple_chunks_[initCID]);
-        init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckCID]);
+        init_chunk_t* init = (init_chunk_t*)(simple_chunks_[initCID]);
+        init_chunk_t* initack = (init_chunk_t*)(simple_chunks_[initAckCID]);
         if (init == NULL || initack == NULL)
         {
             ERRLOG(FALTAL_ERROR_EXIT, "Invalid init or initAck chunk ID");
@@ -1513,8 +1571,8 @@ private:
 
         uint len = init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES;
         EVENTLOG1(VERBOSE,
-                "write_vlp_unreliability()::Scan initChunk for PRSCTP parameter: len %u",
-                len);
+            "write_vlp_unreliability()::Scan initChunk for PRSCTP parameter: len %u",
+            len);
         int ret = -1;
         uint padding_len;
         uint read_len = 0;
@@ -1530,10 +1588,10 @@ private:
             if (len - read_len < VLPARAM_FIXED_SIZE)
             {
                 EVENTLOG(WARNNING_ERROR,
-                        "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
                 ret = -1; /*peer error should send ecc to peer*/
             }
-            vlp = (vlparam_fixed_t*) initchar;
+            vlp = (vlparam_fixed_t*)initchar;
             vlptype = ntohs(vlp->param_type);
             vlp_len = ntohs(vlp->param_length);
             if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
@@ -1570,7 +1628,7 @@ private:
         if (curr_channel_ != NULL)
         {
             return (curr_channel_->remotely_supported_PRSCTP
-                    && curr_channel_->locally_supported_PRDCTP);
+                && curr_channel_->locally_supported_PRDCTP);
         }
         if (curr_geco_instance_ != NULL)
         {
@@ -1585,7 +1643,7 @@ private:
      * without any further action, 1 for an error that stops chunk parsing, but returns error to
      * the peer and 0 for normal continuation */
     int process_unknown_params_from_init_chunk(uint initCID, uint AckCID,
-            uint supportedAddressTypes);
+        uint supportedAddressTypes);
 
     /**
      return the current system time converted to a value of  milliseconds.
@@ -1608,7 +1666,7 @@ private:
             return -1;
 
         uint cookieLength = ntohs(
-                cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
+            cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
         if (cookieLength == 0)
             return -1;
 
@@ -1617,13 +1675,13 @@ private:
             return -1;
 
         MD5 md5;
-        md5.update((uchar*) cookieString, cookieLength);
+        md5.update((uchar*)cookieString, cookieLength);
         md5.update(key, SECRET_KEYSIZE);
         md5.finalize();
         memcpy(cookieString->ck.hmac, md5.Digest(),
-                sizeof(cookieString->ck.hmac));
+            sizeof(cookieString->ck.hmac));
         EVENTLOG1(INTERNAL_TRACE, "Computed MD5 signature : %s",
-                md5.hexdigest().c_str());
+            md5.hexdigest().c_str());
         return 0;
     }
     int write_ecn_chunk(uint initAckID, uint initCID)
@@ -1631,7 +1689,7 @@ private:
         return 0;
     }
     void write_vlp_to_init_chunk(uint initChunkID, uint pCode, uint len,
-            uchar* data)
+        uchar* data)
     {
         if (simple_chunks_[initChunkID] == NULL)
         {
@@ -1641,7 +1699,7 @@ private:
         if (completed_chunks_[initChunkID])
         {
             ERRLOG(MAJOR_ERROR,
-                    " write_vlp_to_init_chunk : chunk already completed");
+                " write_vlp_to_init_chunk : chunk already completed");
             return;
         }
         /* chunk_value is the start of init chunk,
@@ -1649,10 +1707,10 @@ private:
          * so we need pass by INIT_CHUNK_FIXED_SIZE + curr_write_pos_[initChunkID]
          * to get the correct writable pos*/
         uchar *vlPtr = (simple_chunks_[initChunkID]->chunk_value
-                + INIT_CHUNK_FIXED_SIZE + curr_write_pos_[initChunkID]);
-        *((ushort*) vlPtr) = htons(pCode);
+            + INIT_CHUNK_FIXED_SIZE + curr_write_pos_[initChunkID]);
+        *((ushort*)vlPtr) = htons(pCode);
         vlPtr += sizeof(ushort); // pass by param type
-        *((ushort*) vlPtr) = htons(len + VLPARAM_FIXED_SIZE);
+        *((ushort*)vlPtr) = htons(len + VLPARAM_FIXED_SIZE);
         vlPtr += sizeof(ushort); // pass by param length field
         if (len > 0)
             memcpy(vlPtr, data, len);
@@ -1663,11 +1721,11 @@ private:
     /* @brief append the variable length cookie param to an initAck. */
     /* ch_initFixed reads the fixed part of an init or initAck as complete structure */
     int write_cookie(uint initCID, uint initAckID,
-            init_chunk_fixed_t* init_fixed, init_chunk_fixed_t* initAck_fixed,
-            uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
-            ushort last_dest_port, ushort last_src_port,
-            sockaddrunion local_Addresses[], uint num_local_Addresses,
-            sockaddrunion peer_Addresses[], uint num_peer_Addresses);
+        init_chunk_fixed_t* init_fixed, init_chunk_fixed_t* initAck_fixed,
+        uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
+        ushort last_dest_port, ushort last_src_port,
+        sockaddrunion local_Addresses[], uint num_local_Addresses,
+        sockaddrunion peer_Addresses[], uint num_peer_Addresses);
 
     init_chunk_fixed_t* get_init_fixed(uint chunkID)
     {
@@ -1678,27 +1736,27 @@ private:
         }
 
         if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
-                || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+            || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
         {
-            return &((init_chunk_t *) simple_chunks_[chunkID])->init_fixed;
+            return &((init_chunk_t *)simple_chunks_[chunkID])->init_fixed;
         }
         else
         {
             ERRLOG(MAJOR_ERROR,
-                    "get_init_fixed()::chunk type not init or initAck");
+                "get_init_fixed()::chunk type not init or initAck");
             return NULL;
         }
     }
 
     void write_unknown_param_error(uchar* pos, uint cid, ushort length,
-            uchar* data)
+        uchar* data)
     {
         error_cause_t* ec;
         if (pos == NULL)
         {
             ERRLOG(FALTAL_ERROR_EXIT, "write_unknown_param()::pos gets NULL !");
         }
-        ec = (error_cause_t*) pos;
+        ec = (error_cause_t*)pos;
         ec->error_reason_code = htons(VLPARAM_UNRECOGNIZED_PARAM);
         ec->error_reason_length = htons(length + ERR_CAUSE_FIXED_SIZE);
         if (length > 0)
@@ -1725,16 +1783,16 @@ private:
             return 0;
         }
 
-        init_chunk_t* init = ((init_chunk_t*) simple_chunks_[chunkID]);
+        init_chunk_t* init = ((init_chunk_t*)simple_chunks_[chunkID]);
         uint vlparams_len = init->chunk_header.chunk_length - CHUNK_FIXED_SIZE -
-        INIT_CHUNK_FIXED_SIZE;
+            INIT_CHUNK_FIXED_SIZE;
         uchar* curr_pos = find_first_vlparam_of(VLPARAM_COOKIE_PRESEREASONV,
-                init->variableParams, vlparams_len);
+            init->variableParams, vlparams_len);
         if (curr_pos != NULL)
         {
             /* found cookie preservative */
-            return ntohl(((cookie_preservative_t*) curr_pos)->cookieLifetimeInc)
-                    + get_cookielifespan_from_statectrl();
+            return ntohl(((cookie_preservative_t*)curr_pos)->cookieLifetimeInc)
+                + get_cookielifespan_from_statectrl();
         }
         else
         {
@@ -1754,7 +1812,7 @@ private:
         if (old_data == NULL)
         {
             ERRLOG(MINOR_ERROR,
-                    "get_cookielifespan_from_statectrl():  get state machine ctrl failed");
+                "get_cookielifespan_from_statectrl():  get state machine ctrl failed");
             return -1;
         }
         return old_data->cookie_lifetime;
@@ -1764,6 +1822,6 @@ private:
      * only used for finding some vlparam in init or init ack chunks
      * NULL no params, otherwise have params, return vlp fixed*/
     uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len,
-            ushort param_type);
+        ushort param_type);
 };
 #endif

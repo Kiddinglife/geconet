@@ -938,7 +938,8 @@ int sctlr_init(SCTP_init * init)
                     ch_initFixed(initCID),
                     ch_initFixed(initAckCID),
                     ch_cookieLifeTime(initCID),
-                    localData->local_tie_tag, /* this should be different from that in Init_Ack now */
+                    localData->local_tie_tag, 
+                    /* this should be different from that in Init_Ack now */
                     localData->peer_tie_tag,
                     lAddresses, nlAddresses,
                     rAddresses, nrAddresses);

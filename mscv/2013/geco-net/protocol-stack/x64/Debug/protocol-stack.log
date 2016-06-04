@@ -1,62 +1,18 @@
-﻿Build started 2016/5/31 20:52:40.
+﻿Build started 2016/6/4 8:45:42.
      1>Project "D:\VS2013WorkSpace\geco-protocol-stack\mscv\2013\geco-net\protocol-stack\protocol-stack.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\src\dispatch_layer.cc ..\..\..\..\src\transport_layer.cc
-         transport_layer.cc
-     1>..\..\..\..\src\transport_layer.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(81): warning C4005: 'POLLIN' : macro redefinition
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(82): warning C4005: 'POLLPRI' : macro redefinition
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1618) : see previous definition of 'POLLPRI'
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(83): warning C4005: 'POLLOUT' : macro redefinition
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1621) : see previous definition of 'POLLOUT'
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(84): warning C4005: 'POLLERR' : macro redefinition
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
-     1>d:\vs2013workspace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
-                 command-line arguments :  see previous definition of '_DEBUG'
-     1>d:\vs2013workspace\geco-protocol-stack\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>d:\vs2013workspace\geco-protocol-stack\include\dispatch_layer.h(684): warning C4018: '<' : signed/unsigned mismatch
-     1>d:\vs2013workspace\geco-protocol-stack\include\dispatch_layer.h(825): warning C4018: '<' : signed/unsigned mismatch
-     1>d:\vs2013workspace\geco-protocol-stack\include\dispatch_layer.h(1556): warning C4244: 'argument' : conversion from 'unsigned __int64' to 'u_short', possible loss of data
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(2238) : see declaration of 'gethostbyname'
-     1>..\..\..\..\src\transport_layer.cc(77): warning C4244: 'argument' : conversion from 'SOCKET' to 'int', possible loss of data
-     1>..\..\..\..\src\transport_layer.cc(120): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1850) : see declaration of 'inet_addr'
-     1>..\..\..\..\src\transport_layer.cc(170): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(195) : see declaration of 'strncpy'
-     1>..\..\..\..\src\transport_layer.cc(170): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1868) : see declaration of 'inet_ntoa'
-     1>..\..\..\..\src\transport_layer.cc(202): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(118) : see declaration of 'strcat'
-     1>..\..\..\..\src\transport_layer.cc(203): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(118) : see declaration of 'strcat'
-     1>..\..\..\..\src\transport_layer.cc(741): warning C4101: 'i' : unreferenced local variable
-     1>..\..\..\..\src\transport_layer.cc(962): warning C4244: '=' : conversion from 'SOCKET' to 'int', possible loss of data
-     1>..\..\..\..\src\transport_layer.cc(1113): warning C4244: '=' : conversion from 'SOCKET' to 'int', possible loss of data
-     1>..\..\..\..\src\transport_layer.cc(1135): warning C4002: too many actual parameters for macro 'ERRLOG1'
-     1>..\..\..\..\src\transport_layer.cc(1272): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1868) : see declaration of 'inet_ntoa'
-     1>..\..\..\..\src\transport_layer.cc(1546): warning C4305: 'return' : truncation from 'int' to 'bool'
-     1>..\..\..\..\src\transport_layer.cc(1557): warning C4305: 'return' : truncation from 'int' to 'bool'
-     1>..\..\..\..\src\transport_layer.cc(1564): warning C4305: 'return' : truncation from 'int' to 'bool'
-     1>..\..\..\..\src\transport_layer.cc(1586): warning C4305: 'return' : truncation from 'int' to 'bool'
-     1>..\..\..\..\src\transport_layer.cc(1597): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-                 C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1850) : see declaration of 'inet_addr'
-     1>..\..\..\..\src\transport_layer.cc(1607): warning C4305: 'return' : truncation from 'int' to 'bool'
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I../../../../include /I../../../../thirdparty/ /I../../../../thirdparty/cat/include/ /I"../../../../thirdparty/openssl-1.0.0d/include" /I../../../../thirdparty/googletest/include/ /I../../../../thirdparty/googlemock/include/ /Zi /nologo /W3 /WX- /Od /D WIN32 /D _DEBUG /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc120.pdb" /Gd /TP /errorReport:prompt ..\..\..\..\src\dispatch_layer.cc
          dispatch_layer.cc
      1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
                  command-line arguments :  see previous definition of '_DEBUG'
+     1>d:\vs2013workspace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
      1>d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h(684): warning C4018: '<' : signed/unsigned mismatch
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h(825): warning C4018: '<' : signed/unsigned mismatch
-     1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h(1556): warning C4244: 'argument' : conversion from 'unsigned __int64' to 'u_short', possible loss of data
+     1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h(746): warning C4018: '<' : signed/unsigned mismatch
+     1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h(884): warning C4018: '<' : signed/unsigned mismatch
+     1>D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h(1655): warning C4244: 'argument' : conversion from 'unsigned __int64' to 'u_short', possible loss of data
      1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(81): warning C4005: 'POLLIN' : macro redefinition
                  C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
      1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(82): warning C4005: 'POLLPRI' : macro redefinition
@@ -67,18 +23,14 @@
                  C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
      1>D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
                  C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(2238) : see declaration of 'gethostbyname'
-     1>..\..\..\..\src\dispatch_layer.cc(961): warning C4267: '=' : conversion from 'size_t' to 'unsigned short', possible loss of data
+     1>..\..\..\..\src\dispatch_layer.cc(961): warning C4267: '=' : conversion from 'size_t' to 'ushort', possible loss of data
      1>..\..\..\..\src\dispatch_layer.cc(964): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\string.h(112) : see declaration of 'strcpy'
      1>..\..\..\..\src\dispatch_layer.cc(1021): warning C4101: 'padding_len' : unreferenced local variable
-     1>..\..\..\..\src\dispatch_layer.cc(1127): warning C4101: 'suppoted_addr_types' : unreferenced local variable
-     1>..\..\..\..\src\dispatch_layer.cc(1789): warning C4305: '=' : truncation from 'int' to 'uchar'
-     1>..\..\..\..\src\dispatch_layer.cc(1789): warning C4309: '=' : truncation of constant value
-     1>..\..\..\..\src\dispatch_layer.cc(1798): warning C4018: '>=' : signed/unsigned mismatch
-     1>..\..\..\..\src\dispatch_layer.cc(1821): warning C4018: '>=' : signed/unsigned mismatch
-     1>..\..\..\..\src\dispatch_layer.cc(2271): warning C4805: '==' : unsafe mix of type 'bool' and type 'uint' in operation
-         Generating Code...
-     1>d:\vs2013workspace\geco-protocol-stack\include\dispatch_layer.h(1495): warning C4700: uninitialized local variable 'initackchar' used
+     1>..\..\..\..\src\dispatch_layer.cc(1327): warning C4018: '<' : signed/unsigned mismatch
+     1>..\..\..\..\src\dispatch_layer.cc(2213): warning C4018: '>=' : signed/unsigned mismatch
+     1>..\..\..\..\src\dispatch_layer.cc(2683): warning C4805: '==' : unsafe mix of type 'bool' and type 'uint' in operation
+     1>d:\vs2013workspace\geco-protocol-stack\include\dispatch_layer.h(1554): warning C4700: uninitialized local variable 'initackchar' used
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1361,5): warning MSB8012: TargetPath(D:\VS2013WorkSpace\geco-protocol-stack\mscv\2013\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\VS2013WorkSpace\geco-protocol-stack\mscv\2013\geco-net\x64\Debug\geco-protocol-stack_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
      1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(1363,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-protocol-stack_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
        Lib:
@@ -94,4 +46,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:02.38
+Time Elapsed 00:00:01.35

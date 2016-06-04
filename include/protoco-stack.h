@@ -44,6 +44,8 @@ enum ChunkProcessResult
     StopProcessInitChunk_UnkownParamError,
     StopProcessInitChunk_NewAddrAddedError,
     StopAndDeleteChannel,
+    StopAndDeleteChannel_LastSrcPortNullError,
+    StopAndDeleteChannel_ValidateInitParamFailedError,
     ChunkProcessResultSize
 };
 

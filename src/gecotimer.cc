@@ -45,8 +45,8 @@ void timer_mgr::delete_timer(timer_id_t& timerptr)
 {
     if (this->timers.empty())
         return;
-    this->timers.erase(timerptr);
     timerptr->timer_id = 0;
+    this->timers.erase(timerptr);
 }
 int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 {
