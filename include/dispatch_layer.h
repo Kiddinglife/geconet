@@ -1648,14 +1648,15 @@ class dispatch_layer_t
     /**
      return the current system time converted to a value of  milliseconds.
      to make representation in millisecs possible. This done by taking the remainder of
-     a division by OVERFLOW_SECS = 15x24x60x60, restarting millisecs count every 20 days.
-     @return unsigned 32 bit value representing system time in milliseconds. Hmmmh.
+     a division by OVERFLOW_SECS = 15x24x60x60, restarting millisecs count every 15 days.
+     @return unsigned 32 bit value representing system time in milliseconds.
+     span of time id 15 days 
      */
     uint get_safe_time_ms(void)
     {
         struct timeval cur_tval;
         gettimenow(&cur_tval);
-        /* modulo overflows every every one month*/
+        /* modulo overflows every every 15 days*/
         return ((cur_tval.tv_sec % OVERFLOW_SECS) * 1000 + cur_tval.tv_usec);
     }
     /** computes a cookie signature.
