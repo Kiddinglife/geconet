@@ -27,11 +27,10 @@ static int noOftracedModules;
 static char traced_modules[TRACE_MUDULE_SIZE][70];
 static int error_trace_levels[TRACE_MUDULE_SIZE];
 static int event_trace_levels[TRACE_MUDULE_SIZE];
-static const char* error_loglvls_str[4] =
-{ "fatal_error_exit", "major_error_abort", "minor_error", "lwarnning_error" };
-static const char* event_loglvls_str[6] =
-{ "extevent_unexpected", "extevent", "intevent_important", "intevent",
-        "VERBOSE", "lvverbos" };
+static const char* error_loglvls_str[4] = { "fatal_error_exit",
+        "major_error_abort", "minor_error", "lwarnning_error" };
+static const char* event_loglvls_str[6] = { "extevent_unexpected", "extevent",
+        "intevent_important", "intevent", "VERBOSE", "lvverbos" };
 
 void read_trace_levels(void)
 {
@@ -202,7 +201,6 @@ void subtract_time(timeval* a, time_t inteval, timeval* result)
     fills_timeval(&tv, inteval);
     subtract_time(a, &tv, result);
 }
-void subtract_time(timeval* a, time_t* inteval, timeval* result);
 void print_time_now(ushort level)
 {
     struct timeval now;
@@ -641,21 +639,21 @@ unsigned long SuperFastHashIncremental(const char * data, int len,
     /* Handle end cases */
     switch (rem)
     {
-    case 3:
-        hash += get16bits(data);
-        hash ^= hash << 16;
-        hash ^= data[sizeof(unsigned short)] << 18;
-        hash += hash >> 11;
-        break;
-    case 2:
-        hash += get16bits(data);
-        hash ^= hash << 11;
-        hash += hash >> 17;
-        break;
-    case 1:
-        hash += *data;
-        hash ^= hash << 10;
-        hash += hash >> 1;
+        case 3:
+            hash += get16bits(data);
+            hash ^= hash << 16;
+            hash ^= data[sizeof(unsigned short)] << 18;
+            hash += hash >> 11;
+            break;
+        case 2:
+            hash += get16bits(data);
+            hash ^= hash << 11;
+            hash += hash >> 17;
+            break;
+        case 1:
+            hash += *data;
+            hash ^= hash << 10;
+            hash += hash >> 1;
     }
 
     /* Force "avalanching" of final 127 bits */

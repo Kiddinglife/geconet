@@ -24,6 +24,94 @@ TEST(TIMER_MODULE, test_timer_mgr)
     tm.delete_timer(ret2);
     tm.print(VERBOSE);
 }
+TEST(TIMER_MODULE, test_operations_on_time)
+{
+    timeval tv;
+    fills_timeval(&tv, 1000);
+    assert(tv.tv_sec == 1);
+    assert(tv.tv_usec == 0);
+
+    timeval result;
+    sum_time(&tv, (time_t) 200, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 1);
+    assert(result.tv_usec == 200000);
+
+    sum_time(&result, (time_t) 0, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 1);
+    assert(result.tv_usec == 200000);
+
+    sum_time(&result, (time_t) 1, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 1);
+    assert(result.tv_usec == 201000);
+
+    sum_time(&result, (time_t) 1000, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 2);
+    assert(result.tv_usec == 201000);
+
+    sum_time(&result, (time_t) 800, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 3);
+    assert(result.tv_usec == 1000);
+
+    subtract_time(&result, (time_t) 800, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 2);
+    assert(result.tv_usec == 201000);
+
+    subtract_time(&result, (time_t) 201, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 2);
+    assert(result.tv_usec == 0);
+
+    subtract_time(&result, (time_t) 0, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 2);
+    assert(result.tv_usec == 0);
+
+    subtract_time(&result, 2000, &result);
+    print_timeval(&result);
+    assert(result.tv_sec == 0);
+    assert(result.tv_usec == 0);
+}
+
+TEST(GLOBAL_MODULE, test_saddr_str)
+{
+    sockaddrunion saddr;
+    str2saddr(&saddr, "192.168.1.107", 38000);
+
+    char ret[MAX_IPADDR_STR_LEN];
+    ushort port = 0;
+    saddr2str(&saddr, ret, sizeof(ret), &port);
+    EVENTLOG1(VERBOSE, "saddr {%s}\n", ret);
+    assert(strcmp(ret, "192.168.1.107") == 0);
+    assert(saddr.sa.sa_family == AF_INET);
+
+    sockaddrunion saddr1;
+    str2saddr(&saddr1, "192.168.1.107", 38000);
+    sockaddrunion saddr2;
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    bool flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == true);
+
+    str2saddr(&saddr1, "192.167.1.125", 38000);
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == false);
+
+    str2saddr(&saddr1, "192.168.1.107", 3800);
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == false);
+
+    str2saddr(&saddr1, "192.168.1.125", 3800);
+    str2saddr(&saddr2, "192.168.1.107", 38000);
+    flag = saddr_equals(&saddr1, &saddr2);
+    assert(flag == false);
+}
 
 #include "geco-ds-malloc.h"
 #include <algorithm>
@@ -33,8 +121,7 @@ struct alloc_t
         void* ptr;
         size_t allocsize;
 };
-
-TEST(test_case_malloc, test_alloc_dealloc)
+TEST(MALLOC_MODULE, test_alloc_dealloc)
 {
     int j;
     int total = 1000000;
@@ -82,7 +169,7 @@ TEST(test_case_malloc, test_alloc_dealloc)
     single_client_alloc::destroy();
     EXPECT_EQ(alloccnt, deallcnt);
     EXPECT_EQ(allos.size(), 0);
-    printf("alloccnt %d, dealloccnt %d\n", alloccnt, deallcnt);
+    EVENTLOG2(VERBOSE, "alloccnt %d, dealloccnt %d\n", alloccnt, deallcnt);
 }
 
 #include "auth.h"
@@ -147,6 +234,38 @@ TEST(AUTH_MODULE, test_crc32_checksum)
         DATA_CHUNK_FIXED_SIZES + 100);
         EXPECT_TRUE(ret);
     }
+}
+
+TEST(DISPATCHER_MODULE, test_recv_geco_packet)
+{
+
+}
+
+#include "transport_layer.h"
+TEST(TRANSPORT_MODULE, test_get_local_addr)
+{
+    int rcwnd = 512;
+    network_interface_t nit;
+    nit.init(&rcwnd, true);
+
+    sockaddrunion* saddr = 0;
+    int num = 0;
+    int maxmtu = 0;
+    ushort port = 0;
+    char addr[MAX_IPADDR_STR_LEN];
+    IPAddrType t = (IPAddrType) (AllLocalAddrTypes | AllCastAddrTypes);
+    nit.get_local_addresses(&saddr, &num, nit.ip4_socket_despt_, true, &maxmtu,
+            t);
+
+    EVENTLOG1(VERBOSE, "max mtu  %d\n", maxmtu);
+
+    if (saddr != NULL)
+        for (int i = 0; i < num; i++)
+        {
+            saddr2str(saddr + i, addr, MAX_IPADDR_STR_LEN, &port);
+            EVENTLOG2(VERBOSE, "ip address %s port %d\n", addr, port);
+        }
+
 }
 
 TEST(TEST_SWITCH, SWITCH)

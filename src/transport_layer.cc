@@ -1865,7 +1865,7 @@ bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
 
         if (flags & LoopBackAddrType)
         {
-            if (!this->typeofaddr((union sockaddrunion*) toUse,
+            if (this->typeofaddr((union sockaddrunion*) toUse,
                     LoopBackAddrType))
             {
                 /* skip the loopback */
@@ -1873,7 +1873,7 @@ bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
                 continue;
             }
         }
-        if (!this->typeofaddr((union sockaddrunion*) toUse,
+        if (this->typeofaddr((union sockaddrunion*) toUse,
                 ReservedAddrType))
         {
             /* skip reserved */

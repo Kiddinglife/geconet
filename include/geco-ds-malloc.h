@@ -170,7 +170,7 @@ class malloc_alloc
         return result;
     }
 
-public:
+    public:
     //!! 分配指定大小的内存(size_t n)， 如果分配失败, 则进入循环分配阶段
     //!! 循环分配前提是要保证正确设置了oom_handler.
     static void* allocate(size_t size)
@@ -243,7 +243,7 @@ oom_handler_t malloc_alloc<inst>::oom_handler = 0;
 template <class ValueType, class Alloc>
 class simple_alloc
 {
-public:
+    public:
     static ValueType* allocate(size_t size)
     {
         return size == 0 ? 0 : (ValueType*)Alloc::allocate(size*sizeof(ValueType));
@@ -278,7 +278,7 @@ class debug_alloc
     enum
     {
         extra_size = 8
-    };  //! Size of space used to store size.  Note
+    }; //! Size of space used to store size.  Note
 
     //! that this must be large enough to preserve alignment.
     //! extra 保证不会分配为0的内存空间, 而且要保证内存对齐  
@@ -309,7 +309,7 @@ class debug_alloc
         return result + (int)extra_size;
     }
 
-public:
+    public:
     bool operator==(const debug_alloc&)
     {
         return true;
@@ -370,7 +370,7 @@ union Unit
 template <bool threads, int inst>
 class default_alloc
 {
-private:
+    private:
 # if defined(__SUNPRO_CC) || defined(__GNUC__) || defined(__HP_aCC)
     static Unit* GECO_VOLATILE free_list[];
     // Specifying a size results in duplicate def for 4.1
@@ -564,7 +564,7 @@ private:
         return alloc_units(aligned_uint_size, alloc_units_size);
     }
 
-public:
+    public:
     static void* allocate(size_t size)
     {
         if (size == 0) return NULL;
