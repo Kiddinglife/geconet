@@ -10,6 +10,9 @@ CC_SRCS += \
 /home/jakez/2016209/geco-sctp-cplus/src/globals.cc \
 /home/jakez/2016209/geco-sctp-cplus/src/transport_layer.cc 
 
+CPP_SRCS += \
+/home/jakez/2016209/geco-sctp-cplus/src/geco-malloc.cpp 
+
 CC_DEPS += \
 ./src/auth.d \
 ./src/dispatch_layer.d \
@@ -20,9 +23,13 @@ CC_DEPS += \
 OBJS += \
 ./src/auth.o \
 ./src/dispatch_layer.o \
+./src/geco-malloc.o \
 ./src/gecotimer.o \
 ./src/globals.o \
 ./src/transport_layer.o 
+
+CPP_DEPS += \
+./src/geco-malloc.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
@@ -34,6 +41,13 @@ src/auth.o: /home/jakez/2016209/geco-sctp-cplus/src/auth.cc
 	@echo ' '
 
 src/dispatch_layer.o: /home/jakez/2016209/geco-sctp-cplus/src/dispatch_layer.cc
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C++ Compiler'
+	g++ -std=c++0x -I"/home/jakez/2016209/geco-sctp-cplus/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/geco-malloc.o: /home/jakez/2016209/geco-sctp-cplus/src/geco-malloc.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -std=c++0x -I"/home/jakez/2016209/geco-sctp-cplus/include" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

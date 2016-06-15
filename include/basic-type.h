@@ -21,8 +21,6 @@ typedef unsigned int uint;
 
 #if defined(__GNUC__) || defined(__GCCXML__) || defined(__SNC__) || defined(__S3E__)
 #include <stdint.h>
-typedef int64_t longlong;
-typedef uint64_t ulonglong;
 #else
 typedef char int8;
 typedef unsigned char uint8;

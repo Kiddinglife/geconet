@@ -87,12 +87,10 @@
 #endif
 #define MAX_DEST    16
 
-
 extern int set_crc32_checksum(char *buffer, int length);
 extern uchar* get_secre_key(int operation_code);
 extern int validate_crc32_checksum(char* buffer, int len);
 extern uint generate_random_uint32();
-
 
 // a small class for calculating MD5 hashes of strings or byte arrays
 // it is not meant to be fast or secure

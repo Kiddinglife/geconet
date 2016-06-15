@@ -72,11 +72,11 @@ int timer_mgr::timeouts()
         return -1;
 
     const struct timeval& timeout = this->timers.front().action_time;
-    int64 secs = timeout.tv_sec - now.tv_sec;
+    int64_t secs = timeout.tv_sec - now.tv_sec;
     if (secs < 0)
         return 0; // sec timeouts
 
-    int64 usecs = timeout.tv_usec - now.tv_usec;
+    int64_t usecs = timeout.tv_usec - now.tv_usec;
     if (usecs < 0)
     {
         //as usecs has timeout, we need ti check if secs checkouts

@@ -284,12 +284,6 @@ extern void error_log_sys1(short error_loglvl, const char *module_name,
     int line_no, short errnumber);
 
 //<---------------- time-------------------->
-#define ETYPE_TIMER 0 // args formate : timer_type + cb_args
-#define ETYPE_FD_READABLE 1 // args formate : timer_type + cb_args
-struct event_handler_t
-{
-    virtual int handle(uint event_type, void* args) = 0;
-};
 typedef uint TimerID;
 #define   TIMER_TYPE_INIT       0
 #define   TIMER_TYPE_SHUTDOWN   1
