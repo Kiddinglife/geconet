@@ -268,6 +268,183 @@ TEST(TRANSPORT_MODULE, test_get_local_addr)
 
 }
 
+static network_interface_t nit;
+static bool flag = true;
+static void process_stdin(char* data, size_t datalen)
+{
+    EVENTLOG2(VERBOSE,
+            "process_stdin()::recvied %d bytes of %s data  from stdin", datalen,
+            data);
+
+    if (strcmp(data, "q") == 0)
+    {
+        flag = false;
+        return;
+    }
+
+    sockaddrunion saddr;
+    str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
+    int sampledata = 27;
+    uchar tos = IPTOS_DEFAULT;
+    int sentsize = nit.send_ip_packet(nit.ip4_socket_despt_, data, datalen,
+            &saddr, tos);
+    assert(sentsize == datalen);
+}
+static void socket_cb(int sfd, char* data, int datalen, const char* addr,
+        ushort port)
+{
+    EVENTLOG3(VERBOSE,
+            "socket_cb()::recvied  %d bytes of data %s from dctp fd %d\n",
+            datalen, data, sfd);
+}
+static bool timer_cb(timer_id_t& tid, void* a1, void* a2)
+{
+    EVENTLOG2(VERBOSE, "timer_cb(id %d, type->%d)::\n", tid->timer_id,
+            tid->timer_type);
+    nit.restart_timer(tid, 10000);
+    return true;
+}
+TEST(TRANSPORT_MODULE, test_process_stdin)
+{
+    int rcwnd = 512;
+    nit.init(&rcwnd, true);
+
+    nit.cbunion_.socket_cb_fun = socket_cb;
+    nit.poller_.set_expected_event_on_fd(nit.ip4_socket_despt_,
+            EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, nit.cbunion_, 0);
+    // you have to put stdin as last because we test it
+    nit.poller_.add_stdin_cb(process_stdin);
+    nit.start_timer(1000, timer_cb, TIMER_TYPE_INIT, 0, 0);
+    while (flag)
+        nit.poller_.poll();
+    nit.poller_.timer_mgr_.timers.clear();
+    nit.poller_.remove_stdin_cb();
+    nit.poller_.remove_event_handler(nit.ip4_socket_despt_);
+}
+//static void fd_action_sctp(int sfd, char* data, int datalen, const char* addr,
+//        ushort port)
+//{
+//}
+//static void fd_action_udp(int sfd, char* data, int datalen, const char* addr,
+//        ushort port)
+//{
+//}
+//static void fd_action_rounting(int sfd, char* data, int datalen,
+//        const char* addr, ushort port)
+//{
+//}
+//TEST(TRANSPORT_MODULE, test_add_remove_fd)
+//{
+//    // !!! comment wsaselect() in poller::set_event_on_win32_sdespt()
+//    // if you run this unit test
+//    reactor_t poller;
+//    poller.cbunion_.socket_cb_fun = fd_action_sctp;
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.cbunion_.socket_cb_fun = fd_action_udp;
+//    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_UDP, POLLIN,
+//            poller.cbunion_, (void*) 2);
+//    poller.cbunion_.socket_cb_fun = fd_action_rounting;
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//
+//    int size = poller.remove_event_handler(1);
+//    assert(size == 2);
+//    size = poller.remove_event_handler(200);
+//    assert(size == 0);
+//    size = poller.remove_event_handler(200);
+//    assert(size == 0);
+//    size = poller.remove_event_handler(2);
+//    assert(size == 1);
+//    assert(poller.socket_despts_size_ == 0);
+//    poller.cbunion_.socket_cb_fun = fd_action_rounting;
+//    poller.set_expected_event_on_fd(3, EVENTCB_TYPE_ROUTING, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    assert(poller.socket_despts_size_ == 1);
+//    assert(
+//            poller.socket_despts[poller.socket_despts_size_].event_handler_index
+//                    == 0);
+//    assert(
+//            poller.event_callbacks[poller.socket_despts[poller.socket_despts_size_].event_handler_index].action.socket_cb_fun
+//                    == fd_action_rounting);
+//
+//    size = poller.remove_event_handler(3);
+//    assert(size == 1);
+//    assert(poller.socket_despts_size_ == 0);
+//
+//    size = poller.remove_event_handler(200);
+//    assert(size == 0);
+//    assert(poller.socket_despts_size_ == 0);
+//    for (int i = 0; i < MAX_FD_SIZE; i++)
+//    {
+//        assert(poller.socket_despts[i].fd == -1);
+//    }
+//
+//    memset(&poller.cbunion_, 0, sizeof(cbunion_t));
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_UDP, POLLIN,
+//            poller.cbunion_, (void*) 2);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    size = poller.remove_event_handler(1);
+//    assert(size == 5);
+//    assert(poller.socket_despts_size_ == 0);
+//
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    size = poller.remove_event_handler(1);
+//    assert(size == 1);
+//    assert(poller.socket_despts_size_ == 0);
+//
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    size = poller.remove_event_handler(1);
+//    assert(size == 2);
+//    assert(poller.socket_despts_size_ == 0);
+//
+//    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    size = poller.remove_event_handler(1);
+//    assert(size == 2);
+//    assert(poller.socket_despts_size_ == 1);
+//    assert(
+//            poller.event_callbacks[poller.socket_despts[0].event_handler_index].action.socket_cb_fun
+//                    == fd_action_sctp);
+//    assert(
+//            poller.event_callbacks[poller.socket_despts[0].event_handler_index].sfd
+//                    == 2);
+//
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    poller.set_expected_event_on_fd(2, EVENTCB_TYPE_SCTP, POLLIN,
+//            poller.cbunion_, (void*) 1);
+//    size = poller.remove_event_handler(1);
+//    assert(size == 2);
+//    assert(poller.socket_despts_size_ == 3);
+//    assert(
+//            poller.event_callbacks[poller.socket_despts[0].event_handler_index].action.socket_cb_fun
+//                    == fd_action_sctp);
+//    assert(
+//            poller.event_callbacks[poller.socket_despts[1].event_handler_index].action.socket_cb_fun
+//                    == fd_action_sctp);
+//    printf("ALl Done\n");
+//}
+
 TEST(TEST_SWITCH, SWITCH)
 {
     int a = 6;
