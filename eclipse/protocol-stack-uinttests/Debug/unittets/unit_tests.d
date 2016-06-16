@@ -1,4 +1,4 @@
-unittets/unit_tests.d: \
+unittets/unit_tests.o: \
  /home/jakez/2016209/geco-sctp-cplus/unittets/unit_tests.cpp \
  /home/jakez/2016209/geco-sctp-cplus/thirdparty/googletest/include/gtest/gtest.h \
  /home/jakez/2016209/geco-sctp-cplus/thirdparty/googletest/include/gtest/internal/gtest-internal.h \
