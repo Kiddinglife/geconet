@@ -3514,15 +3514,18 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(
 {
     tmp_channel_.remote_addres_size = 1;
     tmp_channel_.remote_addres = &tmp_addr_;
+    EVENTLOG1(VERBOSE,"src addr af is %d\n", saddr_family(src_addr));
 
     switch (saddr_family(src_addr))
     {
         case AF_INET:
-            EVENTLOG1(INTERNAL_TRACE, "Looking for IPv4 Address %x (in NBO)",
-                    s4addr(src_addr));
+            EVENTLOG5(VERBOSE,
+                    "Looking for IPv4 Address %x (in NBO), src port %u, dest port %u, r port %u, r af %u\n",
+                    s4addr(src_addr), src_port, dest_port, ntohs(src_addr->sin.sin_port), saddr_family(src_addr));
             tmp_channel_.remote_addres[0].sa.sa_family = AF_INET;
             tmp_channel_.remote_addres[0].sin.sin_addr.s_addr = s4addr(
                     src_addr);
+            tmp_channel_.remote_addres[0].sin.sin_port = src_addr->sin.sin_port;
             tmp_channel_.remote_port = src_port;
             tmp_channel_.local_port = dest_port;
             tmp_channel_.deleted = false;
@@ -3534,6 +3537,7 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(
             EVENTLOG1(INTERNAL_TRACE,
                     "Looking for IPv6 Address %x, check NTOHX() ! ",
                     tmp_channel_.remote_addres[0].sin6.sin6_addr.s6_addr);
+            tmp_channel_.remote_addres[0].sin6.sin6_port = src_addr->sin6.sin6_port;
             tmp_channel_.remote_port = src_port;
             tmp_channel_.local_port = dest_port;
             tmp_channel_.deleted = false;
@@ -3573,7 +3577,7 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(
     }
     else
     {
-        EVENTLOG(INTERNAL_TRACE,
+        EVENTLOG(VERBOSE,
                 "endpoint indexed by transport address not in list");
     }
 
@@ -3591,8 +3595,20 @@ bool dispatch_layer_t::cmp_channel(const channel_t& a, const channel_t& b)
         /*find if at least there is an ip addr thate quals*/
         for (i = 0; i < a.remote_addres_size; i++)
         {
+//            char buf[MAX_IPADDR_STR_LEN];
+//            ushort port;
+//            saddr2str(&(a.remote_addres[i]), buf, sizeof(a.remote_addres[i].sin),
+//                    &port);
+//            EVENTLOG3(VERBOSE, "a.remote_addres[%d]::%s:%u\n", i, buf,
+//                    port);
+
             for (j = 0; j < b.remote_addres_size; j++)
             {
+//                saddr2str(&(b.remote_addres[j]), buf,
+//                        sizeof(b.remote_addres[j]), &port);
+//                EVENTLOG3(VERBOSE, "b.remote_addres[%d]::%s:%u\n", j, buf,
+//                        port);
+
                 if (saddr_equals(&(a.remote_addres[i]), &(b.remote_addres[j])))
                 {
                     if (!a.deleted && !b.deleted)
@@ -3604,12 +3620,12 @@ bool dispatch_layer_t::cmp_channel(const channel_t& a, const channel_t& b)
                 }
             }
         }
-        EVENTLOG(VERBOSE, "cmp_endpoint_by_addr_port(): found No equal ep !");
+        EVENTLOG(VERBOSE, "cmp_endpoint_by_addr_port(): addres NOT Equals !");
         return false;
     }
     else
     {
-        EVENTLOG(VERBOSE, "cmp_endpoint_by_addr_port(): found No equal ep !");
+        EVENTLOG(VERBOSE, "cmp_endpoint_by_addr_port(): port NOT Equals !");
         return false;
     }
 }

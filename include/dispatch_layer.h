@@ -596,8 +596,8 @@ class dispatch_layer_t
         int send_geco_packet(char* geco_packet, uint length,
                 short destAddressIndex);
 
-    private:
-
+        //todo private: uncomnent when unit test is done
+    public:
         /**
          * generates a random tag value for a new association, but not 0
          * @return   generates a random tag value for a new association, but not 0
