@@ -528,7 +528,7 @@ class dispatch_layer_t
         int tmp_local_addreslist_size_;
         int my_supported_addr_types_;
         sockaddrunion tmp_peer_addreslist_[MAX_NUM_ADDRESSES];
-        int tmp_peer_addreslist_size_;
+        uint tmp_peer_addreslist_size_;
         uint tmp_peer_supported_types_;
 
         /*related to simple chunk send */

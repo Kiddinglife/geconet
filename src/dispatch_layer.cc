@@ -7,7 +7,15 @@
 dispatch_layer_t::dispatch_layer_t()
 {
 	assert(MAX_NETWORK_PACKET_VALUE_SIZE == sizeof(simple_chunk_t));
-
+	found_init_chunk_ = false;
+	found_existed_channel_from_init_chunks_ = false;
+	abort_found_with_channel_not_nil = false;
+	tmp_peer_supported_types_ = 0;
+	my_supported_addr_types_ = 0;
+	curr_channel_ = NULL;
+	curr_geco_instance_ = NULL;
+	curr_geco_packet_ = NULL;
+	library_support_unreliability_ = true;
 	dispatch_layer_initialized = false;
 	curr_channel_ = NULL;
 	curr_geco_instance_ = NULL;
@@ -248,7 +256,6 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
 			curr_geco_packet_value_len_, &total_chunks_count_);
 
 	tmp_peer_addreslist_size_ = 0;
-	int retval = 0;
 	curr_uchar_init_chunk_ = NULL;
 
 	/* 10) validate individual chunks
@@ -2844,8 +2851,8 @@ int dispatch_layer_t::read_peer_addreslist(
 						// validate addr itself
 						if (!IN_CLASSD(ip4_saddr) && !IN_EXPERIMENTAL(ip4_saddr)
 								&& !IN_BADCLASS(ip4_saddr)
-								&& !INADDR_ANY == ip4_saddr
-								&& !INADDR_BROADCAST == ip4_saddr)
+								&& INADDR_ANY != ip4_saddr
+								&& INADDR_BROADCAST != ip4_saddr)
 						{
 							peer_addreslist[found_addr_number].sa.sa_family =
 							AF_INET;
@@ -2908,14 +2915,14 @@ int dispatch_layer_t::read_peer_addreslist(
 				{
 					/* this is from a normal address,
 					 * furtherly filter out except loopbacks */
-					if (b2 = transport_layer_->typeofaddr(last_source_addr_,
-							LinkLocalAddrType)) //
+					if ((b2 = transport_layer_->typeofaddr(last_source_addr_,
+							LinkLocalAddrType))) //
 					{
 						flags = (IPAddrType) (AllCastAddrTypes
 								| LoopBackAddrType);
 					}
-					else if (b3 = transport_layer_->typeofaddr(
-							last_source_addr_, SiteLocalAddrType)) // filtered
+					else if ((b3 = transport_layer_->typeofaddr(
+							last_source_addr_, SiteLocalAddrType))) // filtered
 					{
 						flags = (IPAddrType) (AllCastAddrTypes
 								| LoopBackAddrType | LinkLocalAddrType);
@@ -3289,7 +3296,7 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value,
 			return curr_pos;
 
 		read_len += chunk_len;
-		padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
+		padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
 		read_len += padding_len;
 		curr_pos = packet_value + read_len;
 	}
