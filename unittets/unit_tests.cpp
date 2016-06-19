@@ -669,7 +669,6 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
 	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
 	wt += chunklen;
 
-
 	//1) test good chunks
 	dispatch_layer_t dlt;
 	uint total_chunks_count;
@@ -704,7 +703,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
 	EXPECT_EQ(total_chunks_count, 6);
 
 	//3) test branch chunk_len + read_len > packet_val_len line 3395
-	chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset-4,
+	chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset - 4,
 			&total_chunks_count);
 	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
 	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
@@ -715,7 +714,157 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
 	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
 	EXPECT_EQ(total_chunks_count, 6);
 
+	//4) one CHUNK_SHUTDOWN_ACK
+	chunk_types = dlt.find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	EXPECT_EQ(total_chunks_count, 1);
+
+	//5) two repeated CHUNK_SHUTDOWN_ACK contains_chunk returns 1
+	// but total_chunks_count is 2
+	chunklen = CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 272); // 260+4 = 264
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+
+	chunklen = CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 276); // 260+4 = 264
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+	chunk_types = dlt.find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	EXPECT_EQ(total_chunks_count, 2);
 }
+TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
+{
+	geco_packet_t geco_packet;
+	geco_packet.pk_comm_hdr.checksum = 0;
+	geco_packet.pk_comm_hdr.dest_port = htons(
+			(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.src_port = htons(
+			(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.verification_tag = htons(
+			(generate_random_uint32()));
+
+	// one data chunk
+	uint offset = 0;
+	uint chunklen = 0;
+	uchar* wt = geco_packet.chunk;
+	uint datalen = 101;
+	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 116);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_DATA);
+	wt += chunklen;
+
+	datalen = 35;
+	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 164);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_DATA);
+	wt += chunklen;
+
+	//one sack chunk
+	datalen = 31;
+	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	//116+4+12+31 = 132+31 = 163
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+			CHUNK_SACK);
+	offset += chunklen;
+	EXPECT_EQ(offset, 212);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SACK);
+	wt += chunklen;
+
+	dispatch_layer_t dlt;
+	EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk,offset,CHUNK_DATA),
+			geco_packet.chunk);
+	EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk,offset,CHUNK_SACK),
+			wt - chunklen);
+	EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk,offset,CHUNK_INIT),
+			(uchar*)NULL);
+	EXPECT_EQ(
+			dlt.find_first_chunk_of(geco_packet.chunk,offset-45,CHUNK_SACK),
+			(uchar*)NULL);
+
+	// test branch chunk_len < CHUNK_FIXED_SIZE
+	chunklen = 3;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 216);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+	EXPECT_EQ(
+			dlt.find_first_chunk_of(geco_packet.chunk,offset,CHUNK_SHUTDOWN_ACK),
+			(uchar*)NULL);
+
+	// test branch chunk_len + read_len > packet_val_len
+	offset -= chunklen;
+	wt -= chunklen;
+
+	chunklen = 4;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_INIT_ACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen+1);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 216);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT_ACK);
+	wt += chunklen;
+	EXPECT_EQ(
+			dlt.find_first_chunk_of(geco_packet.chunk,offset,CHUNK_INIT_ACK),
+			(uchar*)NULL);
+}
+
 #include "transport_layer.h"
 TEST(TRANSPORT_MODULE, test_get_local_addr)
 {

@@ -265,8 +265,9 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
 		return;
 	}
 	init_chunk_num_ = contains_chunk(CHUNK_INIT_ACK, chunk_types_arr_);
-	if (init_chunk_num_ > 1
-			|| (init_chunk_num_ == 1 && total_chunks_count_ > 1))
+	if (init_chunk_num_ > 1 || /*only one int ack with other type chunks*/
+	(init_chunk_num_ == 1 && total_chunks_count_ > 1)
+	/*there are repeated init ack chunks*/)
 	{
 		/* silently should_discard_curr_geco_packet_ */
 		ERRLOG(MINOR_ERROR,
@@ -3265,23 +3266,32 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value,
 
 		if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
 		{
-			EVENTLOG(WARNNING_ERROR,
-					"remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+			ERRLOG(MINOR_ERROR,
+					"find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
 			return NULL;
 		}
+
 		chunk = (chunk_fixed_t*) curr_pos;
+		chunk_len = get_chunk_length(chunk);
+		if (chunk_len < CHUNK_FIXED_SIZE)
+		{
+			ERRLOG(MINOR_ERROR,
+					"find_first_chunk_of():chunk_len < CHUNK_FIXED_SIZE(4 bytes)!\n");
+			return NULL;
+		}
+		if (chunk_len + read_len > packet_val_len)
+		{
+			ERRLOG(MINOR_ERROR,
+					"find_first_chunk_of():remaining bytes < chunk_len(4 bytes)!\n");
+			return NULL;
+		}
 		if (chunk->chunk_id == chunk_type)
 			return curr_pos;
-
-		chunk_len = get_chunk_length(chunk);
-		if (chunk_len < CHUNK_FIXED_SIZE
-				|| chunk_len + read_len > packet_val_len)
-			return NULL;
 
 		read_len += chunk_len;
 		padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
 		read_len += padding_len;
-		curr_pos += read_len;
+		curr_pos = packet_value + read_len;
 	}
 	return NULL;
 }
@@ -3389,11 +3399,28 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
 		EVENTLOG2(VERBOSE, "find_chunk_types()::packet_val_len=%d, read_len=%d",
 				packet_val_len, read_len);
 
+		if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
+		{
+			ERRLOG(MINOR_ERROR,
+					"find_chunk_types()::INCOMPLETE CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+			return result;
+		}
+
 		chunk = (chunk_fixed_t*) curr_pos;
 		chunk_len = get_chunk_length(chunk);
-		if (chunk_len < CHUNK_FIXED_SIZE
-				|| chunk_len + read_len > packet_val_len)
+
+		if (chunk_len < CHUNK_FIXED_SIZE)
+		{
+			ERRLOG(MINOR_ERROR,
+					"find_first_chunk_of():chunk_len < CHUNK_FIXED_SIZE(4 bytes)!\n");
 			return result;
+		}
+		if (chunk_len + read_len > packet_val_len)
+		{
+			ERRLOG(MINOR_ERROR,
+					"find_first_chunk_of():remaining bytes < chunk_len(4 bytes)!\n");
+			return result;
+		}
 
 		if (chunk->chunk_id <= 30)
 		{
