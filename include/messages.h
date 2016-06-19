@@ -123,6 +123,7 @@ struct chunk_fixed_t
 
 /* when chunk_id == CHUNK_DATA */
 #define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
+//4+8 = 12 bytes
 #define DATA_CHUNK_FIXED_SIZES \
 (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
 #define MAX_DATA_CHUNK_VALUE_SIZE  \

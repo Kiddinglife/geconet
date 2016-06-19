@@ -238,6 +238,12 @@ TEST(AUTH_MODULE, test_crc32_checksum)
 #include "dispatch_layer.h"
 TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 {
+	/* 6) find dctp instancefor this packet
+	 *  if this packet is for a server dctp instance,
+	 *  we will find that dctp instance and let it handle this packet
+	 *  (i.e. we have the dctp instance's localPort set and
+	 *  it matches the packet's destination port)
+	 */
 	geco_instance_t inst;
 
 	int i;
@@ -321,6 +327,9 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 }
 TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 {
+	/*
+	 * 4) find the endpoint for this packet
+	 */
 	int i;
 	const int addres_cnt = 6;
 	const char* addres[addres_cnt] =
@@ -409,6 +418,11 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 }
 TEST(DISPATCHER_MODULE, test_validate_dest_addr)
 {
+	/*8)
+	 * now we can validate if dest_addr in localaddress
+	 * this method internally uses curr_geco_instance_ and curr_channel_
+	 * so we must call it right here
+	 */
 	int i;
 	const char* addres[6] =
 	{ "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
@@ -427,7 +441,7 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
 		}
 		else
 		{
-			int idx = i%(addres_cnt / 2);
+			int idx = i % (addres_cnt / 2);
 			str2saddr(&local_addres[idx], addres[i], ports[1], true);
 		}
 	}
@@ -442,7 +456,7 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
 	channel.deleted = false;
 
 	geco_instance_t inst;
-	inst.local_addres_size = addres_cnt/2;
+	inst.local_addres_size = addres_cnt / 2;
 	inst.local_addres_list = local_addres;
 	inst.local_port = ports[1];
 	channel.geco_inst = &inst;
@@ -513,7 +527,195 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
 	EXPECT_EQ(ret, false);
 
 }
+TEST(DISPATCHER_MODULE, test_contains_chunk)
+{
+	/**
+	 * contains_chunk: looks for chunk_type in a newly received geco packet
+	 * Should be called after find_chunk_types().
+	 * The chunkArray parameter is inspected. This only really checks for chunks
+	 * with an ID <= 30. For all other chunks, it just guesses...
+	 * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
+	 * @pre: need call find_chunk_types() first
+	 */
+	uint chunk_types;
+	dispatch_layer_t dlt;
 
+	chunk_types = 0;
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 0);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_HBREQ, chunk_types), 0);
+
+	chunk_types = 0;
+	chunk_types |= 1 << CHUNK_INIT;
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 1);
+
+	chunk_types = 0;
+	chunk_types |= 1 << CHUNK_DATA;
+	chunk_types |= 1 << CHUNK_SACK;
+	chunk_types |= 1 << CHUNK_HBREQ;
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_HBREQ, chunk_types), 2);
+
+}
+TEST(DISPATCHER_MODULE, test_find_chunk_types)
+{
+	/*9)
+	 *fetch all chunk types contained in this packet value field
+	 *fetch for use in the folowing curr_geco_packet_value_len_
+	 *fetch = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
+	 *fetch chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk,
+	 *fetch curr_geco_packet_value_len_, &total_chunks_count_);
+	 */
+	geco_packet_t geco_packet;
+	geco_packet.pk_comm_hdr.checksum = 0;
+	geco_packet.pk_comm_hdr.dest_port = htons(
+			(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.src_port = htons(
+			(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.verification_tag = htons(
+			(generate_random_uint32()));
+
+	// one data chunk
+	uint offset = 0;
+	uint chunklen = 0;
+	uchar* wt = geco_packet.chunk;
+	uint datalen = 101;
+	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 116);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_DATA);
+	wt += chunklen;
+
+	//one sack chunk
+	datalen = 31;
+	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	//116+4+12+31 = 132+31 = 163
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+			CHUNK_SACK);
+	offset += chunklen;
+	EXPECT_EQ(offset, 164);
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SACK);
+	wt += chunklen;
+
+	//one init chunk
+	datalen = 21;
+	chunklen = datalen + INIT_CHUNK_FIXED_SIZES; //21+20=41
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_INIT;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	EXPECT_EQ(geco_packet.chunk + offset, wt);
+	EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+			CHUNK_INIT);
+	offset += chunklen;
+	EXPECT_EQ(offset, 208); // 164+4+16+21= 205
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT);
+	wt += chunklen;
+
+	//one init ack chunk
+	datalen = 21;
+	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_INIT_ACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+			CHUNK_INIT_ACK);
+	offset += chunklen;
+	EXPECT_EQ(offset, 252); // 208+20+21 = 228+21=249
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT_ACK);
+	wt += chunklen;
+
+	//CHUNK_SHUTDOWN
+	chunklen = 4 + CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 260); // 252+8 = 260
+	EXPECT_EQ(((chunk_fixed_t* ) wt)->chunk_id, CHUNK_SHUTDOWN);
+	wt += chunklen;
+
+	//CHUNK_SHUTDOWN_ACK
+	chunklen = CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*) wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+	{
+		chunklen++;
+	}
+	offset += chunklen;
+	EXPECT_EQ(offset, 264); // 260+4 = 264
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+
+
+	//1) test good chunks
+	dispatch_layer_t dlt;
+	uint total_chunks_count;
+	uint chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset,
+			&total_chunks_count);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+	EXPECT_EQ(total_chunks_count, 6);
+
+	//2) test bad chunks whose chun len < CHUNK_FIXED_SIZE
+	// this will give us all legal chunks
+	//CHUNK_SHUTDOWN_COMPLETE
+	((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_COMPLETE;
+	((chunk_fixed_t*) wt)->chunk_length = htons(3);
+	offset += 4;
+	EXPECT_EQ(offset, 268); // 264+4 = 268
+	EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_COMPLETE);
+	wt += 4;
+	chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset,
+			&total_chunks_count);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	EXPECT_EQ(total_chunks_count, 6);
+
+	//3) test branch chunk_len + read_len > packet_val_len line 3395
+	chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset-4,
+			&total_chunks_count);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+	EXPECT_EQ(dlt.contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	EXPECT_EQ(total_chunks_count, 6);
+
+}
 #include "transport_layer.h"
 TEST(TRANSPORT_MODULE, test_get_local_addr)
 {
