@@ -1,4 +1,4 @@
-src/gecotimer.o: /home/jakez/2016209/geco-sctp-cplus/src/gecotimer.cc \
+src/gecotimer.d: /home/jakez/2016209/geco-sctp-cplus/src/gecotimer.cc \
  /home/jakez/2016209/geco-sctp-cplus/include/gecotimer.h \
  /home/jakez/2016209/geco-sctp-cplus/include/globals.h \
  /home/jakez/2016209/geco-sctp-cplus/include/config.h \

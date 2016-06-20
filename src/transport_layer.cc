@@ -104,7 +104,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
     int ret;
     memset((void*) su, 0, sizeof(union sockaddrunion));
 
-    if (hs_port <= 0)
+    if (hs_port < 0)
     {
         ERRLOG(MAJOR_ERROR, "Invalid port \n");
         return -1;

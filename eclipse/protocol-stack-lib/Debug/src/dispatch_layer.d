@@ -1,4 +1,4 @@
-src/dispatch_layer.o: \
+src/dispatch_layer.d: \
  /home/jakez/2016209/geco-sctp-cplus/src/dispatch_layer.cc \
  /home/jakez/2016209/geco-sctp-cplus/include/dispatch_layer.h \
  /home/jakez/2016209/geco-sctp-cplus/include/globals.h \

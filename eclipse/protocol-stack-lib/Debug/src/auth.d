@@ -1,4 +1,4 @@
-src/auth.o: /home/jakez/2016209/geco-sctp-cplus/src/auth.cc \
+src/auth.d: /home/jakez/2016209/geco-sctp-cplus/src/auth.cc \
  /home/jakez/2016209/geco-sctp-cplus/include/auth.h \
  /home/jakez/2016209/geco-sctp-cplus/include/basic-type.h \
  /home/jakez/2016209/geco-sctp-cplus/include/globals.h \
