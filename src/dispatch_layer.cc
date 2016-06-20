@@ -2796,11 +2796,8 @@ int dispatch_layer_t::read_peer_addreslist(
 {
     /*1) validate method input params*/
     uint read_len = INIT_CHUNK_FIXED_SIZES;
-    if (chunk_len < read_len)
+    if (chunk == NULL || peer_addreslist == NULL || chunk_len < read_len)
     {
-        EVENTLOG2(WARNNING_ERROR,
-                "chunk_len(%u) < CHUNK_FIXED_SIZE( %u bytes) RETURN -1 !\n",
-                chunk_len, read_len);
         return -1;
     }
 
@@ -3042,7 +3039,7 @@ int dispatch_layer_t::read_peer_addreslist(
                 break;
         }
         read_len += vlp_len;
-        padding_len = ((read_len&3) == 0) ? 0 : (4 - read_len&3);
+        padding_len = ((read_len & 3) == 0) ? 0 : (4 - read_len & 3);
         read_len += padding_len;
         curr_pos = init_chunk->variableParams + read_len;
     } // while

@@ -1503,6 +1503,7 @@ class dispatch_layer_t
 
         /**
          * @return -1 prama error, >=0 number of the found addresses
+         * rbu_scanInitChunkForParameter() rbundling.c
          */
         int read_peer_addreslist(
                 sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
