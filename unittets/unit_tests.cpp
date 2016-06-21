@@ -1029,6 +1029,44 @@ TEST(DISPATCHER_MODULE, test_contains_local_host_addr)
     EXPECT_FALSE(dlt.contains_local_host_addr(&tmpaddr, 1));
 }
 
+TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
+{
+    geco_packet_t geco_packet;
+    geco_packet.pk_comm_hdr.checksum = 0;
+    geco_packet.pk_comm_hdr.dest_port = htons(
+            (generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.src_port = htons(
+            (generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.verification_tag = htons(
+            (generate_random_uint32()));
+
+    init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
+    init_chunk->chunk_header.chunk_id = CHUNK_INIT;
+    init_chunk->chunk_header.chunk_flags = 0;
+
+    const char* hn = "www.baidu.com";
+    ((vlparam_fixed_t*) init_chunk->variableParams)->param_type = htons(
+    VLPARAM_HOST_NAME_ADDR);
+    ((vlparam_fixed_t*) init_chunk->variableParams)->param_length = htons(
+            4 + strlen(hn));
+    strcpy((char*) (init_chunk->variableParams + 4), hn);
+
+    uint len = 4 + strlen(hn) +
+    INIT_CHUNK_FIXED_SIZES;
+    init_chunk->chunk_header.chunk_length = htons(len);
+    while (len % 4)
+        ++len;
+    dispatch_layer_t dlt;
+    uchar* ret = dlt.find_vlparam_from_setup_chunk(geco_packet.chunk, len,
+    VLPARAM_HOST_NAME_ADDR);
+    EXPECT_EQ(ret, init_chunk->variableParams);
+
+    ret = dlt.find_vlparam_from_setup_chunk(geco_packet.chunk, len,
+    VLPARAM_COOKIE);
+    EXPECT_EQ(ret, (uchar*)NULL);
+
+}
+
 #include "transport_layer.h"
 TEST(TRANSPORT_MODULE, test_get_local_addr)
 {
@@ -1053,7 +1091,6 @@ TEST(TRANSPORT_MODULE, test_get_local_addr)
             saddr2str(saddr + i, addr, MAX_IPADDR_STR_LEN, &port);
             EVENTLOG2(VERBOSE, "ip address %s port %d\n", addr, port);
         }
-
 }
 
 static network_interface_t nit;

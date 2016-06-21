@@ -1433,7 +1433,7 @@ class dispatch_layer_t
          * check if local addr is found
          * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
          * */
-        inline bool contains_local_host_addr(sockaddrunion* addr_list,
+        bool contains_local_host_addr(sockaddrunion* addr_list,
                 uint addr_list_num);
 
         /**

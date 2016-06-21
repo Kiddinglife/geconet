@@ -2282,11 +2282,8 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
 {
     /*1) validate packet length*/
     uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
-    if (chunk_len < read_len)
+    if (setup_chunk == NULL || chunk_len < read_len)
     {
-        EVENTLOG2(WARNNING_ERROR,
-                "chunk_len(%u) < CHUNK_FIXED_SIZE( %u bytes) return NULL !\n",
-                chunk_len, read_len);
         return NULL;
     }
 
@@ -2299,7 +2296,7 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
     }
 
     uint len = ntohs(init_chunk->chunk_header.chunk_length);
-    uchar* curr_pos = init_chunk->variableParams;
+    uchar* curr_pos = setup_chunk+read_len;
 
     ushort vlp_len;
     uint padding_len;
@@ -2314,15 +2311,15 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
 
         if (len - read_len < VLPARAM_FIXED_SIZE)
         {
-            EVENTLOG(WARNNING_ERROR,
-                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
             return NULL;
         }
 
-        vlp = (vlparam_fixed_t*) curr_pos;
+        vlp = (vlparam_fixed_t*)(curr_pos);
         vlp_len = ntohs(vlp->param_length);
         if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
+        {
             return NULL;
+        }
 
         /*4) find param in this chunk*/
         if (ntohs(vlp->param_type) == param_type)
@@ -2331,9 +2328,9 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
         }
 
         read_len += vlp_len;
-        padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
+        padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
         read_len += padding_len;
-        curr_pos += read_len;
+        curr_pos = setup_chunk + read_len;
     } // while
 
     return NULL;
