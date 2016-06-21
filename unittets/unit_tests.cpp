@@ -976,6 +976,59 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     EXPECT_TRUE(saddr_equals(&peer_addreslist[2], &last_source_addr, true));
 }
 
+TEST(DISPATCHER_MODULE, test_contains_local_host_addr)
+{
+    /**
+     * check if local addr is found
+     * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
+     * contains_local_host_addr(sockaddrunion* addr_list,uint addr_list_num);*/
+    int i;
+    const char* addres[] = { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+    const char* addres6[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
+            "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+    sockaddrunion local_addres[3];
+    sockaddrunion local_addres6[2];
+    for (i = 0; i < 3; i++)
+    {
+        str2saddr(&local_addres[i], addres[i], 0, true);
+    }
+    for (i = 0; i < 2; i++)
+    {
+        str2saddr(&local_addres6[i], addres6[i], 0, false);
+    }
+    geco_instance_t inst;
+    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4;
+    inst.local_addres_size = 3;
+    inst.local_addres_list = local_addres;
+
+    dispatch_layer_t dlt;
+    dlt.geco_instances_.push_back(&inst);
+    sockaddrunion tmpaddr;
+
+    //1) test branch 1 curr geco_inst and curr channel both NULL
+    //1.1) test no local addr presents
+    EXPECT_FALSE(dlt.contains_local_host_addr(local_addres, 3));
+    EXPECT_FALSE(dlt.contains_local_host_addr(local_addres6, 2));
+    //1.2) test  local addr presents
+    tmpaddr = local_addres[1];
+    str2saddr(&local_addres[1], "127.0.0.1", 0, true);
+    EXPECT_TRUE(dlt.contains_local_host_addr(local_addres, 3));
+    local_addres[1] = tmpaddr;
+    tmpaddr = local_addres6[1];
+    str2saddr(&local_addres6[1], "::1", 0, false);
+    EXPECT_TRUE(dlt.contains_local_host_addr(local_addres6, 2));
+    local_addres6[1] = tmpaddr;
+
+    //2) test branch 2 curr_geco_instance_ NOT NULL
+    dlt.curr_geco_instance_ = &inst;
+    //2.1) test local addr in curr gecio inst local addres list
+    tmpaddr = local_addres[1];
+    EXPECT_TRUE(dlt.contains_local_host_addr(&tmpaddr, 1));
+    //2.1) test no local addr in curr gecio inst local addres list
+    str2saddr(&tmpaddr, "221.123.45.12", 0, true);
+    EXPECT_FALSE(dlt.contains_local_host_addr(&tmpaddr, 1));
+}
+
 #include "transport_layer.h"
 TEST(TRANSPORT_MODULE, test_get_local_addr)
 {

@@ -2842,6 +2842,38 @@ int dispatch_layer_t::read_peer_addreslist(
         if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
             return -1;
 
+        /* determine the falgs from last source addr
+         * then this falg will be used to validate other found addres*/
+        bool b1, b2, b3;
+        if (!(b1 = contains_local_host_addr(last_source_addr_, 1)))
+        {
+            /* this is from a normal address,
+             * furtherly filter out except loopbacks */
+            if ((b2 = transport_layer_->typeofaddr(last_source_addr_,
+                    LinkLocalAddrType))) //
+            {
+                flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType);
+            }
+            else if ((b3 = transport_layer_->typeofaddr(last_source_addr_,
+                    SiteLocalAddrType))) // filtered
+            {
+                flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType
+                        | LinkLocalAddrType);
+            }
+            else
+            {
+                flags = (IPAddrType) (AllCastAddrTypes | AllLocalAddrTypes);
+            }
+        }
+        else
+        {
+            /* this is from a loopback, use default flag*/
+            flags = AllCastAddrTypes;
+        }
+        EVENTLOG3(VERBOSE,
+                "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d",
+                b1, b2, b3);
+
         /*4) validate received addresses in this chunk*/
         switch (ntohs(vlp->param_type))
         {
@@ -2871,42 +2903,48 @@ int dispatch_layer_t::read_peer_addreslist(
                                         0;
                                 peer_addreslist[found_addr_number].sin.sin_addr.s_addr =
                                         addres->dest_addr_un.ipv4_addr;
-                                //current addr duplicated with a previous found addr?
-                                is_new_addr = true; // default as new addr
-                                if (ignore_dups)
+
+                                if (!transport_layer_->typeofaddr(
+                                        &peer_addreslist[found_addr_number],
+                                        flags)) // NOT contains the addr type of [flags]
                                 {
-                                    for (idx = 0; idx < found_addr_number;
-                                            idx++)
+                                    //current addr duplicated with a previous found addr?
+                                    is_new_addr = true; // default as new addr
+                                    if (ignore_dups)
                                     {
-                                        if (saddr_equals(
-                                                &peer_addreslist[found_addr_number],
-                                                &peer_addreslist[idx]))
+                                        for (idx = 0; idx < found_addr_number;
+                                                idx++)
                                         {
-                                            is_new_addr = false;
+                                            if (saddr_equals(
+                                                    &peer_addreslist[found_addr_number],
+                                                    &peer_addreslist[idx]))
+                                            {
+                                                is_new_addr = false;
+                                            }
                                         }
                                     }
-                                }
 
-                                if (is_new_addr)
-                                {
-                                    found_addr_number++;
-                                    if (peer_supported_addr_types != NULL)
-                                        (*peer_supported_addr_types) |=
-                                        SUPPORT_ADDRESS_TYPE_IPV4;
+                                    if (is_new_addr)
+                                    {
+                                        found_addr_number++;
+                                        if (peer_supported_addr_types != NULL)
+                                            (*peer_supported_addr_types) |=
+                                            SUPPORT_ADDRESS_TYPE_IPV4;
 #ifdef _DEBUG
-                                    saddr2str(
-                                            &peer_addreslist[found_addr_number
-                                                    - 1], hoststr_,
-                                            sizeof(hoststr_), 0);
-                                    EVENTLOG1(VERBOSE,
-                                            "Found NEW IPv4 Address = %s",
-                                            hoststr_);
+                                        saddr2str(
+                                                &peer_addreslist[found_addr_number
+                                                        - 1], hoststr_,
+                                                sizeof(hoststr_), 0);
+                                        EVENTLOG1(VERBOSE,
+                                                "Found NEW IPv4 Address = %s",
+                                                hoststr_);
 #endif
-                                }
-                                else
-                                {
-                                    EVENTLOG(VERBOSE,
-                                            "IPv4 was in the INIT or INIT ACK chunk more than once");
+                                    }
+                                    else
+                                    {
+                                        EVENTLOG(VERBOSE,
+                                                "IPv4 was in the INIT or INIT ACK chunk more than once");
+                                    }
                                 }
                             }
                         }
@@ -2922,62 +2960,12 @@ int dispatch_layer_t::read_peer_addreslist(
             case VLPARAM_IPV6_ADDRESS:
                 if ((my_supported_addr_types & VLPARAM_IPV6_ADDRESS))
                 {
-                    /* 5) determine the falgs from last source addr
-                     * then this falg will be used to validate other found addres*/
-                    bool b1, b2, b3;
-                    if (!(b1 = contains_local_host_addr(last_source_addr_, 1)))
-                    {
-                        /* this is from a normal address,
-                         * furtherly filter out except loopbacks */
-                        if ((b2 = transport_layer_->typeofaddr(
-                                last_source_addr_, LinkLocalAddrType))) //
-                        {
-                            flags = (IPAddrType) (AllCastAddrTypes
-                                    | LoopBackAddrType);
-                        }
-                        else if ((b3 = transport_layer_->typeofaddr(
-                                last_source_addr_, SiteLocalAddrType))) // filtered
-                        {
-                            flags = (IPAddrType) (AllCastAddrTypes
-                                    | LoopBackAddrType | LinkLocalAddrType);
-                        }
-                        else
-                        {
-                            flags = (IPAddrType) (AllCastAddrTypes
-                                    | AllLocalAddrTypes);
-                        }
-                    }
-                    else
-                    {
-                        /* this is from a loopback, use default flag*/
-                        flags = AllCastAddrTypes;
-                    }
-                    EVENTLOG3(VERBOSE,
-                            "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d",
-                            b1, b2, b3);
-
                     /*6) pass by other validates*/
                     if (found_addr_number < MAX_NUM_ADDRESSES)
                     {
                         addres = (ip_address_t*) curr_pos;
                         if (IS_IPV6_ADDRESS_PTR_NBO(addres))
                         {
-                            if (IN6_IS_ADDR_UNSPECIFIED(
-                                    addres->dest_addr_un.ipv6_addr.s6_addr))
-                            {
-                                printf("bad");
-                            }
-                            if (IN6_IS_ADDR_MULTICAST(
-                                    addres->dest_addr_un.ipv6_addr.s6_addr))
-                            {
-                                printf("bad");
-                            }
-                            if (IN6_IS_ADDR_V4COMPAT(
-                                    addres->dest_addr_un.ipv6_addr.s6_addr))
-                            {
-                                printf("bad");
-                            }
-
                             if (!IN6_IS_ADDR_UNSPECIFIED(
                                     addres->dest_addr_un.ipv6_addr.s6_addr) && !IN6_IS_ADDR_MULTICAST(addres->dest_addr_un.ipv6_addr.s6_addr)
                                     && !IN6_IS_ADDR_V4COMPAT(addres->dest_addr_un.ipv6_addr.s6_addr))
@@ -3087,11 +3075,11 @@ int dispatch_layer_t::read_peer_addreslist(
                 {
                     case AF_INET:
                         (*peer_supported_addr_types) |=
-                                SUPPORT_ADDRESS_TYPE_IPV4;
+                        SUPPORT_ADDRESS_TYPE_IPV4;
                         break;
                     case AF_INET6:
                         (*peer_supported_addr_types) |=
-                                SUPPORT_ADDRESS_TYPE_IPV6;
+                        SUPPORT_ADDRESS_TYPE_IPV6;
                         break;
                     default:
                         ERRLOG(FALTAL_ERROR_EXIT, "no such addr family!");
@@ -3144,17 +3132,23 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
                 ret = false;
         }
     }
+
     /*2) otherwise try to find from local addr list stored in curr geco instance*/
     if (curr_geco_instance_ != NULL)
     {
         if (curr_geco_instance_->local_addres_size > 0)
         {
-            for (idx = 0; idx < curr_geco_instance_->local_addres_size; idx++)
+            for (idx = 0; idx < curr_geco_instance_->local_addres_size; ++idx)
             {
-                if (saddr_equals(addr_list + idx,
-                        curr_geco_instance_->local_addres_list + idx))
+                for (ii = 0; ii < addr_list_num; ++ii)
                 {
-                    ret = true;
+                    if (saddr_equals(addr_list + ii,
+                            curr_geco_instance_->local_addres_list + idx))
+                    {
+                        ret = true;
+                        EVENTLOG(VERBOSE,
+                                "Found same address from curr_geco_instance_\n");
+                    }
                 }
             }
         }
@@ -3163,9 +3157,15 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
         {
             for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
             {
-                if (saddr_equals(addr_list + idx, defaultlocaladdrlist_ + idx))
+                for (ii = 0; ii < addr_list_num; ++ii)
                 {
-                    ret = true;
+                    if (saddr_equals(addr_list + ii,
+                            defaultlocaladdrlist_ + idx))
+                    {
+                        ret = true;
+                        EVENTLOG(VERBOSE,
+                                "Found same address from defaultlocaladdrlist_\n");
+                    }
                 }
             }
         }
@@ -3175,15 +3175,17 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
     {
         for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
         {
-            if (saddr_equals(addr_list + idx, defaultlocaladdrlist_ + idx))
+            for (ii = 0; ii < addr_list_num; ++ii)
             {
-                ret = true;
+                if (saddr_equals(addr_list + ii, defaultlocaladdrlist_ + idx))
+                {
+                    ret = true;
+                    EVENTLOG(VERBOSE,
+                            "Found same address from defaultlocaladdrlist_\n");
+                }
             }
         }
     }
-
-    EVENTLOG1(VERBOSE, "Found loopback address returns %s",
-            (ret == true) ? "TRUE" : "FALSE");
     return ret;
 }
 
