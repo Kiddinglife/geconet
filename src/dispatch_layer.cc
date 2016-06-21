@@ -8,6 +8,7 @@ dispatch_layer_t::dispatch_layer_t()
 {
     assert(MAX_NETWORK_PACKET_VALUE_SIZE == sizeof(simple_chunk_t));
     found_init_chunk_ = false;
+    defaultlocaladdrlistsize_ = 0;
     found_existed_channel_from_init_chunks_ = false;
     abort_found_with_channel_not_nil = false;
     tmp_peer_supported_types_ = 0;
@@ -2810,7 +2811,7 @@ int dispatch_layer_t::read_peer_addreslist(
     }
 
     uint len = ntohs(init_chunk->chunk_header.chunk_length);
-    uchar* curr_pos = init_chunk->variableParams;
+    uchar* curr_pos = chunk + read_len;
 
     uint vlp_len;
     uint padding_len;
@@ -2959,15 +2960,27 @@ int dispatch_layer_t::read_peer_addreslist(
                     if (found_addr_number < MAX_NUM_ADDRESSES)
                     {
                         addres = (ip_address_t*) curr_pos;
-                        if (IS_IPV6_ADDRESS_PTR_HBO(addres))
+                        if (IS_IPV6_ADDRESS_PTR_NBO(addres))
                         {
+                            if (IN6_IS_ADDR_UNSPECIFIED(
+                                    addres->dest_addr_un.ipv6_addr.s6_addr))
+                            {
+                                printf("bad");
+                            }
+                            if (IN6_IS_ADDR_MULTICAST(
+                                    addres->dest_addr_un.ipv6_addr.s6_addr))
+                            {
+                                printf("bad");
+                            }
+                            if (IN6_IS_ADDR_V4COMPAT(
+                                    addres->dest_addr_un.ipv6_addr.s6_addr))
+                            {
+                                printf("bad");
+                            }
+
                             if (!IN6_IS_ADDR_UNSPECIFIED(
-                                    &(addres->dest_addr_un.ipv6_addr)) && !IN6_IS_ADDR_MULTICAST(&(addres->dest_addr_un.ipv6_addr))
-                                    && !IN6_IS_ADDR_V4COMPAT(&(addres->dest_addr_un.ipv6_addr))
-                                    && !IN6_IS_ADDR_UNSPECIFIED(
-                                            &(addres->dest_addr_un.ipv6_addr))
-                                    && !IN6_IS_ADDR_MULTICAST(&(addres->dest_addr_un.ipv6_addr))
-                                    && !IN6_IS_ADDR_V4COMPAT(&(addres->dest_addr_un.ipv6_addr)))
+                                    addres->dest_addr_un.ipv6_addr.s6_addr) && !IN6_IS_ADDR_MULTICAST(addres->dest_addr_un.ipv6_addr.s6_addr)
+                                    && !IN6_IS_ADDR_V4COMPAT(addres->dest_addr_un.ipv6_addr.s6_addr))
                             {
 
                                 // fillup addrr
@@ -3017,14 +3030,14 @@ int dispatch_layer_t::read_peer_addreslist(
                                                         - 1], hoststr_,
                                                 sizeof(hoststr_), 0);
                                         EVENTLOG1(VERBOSE,
-                                                "Found NEW IPv4 Address = %s",
+                                                "Found NEW IPv6 Address = %s",
                                                 hoststr_);
 #endif
                                     }
                                     else
                                     {
                                         EVENTLOG(VERBOSE,
-                                                "IPv4 was in the INIT or INIT ACK chunk more than once");
+                                                "IPv6 was in the INIT or INIT ACK chunk more than once");
                                     }
                                 }
                             }
@@ -3039,9 +3052,9 @@ int dispatch_layer_t::read_peer_addreslist(
                 break;
         }
         read_len += vlp_len;
-        padding_len = ((read_len & 3) == 0) ? 0 : (4 - read_len & 3);
+        padding_len = (((read_len & 3)) == 0) ? 0 : (4 - (read_len & 3));
         read_len += padding_len;
-        curr_pos = init_chunk->variableParams + read_len;
+        curr_pos = chunk + read_len;
     } // while
 
     // we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
@@ -3050,7 +3063,7 @@ int dispatch_layer_t::read_peer_addreslist(
         is_new_addr = true;
         for (idx = 0; idx < found_addr_number; idx++)
         {
-            if (saddr_equals(last_source_addr_, &peer_addreslist[idx]))
+            if (saddr_equals(last_source_addr_, &peer_addreslist[idx], true))
             {
                 is_new_addr = false;
             }
@@ -3068,17 +3081,22 @@ int dispatch_layer_t::read_peer_addreslist(
             }
             memcpy(&peer_addreslist[found_addr_number], last_source_addr_,
                     sizeof(sockaddrunion));
-            switch (saddr_family(last_source_addr_))
+            if (peer_supported_addr_types != NULL)
             {
-                case AF_INET:
-                    (*peer_supported_addr_types) |= SUPPORT_ADDRESS_TYPE_IPV4;
-                    break;
-                case AF_INET6:
-                    (*peer_supported_addr_types) |= SUPPORT_ADDRESS_TYPE_IPV6;
-                    break;
-                default:
-                    ERRLOG(FALTAL_ERROR_EXIT, "no such addr family!");
-                    break;
+                switch (saddr_family(last_source_addr_))
+                {
+                    case AF_INET:
+                        (*peer_supported_addr_types) |=
+                                SUPPORT_ADDRESS_TYPE_IPV4;
+                        break;
+                    case AF_INET6:
+                        (*peer_supported_addr_types) |=
+                                SUPPORT_ADDRESS_TYPE_IPV6;
+                        break;
+                    default:
+                        ERRLOG(FALTAL_ERROR_EXIT, "no such addr family!");
+                        break;
+                }
             }
             EVENTLOG2(VERBOSE,
                     "Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",

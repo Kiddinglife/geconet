@@ -874,9 +874,10 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 
     int i;
     const char* addres[] = { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
-    const char* addres6[] = { "2001:cdba:0000:0000:0000:0000:3257",
-            "2001:cdba:0:0:0:0:3257", "2001:cdba::3257" };
+    const char* addres6[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
+            "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     sockaddrunion local_addres[3];
+    sockaddrunion local_addres6[2];
 
     EXPECT_EQ(sizeof(in_addr), 4);
     EXPECT_EQ(sizeof(in6_addr), 16);
@@ -901,27 +902,78 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 
     len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
     EXPECT_EQ(len, 20);
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 2; i++)
     {
-        str2saddr(&local_addres[i], addres6[i], 0, false);
+        str2saddr(&local_addres6[i], addres6[i], 0, false);
         ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
         ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv6_addr = local_addres[i].sin6.sin6_addr;
+        ipaddr->dest_addr_un.ipv6_addr = local_addres6[i].sin6.sin6_addr;
         while (len % 4)
             len++;
         offset += len;
         ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
     }
-    EXPECT_EQ(offset, 84);
+    EXPECT_EQ(offset, 64);
     init_chunk->chunk_header.chunk_length = htons(
-            INIT_CHUNK_FIXED_SIZES + offset);
+    INIT_CHUNK_FIXED_SIZES + offset);
     sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES];
     dispatch_layer_t dlt;
+    dlt.defaultlocaladdrlistsize_ = 0;
 
-    int ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
-            offset+INIT_CHUNK_FIXED_SIZES,
+    char buf[MAX_IPADDR_STR_LEN];
+    ushort port;
+
+    sockaddrunion last_source_addr;
+    dlt.last_source_addr_ = &last_source_addr;
+    int ret;
+
+    str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0,
+            false);
+    ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+            offset + INIT_CHUNK_FIXED_SIZES,
             SUPPORT_ADDRESS_TYPE_IPV4);
+    EXPECT_EQ(ret, 4); //2 + last_source_addr_ = 3
+    for (i = 0; i < 3; ++i)
+    {
+        saddr2str(&peer_addreslist[i], buf, MAX_IPADDR_STR_LEN, &port);
+        EVENTLOG1(VERBOSE, "peer ip4addr: %s\n", buf);
+        saddr2str(&local_addres[i], buf, MAX_IPADDR_STR_LEN, &port);
+        EVENTLOG1(VERBOSE, "record ip4addr: %s\n", buf);
+        EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres[i], true));
+    }
+    EXPECT_TRUE(saddr_equals(&peer_addreslist[3], &last_source_addr, true));
+
+    str2saddr(&last_source_addr, "192.168.5.123", 0, true);
+    ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+            offset + INIT_CHUNK_FIXED_SIZES,
+            SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6);
     EXPECT_EQ(ret, 6);
+    for (i = 0; i < 3; ++i)
+    {
+        EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres[i], true));
+    }
+    for (i = 3; i < 5; ++i)
+    {
+        EXPECT_TRUE(
+                saddr_equals(&peer_addreslist[i], &local_addres6[i - 3], true));
+    }
+    EXPECT_TRUE(saddr_equals(&peer_addreslist[5], &last_source_addr, true));
+
+    str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0,
+            false);
+    ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+            offset + INIT_CHUNK_FIXED_SIZES,
+            SUPPORT_ADDRESS_TYPE_IPV6);
+    EXPECT_EQ(ret, 3); //2 + last_source_addr_ = 3
+    for (i = 0; i < 2; ++i)
+    {
+        saddr2str(&peer_addreslist[i], buf, MAX_IPADDR_STR_LEN, &port);
+        EVENTLOG1(VERBOSE, "peer ip6addr: %s\n", buf);
+        saddr2str(&local_addres6[i], buf, MAX_IPADDR_STR_LEN, &port);
+        EVENTLOG1(VERBOSE, "record ip6addr: %s\n", buf);
+        EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres6[i], true));
+    }
+    EXPECT_TRUE(saddr_equals(&peer_addreslist[2], &last_source_addr, true));
 }
 
 #include "transport_layer.h"

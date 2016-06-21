@@ -1504,6 +1504,8 @@ class dispatch_layer_t
         /**
          * @return -1 prama error, >=0 number of the found addresses
          * rbu_scanInitChunkForParameter() rbundling.c
+         * if ignore_last_src_addr == false, this fuction will always record this address
+         * even through receiver supportedAddressTypes does not supports it
          */
         int read_peer_addreslist(
                 sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
