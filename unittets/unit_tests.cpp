@@ -236,6 +236,7 @@ TEST(AUTH_MODULE, test_crc32_checksum)
     }
 }
 #include "dispatch_layer.h"
+#include "transport_layer.h"
 TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 {
     /* 6) find dctp instancefor this packet
@@ -975,7 +976,6 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     }
     EXPECT_TRUE(saddr_equals(&peer_addreslist[2], &last_source_addr, true));
 }
-
 TEST(DISPATCHER_MODULE, test_contains_local_host_addr)
 {
     /**
@@ -1028,7 +1028,6 @@ TEST(DISPATCHER_MODULE, test_contains_local_host_addr)
     str2saddr(&tmpaddr, "221.123.45.12", 0, true);
     EXPECT_FALSE(dlt.contains_local_host_addr(&tmpaddr, 1));
 }
-
 TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 {
     geco_packet_t geco_packet;
@@ -1065,6 +1064,58 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
     VLPARAM_COOKIE);
     EXPECT_EQ(ret, (uchar*)NULL);
 
+}
+TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
+{
+    dispatch_layer_t dlt;
+    int rcwnd = 512;
+    network_interface_t nit;
+    nit.init(&rcwnd, true);
+    dlt.transport_layer_ = &nit;
+    sockaddrunion last_drc_addr;
+    str2saddr(&last_drc_addr, "127.0.0.1", 456);
+    dlt.last_source_addr_ = &last_drc_addr;
+    dlt.last_dest_port_ = 123;
+    dlt.last_src_port_ = 456;
+    dlt.last_init_tag_ = 12345;
+
+    uint shutdown_complete_cid = dlt.alloc_simple_chunk(
+    CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
+    simple_chunk_t* simple_chunk_t_ptr_ = dlt.complete_simple_chunk(
+            shutdown_complete_cid);
+    EXPECT_EQ(
+            dlt.curr_write_pos_[shutdown_complete_cid]
+                    + ntohs(
+                            dlt.simple_chunks_[shutdown_complete_cid]->chunk_header.chunk_length),
+            4);
+    //1) test branch < max_geco_
+    //1.1) test dest_index == NULL
+    dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, NULL);
+    EXPECT_FALSE(dlt.default_bundle_ctrl_.got_send_address);
+    EXPECT_EQ(dlt.default_bundle_ctrl_.requested_destination, 0);
+    //1.2 ) test dest_index != NULL
+    int path = 6;
+    dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
+    EXPECT_TRUE(dlt.default_bundle_ctrl_.got_send_address);
+    EXPECT_EQ(dlt.default_bundle_ctrl_.requested_destination, path);
+
+    //2) test branch >= max_geco_
+    dlt.curr_write_pos_[shutdown_complete_cid] +=
+    MAX_NETWORK_PACKET_VALUE_SIZE - 4;
+    simple_chunk_t_ptr_->chunk_header.chunk_length = 4;
+    dlt.default_bundle_ctrl_.ctrl_position = UDP_GECO_PACKET_FIXED_SIZES;
+    dlt.default_bundle_ctrl_.ctrl_chunk_in_buffer = true;
+    simple_chunk_t_ptr_ = dlt.complete_simple_chunk(shutdown_complete_cid);
+    EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length),
+            MAX_NETWORK_PACKET_VALUE_SIZE);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
+            UDP_GECO_PACKET_FIXED_SIZES);
+    dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),MAX_GECO_PACKET_SIZE);
+    EXPECT_TRUE(dlt.default_bundle_ctrl_.locked);
+    dlt.unlock_bundle_ctrl();
+    //dlt.send_bundled_chunks();
+    dlt.free_simple_chunk(shutdown_complete_cid);
 }
 
 #include "transport_layer.h"

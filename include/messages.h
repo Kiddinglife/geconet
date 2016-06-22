@@ -20,6 +20,7 @@
 
 typedef short chunk_id_t;
 #define MAX_CHUNKS_SIZE 32
+#define MAX_CHUNKS_SIZE_MASK 31
 
 /**************************** packet definitions ***************************/
 #define MAX_MTU_SIZE 1500

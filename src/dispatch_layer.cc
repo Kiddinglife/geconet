@@ -7,6 +7,12 @@
 dispatch_layer_t::dispatch_layer_t()
 {
     assert(MAX_NETWORK_PACKET_VALUE_SIZE == sizeof(simple_chunk_t));
+    default_bundle_ctrl_.ctrl_chunk_in_buffer = false;
+    default_bundle_ctrl_.ctrl_position = UDP_GECO_PACKET_FIXED_SIZES;
+    default_bundle_ctrl_.sack_in_buffer = false;
+    default_bundle_ctrl_.sack_position = UDP_GECO_PACKET_FIXED_SIZES;
+    default_bundle_ctrl_.data_in_buffer = false;
+    default_bundle_ctrl_.data_position = UDP_GECO_PACKET_FIXED_SIZES;
     found_init_chunk_ = false;
     defaultlocaladdrlistsize_ = 0;
     found_existed_channel_from_init_chunks_ = false;
@@ -588,8 +594,8 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 EVENTLOG(VERBOSE,
                         "recv_geco_packet()::Found SHUTDOWN_ACK in non-packet at state cookie echoed or cookie wait state, will send SHUTDOWN_COMPLETE to the peer!");
 
-                uchar shutdown_complete_cid = alloc_simple_chunk(
-                        (uchar) CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
+                uint shutdown_complete_cid = alloc_simple_chunk(
+                CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
                 simple_chunk_t_ptr_ = complete_simple_chunk(
                         shutdown_complete_cid);
                 // this method will internally send all bundled chunks if exceeding packet max
@@ -2296,7 +2302,7 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
     }
 
     uint len = ntohs(init_chunk->chunk_header.chunk_length);
-    uchar* curr_pos = setup_chunk+read_len;
+    uchar* curr_pos = setup_chunk + read_len;
 
     ushort vlp_len;
     uint padding_len;
@@ -2314,7 +2320,7 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
             return NULL;
         }
 
-        vlp = (vlparam_fixed_t*)(curr_pos);
+        vlp = (vlparam_fixed_t*) (curr_pos);
         vlp_len = ntohs(vlp->param_length);
         if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
         {
@@ -2339,14 +2345,15 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk,
 int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
         short destAddressIndex)
 {
-    if (geco_packet == NULL)
+    if (geco_packet == NULL || length == 0)
     {
         ERRLOG(MINOR_ERROR,
                 "dispatch_layer::send_geco_packet(): no message to send !!!");
         return 1;
     }
 
-    geco_packet_t* geco_packet_ptr = ((geco_packet_t*) geco_packet);
+    geco_packet_t* geco_packet_ptr = (geco_packet_t*) (geco_packet
+            + UDP_PACKET_FIXED_SIZE);
     simple_chunk_t* chunk = ((simple_chunk_t*) (geco_packet_ptr->chunk));
 
     /*1)
@@ -2387,7 +2394,7 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
     {
         /*2) normal send with channel found*/
         if (destAddressIndex < -1
-                || destAddressIndex >= curr_channel_->remote_addres_size)
+                || destAddressIndex >= (int) curr_channel_->remote_addres_size)
         {
             ERRLOG(MINOR_ERROR,
                     "dispatch_layer::send_geco_packet(): invalid destAddressIndex!!!");
@@ -2670,12 +2677,15 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     }
 
     ushort chunk_len = get_chunk_length((chunk_fixed_t* )chunk);
-    if (get_bundle_total_size(bundle_ctrl) + chunk_len >= MAX_GECO_PACKET_SIZE)
+    uint bundle_size = get_bundle_total_size(bundle_ctrl);
+
+    if (bundle_size + chunk_len >= MAX_GECO_PACKET_SIZE)
     {
         /*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
-        EVENTLOG1(VERBOSE,
-                "Chunk Length exceeded MAX_NETWORK_PACKET_VALUE_SIZE : sending chunk to address %u !",
-                (dest_index == NULL) ? 0 : *dest_index);
+        EVENTLOG5(VERBOSE,
+                "Chunk Length (bundlesize %u+chunk_len %u = %u)exceeded MAX_NETWORK_PACKET_VALUE_SIZE(%u) : sending chunk to address %u !",
+                bundle_size, chunk_len, bundle_size + chunk_len,
+                MAX_GECO_PACKET_SIZE, (dest_index == NULL) ? 0 : *dest_index);
 
         bundle_ctrl->locked = false;/* unlock to allow send bundle*/
         send_bundled_chunks(dest_index);
@@ -2700,17 +2710,18 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     memcpy(&bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position], chunk,
             chunk_len);
     bundle_ctrl->ctrl_position += chunk_len;
-    chunk_len = 4 - (chunk_len % 4);
-    bundle_ctrl->ctrl_chunk_in_buffer = true;
-    if (chunk_len < 4)
-    {
-        memset(&(bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position]), 0,
-                chunk_len);
-        bundle_ctrl->ctrl_position += chunk_len;
-    }
-
+    while (bundle_ctrl->ctrl_position & 3)
+        ++bundle_ctrl->ctrl_position;
+//    chunk_len = 4 - (chunk_len % 4);
+//    bundle_ctrl->ctrl_chunk_in_buffer = true;
+//    if (chunk_len < 4)
+//    {
+//        memset(&(bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position]), 0,
+//                chunk_len);
+//        bundle_ctrl->ctrl_position += chunk_len;
+//    }
     EVENTLOG2(VERBOSE,
-            "bundle_ctrl_chunk() : %u , Total buffer size now (includes pad): %u\n",
+            "bundle_ctrl_chunk() : chunklen %u , Total buffer size now (includes pad): %u\n",
             get_chunk_length((chunk_fixed_t *)chunk),
             get_bundle_total_size(bundle_ctrl));
     return 0;

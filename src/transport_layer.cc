@@ -1224,7 +1224,7 @@ int network_interface_t::send_udp_packet(int sfd, char* buf, int length,
 int network_interface_t::send_ip_packet(int sfd, char *buf, int len,
         sockaddrunion *dest, uchar tos)
 {
-    printf("%d\n", ntohs(dest->sin.sin_port));
+    EVENTLOG(VERBOSE,"network_interface_t::send_ip_packet() enters");
     int txmt_len = 0;
     uchar old_tos;
     socklen_t opt_len;

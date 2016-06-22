@@ -454,6 +454,7 @@ struct network_interface_t;
 class dispatch_layer_t
 {
     public:
+        bool enable_test_;
         bool dispatch_layer_initialized;
 
 #ifdef _WIN32
@@ -535,7 +536,7 @@ class dispatch_layer_t
         uint curr_write_pos_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
         simple_chunk_t* simple_chunks_[MAX_CHUNKS_SIZE]; /* simple ctrl chunks to send*/
         bool completed_chunks_[MAX_CHUNKS_SIZE];/*if a chunk is completely constructed*/
-        uchar simple_chunk_index_; /* current simple chunk index */
+        uint simple_chunk_index_; /* current simple chunk index */
         simple_chunk_t* simple_chunk_t_ptr_; /* current simple chunk ptr */
 
         /* used if no bundlecontroller has been allocated and initialized yet */
@@ -1051,10 +1052,8 @@ class dispatch_layer_t
          * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
          * that have only variable length parameters like the error chunks
          */
-        uchar alloc_simple_chunk(uint chunk_type, uchar flag)
+        uint alloc_simple_chunk(uint chunk_type, uchar flag)
         {
-            assert(sizeof(simple_chunk_t) == MAX_SIMPLE_CHUNK_VALUE_SIZE);
-
             //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
             simple_chunk_t* simple_chunk_ptr =
                     (simple_chunk_t*) geco::ds::single_client_alloc::allocate(
@@ -1062,7 +1061,7 @@ class dispatch_layer_t
 
             simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
             simple_chunk_ptr->chunk_header.chunk_flags = flag;
-            simple_chunk_ptr->chunk_header.chunk_length = 0x0004;
+            simple_chunk_ptr->chunk_header.chunk_length = CHUNK_FIXED_SIZE;
 
             add2chunklist(simple_chunk_ptr, "create simple chunk %u");
             return simple_chunk_index_;
@@ -1232,12 +1231,11 @@ class dispatch_layer_t
          * free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
          * memory allocated for that chunk
          */
-        void free_simple_chunk(uchar chunkID)
+        void free_simple_chunk(uint chunkID)
         {
-            uint cid = chunkID;
             if (simple_chunks_[chunkID] != NULL)
             {
-                EVENTLOG1(INTERNAL_TRACE, "freed simple chunk %u", cid);
+                EVENTLOG1(INTERNAL_TRACE, "freed simple chunk %u", chunkID);
                 geco::ds::single_client_alloc::deallocate(
                         simple_chunks_[chunkID],
                         SIMPLE_CHUNK_SIZE);
@@ -1274,16 +1272,18 @@ class dispatch_layer_t
 
         void add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL)
         {
-            uint cid;
-            simple_chunk_index_ = (simple_chunk_index_ + 1) % MAX_CHUNKS_SIZE;
-            cid = simple_chunk_index_;
-            EVENTLOG1(INTERNAL_TRACE, log_text, cid);
+            simple_chunk_index_ = ((simple_chunk_index_ + 1)
+                    & MAX_CHUNKS_SIZE_MASK);
+            EVENTLOG1(INTERNAL_TRACE, log_text, simple_chunk_index_);
             simple_chunks_[simple_chunk_index_] = chunk;
             curr_write_pos_[simple_chunk_index_] = 0;
             completed_chunks_[simple_chunk_index_] = false;
         }
 
-        /** returns a pointer to the beginning of a simple chunk.*/
+        /**
+         * @brief returns a pointer to the beginning of a simple chunk,
+         * internally fillup chunk length.
+         */
         simple_chunk_t *complete_simple_chunk(uchar chunkID)
         {
             if (simple_chunks_[chunkID] == NULL)
