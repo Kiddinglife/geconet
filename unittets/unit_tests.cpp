@@ -1099,7 +1099,7 @@ TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
     EXPECT_TRUE(dlt.default_bundle_ctrl_.got_send_address);
     EXPECT_EQ(dlt.default_bundle_ctrl_.requested_destination, path);
 
-    //2) test branch >= max_geco_
+    //2) test branch >= max_geco_ automatically call send
     dlt.curr_write_pos_[shutdown_complete_cid] +=
     MAX_NETWORK_PACKET_VALUE_SIZE - 4;
     simple_chunk_t_ptr_->chunk_header.chunk_length = 4;
@@ -1112,9 +1112,9 @@ TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
             UDP_GECO_PACKET_FIXED_SIZES);
     dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
     EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),MAX_GECO_PACKET_SIZE);
-    EXPECT_TRUE(dlt.default_bundle_ctrl_.locked);
     dlt.unlock_bundle_ctrl();
-    //dlt.send_bundled_chunks();
+    dlt.send_bundled_chunks(&path);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),UDP_GECO_PACKET_FIXED_SIZES);
     dlt.free_simple_chunk(shutdown_complete_cid);
 }
 

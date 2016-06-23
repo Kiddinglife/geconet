@@ -2408,7 +2408,6 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
         }
         else
         {
-            /*4) use last src addr*/
             if (last_source_addr_ == NULL)
             {
                 /*5) last src addr is NUll, we use primary path*/
@@ -2491,10 +2490,12 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
     }
 
 #ifdef _DEBUG
-    saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, NULL);
-    EVENTLOG4(INTERNAL_TRACE,
-            "sent geco packet of %d bytes to %s:%u, sent bytes %d", length,
-            hoststr_, geco_packet_ptr->pk_comm_hdr.dest_port, len);
+    ushort port;
+    saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, &port);
+    EVENTLOG4(VERBOSE,
+            "send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d",
+            length, hoststr_, ntohs(geco_packet_ptr->pk_comm_hdr.dest_port),
+            len);
 #endif
 
     return (len == (int) length) ? 0 : -1;
@@ -2562,11 +2563,12 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
         stop_sack_timer();
 
         /* send sacks, by default they go to the last active address,
-         * from which data arrived*/
+         * from which data arrived */
         send_buffer = bundle_ctrl->sack_buf;
 
-        // at least sizeof(geco_packet_fixed_t)
-        // at most pointing to the end of SACK chunk
+        /*
+         * at least sizeof(geco_packet_fixed_t)
+         * at most pointing to the end of SACK chunk */
         send_len = bundle_ctrl->sack_position;
         EVENTLOG1(VERBOSE, "send_bundled_chunks(sack) : send_len == %d ",
                 send_len);
@@ -2679,7 +2681,8 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     ushort chunk_len = get_chunk_length((chunk_fixed_t* )chunk);
     uint bundle_size = get_bundle_total_size(bundle_ctrl);
 
-    if (bundle_size + chunk_len >= MAX_GECO_PACKET_SIZE)
+    if (bundle_size + chunk_len >= MAX_GECO_PACKET_SIZE
+            && bundle_size > UDP_GECO_PACKET_FIXED_SIZES)
     {
         /*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
         EVENTLOG5(VERBOSE,
@@ -2712,14 +2715,7 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     bundle_ctrl->ctrl_position += chunk_len;
     while (bundle_ctrl->ctrl_position & 3)
         ++bundle_ctrl->ctrl_position;
-//    chunk_len = 4 - (chunk_len % 4);
-//    bundle_ctrl->ctrl_chunk_in_buffer = true;
-//    if (chunk_len < 4)
-//    {
-//        memset(&(bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position]), 0,
-//                chunk_len);
-//        bundle_ctrl->ctrl_position += chunk_len;
-//    }
+
     EVENTLOG2(VERBOSE,
             "bundle_ctrl_chunk() : chunklen %u , Total buffer size now (includes pad): %u\n",
             get_chunk_length((chunk_fixed_t *)chunk),

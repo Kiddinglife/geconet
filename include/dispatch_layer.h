@@ -215,9 +215,9 @@ struct path_controller_t
         //channel id
         uint channel_id;
         // store the current primary path
-        uint primary_path;
+        int primary_path;
         //the number of paths used by this channel
-        uint path_num;
+        int path_num;
         //counter for all retransmittions over all paths
         uint retrans_count;
         //pointer to path-secific prams maybe more than one
@@ -791,7 +791,7 @@ class dispatch_layer_t
          * helper function, that simply sets the chunksSent flag of this path management instance to true
          * @param path_param_id  index of the address, where flag is set
          */
-        inline void set_data_chunk_sent_flag(short path_param_id)
+        inline void set_data_chunk_sent_flag(int path_param_id)
         {
             path_controller_t* path_ctrl = get_path_controller();
             if (path_ctrl == NULL)
