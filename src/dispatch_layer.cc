@@ -60,7 +60,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             dctp_packet_len, dctp_packet, socket_fd);
 
     /* 1) validate packet hdr size, checksum and if aligned 4 bytes */
-    if (dctp_packet_len % 4 != 0
+    if ((dctp_packet_len & 3) != 0
             || dctp_packet_len < MIN_NETWORK_PACKET_HDR_SIZES
             || dctp_packet_len > MAX_NETWORK_PACKET_HDR_SIZES
             || !validate_crc32_checksum(dctp_packet, dctp_packet_len))
@@ -84,86 +84,74 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         return;
     }
 
-    /* 3) validate ip addresses */
+    /* 3) validate ip addresses
+     #include <netinet/in.h>
+     int IN6_IS_ADDR_UNSPECIFIED(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_LOOPBACK(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_MULTICAST(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_LINKLOCAL(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_SITELOCAL(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_V4MAPPED(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_V4COMPAT(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_MC_NODELOCAL(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_MC_LINKLOCAL(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_MC_SITELOCAL(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_MC_ORGLOCAL(const struct in6_addr * aptr);
+     int IN6_IS_ADDR_MC_GLOBAL(const struct in6_addr * aptr);
+     //返回值：非零表示IPv6地址是指定类型的，否则返回零 */
     switch (saddr_family(dest_addr))
     {
         case AF_INET:
-            EVENTLOG(VERBOSE,
-                    "dispatch_layer_t::recv_geco_packet()::checking for correct IPV4 addresses\n");
             source_addr->sin.sin_port = last_src_port_;
             dest_addr->sin.sin_port = last_dest_port_;
             address_type_ = SUPPORT_ADDRESS_TYPE_IPV4;
             ip4_saddr_ = ntohl(dest_addr->sin.sin_addr.s_addr);
-            if (IN_CLASSD(ip4_saddr_))
-                should_discard_curr_geco_packet_ = true;
-            if (IN_EXPERIMENTAL(ip4_saddr_))
-                should_discard_curr_geco_packet_ = true;
-            if (IN_BADCLASS(ip4_saddr_))
-                should_discard_curr_geco_packet_ = true;
-            if (INADDR_ANY == ip4_saddr_)
-                should_discard_curr_geco_packet_ = true;
-            if (INADDR_BROADCAST == ip4_saddr_)
+            if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_)
+                    || IN_BADCLASS(ip4_saddr_) || (INADDR_ANY == ip4_saddr_)
+                    || (INADDR_BROADCAST == ip4_saddr_))
                 should_discard_curr_geco_packet_ = true;
 
             ip4_saddr_ = ntohl(source_addr->sin.sin_addr.s_addr);
-            if (IN_CLASSD(ip4_saddr_))
+            if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_)
+                    || IN_BADCLASS(ip4_saddr_) || (INADDR_ANY == ip4_saddr_)
+                    || (INADDR_BROADCAST == ip4_saddr_))
                 should_discard_curr_geco_packet_ = true;
-            if (IN_EXPERIMENTAL(ip4_saddr_))
-                should_discard_curr_geco_packet_ = true;
-            if (IN_BADCLASS(ip4_saddr_))
-                should_discard_curr_geco_packet_ = true;
-            if (INADDR_ANY == ip4_saddr_)
-                should_discard_curr_geco_packet_ = true;
-            if (INADDR_BROADCAST == ip4_saddr_)
-                should_discard_curr_geco_packet_ = true;
-
-            /* we should not should_discard_curr_geco_packet_ the msg sent to ourself */
-            /* if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr)) &&
-             (source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr)) should_discard_curr_geco_packet_ = true;*/
+            /* we should not should_discard_curr_geco_packet_ the msg
+             * sent to ourself
+             * if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr))
+             *  &&(source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr))
+             *  should_discard_curr_geco_packet_ = true;*/
+            EVENTLOG1(VERBOSE,
+                    "dispatch_layer_t::recv_geco_packet()::checking for correct IPV4 addresses (%d)\n",
+                    should_discard_curr_geco_packet_);
             break;
-
         case AF_INET6:
             EVENTLOG(VERBOSE,
                     "recv_geco_packet: checking for correct IPV6 addresses\n");
             address_type_ = SUPPORT_ADDRESS_TYPE_IPV6;
             source_addr->sin6.sin6_port = last_src_port_;
             dest_addr->sin6.sin6_port = last_dest_port_;
-#if defined (__linux__)
-            if (IN6_IS_ADDR_UNSPECIFIED(dest_addr->sin6.sin6_addr.s6_addr))
+            ip6_saddr_ = &(dest_addr->sin6.sin6_addr);
+            if (IN6_IS_ADDR_UNSPECIFIED(
+                    ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_))
                 should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_MULTICAST(dest_addr->sin6.sin6_addr.s6_addr))
+//            if (IN6_IS_ADDR_V4COMPAT(&(ip6_saddr_)))
+//                should_discard_curr_geco_packet_ = true;
+            ip6_saddr_ = &(source_addr->sin6.sin6_addr);
+            if (IN6_IS_ADDR_UNSPECIFIED(
+                    ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_))
                 should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr.s6_addr)))
-                should_discard_curr_geco_packet_ = true;
-
-            if (IN6_IS_ADDR_UNSPECIFIED(source_addr->sin6.sin6_addr.s6_addr))
-                should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_MULTICAST(source_addr->sin6.sin6_addr.s6_addr))
-                should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr)))
-                should_discard_curr_geco_packet_ = true;
+//            if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr)))
+//                should_discard_curr_geco_packet_ = true;
             /*
              if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
              IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
              &(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true;
              */
-#else
-            if (IN6_IS_ADDR_UNSPECIFIED(&dest_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_MULTICAST(&dest_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true;
-
-            if (IN6_IS_ADDR_UNSPECIFIED(&source_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
-            if (IN6_IS_ADDR_MULTICAST(&source_addr->sin6.sin6_addr)) should_discard_curr_geco_packet_ = true;
-
-            if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true;
-            /*
-             if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr))) &&
-             IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr),
-             &(dest_addr->sin6.sin6_addr))) should_discard_curr_geco_packet_ = true;
-             */
-#endif
+            EVENTLOG1(VERBOSE,
+                    "dispatch_layer_t::recv_geco_packet()::checking for correct IPV6 addresses (%d)\n",
+                    should_discard_curr_geco_packet_);
             break;
-
         default:
             ERRLOG(FALTAL_ERROR_EXIT,
                     "recv_geco_packet()::Unsupported AddressType Received !\n");
@@ -230,13 +218,17 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             EVENTLOG1(VERBOSE,
                     "Couldn't find SCTP Instance for Port %u and Address in List !",
                     last_dest_port_);
-            address_type_ == SUPPORT_ADDRESS_TYPE_IPV4 ?
-                    my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4 :
-                    my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4
-                            | SUPPORT_ADDRESS_TYPE_IPV6;
+//            address_type_ == SUPPORT_ADDRESS_TYPE_IPV4 ?
+//                    my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4 :
+//                    my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4
+//                            | SUPPORT_ADDRESS_TYPE_IPV6;
+            // in default can handle ip4and6 packet
+            my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4
+                    | SUPPORT_ADDRESS_TYPE_IPV6;
         }
         else
         {
+            // use user sepecified supported addr types
             my_supported_addr_types_ =
                     curr_geco_instance_->supportedAddressTypes;
             EVENTLOG2(VERBOSE,
@@ -246,7 +238,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     }
 
     /*8)
-     * now we can validate if dest_addr in localaddress
+     * now we can validate if dest_addr is in localaddress
      * this method internally uses curr_geco_instance_ and curr_channel_
      * so we must call it right here */
     if (!validate_dest_addr(dest_addr))
@@ -3318,18 +3310,22 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value,
 
         chunk = (chunk_fixed_t*) curr_pos;
         chunk_len = get_chunk_length(chunk);
+
         if (chunk_len < CHUNK_FIXED_SIZE)
         {
-            ERRLOG(MINOR_ERROR,
-                    "find_first_chunk_of():chunk_len < CHUNK_FIXED_SIZE(4 bytes)!\n");
+            ERRLOG1(MINOR_ERROR,
+                    "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!\n",
+                    chunk_len);
             return NULL;
         }
         if (chunk_len + read_len > packet_val_len)
         {
-            ERRLOG(MINOR_ERROR,
-                    "find_first_chunk_of():remaining bytes < chunk_len(4 bytes)!\n");
+            ERRLOG3(MINOR_ERROR,
+                    "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!\n",
+                    chunk_len, read_len, packet_val_len);
             return NULL;
         }
+
         if (chunk->chunk_id == chunk_type)
             return curr_pos;
 
@@ -3456,14 +3452,16 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value,
 
         if (chunk_len < CHUNK_FIXED_SIZE)
         {
-            ERRLOG(MINOR_ERROR,
-                    "find_first_chunk_of():chunk_len < CHUNK_FIXED_SIZE(4 bytes)!\n");
+            ERRLOG1(MINOR_ERROR,
+                    "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!\n",
+                    chunk_len);
             return result;
         }
         if (chunk_len + read_len > packet_val_len)
         {
-            ERRLOG(MINOR_ERROR,
-                    "find_first_chunk_of():remaining bytes < chunk_len(4 bytes)!\n");
+            ERRLOG3(MINOR_ERROR,
+                    "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!\n",
+                    chunk_len, read_len, packet_val_len);
             return result;
         }
 

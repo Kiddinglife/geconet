@@ -1111,11 +1111,116 @@ TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
     EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
             UDP_GECO_PACKET_FIXED_SIZES);
     dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),MAX_GECO_PACKET_SIZE);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
+            MAX_GECO_PACKET_SIZE);
     dlt.unlock_bundle_ctrl();
     dlt.send_bundled_chunks(&path);
-    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),UDP_GECO_PACKET_FIXED_SIZES);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
+            UDP_GECO_PACKET_FIXED_SIZES);
     dlt.free_simple_chunk(shutdown_complete_cid);
+
+    //3) test sack + data+ctrl chunks bundled in one packet TODO
+}
+TEST(DISPATCHER_MODULE, test_recv_geco_packet)
+{
+    geco_packet_t geco_packet;
+
+    /*1) put an init chunk*/
+    //1.1) fills up geco packet hdr
+    geco_packet.pk_comm_hdr.checksum = 0;
+    geco_packet.pk_comm_hdr.dest_port = htons(
+            (generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.src_port = htons(
+            (generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.verification_tag = 0;
+    //1.2) fills up init chunk hdr
+    init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
+    init_chunk->chunk_header.chunk_id = CHUNK_INIT;
+    init_chunk->chunk_header.chunk_flags = 0;
+    init_chunk->init_fixed.inbound_streams = htons(5);
+    init_chunk->init_fixed.outbound_streams = htons(5);
+    init_chunk->init_fixed.init_tag = htonl(generate_random_uint32());
+    init_chunk->init_fixed.initial_tsn = init_chunk->init_fixed.init_tag;
+    init_chunk->init_fixed.rwnd = htonl(512);
+    //1.3) fills up addreslist
+    int i;
+    const char* addres[] = { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+    const char* addres6[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
+            "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+    sockaddrunion local_addres[3];
+    sockaddrunion local_addres6[2];
+    EXPECT_EQ(sizeof(in_addr), 4);
+    EXPECT_EQ(sizeof(in6_addr), 16);
+    ip_address_t* ipaddr = (ip_address_t*) init_chunk->variableParams;
+    ushort len;
+    ushort offset = 0;
+    len = sizeof(in_addr) + VLPARAM_FIXED_SIZE;
+    EXPECT_EQ(len, 8);
+    for (i = 0; i < 3; i++)
+    {
+        str2saddr(&local_addres[i], addres[i], 0, true);
+        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
+        ipaddr->vlparam_header.param_length = htons(len);
+        ipaddr->dest_addr_un.ipv4_addr = local_addres[i].sin.sin_addr.s_addr;
+        while (len % 4)
+            len++;
+        offset += len;
+        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
+    }
+    len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
+    EXPECT_EQ(len, 20);
+    for (i = 0; i < 2; i++)
+    {
+        str2saddr(&local_addres6[i], addres6[i], 0, false);
+        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
+        ipaddr->vlparam_header.param_length = htons(len);
+        ipaddr->dest_addr_un.ipv6_addr = local_addres6[i].sin6.sin6_addr;
+        while (len % 4)
+            len++;
+        offset += len;
+        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
+    }
+    EXPECT_EQ(offset, 64);
+    //1.4) fills up support types
+    len = sizeof(ushort) * 2 + 4;
+    vlparam_fixed_t* saddrtypes = (vlparam_fixed_t*) (init_chunk->variableParams
+            + offset);
+    saddrtypes->param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
+    saddrtypes->param_length = htons(len);
+    *((ushort*) (init_chunk->variableParams + offset + 4)) = htons(
+    VLPARAM_IPV4_ADDRESS);
+    *((ushort*) (init_chunk->variableParams + offset + 4 + 2)) = htons(
+    VLPARAM_IPV6_ADDRESS);
+    while (len % 4)
+        len++;
+    offset += len;
+    EXPECT_EQ(offset, 72);
+
+    init_chunk->chunk_header.chunk_length = htons(
+    INIT_CHUNK_FIXED_SIZES + offset);
+    EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + offset, 92);
+    set_crc32_checksum((char*) &geco_packet, offset + INIT_CHUNK_FIXED_SIZES+GECO_PACKET_FIXED_SIZE);
+
+    int sfd = 123;
+    geco_packet_t* dctp_packet = &geco_packet;
+    uint dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES+GECO_PACKET_FIXED_SIZE;
+    sockaddrunion source_addr;
+    sockaddrunion dest_addr;
+    str2saddr(&source_addr, "192.168.1.107",
+            ntohs(geco_packet.pk_comm_hdr.src_port));
+    str2saddr(&dest_addr, "222.134.12.34",
+            ntohs(geco_packet.pk_comm_hdr.dest_port));
+
+    dispatch_layer_t dlt;
+    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
+            &source_addr, &dest_addr);
+
+    geco_instance_t inst;
+    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4
+            | SUPPORT_ADDRESS_TYPE_IPV6;
+    inst.local_addres_size = 1;
+    inst.local_addres_list = &dest_addr;
+    dlt.geco_instances_.push_back(&inst);
 }
 
 #include "transport_layer.h"

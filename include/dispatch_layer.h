@@ -513,6 +513,7 @@ class dispatch_layer_t
         bool found_existed_channel_from_init_chunks_;
         int address_type_;
         uint ip4_saddr_;
+        in6_addr* ip6_saddr_;
         uint total_chunks_count_;
         uint chunk_types_arr_;
         int init_chunk_num_;
