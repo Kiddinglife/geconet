@@ -57,6 +57,7 @@ TEST(TIMER_MODULE, test_operations_on_time)
     assert(result.tv_sec == 3);
     assert(result.tv_usec == 1000);
 
+
     subtract_time(&result, (time_t) 800, &result);
     print_timeval(&result);
     assert(result.tv_sec == 2);
@@ -123,8 +124,9 @@ struct alloc_t
 };
 TEST(MALLOC_MODULE, test_alloc_dealloc)
 {
+    single_client_alloc allocator;
     int j;
-    int total = 100000;
+    int total = 60;
     /*max is 5120 we use 5121 to have the max*/
     size_t allocsize;
     size_t dealloc_idx;
@@ -133,14 +135,20 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
 
     int alloccnt = 0;
     int deallcnt = 0;
-
+    int less_than_max_byte_cnt = 0;
+    int zero_alloc_cnt = 0;
     for (j = 0; j < total; j++)
     {
+
         if (rand() % 2)
         {
-            allocsize = rand() % 5121;
+            allocsize = (rand()*UINT32_MAX) % 2049;
+            if (allocsize <= 1512)
+                ++less_than_max_byte_cnt;
+            if (allocsize == 0)
+                ++zero_alloc_cnt;
             alloc_t at;
-            at.ptr = single_client_alloc::allocate(allocsize);
+            at.ptr = allocator.allocate(allocsize);
             at.allocsize = allocsize;
             allos.push_back(at);
             alloccnt++;
@@ -153,7 +161,7 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
                 dealloc_idx = rand() % s;
                 it = allos.begin();
                 std::advance(it, dealloc_idx);
-                single_client_alloc::deallocate(it->ptr, it->allocsize);
+                allocator.deallocate(it->ptr, it->allocsize);
                 allos.erase(it);
                 deallcnt++;
             }
@@ -162,14 +170,20 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
 
     for (auto& p : allos)
     {
-        single_client_alloc::deallocate(p.ptr, p.allocsize);
+        allocator.deallocate(p.ptr, p.allocsize);
         deallcnt++;
     }
+    EVENTLOG(VERBOSE, "hello world 1 \n");
     allos.clear();
-    single_client_alloc::destroy();
+
+    allocator.destroy();
     EXPECT_EQ(alloccnt, deallcnt);
     EXPECT_EQ(allos.size(), 0);
-    EVENTLOG2(VERBOSE, "alloccnt %d, dealloccnt %d\n", alloccnt, deallcnt);
+    EVENTLOG(VERBOSE, "hello world\n");
+    EVENTLOG5(VERBOSE,
+            "alloccnt %d, dealloccnt %d, < 1512 cnt %d, %d, zer alloc cnt %d\n",
+            alloccnt, deallcnt, less_than_max_byte_cnt,
+            alloccnt - less_than_max_byte_cnt, zero_alloc_cnt);
 }
 
 #include "auth.h"
@@ -1199,11 +1213,13 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     init_chunk->chunk_header.chunk_length = htons(
     INIT_CHUNK_FIXED_SIZES + offset);
     EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + offset, 92);
-    set_crc32_checksum((char*) &geco_packet, offset + INIT_CHUNK_FIXED_SIZES+GECO_PACKET_FIXED_SIZE);
+    set_crc32_checksum((char*) &geco_packet,
+            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
 
     int sfd = 123;
     geco_packet_t* dctp_packet = &geco_packet;
-    uint dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES+GECO_PACKET_FIXED_SIZE;
+    uint dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES
+            + GECO_PACKET_FIXED_SIZE;
     sockaddrunion source_addr;
     sockaddrunion dest_addr;
     str2saddr(&source_addr, "192.168.1.107",

@@ -76,6 +76,9 @@
 #include "config.h"
 #include "messages.h"
 
+#include "geco-ds-malloc.h"
+extern geco::ds::single_client_alloc galloc;
+
 const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 
 /* ms default interval to timeout when no timers in poll

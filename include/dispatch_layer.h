@@ -1057,8 +1057,7 @@ class dispatch_layer_t
         {
             //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
             simple_chunk_t* simple_chunk_ptr =
-                    (simple_chunk_t*) geco::ds::single_client_alloc::allocate(
-                    SIMPLE_CHUNK_SIZE);
+                    (simple_chunk_t*) galloc.allocate(SIMPLE_CHUNK_SIZE);
 
             simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
             simple_chunk_ptr->chunk_header.chunk_flags = flag;
@@ -1073,9 +1072,8 @@ class dispatch_layer_t
         {
             assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
 
-            init_chunk_t* initAckChunk =
-                    (init_chunk_t*) geco::ds::single_client_alloc::allocate(
-                    INIT_CHUNK_TOTAL_SIZE);
+            init_chunk_t* initAckChunk = (init_chunk_t*) galloc.allocate(
+            INIT_CHUNK_TOTAL_SIZE);
 
             initAckChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
             initAckChunk->chunk_header.chunk_flags = 0;
@@ -1237,9 +1235,8 @@ class dispatch_layer_t
             if (simple_chunks_[chunkID] != NULL)
             {
                 EVENTLOG1(INTERNAL_TRACE, "freed simple chunk %u", chunkID);
-                geco::ds::single_client_alloc::deallocate(
-                        simple_chunks_[chunkID],
-                        SIMPLE_CHUNK_SIZE);
+                galloc.deallocate(simple_chunks_[chunkID],
+                SIMPLE_CHUNK_SIZE);
                 simple_chunks_[chunkID] = NULL;
             }
             else
