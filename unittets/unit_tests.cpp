@@ -126,7 +126,7 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
 {
     single_client_alloc allocator;
     int j;
-    int total = 60;
+    int total = 500000;
     /*max is 5120 we use 5121 to have the max*/
     size_t allocsize;
     size_t dealloc_idx;
@@ -139,7 +139,6 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
     int zero_alloc_cnt = 0;
     for (j = 0; j < total; j++)
     {
-
         if (rand() % 2)
         {
             allocsize = (rand()*UINT32_MAX) % 2049;
@@ -167,19 +166,15 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
             }
         }
     }
-
     for (auto& p : allos)
     {
         allocator.deallocate(p.ptr, p.allocsize);
         deallcnt++;
     }
-    EVENTLOG(VERBOSE, "hello world 1 \n");
     allos.clear();
-
     allocator.destroy();
     EXPECT_EQ(alloccnt, deallcnt);
     EXPECT_EQ(allos.size(), 0);
-    EVENTLOG(VERBOSE, "hello world\n");
     EVENTLOG5(VERBOSE,
             "alloccnt %d, dealloccnt %d, < 1512 cnt %d, %d, zer alloc cnt %d\n",
             alloccnt, deallcnt, less_than_max_byte_cnt,

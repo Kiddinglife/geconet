@@ -373,7 +373,7 @@ template <bool threads, int inst>
 class default_alloc
 {
     private:
-# if defined(__SUNPRO_CC) || defined(__GNUC__) || defined(__HP_aCC)
+# if defined(__SUNPRO_CC) || defined(__HP_aCC)
     Unit* GECO_VOLATILE free_list[];
     // Specifying a size results in duplicate def for 4.1
 # else
@@ -564,7 +564,7 @@ class default_alloc
         {
             pools_[pool_num] = (void*)start_free;
             pool_num++;
-            printf("allocate()::pools_[%zu] =  %p\n", pool_num-1, pools_[pool_num-1]);
+            //printf("allocate()::pools_[%zu] =  %p\n", pool_num-1, pools_[pool_num-1]);
         }
         else
         {
@@ -665,7 +665,7 @@ class default_alloc
     {
         for (size_t i = 0; i < pool_num; i++)
         {
-            printf("destrot()::pools_[%zu] =  %p\n",i, pools_[i]);
+            //printf("destrot()::pools_[%zu] =  %p\n",i, pools_[i]);
             if (pools_[i] != NULL)
             {
                 free(pools_[i]);
@@ -690,8 +690,7 @@ class default_alloc
 
 typedef default_alloc<GECO_ALLOC_USES_THREAD, 0> multi_clients_alloc;
 typedef default_alloc<false, 0> single_client_alloc;
-
-#endif  /* ! GECO__USE_MALLOC */
+#endif
 
 //template <bool threads, int inst>
 //class default_alloc
