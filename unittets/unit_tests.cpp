@@ -1161,12 +1161,12 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     const char* addres_geco_channel_can_found[] = { "192.168.1.122", "192.168.1.132", "192.168.34.1" };
     const char* addres6_geco_channel_can_found[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0002",
             "2607:f0d0:1002:0051:0000:0000:0000:0004" };
-    sockaddrunion local_addres[3];
-    sockaddrunion local_addres6[2];
-    sockaddrunion local_addres_geco_channel_not_found[3];
-    sockaddrunion local_addres6_geco_channel_not_found[2];
-    sockaddrunion local_addres_geco_channel_can_found[3];
-    sockaddrunion local_addres6_geco_channel_can_found[2];
+    sockaddrunion src_addres[3];
+    sockaddrunion src_addres6[2];
+    sockaddrunion remote_addres_geco_channel_not_found[3];
+    sockaddrunion remote_addres6_geco_channel_not_found[2];
+    sockaddrunion remote_addres_geco_channel_can_found[3];
+    sockaddrunion remote_addres6_geco_channel_can_found[2];
 
     EXPECT_EQ(sizeof(in_addr), 4);
     EXPECT_EQ(sizeof(in6_addr), 16);
@@ -1177,36 +1177,36 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     EXPECT_EQ(len, 8);
     for (i = 0; i < 3; i++)
     {
-        str2saddr(&local_addres[i], addres[i], 0, true);
+        str2saddr(&src_addres[i], addres[i], 0, true);
         ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
         ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv4_addr = local_addres[i].sin.sin_addr.s_addr;
+        ipaddr->dest_addr_un.ipv4_addr = src_addres[i].sin.sin_addr.s_addr;
         while (len % 4)
             len++;
         offset += len;
         ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
 
-        str2saddr(&local_addres_geco_channel_not_found[i],
+        str2saddr(&remote_addres_geco_channel_not_found[i],
                 addres_geco_channel_not_found[i], 0, true);
-        str2saddr(&local_addres_geco_channel_can_found[i],
+        str2saddr(&remote_addres_geco_channel_can_found[i],
                 addres_geco_channel_can_found[i], 0, true);
     }
     len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
     EXPECT_EQ(len, 20);
     for (i = 0; i < 2; i++)
     {
-        str2saddr(&local_addres6[i], addres6[i], 0, false);
+        str2saddr(&src_addres6[i], addres6[i], 0, false);
         ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
         ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv6_addr = local_addres6[i].sin6.sin6_addr;
+        ipaddr->dest_addr_un.ipv6_addr = src_addres6[i].sin6.sin6_addr;
         while (len % 4)
             len++;
         offset += len;
         ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
 
-        str2saddr(&local_addres6_geco_channel_not_found[i],
+        str2saddr(&remote_addres6_geco_channel_not_found[i],
                 addres6_geco_channel_not_found[i], 0, false);
-        str2saddr(&local_addres6_geco_channel_can_found[i],
+        str2saddr(&remote_addres6_geco_channel_can_found[i],
                 addres6_geco_channel_can_found[i], 0, false);
     }
     EXPECT_EQ(offset, 64);
@@ -1291,25 +1291,38 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4
             | SUPPORT_ADDRESS_TYPE_IPV6;
     //2.1 test when is_in(6)addr_any both true and local addr and port All different,
-    // should still found geco inst
+    // should NOT found geco inst
+    offset -= len;
+    dctp_packet_len -= len;
+    EXPECT_EQ(offset, 72);
     inst.local_addres_size = 3;
-    inst.local_addres_list = local_addres_geco_channel_not_found;
+    inst.local_addres_list = remote_addres6_geco_channel_not_found;
     inst.is_inaddr_any = true;
     inst.is_inaddr_any = true;
-    inst.local_port = 3306; // zero not care
+    inst.local_port = 3306; // not found dest port
     inst.is_ip4 = true;
     inst.is_ip6 = true;
     dlt.geco_instances_.push_back(&inst);
+    // repeated src addr
     str2saddr(&source_addr, "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
             ntohs(geco_packet.pk_comm_hdr.src_port), false);
-    str2saddr(&dest_addr, "222.134.12.34",
+    // not found dest addr
+    str2saddr(&dest_addr, "2001:0db8:0a0b:12f0:0000:0000:0000:0002",
             ntohs(geco_packet.pk_comm_hdr.dest_port),false);
+    init_chunk->chunk_header.chunk_id = CHUNK_INIT;
+    set_crc32_checksum((char*) &geco_packet,
+            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
+    //dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
+            //&source_addr, &dest_addr);
+
+    //2,2  test when is_in(6)addr_any both true and local addr different but dest port same
+    // should found geco inst
+    inst.local_port = ntohs(geco_packet.pk_comm_hdr.dest_port) ; // zero not care not found dest port
     init_chunk->chunk_header.chunk_id = CHUNK_INIT;
     set_crc32_checksum((char*) &geco_packet,
             offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
     dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
             &source_addr, &dest_addr);
-
 }
 
 #include "transport_layer.h"
