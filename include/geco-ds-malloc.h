@@ -390,6 +390,12 @@ class default_alloc
     char* end_free;//  pool end address in each chunk
     size_t heap_size;// 已经在堆上分配的空间大小
 
+    // tmp local variables for efficiency and unit test
+    int alloc_units_size;
+    char* unit;
+    Unit* GECO_VOLATILE* my_free_list;
+    Unit* tmp_unit;
+
     // It would be nice to use _STL_auto_lock here.  But we
     // don't need the NULL check.  And we do need a test whether
     // threads have actually been started.
@@ -417,6 +423,10 @@ class default_alloc
         memset(pools_, 0, NFREELISTS*sizeof(void*));
         start_free = end_free = NULL;
         heap_size = pool_num = 0;
+        alloc_units_size = 0;
+        unit = 0;
+        my_free_list = 0;
+        tmp_unit = 0;
     }
 
     //! 向上舍入操作
@@ -453,8 +463,8 @@ class default_alloc
      * may be changed by alloc_units() function */
     void* build_unit_list(size_t aligned_uint_size)
     {
-        int alloc_units_size = ALLOC_UNITS_SIZE;
-        char* unit = alloc_units(aligned_uint_size, alloc_units_size);
+        alloc_units_size = ALLOC_UNITS_SIZE;
+        unit = alloc_units(aligned_uint_size, alloc_units_size);
 
         // we got one unit from pool ans so no need to build list, just return it to user
         if (alloc_units_size == 1) return (unit);
@@ -463,7 +473,7 @@ class default_alloc
         alloc_units_size -= 1;
         /* Build a free list in size of @allocbytes */
         //1) find an avaiable free list
-        Unit* GECO_VOLATILE* my_free_list = free_list + freelist_index(aligned_uint_size);
+        my_free_list = free_list + freelist_index(aligned_uint_size);
         //2) find the start unit exclusive the first one for returning to client
         Unit* curr;
         Unit* next;
@@ -512,7 +522,6 @@ class default_alloc
         }
 
         /* cannot even alloc one, start to extend the pool */
-        Unit* GECO_VOLATILE* my_free_list;
         size_t byte2alloc = 2 * total_alloc_size + round_up(heap_size >> 4);
 
         // Try to make use of the left-over piece.
@@ -588,7 +597,7 @@ class default_alloc
         }
 
         /*find an avaiable free list*/
-        Unit* GECO_VOLATILE* my_free_list = free_list + freelist_index(size);
+        my_free_list = free_list + freelist_index(size);
 
 #if defined(GECO_USE_STL_THREADS) && !defined(GECO_NO_THREADS)
         GECO_ALLOC_LOCK;
@@ -622,13 +631,13 @@ class default_alloc
             malloc_allocator::deallocate(pointer, size);
             return;
         }
-        Unit* GECO_VOLATILE* my_free_list = free_list + freelist_index(size);
-        Unit* unit = (Unit*)pointer;
+        my_free_list = free_list + freelist_index(size);
+        tmp_unit = (Unit*)pointer;
 #if defined(GECO_USE_STL_THREADS) && !defined(GECO_NO_THREADS)
         GECO_ALLOC_LOCK;
 #endif
-        unit->_M_free_list_link = *my_free_list;
-        *my_free_list = unit;
+        tmp_unit->_M_free_list_link = *my_free_list;
+        *my_free_list = tmp_unit;
 #if defined(GECO_USE_STL_THREADS) && !defined(GECO_NO_THREADS)
         GECO_ALLOC_UNLOCK;
 #endif
