@@ -102,8 +102,8 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     switch (saddr_family(dest_addr))
     {
         case AF_INET:
-            source_addr->sin.sin_port = last_src_port_;
-            dest_addr->sin.sin_port = last_dest_port_;
+            source_addr->sin.sin_port = curr_geco_packet_fixed_->src_port;
+            dest_addr->sin.sin_port = curr_geco_packet_fixed_->dest_port;
             address_type_ = SUPPORT_ADDRESS_TYPE_IPV4;
             ip4_saddr_ = ntohl(dest_addr->sin.sin_addr.s_addr);
             if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_)
@@ -129,8 +129,8 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             EVENTLOG(VERBOSE,
                     "recv_geco_packet: checking for correct IPV6 addresses\n");
             address_type_ = SUPPORT_ADDRESS_TYPE_IPV6;
-            source_addr->sin6.sin6_port = last_src_port_;
-            dest_addr->sin6.sin6_port = last_dest_port_;
+            source_addr->sin6.sin6_port = curr_geco_packet_fixed_->src_port;
+            dest_addr->sin6.sin6_port = curr_geco_packet_fixed_->dest_port;
             ip6_saddr_ = &(dest_addr->sin6.sin6_addr);
             if (IN6_IS_ADDR_UNSPECIFIED(
                     ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_))
@@ -174,7 +174,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         last_dest_port_ = 0;
         saddr2str(source_addr, src_addr_str_, MAX_IPADDR_STR_LEN, NULL);
         saddr2str(dest_addr, dest_addr_str_, MAX_IPADDR_STR_LEN, NULL);
-        EVENTLOG2(INTERNAL_TRACE,
+        EVENTLOG2(VERBOSE,
                 "recv_geco_packet()::discarding packet for incorrect address\n src addr : %s,\ndest addr%s",
                 src_addr_str_, dest_addr_str_);
         return;
@@ -266,7 +266,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     {
         /* silently should_discard_curr_geco_packet_ */
         ERRLOG(MINOR_ERROR,
-                "recv_geco_packet(): discarding illegal packet (init init ack or sdcomplete)\n");
+                "recv_geco_packet(): discarding illegal packet (init ack is not only one !)\n");
         clear();
         return;
     }
@@ -277,7 +277,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     {
         /* silently should_discard_curr_geco_packet_ */
         ERRLOG(MINOR_ERROR,
-                "recv_geco_packet(): discarding illegal packet (init init ack or sdcomplete)\n");
+                "recv_geco_packet(): discarding illegal packet (init ack is not only chunk!)\n");
         clear();
         return;
     }
@@ -287,7 +287,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     {
         /* silently should_discard_curr_geco_packet_ */
         ERRLOG(MINOR_ERROR,
-                "recv_geco_packet(): discarding illegal packet (init init ack or sdcomplete)\n");
+                "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)\n");
         clear();
         return;
     }
@@ -297,6 +297,9 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     found_init_chunk_ = false;
     init_chunk_fixed_ = NULL;
     vlparam_fixed_ = NULL;
+    /* founda matching channel using the source addr
+     * from init chunk's addrlist vlp, default false*/
+    found_existed_channel_from_init_chunks_ = false;
 
     /* 11) try to find an channel for this packet from setup chunks */
     if (curr_channel_ == NULL)
@@ -312,12 +315,12 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                     curr_geco_packet_value_len_, my_supported_addr_types_) - 1;
             for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
             {
-                curr_channel_ = find_channel_by_transport_addr(
+                if ((curr_channel_ = find_channel_by_transport_addr(
                         &tmp_peer_addreslist_[tmp_peer_addreslist_size_],
-                        last_src_port_, last_dest_port_);
-                if (curr_channel_ != NULL)
+                        last_src_port_, last_dest_port_)) != NULL)
                 {
-                    last_src_path_ = tmp_peer_addreslist_size_;
+                    EVENTLOG(VERBOSE,
+                            "found channel using src addr in INIT chunk's addrlist vlp\n");
                     break;
                 }
             }
@@ -338,12 +341,12 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
                 for (; tmp_peer_addreslist_size_ >= 0;
                         tmp_peer_addreslist_size_--)
                 {
-                    curr_channel_ = find_channel_by_transport_addr(
+                    if ((curr_channel_ = find_channel_by_transport_addr(
                             &tmp_peer_addreslist_[tmp_peer_addreslist_size_],
-                            last_src_port_, last_dest_port_);
-                    if (curr_channel_ != NULL)
+                            last_src_port_, last_dest_port_)) != NULL)
                     {
-                        last_src_path_ = tmp_peer_addreslist_size_;
+                        EVENTLOG(VERBOSE,
+                                "found channel using src addr in INIT chunk's addrlist vlp\n");
                         break;
                     }
                 }
@@ -368,7 +371,6 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         {
             EVENTLOG(VERBOSE,
                     "recv_geco_packet(): NOT found previous channel from INIT (ACK) CHUNK");
-            found_existed_channel_from_init_chunks_ = false;
         }
     }
 
@@ -1775,7 +1777,7 @@ int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID,
                 write_unknown_param_error(init_ack_str, AckCID, pLen,
                         curr_vlp_start);
             }
-            // if(STOP_PARAM_REPORT_EREASON){} DO NOTHING FOR THIS BRANCH
+// if(STOP_PARAM_REPORT_EREASON){} DO NOTHING FOR THIS BRANCH
         }
 
         read_len += pLen;
@@ -3055,9 +3057,9 @@ int dispatch_layer_t::read_peer_addreslist(
 
         if (is_new_addr)
         {
-            // always add last_source_addr as it is from received packet
-            // which means the path is active on that address
-            // if exceed MAX_NUM_ADDRESSES, we rewrite the last addr by last_source_addr
+// always add last_source_addr as it is from received packet
+// which means the path is active on that address
+// if exceed MAX_NUM_ADDRESSES, we rewrite the last addr by last_source_addr
             if (found_addr_number >= MAX_NUM_ADDRESSES)
             {
                 found_addr_number = MAX_NUM_ADDRESSES - 1;
@@ -3297,9 +3299,9 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value,
 
     while (read_len < packet_val_len)
     {
-        EVENTLOG2(VERBOSE,
-                "find_first_chunk_of()::packet_val_len=%d, read_len=%d",
-                packet_val_len, read_len);
+        EVENTLOG3(VERBOSE,
+                "find_first_chunk_of(%u)::packet_val_len=%d, read_len=%d",
+                chunk_type, packet_val_len, read_len);
 
         if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
@@ -3349,9 +3351,9 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
 
     while (read_len < packet_val_len)
     {
-        EVENTLOG2(VERBOSE,
-                "contains_error_chunk()::packet_val_len=%d, read_len=%d",
-                packet_val_len, read_len);
+        EVENTLOG3(VERBOSE,
+                "contains_error_chunk(error_cause %u)::packet_val_len=%d, read_len=%d",
+                error_cause, packet_val_len, read_len);
 
         if (packet_val_len - read_len < (int) CHUNK_FIXED_SIZE)
         {
@@ -3373,7 +3375,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
             uint err_param_len = 0;
             uchar* simple_chunk;
             uint param_len = 0;
-            // search for target error param
+// search for target error param
             while (err_param_len < chunk_len - (int) CHUNK_FIXED_SIZE)
             {
                 if (chunk_len - CHUNK_FIXED_SIZE
@@ -3563,7 +3565,6 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(
 {
     tmp_channel_.remote_addres_size = 1;
     tmp_channel_.remote_addres = &tmp_addr_;
-    EVENTLOG1(VERBOSE, "src addr af is %d\n", saddr_family(src_addr));
 
     switch (saddr_family(src_addr))
     {
