@@ -60,7 +60,7 @@ struct geco_instance_t
          Once assigned this should not be changed !*/
         ushort local_port;
         ushort local_addres_size;
-        sockaddrunion* local_addres_list;
+        sockaddrunion* local_addres_list; /* when init, set port to local_port*/
         char* local_addres_str_list;
         bool is_inaddr_any;
         bool is_in6addr_any;
@@ -547,6 +547,13 @@ class dispatch_layer_t
         /* related to error cause */
         ushort curr_ecc_code_;
         const char* curr_ecc_reason_;
+        enum
+        {
+            GECO_INST_NOT_STARTED = 1,
+            DEST_PORT_NOT_FOUND =2,
+            DEST_SADDR_NOT_FOUND = 3,
+        };
+        uint geco_inst_not_found_reason_;
 
         timer_mgr timer_mgr_;
         network_interface_t* transport_layer_;
@@ -1341,7 +1348,15 @@ class dispatch_layer_t
         }
 
         /**
-         * Enable sending again - wait after received chunks have been diassembled completely.
+         * Allow sender to send data right away
+         * when all received chunks have been diassembled completely.
+         * @example
+         * firstly, lock_bundle_ctrl() when disassembling received chunks;
+         * then, generate and bundle outging chunks like sack, data or ctrl chunks;
+         * the bundle() will interally force sending all chunks if the bundle are full.
+         * then, excitely call send all bundled chunks;
+         * finally, unlock_bundle_ctrl(dest addr);
+         * will send all bundled chunks automatically to the specified dest addr
          */
         inline void unlock_bundle_ctrl(int* ad_idx = NULL)
         {
@@ -1364,10 +1379,9 @@ class dispatch_layer_t
                     "unlock_bundle_ctrl() was called..and got %s send request -> processing",
                     (bundle_ctrl->got_send_request == true) ? "A" : "NO");
         }
-
         /**
-         * Keep sender from sending data right away - wait after received chunks have
-         * been diassembled completely.
+         * disallow sender to send data right away when newly received chunks have
+         * NOT been diassembled completely.
          */
         inline void lock_bundle_ctrl()
         {

@@ -15,5 +15,5 @@
 #define _DEBUG
 #define GECO_ASSERTIONS
 #define GECO_PRINTS
-#define CURR_EVENT_LOG_LEVEL 6
+#define CURR_EVENT_LOG_LEVEL 5
 #endif /* MY_CONFIG_H_ */
