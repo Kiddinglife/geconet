@@ -1131,17 +1131,49 @@ TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
 }
 TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 {
-    geco_packet_t geco_packet;
+    //fills up addreslist
+    int i;
+    const char* addres[] = { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+    const char* addres6[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
+            "2607:f0d0:1002:0051:0000:0000:0000:0004" };
 
-    /*1) put an init chunk*/
-    //1.1) fills up geco packet hdr
+    const char* dest_ips[] =
+            { "192.168.1.122", "192.168.1.131", "192.168.34.1" };
+    const char* dest_ips6[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0002",
+            "2607:f0d0:1002:0051:0000:0000:0000:0005" };
+
+    ushort sender_src_port = 123;
+    ushort sender_dest_port = 456;
+
+    const char* cannot_found_ips4[] = { "192.168.1.123", "192.168.1.101",
+            "192.168.34.5" };
+    const char* cannot_found_ips6[] = {
+            "2001:0db8:0a0b:12f0:0000:0000:0000:0020",
+            "2607:f0d0:1002:0051:0000:0000:0000:0100" };
+
+    sockaddrunion src_addres[3]; // sender src addr=receiver remote addr
+    sockaddrunion src_addres6[2]; // sender src addr=receiver remote addr
+    sockaddrunion dest_addres[3]; // sender dest add is receiver local addr
+    sockaddrunion dest_addres6[2]; // sender dest addr=receiver local addr
+    sockaddrunion cannot_found_addres4[3]; // sender dest add is receiver local addr
+    sockaddrunion cannot_found_addres6[2]; // sender dest addr=receiver local addr
+    EXPECT_EQ(sizeof(in_addr), 4);
+    EXPECT_EQ(sizeof(in6_addr), 16);
+
+    geco_packet_t geco_packet;
+    int sfd = 123;
+    geco_packet_t* dctp_packet = &geco_packet;
+    uint dctp_packet_len;
+    sockaddrunion source_addr;
+    sockaddrunion dest_addr;
+
+    /*prepare an init chunk*/
+    // fills up geco packet hdr
     geco_packet.pk_comm_hdr.checksum = 0;
-    geco_packet.pk_comm_hdr.dest_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.src_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.dest_port = htons(sender_dest_port); //456
+    geco_packet.pk_comm_hdr.src_port = htons(sender_src_port); //123
     geco_packet.pk_comm_hdr.verification_tag = 0;
-    //1.2) fills up init chunk hdr
+    // fills up init chunk hdr
     init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
     init_chunk->chunk_header.chunk_id = CHUNK_INIT;
     init_chunk->chunk_header.chunk_flags = 0;
@@ -1150,30 +1182,6 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     init_chunk->init_fixed.init_tag = htonl(generate_random_uint32());
     init_chunk->init_fixed.initial_tsn = init_chunk->init_fixed.init_tag;
     init_chunk->init_fixed.rwnd = htonl(512);
-    //1.3) fills up addreslist
-    int i;
-    const char* addres[] = { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
-    const char* addres6[] = { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
-            "2607:f0d0:1002:0051:0000:0000:0000:0004" };
-    const char* addres_geco_channel_not_found[] = { "192.168.1.122",
-            "192.168.1.131", "192.168.34.1" };
-    const char* addres6_geco_channel_not_found[] = {
-            "2001:0db8:0a0b:12f0:0000:0000:0000:0002",
-            "2607:f0d0:1002:0051:0000:0000:0000:0005" };
-    const char* addres_geco_channel_can_found[] = { "192.168.1.122",
-            "192.168.1.132", "192.168.34.1" };
-    const char* addres6_geco_channel_can_found[] = {
-            "2001:0db8:0a0b:12f0:0000:0000:0000:0002",
-            "2607:f0d0:1002:0051:0000:0000:0000:0004" };
-    sockaddrunion src_addres[3];
-    sockaddrunion src_addres6[2];
-    sockaddrunion remote_addres_geco_channel_not_found[3];
-    sockaddrunion remote_addres6_geco_channel_not_found[2];
-    sockaddrunion remote_addres_geco_channel_can_found[3];
-    sockaddrunion remote_addres6_geco_channel_can_found[2];
-
-    EXPECT_EQ(sizeof(in_addr), 4);
-    EXPECT_EQ(sizeof(in6_addr), 16);
     ip_address_t* ipaddr = (ip_address_t*) init_chunk->variableParams;
     ushort len;
     ushort offset = 0;
@@ -1181,7 +1189,9 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     EXPECT_EQ(len, 8);
     for (i = 0; i < 3; i++)
     {
-        str2saddr(&src_addres[i], addres[i], 0, true);
+        str2saddr(&src_addres[i], addres[i], sender_src_port, true);
+        str2saddr(&dest_addres[i], dest_ips[i], sender_dest_port, true);
+        str2saddr(&cannot_found_addres4[i], cannot_found_ips4[i], 0, true);
         ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
         ipaddr->vlparam_header.param_length = htons(len);
         ipaddr->dest_addr_un.ipv4_addr = src_addres[i].sin.sin_addr.s_addr;
@@ -1189,17 +1199,15 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
             len++;
         offset += len;
         ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
-
-        str2saddr(&remote_addres_geco_channel_not_found[i],
-                addres_geco_channel_not_found[i], 0, true);
-        str2saddr(&remote_addres_geco_channel_can_found[i],
-                addres_geco_channel_can_found[i], 0, true);
     }
     len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
     EXPECT_EQ(len, 20);
     for (i = 0; i < 2; i++)
     {
-        str2saddr(&src_addres6[i], addres6[i], 0, false);
+        str2saddr(&src_addres6[i], addres6[i], sender_src_port, false);
+        str2saddr(&dest_addres6[i], dest_ips6[i], sender_dest_port, false);
+        str2saddr(&cannot_found_addres6[i], cannot_found_ips6[i], 0, false);
+
         ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
         ipaddr->vlparam_header.param_length = htons(len);
         ipaddr->dest_addr_un.ipv6_addr = src_addres6[i].sin6.sin6_addr;
@@ -1207,14 +1215,9 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
             len++;
         offset += len;
         ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
-
-        str2saddr(&remote_addres6_geco_channel_not_found[i],
-                addres6_geco_channel_not_found[i], 0, false);
-        str2saddr(&remote_addres6_geco_channel_can_found[i],
-                addres6_geco_channel_can_found[i], 0, false);
     }
     EXPECT_EQ(offset, 64);
-    //1.4) fills up support types
+    // fills up support types
     len = sizeof(ushort) * 2 + 4;
     vlparam_fixed_t* saddrtypes = (vlparam_fixed_t*) (init_chunk->variableParams
             + offset);
@@ -1233,77 +1236,109 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     INIT_CHUNK_FIXED_SIZES + offset);
     EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + offset, 92);
 
-    int sfd = 123;
-    geco_packet_t* dctp_packet = &geco_packet;
-    uint dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES
-            + GECO_PACKET_FIXED_SIZE;
-    sockaddrunion source_addr;
-    sockaddrunion dest_addr;
-    str2saddr(&source_addr, "192.168.1.107",
-            ntohs(geco_packet.pk_comm_hdr.src_port));
-    str2saddr(&dest_addr, "222.134.12.34",
-            ntohs(geco_packet.pk_comm_hdr.dest_port));
-
+    // setup default test variables, they may be manually changed
+    // to cater for specified test.
     dispatch_layer_t dlt;
+    network_interface_t init;
+    int rwnd = 512;
+    init.init(&rwnd,true);
+    dlt.transport_layer_ = &init;
+    geco_instance_t inst;
+    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4
+            | SUPPORT_ADDRESS_TYPE_IPV6;
+    inst.is_inaddr_any = false;
+    inst.is_in6addr_any = true;
+    inst.noOfInStreams = 12;
+    inst.noOfOutStreams = 12;
+    inst.local_port = sender_dest_port;
+    inst.local_addres_list = dest_addres6;
+    inst.local_addres_size = sizeof dest_addres6;
+    channel_t channel;
+    channel.channel_id = 123;
+    channel.remote_addres = src_addres6;
+    channel.remote_addres_size = sizeof src_addres6;
+    channel.local_addres = dest_addres6;
+    channel.local_addres_size = sizeof dest_addres6;
+    channel.remote_port = sender_src_port;
+    channel.local_port = sender_dest_port;
+    channel.deleted = false;
+    channel.geco_inst = &inst;
+    dlt.channels_.push_back(&channel);
+    dlt.geco_instances_.push_back(&inst);
 
-    //1) channel and geco instance both NULL -> test branch (curr_channel_ == NULL) at line 687
-    // filtering and pre-process OOB chunks that have no channel found
-    // refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets
-    //1.1) test branch at line 263 -> init, init ack or shutdown complete should be the only chunk
-    //otherwise will be discarded.
-    len = CHUNK_FIXED_SIZE;
-    simple_chunk_t* abort = (simple_chunk_t*) (dctp_packet->chunk + offset
-            + INIT_CHUNK_FIXED_SIZES);
-    abort->chunk_header.chunk_id = CHUNK_ABORT;
-    abort->chunk_header.chunk_flags = 1; // T set reflected verifi tag
-    abort->chunk_header.chunk_length = htons(len);
-    while (len % 4)
-        len++;
-    offset += len;
-    dctp_packet_len += len;
-    EXPECT_EQ(offset, 76);
+    // use INIT CHUNK as default packet, we may change its chunk id and so
+    // on to catter for specified needs. eg, set chunk id to chunk data to
+    // to test chunk_abort branch
+    dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE;
+    set_crc32_checksum((char*) &geco_packet,
+            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
 
-//    set_crc32_checksum((char*) &geco_packet,
-//            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
+    //1) branch line 364 - 12) try to find an channel for this packet from setup chunks
+    // 1.2) test found an existed channel from setup chunks
+    str2saddr(&source_addr, cannot_found_ips6[1], sender_src_port, false); //use unfoundable src addr
+    dest_addr = dest_addres6[1]; // use foundable dest addr
+    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
+            &source_addr, &dest_addr);
+    EXPECT_EQ(dlt.curr_channel_, &channel);
+    EXPECT_TRUE(dlt.found_existed_channel_from_init_chunks_);
+//    //1.2) test Not found an existed channel from setup chunks
+//    str2saddr(&source_addr, cannot_found_ips6[1], sender_src_port, false); //use unfoundable src addr
+//    dest_addr = dest_addres6[1]; // use foundable dest addr
+//    sockaddrunion* tmp_remotes = channel.remote_addres;
+//    uint tmp_remotes_size = channel.remote_addres_size;
+//    channel.remote_addres = cannot_found_addres6;
+//    channel.remote_addres_size = sizeof cannot_found_addres6;
 //    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
 //            &source_addr, &dest_addr);
-//    init_chunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
-//    set_crc32_checksum((char*) &geco_packet,
-//            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
-//    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
-//            &source_addr, &dest_addr);
-//    init_chunk->chunk_header.chunk_id = CHUNK_SHUTDOWN_COMPLETE;
-//    set_crc32_checksum((char*) &geco_packet,
-//            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
-//    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
-//            &source_addr, &dest_addr);
+//    EXPECT_FALSE(dlt.found_existed_channel_from_init_chunks_);
 
-//    //1.2) test branch if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0) at line 699
-    // SHOULD DISCARD IT
+//    //2) test branch at line 263 -> init, init ack or shutdown complete should be the only chunk
+//    //otherwise will be discarded.
+//    len = CHUNK_FIXED_SIZE;
+//    simple_chunk_t* abort = (simple_chunk_t*) (dctp_packet->chunk + offset
+//            + INIT_CHUNK_FIXED_SIZES);
+//    abort->chunk_header.chunk_id = CHUNK_ABORT;
+//    abort->chunk_header.chunk_flags = 1; // T set reflected verifi tag
+//    abort->chunk_header.chunk_length = htons(len);
+//    while (len % 4)
+//        len++;
+//    offset += len;
+//    dctp_packet_len += len;
+//    EXPECT_EQ(offset, 76);
+
+//    //3) test branch if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0) at line 699
+//    // SHOULD DISCARD IT
 //    init_chunk->chunk_header.chunk_id = CHUNK_DATA;
 //    set_crc32_checksum((char*) &geco_packet,
 //            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
 //    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
 //            &source_addr, &dest_addr);
-//    //1.3 test branch - validate ip addresses -  switch (saddr_family(dest_addr)) at line 102
+//    EXPECT_TRUE(dlt.branchtest_contains_chunk_abort_when_curr_channel_is_null_);
+
+//    //4) test branch - validate ip addresses -
+//    // switch (saddr_family(dest_addr)) at line 102
+//    // should failed when given a any addr as src address
 //    init_chunk->chunk_header.chunk_id = CHUNK_DATA;
 //    source_addr.sin.sin_addr.s_addr = INADDR_ANY;
 //    set_crc32_checksum((char*) &geco_packet,
 //            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
 //    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
 //            &source_addr, &dest_addr);
+//    EXPECT_TRUE(dlt.should_discard_curr_geco_packet_);
 
-    geco_instance_t inst;
-    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4
-            | SUPPORT_ADDRESS_TYPE_IPV6;
+//    //5) test branch if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0) at line 699
+//    // SHOULD DISCARD IT
+//    init_chunk->chunk_header.chunk_id = CHUNK_DATA;
+//    set_crc32_checksum((char*) &geco_packet,
+//            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
+//    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
+//            &source_addr, &dest_addr);
 
     offset -= len;
     dctp_packet_len -= len;
-    EXPECT_EQ(offset, 72);
-    dlt.geco_instances_.push_back(&inst);
 
 //    //2.1 test when is_in(6)addr_any both true and local addr and port All different,
-//    // should NOT found geco inst
+//    // should NOT found geco inst and Not find channel
 //    inst.local_addres_size = 3;
 //    inst.local_addres_list = remote_addres6_geco_channel_not_found;
 //    inst.is_inaddr_any = true;
@@ -1324,7 +1359,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 //            &source_addr, &dest_addr);
 
     //2,2  test when is_in(6)addr_any both true and local addr different but dest port same
-    // should found geco inst
+    // should found geco inst and NOT found channel
     // repeated src addr
 //    inst.local_addres_size = 3;
 //    inst.local_addres_list = remote_addres6_geco_channel_can_found;

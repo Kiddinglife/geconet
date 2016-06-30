@@ -2,6 +2,17 @@
 #include "transport_layer.h"
 #define STD_INPUT_FD 0
 
+static void errorno(uint level)
+{
+#ifdef _WIN32
+    ERRLOG1(level,"errorno %d\n",WSAGetLastError());
+#elif defined(__linux__)
+    ERRLOG1(level, "errorno %d\n", errno);
+#else
+    ERRLOG(level, "errorno unknown plateform !\n");
+#endif
+}
+
 static void safe_close_soket(int sfd)
 {
     if (sfd < 0)
@@ -951,7 +962,7 @@ int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
 {
     int sockdespt;
     int optval;
-    socklen_t opt_size = sizeof(int);
+    socklen_t opt_size = sizeof(optval);
 
     if (rwnd == NULL)
     {
@@ -971,8 +982,8 @@ int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
 #endif
     if (sockdespt < 0)
     {
-        ERRLOG2(MAJOR_ERROR, "socket()  return  %d, errorno %d!\n", sockdespt,
-                errno);
+        ERRLOG1(MINOR_ERROR, "socket()  return  %d!\n", sockdespt);
+        errorno(MAJOR_ERROR);
         return sockdespt;
     }
 
@@ -985,10 +996,10 @@ int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
         // bind any can recv all  ip packets
         me.sin.sin_addr.s_addr = INADDR_ANY;
 #ifdef USE_UDP
-        me.sin.sin_port = USED_UDP_PORT;
+        me.sin.sin_port = htons(USED_UDP_PORT);
 #endif
 #ifdef HAVE_SIN_LEN
-        me.sin_len = sizeof(me);
+        me.sin_len = htons(sizeof(me));
 #endif
     }
     else
@@ -996,39 +1007,34 @@ int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
         /* binding to INADDR_ANY to make Windows happy... */
         me.sin6.sin6_family = AF_INET6;
         // bind any can recv all  ip packets
-        memset(&me.sin6.sin6_addr.s6_addr, 0, sizeof(struct in6_addr));
+        memset(me.sin6.sin6_addr.s6_addr, 0, sizeof(struct in6_addr));
 #ifdef USE_UDP
-        me.sin6.sin6_port = USED_UDP_PORT;
+        me.sin.sin_port = htons(USED_UDP_PORT);
 #endif
 #ifdef HAVE_SIN_LEN
-        me.sin_len = sizeof(me);
+        me.sin_len = htons(sizeof(me));
 #endif
     }
-    bind(sockdespt, (const struct sockaddr *) &me.sa, sizeof(struct sockaddr));
-
+    if (bind(sockdespt, &me.sa,sizeof(struct sockaddr)) < 0)
+    {
+        ERRLOG1(MAJOR_ERROR,
+                "Try to bind sockdespt {%d} but failed !", sockdespt);
+    }
     //setup recv buffer option
     *rwnd = set_sockdespt_recvbuffer_size(sockdespt, *rwnd); // 655360 bytes
     if (*rwnd < 0)
     {
         safe_close_soket(sockdespt);
-        ERRLOG2(MAJOR_ERROR,
-                "setsockopt: Try to set SO_RCVBUF {%d} but failed errno %d\n!",
-                *rwnd, errno);
+        ERRLOG1(MAJOR_ERROR,
+                "setsockopt: Try to set SO_RCVBUF {%d} but failed !", *rwnd);
     }
 
     if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (char*) &optval,
             opt_size) < 0)
     {
         safe_close_soket(sockdespt);
-#ifdef _WIN32
-        ERRLOG1(MAJOR_ERROR,
-                "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} !\n",
-                WSAGetLastError());
-#else
-        ERRLOG1(MAJOR_ERROR,
-                "setsockopt: Try to set SO_REUSEADDR but failed ! !\n", errno);
-#endif
-        return -1;
+        ERRLOG(MAJOR_ERROR,
+                "setsockopt: Try to set SO_REUSEADDR but failed ! {%d} ! ");
     }
 
     //setup mtu discover option
@@ -1038,7 +1044,8 @@ int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
             (const char *) &optval, optval) < 0)
     {
         safe_close_soket(sockdespt);
-        ERRLOG(MAJOR_ERROR, "setsockopt: IP_PMTU_DISCOVER failed !");
+        ERRLOG(MAJOR_ERROR,
+                "setsockopt: Try to set IP_MTU_DISCOVER but failed ! ");
     }
 
     // test to make sure we set it correctly
@@ -1046,7 +1053,7 @@ int network_interface_t::open_ipproto_geco_socket(int af, int* rwnd)
             &opt_size) < 0)
     {
         safe_close_soket(sockdespt);
-        ERRLOG(MAJOR_ERROR, "getsockopt: SO_RCVBUF failed !");
+        ERRLOG(MAJOR_ERROR, "getsockopt: IP_MTU_DISCOVER failed %d!");
     }
     else
     {
@@ -1293,9 +1300,9 @@ int network_interface_t::send_ip_packet(int sfd, char *buf, int len,
             break;
 
         case AF_INET6:
-            char hostname[IFNAMSIZ];
+            char hostname[MAX_IPADDR_STR_LEN];
             if (inet_ntop(AF_INET6, s6addr(dest), (char *) hostname,
-            IFNAMSIZ) == NULL)
+                    MAX_IPADDR_STR_LEN) == NULL)
             {
                 ERRLOG(MAJOR_ERROR, "inet_ntop()  buffer is too small !\n");
                 return -1;

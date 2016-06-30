@@ -16,4 +16,5 @@
 #define GECO_ASSERTIONS
 #define GECO_PRINTS
 #define CURR_EVENT_LOG_LEVEL 5
+#define ENABLE_UNIT_TEST
 #endif /* MY_CONFIG_H_ */

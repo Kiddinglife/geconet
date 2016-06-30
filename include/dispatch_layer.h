@@ -559,6 +559,12 @@ class dispatch_layer_t
         network_interface_t* transport_layer_;
         char hoststr_[MAX_IPADDR_STR_LEN];
         bool library_support_unreliability_;
+
+#ifdef ENABLE_UNIT_TEST
+        /* unit test extra variables*/
+        bool branchtest_contains_chunk_abort_when_curr_channel_is_null_;
+#endif
+
         dispatch_layer_t();
 
         /**

@@ -49,6 +49,11 @@ dispatch_layer_t::dispatch_layer_t()
     curr_ecc_code_ = 0;
     curr_ecc_reason_ = NULL;
     transport_layer_ = NULL;
+
+    /*unit test variables initilitions*/
+#ifdef ENABLE_UNIT_TEST
+    branchtest_contains_chunk_abort_when_curr_channel_is_null_ = false;
+#endif
 }
 
 void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
@@ -360,13 +365,16 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         {
             EVENTLOG(VERBOSE,
                     "recv_geco_packet(): found previous channel from setup chunk");
-            my_supported_addr_types_ = 0; // we will
+            curr_geco_instance_ = curr_channel_->geco_inst;
+            my_supported_addr_types_ =
+                    curr_geco_instance_->supportedAddressTypes;
             found_existed_channel_from_init_chunks_ = true;
         }
         else
         {
             EVENTLOG(VERBOSE,
                     "recv_geco_packet(): NOT found previous channel from INIT (ACK) CHUNK");
+            found_existed_channel_from_init_chunks_ = false;
         }
     }
 
@@ -697,7 +705,10 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             EVENTLOG(VERBOSE,
                     "recv_geco_packet()::Found ABORT in oob packet, discarding it !");
             clear();
+#ifdef ENABLE_UNIT_TEST
+            branchtest_contains_chunk_abort_when_curr_channel_is_null_ = true;
             return;
+#endif
         }
 
         /*16) refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (5)
@@ -899,6 +910,16 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             EVENTLOG(INTERNAL_TRACE,
                     "recv_geco_packet()::Found CHUNK_COOKIE_ECHO in OOB packet -> processing it");
 
+            // validate that cookie echo chunk must be the first chunk
+            if (((chunk_fixed_t*) (curr_geco_packet_->chunk))->chunk_id
+                    != CHUNK_COOKIE_ECHO)
+            {
+                EVENTLOG(VERBOSE,
+                        "but it is not the first chunk in the packet ---> discarding");
+                clear();
+                return;
+            }
+
             // we have an instance up listenning on that port just validate params
             if (curr_geco_instance_ != NULL)
             {
@@ -926,8 +947,8 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             else
             {
                 // we do not have an instance up listening on that port-> ABORT
-                EVENTLOG(INTERNAL_TRACE,
-                        "got INIT Message, but no instance found -> discarding");
+                EVENTLOG(VERBOSE,
+                        "got CHUNK_COOKIE_ECHO, but no instance found -> discarding");
                 clear();
                 return;
             }
@@ -1543,7 +1564,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
                     /* send all bundled chunks to ensure init ack is the only chunk sent
                      * in the whole geco packet*/
-                    EVENTLOG1(VERBOSE, "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
+                    EVENTLOG1(VERBOSE,
+                            "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
                             get_bundle_total_size(get_bundle_controller()));
                     unlock_bundle_ctrl();
                     send_bundled_chunks();
@@ -1668,7 +1690,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                                 ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                     }
                     /*send all bundled chunks to ensure init ack is the only chunk sent*/
-                    EVENTLOG1(VERBOSE, "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
+                    EVENTLOG1(VERBOSE,
+                            "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
                             get_bundle_total_size(get_bundle_controller()));
                     assert(
                             get_bundle_total_size(get_bundle_controller()) == UDP_GECO_PACKET_FIXED_SIZES);
@@ -1701,7 +1724,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                 uint shutdownackcid = alloc_simple_chunk(CHUNK_SHUTDOWN_ACK,
                 FLAG_NONE);
                 /*send all bundled chunks to ensure init ack is the only chunk sent*/
-                EVENTLOG1(VERBOSE, "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
+                EVENTLOG1(VERBOSE,
+                        "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
                         get_bundle_total_size(get_bundle_controller()));
                 unlock_bundle_ctrl();
                 send_bundled_chunks();
@@ -3061,8 +3085,8 @@ int dispatch_layer_t::read_peer_addreslist(
                 break;
         }
         read_len += vlp_len;
-        padding_len = (((read_len & 3)) == 0) ? 0 : (4 - (read_len & 3));
-        read_len += padding_len;
+        while (read_len & 3)
+            ++read_len;
         curr_pos = chunk + read_len;
     } // while
 
@@ -3308,8 +3332,8 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
                 break;
         }
         read_len += chunk_len;
-        padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
-        read_len += padding_len;
+        while (read_len & 3)
+            ++read_len;
         curr_pos = init_chunk->variableParams + read_len;
     } // while
     return 1;
@@ -3358,8 +3382,8 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value,
             return curr_pos;
 
         read_len += chunk_len;
-        padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
-        read_len += padding_len;
+        while (read_len & 3)
+            ++read_len;
         curr_pos = packet_value + read_len;
     }
     return NULL;
@@ -3381,9 +3405,9 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
                 "contains_error_chunk(error_cause %u)::packet_val_len=%d, read_len=%d",
                 error_cause, packet_val_len, read_len);
 
-        if (packet_val_len - read_len < (int) CHUNK_FIXED_SIZE)
+        if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
-            EVENTLOG(WARNNING_ERROR,
+            EVENTLOG(MINOR_ERROR,
                     "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
             return false;
         }
@@ -3401,12 +3425,12 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
             uchar* simple_chunk;
             uint param_len = 0;
 // search for target error param
-            while (err_param_len < chunk_len - (int) CHUNK_FIXED_SIZE)
+            while (err_param_len < chunk_len - CHUNK_FIXED_SIZE)
             {
                 if (chunk_len - CHUNK_FIXED_SIZE
                         - err_param_len< VLPARAM_FIXED_SIZE)
                 {
-                    EVENTLOG(WARNNING_ERROR,
+                    EVENTLOG(MINOR_ERROR,
                             "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
                     return false;
                 }
@@ -3429,9 +3453,9 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value,
         }
 
         read_len += chunk_len;
-        padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
-        read_len += padding_len;
-        curr_pos += read_len;
+        while (read_len & 3)
+            ++read_len;
+        curr_pos = packet_value + read_len;
     }
     return false;
 }
@@ -3543,7 +3567,7 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a,
             for (j = 0; j < b.local_addres_size; j++)
             {
                 if (saddr_equals(&(a.local_addres_list[i]),
-                        &(b.local_addres_list[j])))
+                        &(b.local_addres_list[j]), true))
                 {
                     geco_inst_not_found_reason_ = 0;
                     return true;
@@ -3689,7 +3713,8 @@ bool dispatch_layer_t::cmp_channel(const channel_t& a, const channel_t& b)
 //                EVENTLOG3(VERBOSE, "b.remote_addres[%d]::%s:%u\n", j, buf,
 //                        port);
 
-                if (saddr_equals(&(a.remote_addres[i]), &(b.remote_addres[j])))
+                if (saddr_equals(&(a.remote_addres[i]), &(b.remote_addres[j]),
+                        true))
                 {
                     if (!a.deleted && !b.deleted)
                     {
