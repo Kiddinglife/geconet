@@ -377,7 +377,7 @@ union sockunion* destinationList,
             event_logi(VERBOSE, "1: supportedTypes : %u", supportedTypes);
 
             if (withPRSCTP) {
-                ch_addParameterToInitChunk(initCID, VLPARAM_PartialReliability, 0, NULL);
+                ch_addParameterToInitChunk(initCID, VLPARAM_UNRELIABILITY, 0, NULL);
             }
 
 #ifdef BAKEOFF
@@ -780,16 +780,20 @@ int sctlr_init(SCTP_init * init)
             0, lAddresses, nlAddresses, rAddresses, nrAddresses);
 
 
-        process_further = ch_enterUnrecognizedParameters(initCID, initAckCID, supportedTypes);
+        process_further = ch_enterUnrecognizedParameters(initCID, initAckCID,
+            supportedTypes);
 
-        if (process_further == -1) {
+        if (process_further == -1)
+        {
             /*   ch_deleteChunk(initAckCID);
                ch_forgetChunk(initCID); */
             return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
             /* return return_state; */
         }
-        else {
-            if (process_further == 1) {
+        else
+        {
+            if (process_further == 1)
+            {
                 return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
             }
             /* send initAck */
@@ -814,7 +818,8 @@ int sctlr_init(SCTP_init * init)
         switch (state) {
             /* see section 5.2.1 */
             case COOKIE_WAIT:
-                if ((localData->local_tie_tag != 0) || (localData->peer_tie_tag != 0)) {
+                if ((localData->local_tie_tag != 0) || (localData->peer_tie_tag != 0))
+                {
                     error_logii(ERROR_FATAL, "Tie tags NOT zero in COOKIE_WAIT, but %u and %u",
                         localData->local_tie_tag, localData->peer_tie_tag);
                 }
@@ -828,7 +833,8 @@ int sctlr_init(SCTP_init * init)
                         localData->local_tie_tag, localData->peer_tie_tag);
                 }
 
-                if (state == COOKIE_ECHOED) {
+                if (state == COOKIE_ECHOED)
+                {
                     /*
                      * For an endpoint that is in the COOKIE-ECHOED state it MUST populate
                      * its Tie-Tags with random values so that possible attackers cannot guess
@@ -876,13 +882,15 @@ int sctlr_init(SCTP_init * init)
 
                 process_further = ch_enterUnrecognizedParameters(initCID, initAckCID, supportedTypes);
 
-                if (process_further == -1) {
+                if (process_further == -1)
+                {
                     ch_deleteChunk(initAckCID);
                     ch_forgetChunk(initCID);
                     return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
                     return return_state;
                 }
-                else if (process_further == 1) {
+                else if (process_further == 1)
+                {
                     return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
                 }
 
@@ -930,7 +938,8 @@ int sctlr_init(SCTP_init * init)
                     ch_initFixed(initCID),
                     ch_initFixed(initAckCID),
                     ch_cookieLifeTime(initCID),
-                    localData->local_tie_tag, /* this should be different from that in Init_Ack now */
+                    localData->local_tie_tag, 
+                    /* this should be different from that in Init_Ack now */
                     localData->peer_tie_tag,
                     lAddresses, nlAddresses,
                     rAddresses, nrAddresses);

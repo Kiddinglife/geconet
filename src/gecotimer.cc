@@ -45,11 +45,8 @@ void timer_mgr::delete_timer(timer_id_t& timerptr)
 {
     if (this->timers.empty())
         return;
-    EVENTLOG1(VERBOSE, "Before delete List Length : %u ",
-        this->timers.size());
+    timerptr->timer_id = 0;
     this->timers.erase(timerptr);
-    EVENTLOG1(VERBOSE, "After delete List Length : %u ",
-        this->timers.size());
 }
 int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 {
@@ -75,11 +72,11 @@ int timer_mgr::timeouts()
         return -1;
 
     const struct timeval& timeout = this->timers.front().action_time;
-    longlong secs = timeout.tv_sec - now.tv_sec;
+    int64_t secs = timeout.tv_sec - now.tv_sec;
     if (secs < 0)
         return 0; // sec timeouts
 
-    longlong usecs = timeout.tv_usec - now.tv_usec;
+    int64_t usecs = timeout.tv_usec - now.tv_usec;
     if (usecs < 0)
     {
         //as usecs has timeout, we need ti check if secs checkouts
@@ -149,3 +146,6 @@ void timer_mgr::print(short event_log_level)
     }
     EVENTLOG(event_log_level, "Leave timer_mgr::print_debug_list");
 }
+
+
+

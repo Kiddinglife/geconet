@@ -37,7 +37,7 @@
 #include <sys/ioctl.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
-#ifdef SCTP_OVER_UDP
+#ifdef USE_UDP
 #include <netinet/udp.h>
 #endif
 #include <asm/types.h>

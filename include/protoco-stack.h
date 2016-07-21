@@ -40,7 +40,12 @@ enum ChunkProcessResult
 {
     Good,
     Stop,
+    SkipProcessInitChunk_UnkownParamError,
+    StopProcessInitChunk_UnkownParamError,
+    StopProcessInitChunk_NewAddrAddedError,
     StopAndDeleteChannel,
+    StopAndDeleteChannel_LastSrcPortNullError,
+    StopAndDeleteChannel_ValidateInitParamFailedError,
     ChunkProcessResultSize
 };
 
