@@ -12,7 +12,7 @@
 *.mod
 
 # Executables
-*.exe
+# *.exe
 *.out
 *.app
 
@@ -22,3 +22,4 @@
 *.pdb
 *.tlog
 *.pdb
+*.d

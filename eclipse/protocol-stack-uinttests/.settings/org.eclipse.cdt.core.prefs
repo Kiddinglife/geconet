@@ -1,0 +1,11 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.1853752798/RootPath/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.1853752798/RootPath/operation=replace
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.1853752798/RootPath/value=/home/jackiez/20160219/geco-sctp-cplus
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.1853752798/append=true
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.1853752798/appendContributed=true
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2133133749/RootPath/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2133133749/RootPath/operation=append
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2133133749/RootPath/value=~/20160219/geco-sctp-cplus
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2133133749/append=true
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2133133749/appendContributed=true
