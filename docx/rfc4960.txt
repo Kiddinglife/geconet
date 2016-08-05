@@ -1,8 +1,23 @@
+ Summary of masquerade attacks　:
+ also called IP address spoofing  in TCP/IP architecture 
+ see https://en.wikipedia.org/wiki/IP_address_spoofing for details
+IP spoofing is most frequently used in denial-of-service attacks. 
+In such attacks, the goal is to flood the victim with overwhelming amounts of traffic, 
+and the attacker does not care about receiving responses to the attack packets. 
+Packets with spoofed addresses are thus suitable for such attacks.
+wrote at 15:15 PM on 5 Aug 2016 by Jackie Zhang
 
+Summary of HMAC:
+http://my.oschina.net/xinxingegeya/blog/290594
+某公司对来自网络的欺诈性订单叫苦不迭。为了改变这种局面，
+公司分配给每位客户一个唯一的密钥。客户每下一个订单，
+均需要提供订单的MAC签名（用这个密钥计算得来）。
+因为公司有客户的密钥，所以自然能够验证此订单：
+1. 是否来自所声明的客户，2.是否被篡改了。
+wrote at 16:21 PM on 5 Aug 2016 by Jackie Zhang
 
-
-
-
+Summary of signature:
+http://my.oschina.net/xinxingegeya/blog/264417
 
 Network Working Group                                    R. Stewart, Ed.
 Request for Comments: 4960                                September 2007
@@ -375,27 +390,16 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       different meanings in different contexts.  SCTP uses this term
       with the same meaning as in [RFC2104].
 
-   o  Network Byte Order: Most significant byte first, a.k.a., big
-      endian.
+   o  Network Byte Order: Most significant byte first, a.k.a., big endian.
 
    o  Ordered Message: A user message that is delivered in order with
       respect to all previous user messages sent within the stream on
       which the message was sent.
 
-   o  Outstanding TSN (at an SCTP endpoint): A TSN (and the associated
-      DATA chunk) that has been sent by the endpoint but for which it
-      has not yet received an acknowledgement.
-
-
-
-
-
-
-Stewart                     Standards Track                     [Page 7]
-
-RFC 4960          Stream Control Transmission Protocol    September 2007
-
-
+   o  Outstanding / Unacknowledged TSN (at an SCTP endpoint): 
+      A TSN (and the associated DATA chunk) that has been sent 
+      by the endpoint but for which it has not yet received an acknowledgement.
+      
    o  Path: The route taken by the SCTP packets sent by one SCTP
       endpoint to a specific destination transport address of its peer
       SCTP endpoint.  Sending to different destination transport

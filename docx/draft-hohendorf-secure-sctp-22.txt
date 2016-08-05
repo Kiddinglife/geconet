@@ -5,14 +5,14 @@
 Network Working Group                                       C. Hohendorf
 Internet-Draft                              University of Duisburg-Essen
 Intended status: Experimental                               E. Unurkhaan
-Expires: July 12, 2016                              Mongolian University
+Expires: January 19, 2017                           Mongolian University
                                                             T. Dreibholz
                                               Simula Research Laboratory
-                                                        January 09, 2016
+                                                           July 18, 2016
 
 
                               Secure SCTP
-                   draft-hohendorf-secure-sctp-21.txt
+                   draft-hohendorf-secure-sctp-22.txt
 
 Abstract
 
@@ -37,7 +37,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on July 12, 2016.
+   This Internet-Draft will expire on January 19, 2017.
 
 Copyright Notice
 
@@ -53,9 +53,9 @@ Copyright Notice
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 1]
+Hohendorf, et al.       Expires January 19, 2017                [Page 1]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    include Simplified BSD License text as described in Section 4.e of
@@ -109,9 +109,9 @@ Table of Contents
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 2]
+Hohendorf, et al.       Expires January 19, 2017                [Page 2]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    15. Security Considerations . . . . . . . . . . . . . . . . . . .  38
@@ -119,7 +119,7 @@ Internet-Draft                 Secure SCTP                  January 2016
    17. References  . . . . . . . . . . . . . . . . . . . . . . . . .  38
      17.1.  Normative References . . . . . . . . . . . . . . . . . .  38
      17.2.  Informative References . . . . . . . . . . . . . . . . .  39
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  39
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  40
 
 1.  Introduction
 
@@ -165,9 +165,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 3]
+Hohendorf, et al.       Expires January 19, 2017                [Page 3]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
 4.  Key terms
@@ -221,9 +221,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 4]
+Hohendorf, et al.       Expires January 19, 2017                [Page 4]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     Chunktype     Chunk name
@@ -277,9 +277,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 5]
+Hohendorf, et al.       Expires January 19, 2017                [Page 5]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    Length: 16 bits unsigned integer
@@ -333,9 +333,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 6]
+Hohendorf, et al.       Expires January 19, 2017                [Page 6]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     0                   1                    2                   3
@@ -389,9 +389,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 7]
+Hohendorf, et al.       Expires January 19, 2017                [Page 7]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    the default cipher suite, DH_with_3DES_CBC_SHA-1 (value=0).  If the
@@ -445,9 +445,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 8]
+Hohendorf, et al.       Expires January 19, 2017                [Page 8]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    SSCert chunk is optional.  For security reasons, both endpoints
@@ -501,9 +501,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                 [Page 9]
+Hohendorf, et al.       Expires January 19, 2017                [Page 9]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    The endpoint can send two or more certificates.  In this case the
@@ -557,9 +557,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 10]
+Hohendorf, et al.       Expires January 19, 2017               [Page 10]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    o  Client and Server have a RSA certificate: Use RSA key exchange.
@@ -613,9 +613,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 11]
+Hohendorf, et al.       Expires January 19, 2017               [Page 11]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     0                   1                    2                   3
@@ -669,9 +669,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 12]
+Hohendorf, et al.       Expires January 19, 2017               [Page 12]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    This is the prime number of the DH key exchange protocol.
@@ -725,9 +725,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 13]
+Hohendorf, et al.       Expires January 19, 2017               [Page 13]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    Signature: Variable length
@@ -781,9 +781,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 14]
+Hohendorf, et al.       Expires January 19, 2017               [Page 14]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     0                   1                    2                   3
@@ -837,9 +837,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 15]
+Hohendorf, et al.       Expires January 19, 2017               [Page 15]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     0                   1                    2                   3
@@ -893,9 +893,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 16]
+Hohendorf, et al.       Expires January 19, 2017               [Page 16]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     0                   1                    2                   3
@@ -949,9 +949,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 17]
+Hohendorf, et al.       Expires January 19, 2017               [Page 17]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    Length: 16 bits unsigned integer
@@ -1005,9 +1005,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 18]
+Hohendorf, et al.       Expires January 19, 2017               [Page 18]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
 5.1.10.  Security Level Changed Acknowledged chunk (SecLevCHD_Ack)
@@ -1061,9 +1061,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 19]
+Hohendorf, et al.       Expires January 19, 2017               [Page 19]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    to receive messages, which were encrypted with an old key, after the
@@ -1117,9 +1117,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 20]
+Hohendorf, et al.       Expires January 19, 2017               [Page 20]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     0                   1                    2                   3
@@ -1173,9 +1173,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 21]
+Hohendorf, et al.       Expires January 19, 2017               [Page 21]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    the endpoint receives a message which was authenticated by an old
@@ -1229,9 +1229,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 22]
+Hohendorf, et al.       Expires January 19, 2017               [Page 22]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
     Error Code Value  Error Code
@@ -1285,9 +1285,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 23]
+Hohendorf, et al.       Expires January 19, 2017               [Page 23]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    o  Bad certificate: The signature of the certificate is bad and the
@@ -1341,9 +1341,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 24]
+Hohendorf, et al.       Expires January 19, 2017               [Page 24]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
 7.  S-SCTP packet format and security levels
@@ -1397,9 +1397,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 25]
+Hohendorf, et al.       Expires January 19, 2017               [Page 25]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    HMAC computation is performed over all chunks and the SCTP common
@@ -1453,9 +1453,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 26]
+Hohendorf, et al.       Expires January 19, 2017               [Page 26]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    begins when one of the associated endpoints sets the security level
@@ -1509,9 +1509,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 27]
+Hohendorf, et al.       Expires January 19, 2017               [Page 27]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
       when it detects no errors, but the client must wait for the
@@ -1565,9 +1565,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 28]
+Hohendorf, et al.       Expires January 19, 2017               [Page 28]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    first cipher suite supported by both endpoints is chosen.  When two
@@ -1621,9 +1621,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 29]
+Hohendorf, et al.       Expires January 19, 2017               [Page 29]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
       d) S-SCTP sends the packet.
@@ -1677,9 +1677,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 30]
+Hohendorf, et al.       Expires January 19, 2017               [Page 30]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
 9.6.  Update of the master secret key
@@ -1733,9 +1733,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 31]
+Hohendorf, et al.       Expires January 19, 2017               [Page 31]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    the client's SSOpReq chunk.  The next steps are the same as for the
@@ -1789,9 +1789,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 32]
+Hohendorf, et al.       Expires January 19, 2017               [Page 32]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    o  certificate(s): Local endpoint certificate(s).
@@ -1845,9 +1845,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 33]
+Hohendorf, et al.       Expires January 19, 2017               [Page 33]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    o  secure session ID: local handle to the secure session.
@@ -1901,9 +1901,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 34]
+Hohendorf, et al.       Expires January 19, 2017               [Page 34]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
 12.  Transmission Control Block (TCB) extension
@@ -1957,9 +1957,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 35]
+Hohendorf, et al.       Expires January 19, 2017               [Page 35]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    o  Selected compression: This parameter indicates the compression
@@ -2013,9 +2013,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 36]
+Hohendorf, et al.       Expires January 19, 2017               [Page 36]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    o  certificate: This parameter includes a certificate of the
@@ -2069,9 +2069,9 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-Hohendorf, et al.         Expires July 12, 2016                [Page 37]
+Hohendorf, et al.       Expires January 19, 2017               [Page 37]
 
-Internet-Draft                 Secure SCTP                  January 2016
+Internet-Draft                 Secure SCTP                     July 2016
 
 
    struct ssctp_secsessTTL {
@@ -2117,37 +2117,49 @@ Internet-Draft                 Secure SCTP                  January 2016
 17.1.  Normative References
 
    [RFC2104]  Krawczyk, H., Bellare, M., and R. Canetti, "HMAC: Keyed-
-              Hashing for Message Authentication", RFC 2104, February
-              1997.
+              Hashing for Message Authentication", RFC 2104,
+              DOI 10.17487/RFC2104, February 1997,
+              <http://www.rfc-editor.org/info/rfc2104>.
+
+
+
+
+
+Hohendorf, et al.       Expires January 19, 2017               [Page 38]
+
+Internet-Draft                 Secure SCTP                     July 2016
+
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119, March 1997.
-
-
-
-Hohendorf, et al.         Expires July 12, 2016                [Page 38]
-
-Internet-Draft                 Secure SCTP                  January 2016
-
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <http://www.rfc-editor.org/info/rfc2119>.
 
    [RFC3436]  Jungmaier, A., Rescorla, E., and M. Tuexen, "Transport
               Layer Security over Stream Control Transmission Protocol",
-              RFC 3436, December 2002.
+              RFC 3436, DOI 10.17487/RFC3436, December 2002,
+              <http://www.rfc-editor.org/info/rfc3436>.
 
    [RFC3554]  Bellovin, S., Ioannidis, J., Keromytis, A., and R.
               Stewart, "On the Use of Stream Control Transmission
-              Protocol (SCTP) with IPsec", RFC 3554, July 2003.
+              Protocol (SCTP) with IPsec", RFC 3554,
+              DOI 10.17487/RFC3554, July 2003,
+              <http://www.rfc-editor.org/info/rfc3554>.
 
-   [RFC4086]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
-              Requirements for Security", BCP 106, RFC 4086, June 2005.
+   [RFC4086]  Eastlake 3rd, D., Schiller, J., and S. Crocker,
+              "Randomness Requirements for Security", BCP 106, RFC 4086,
+              DOI 10.17487/RFC4086, June 2005,
+              <http://www.rfc-editor.org/info/rfc4086>.
 
-   [RFC4960]  Stewart, R., "Stream Control Transmission Protocol", RFC
-              4960, September 2007.
+   [RFC4960]  Stewart, R., Ed., "Stream Control Transmission Protocol",
+              RFC 4960, DOI 10.17487/RFC4960, September 2007,
+              <http://www.rfc-editor.org/info/rfc4960>.
 
    [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
               Housley, R., and W. Polk, "Internet X.509 Public Key
               Infrastructure Certificate and Certificate Revocation List
-              (CRL) Profile", RFC 5280, May 2008.
+              (CRL) Profile", RFC 5280, DOI 10.17487/RFC5280, May 2008,
+              <http://www.rfc-editor.org/info/rfc5280>.
 
 17.2.  Informative References
 
@@ -2156,8 +2168,8 @@ Internet-Draft                 Secure SCTP                  January 2016
               the NorNet Core Research Testbed for Multi-Homed Systems",
               Proceedings of the 3nd International Workshop on Protocols
               and Applications with Multi-Homing Support (PAMS) Pages
-              1094-1100, ISBN 978-0-7695-4952-1, DOI 10.1109/
-              WAINA.2013.71, March 2013,
+              1094-1100, ISBN 978-0-7695-4952-1,
+              DOI 10.1109/WAINA.2013.71, March 2013,
               <https://www.simula.no/sites/www.simula.no/files/
               publications/threfereedinproceedingsreference.2012-12-20.7
               643198512.pdf>.
@@ -2166,6 +2178,13 @@ Internet-Draft                 Secure SCTP                  January 2016
               Dreibholz, T., "NorNet -- A Real-World, Large-Scale Multi-
               Homing Testbed", Online: https://www.nntb.no/, 2016,
               <https://www.nntb.no/>.
+
+
+
+Hohendorf, et al.       Expires January 19, 2017               [Page 39]
+
+Internet-Draft                 Secure SCTP                     July 2016
+
 
 Authors' Addresses
 
@@ -2176,14 +2195,6 @@ Authors' Addresses
    Germany
 
    Email: hohend@iem.uni-due.de
-
-
-
-
-
-Hohendorf, et al.         Expires July 12, 2016                [Page 39]
-
-Internet-Draft                 Secure SCTP                  January 2016
 
 
    Esbold Unurkhaan
@@ -2226,15 +2237,4 @@ Internet-Draft                 Secure SCTP                  January 2016
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-Hohendorf, et al.         Expires July 12, 2016                [Page 40]
+Hohendorf, et al.       Expires January 19, 2017               [Page 40]
