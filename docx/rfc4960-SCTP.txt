@@ -1,3 +1,7 @@
+1.bookmark of line 1167 created at 20:27 PM on 6 Aug 2016
+ 
+ 
+ 
  Summary of Masquerade Attacks　: 
  wrote at 15:15 PM on 5 Aug 2016 by Jackie Zhang at GECOGAMING Office
  
@@ -51,6 +55,10 @@ Algorithm研究解决难题思路和方法的科学，他属于计算机科学�
 Arithmetic解决如何更快更精确计算的科学，属于数学领域。涉及到常用的运算：+ - x ÷。
  wrote at 11:37 AM on 6 Aug 2016 by Jackie Zhang at UTS
  
+ 
+Hightlight line 1153 at page 21 
+wrote at 20:23 PM on 6 Aug 2016 by Jackie Zhang at baukham hill home
+
 Network Working Group                                    R. Stewart, Ed.
 Request for Comments: 4960                                September 2007
 Obsoletes: 2960, 3309
@@ -1031,11 +1039,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       chunk padding.
 
 
-
-
-
 Stewart                     Standards Track                    [Page 18]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 

@@ -1,32 +1,198 @@
 ﻿  unit_tests.cpp
-d:\vs2013workspace\geco-sctp-cplus\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-sctp-cplus\include\config.h(15): warning C4005: '_DEBUG': macro redefinition
-  d:\vs2013workspace\geco-sctp-cplus\include\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
-  test-main.cc
-  Generating Code...
-C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1189,5): warning MSB8012: TargetPath(D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2015\geco-net\x64\Debug\unit-test-ps-lib.exe) does not match the Linker's OutputFile property value (D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2015\geco-net\x64\Debug\geco-net_unit-test-ps-lib_Debugx64.exe). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1191,5): warning MSB8012: TargetName(unit-test-ps-lib) does not match the Linker's OutputFile property value (geco-net_unit-test-ps-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2038: mismatch detected for '_MSC_VER': value '1800' doesn't match value '1900' in test-main.obj
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2038: mismatch detected for '_MSC_VER': value '1800' doesn't match value '1900' in test-main.obj
-libucrtd.lib(hypot.obj) : error LNK2005: hypot already defined in gmock_Debugx64.lib(gtest-all.obj)
-unit_tests.obj : error LNK2019: unresolved external symbol "public: __cdecl MD5::MD5(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (??0MD5@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z) referenced in function "private: virtual void __cdecl test_case_auth_test_md5_1_Test::TestBody(void)" (?TestBody@test_case_auth_test_md5_1_Test@@EEAAXXZ)
-unit_tests.obj : error LNK2019: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl MD5::hexdigest(void)const " (?hexdigest@MD5@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ) referenced in function "private: virtual void __cdecl test_case_auth_test_md5_1_Test::TestBody(void)" (?TestBody@test_case_auth_test_md5_1_Test@@EEAAXXZ)
-unit_tests.obj : error LNK2019: unresolved external symbol "void __cdecl read_trace_levels(void)" (?read_trace_levels@@YAXXZ) referenced in function "private: virtual void __cdecl test_case_logging_test_read_trace_levels_Test::TestBody(void)" (?TestBody@test_case_logging_test_read_trace_levels_Test@@EEAAXXZ)
-unit_tests.obj : error LNK2019: unresolved external symbol "void __cdecl event_log1(short,char const *,char const *,...)" (?event_log1@@YAXFPEBD0ZZ) referenced in function "private: virtual void __cdecl test_case_auth_test_md5_1_Test::TestBody(void)" (?TestBody@test_case_auth_test_md5_1_Test@@EEAAXXZ)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol __iob_func referenced in function "public: __cdecl testing::internal::GTestLog::~GTestLog(void)" (??1GTestLog@internal@testing@@QEAA@XZ)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol vprintf referenced in function "void __cdecl testing::internal::ColoredPrintf(enum testing::internal::GTestColor,char const *,...)" (?ColoredPrintf@internal@testing@@YAXW4GTestColor@12@PEBDZZ)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "public: __cdecl std::exception::exception(char const * const &)" (??0exception@std@@QEAA@AEBQEBD@Z) referenced in function "public: __cdecl std::runtime_error::runtime_error(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (??0runtime_error@std@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@1@@Z)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "public: __cdecl std::exception::exception(char const * const &)" (??0exception@std@@QEAA@AEBQEBD@Z)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "public: __cdecl std::bad_cast::bad_cast(char const *)" (??0bad_cast@std@@QEAA@PEBD@Z) referenced in function "class std::ctype<char> const & __cdecl std::use_facet<class std::ctype<char> >(class std::locale const &)" (??$use_facet@V?$ctype@D@std@@@std@@YAAEBV?$ctype@D@0@AEBVlocale@0@@Z)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "public: __cdecl std::bad_cast::bad_cast(char const *)" (??0bad_cast@std@@QEAA@PEBD@Z)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "void * __cdecl operator new(unsigned __int64,struct std::_DebugHeapTag_t const &,char *,int)" (??2@YAPEAX_KAEBU_DebugHeapTag_t@std@@PEADH@Z) referenced in function "protected: __cdecl std::basic_streambuf<char,struct std::char_traits<char> >::basic_streambuf<char,struct std::char_traits<char> >(void)" (??0?$basic_streambuf@DU?$char_traits@D@std@@@std@@IEAA@XZ)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "void * __cdecl operator new(unsigned __int64,struct std::_DebugHeapTag_t const &,char *,int)" (??2@YAPEAX_KAEBU_DebugHeapTag_t@std@@PEADH@Z)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "void * __cdecl operator new[](unsigned __int64,struct std::_DebugHeapTag_t const &,char *,int)" (??_U@YAPEAX_KAEBU_DebugHeapTag_t@std@@PEADH@Z) referenced in function "char * __cdecl std::_Maklocstr<char>(char const *,char *,struct _Cvtvec const &)" (??$_Maklocstr@D@std@@YAPEADPEBDPEADAEBU_Cvtvec@@@Z)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "void * __cdecl operator new[](unsigned __int64,struct std::_DebugHeapTag_t const &,char *,int)" (??_U@YAPEAX_KAEBU_DebugHeapTag_t@std@@PEADH@Z)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "void __cdecl operator delete(void *,struct std::_DebugHeapTag_t const &,char *,int)" (??3@YAXPEAXAEBU_DebugHeapTag_t@std@@PEADH@Z) referenced in function "int `public: static unsigned __int64 __cdecl std::ctype<char>::_Getcat(class ctype<char>::locale::facet const * *,class ctype<char>::facet const *)'::`1'::dtor$0" (?dtor$0@?0??_Getcat@?$ctype@D@std@@SA_KPEAPEBVfacet@locale@2@PEBV42@@Z@4HA)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "void __cdecl operator delete(void *,struct std::_DebugHeapTag_t const &,char *,int)" (??3@YAXPEAXAEBU_DebugHeapTag_t@std@@PEADH@Z)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "struct std::_DebugHeapTag_t const & __cdecl std::_DebugHeapTag_func(void)" (?_DebugHeapTag_func@std@@YAAEBU_DebugHeapTag_t@1@XZ) referenced in function "char * __cdecl std::_Maklocstr<char>(char const *,char *,struct _Cvtvec const &)" (??$_Maklocstr@D@std@@YAPEADPEBDPEADAEBU_Cvtvec@@@Z)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "struct std::_DebugHeapTag_t const & __cdecl std::_DebugHeapTag_func(void)" (?_DebugHeapTag_func@std@@YAAEBU_DebugHeapTag_t@1@XZ)
-gmock_Debugx64.lib(gtest-all.obj) : error LNK2019: unresolved external symbol "char const * __cdecl std::_Winerror_map(int)" (?_Winerror_map@std@@YAPEBDH@Z) referenced in function "public: virtual class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl std::_System_error_category::message(int)const " (?message@_System_error_category@std@@UEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@H@Z)
-gmock_Debugx64.lib(gmock-all.obj) : error LNK2001: unresolved external symbol "char const * __cdecl std::_Winerror_map(int)" (?_Winerror_map@std@@YAPEBDH@Z)
-D:\VS2013WorkSpace\geco-sctp-cplus\mscv\2015\geco-net\x64\Debug\geco-net_unit-test-ps-lib_Debugx64.exe : fatal error LNK1120: 13 unresolved externals
+d:\vs2013workspace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG': macro redefinition
+  d:\vs2013workspace\geco-protocol-stack\include\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs2013workspace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): warning C4346: 'oom_handler_t': dependent name is not a type
+  d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): note: prefix with 'typename' to indicate a type
+d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): error C2061: syntax error: identifier 'oom_handler_t'
+d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(811): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs2013workspace\geco-protocol-stack\include\globals.h(80): error C2146: syntax error: missing ';' before identifier 'galloc'
+d:\vs2013workspace\geco-protocol-stack\include\globals.h(514): error C3861: 'error_log1': identifier not found
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2059: syntax error: 'private'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2143: syntax error: missing ';' before ':'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2059: syntax error: ':'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2143: syntax error: missing ')' before 'const'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2143: syntax error: missing ';' before 'const'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2059: syntax error: ')'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2059: syntax error: ';'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2059: syntax error: '}'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): error C2143: syntax error: missing ';' before '}'
+d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(6): error C2509: 'TestBody': member function not declared in 'test_case_logging_test_read_trace_levels_Test'
+  d:\vs2013workspace\geco-protocol-stack\unittets\unit_tests.cpp(5): note: see declaration of 'test_case_logging_test_read_trace_levels_Test'
+d:\vs2013workspace\geco-protocol-stack\include\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs2015\vc\include\list(25): warning C4346: '_Mylist::value_type': dependent name is not a type
+  d:\vs2015\vc\include\list(25): note: prefix with 'typename' to indicate a type
+  d:\vs2015\vc\include\list(100): note: see reference to class template instantiation 'std::_List_unchecked_const_iterator<_Mylist,_Base>' being compiled
+d:\vs2015\vc\include\list(25): error C2923: 'std::_Iterator012': '_Mylist::value_type' is not a valid template type argument for parameter '_Ty'
+  d:\vs2015\vc\include\list(21): note: see declaration of '_Mylist::value_type'
+d:\vs2015\vc\include\list(25): warning C4346: '_Mylist::difference_type': dependent name is not a type
+  d:\vs2015\vc\include\list(25): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(25): error C2923: 'std::_Iterator012': '_Mylist::difference_type' is not a valid template type argument for parameter '_Diff'
+  d:\vs2015\vc\include\list(22): note: see declaration of '_Mylist::difference_type'
+d:\vs2015\vc\include\list(25): warning C4346: '_Mylist::const_pointer': dependent name is not a type
+  d:\vs2015\vc\include\list(25): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(25): error C2923: 'std::_Iterator012': '_Mylist::const_pointer' is not a valid template type argument for parameter '_Pointer'
+  d:\vs2015\vc\include\list(23): note: see declaration of '_Mylist::const_pointer'
+d:\vs2015\vc\include\list(25): warning C4346: '_Mylist::const_reference': dependent name is not a type
+  d:\vs2015\vc\include\list(25): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(25): error C2923: 'std::_Iterator012': '_Mylist::const_reference' is not a valid template type argument for parameter '_Reference'
+  d:\vs2015\vc\include\list(24): note: see declaration of '_Mylist::const_reference'
+d:\vs2015\vc\include\list(26): error C2955: 'std::_Iterator012': use of class template requires template argument list
+  d:\vs2015\vc\include\xutility(554): note: see declaration of 'std::_Iterator012'
+d:\vs2015\vc\include\list(31): warning C4346: '_Nodeptr': dependent name is not a type
+  d:\vs2015\vc\include\list(31): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(31): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(31): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(32): warning C4346: 'value_type': dependent name is not a type
+  d:\vs2015\vc\include\list(32): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(32): error C2061: syntax error: identifier 'value_type'
+d:\vs2015\vc\include\list(32): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(33): warning C4346: 'difference_type': dependent name is not a type
+  d:\vs2015\vc\include\list(33): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(33): error C2061: syntax error: identifier 'difference_type'
+d:\vs2015\vc\include\list(33): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(34): warning C4346: 'const_pointer': dependent name is not a type
+  d:\vs2015\vc\include\list(34): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(34): error C2061: syntax error: identifier 'const_pointer'
+d:\vs2015\vc\include\list(34): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(35): warning C4346: 'const_reference': dependent name is not a type
+  d:\vs2015\vc\include\list(35): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(35): error C2061: syntax error: identifier 'const_reference'
+d:\vs2015\vc\include\list(35): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(42): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(42): error C2535: 'std::_List_unchecked_const_iterator<_Mylist,_Base>::_List_unchecked_const_iterator(void)': member function already defined or declared
+  d:\vs2015\vc\include\list(37): note: see declaration of 'std::_List_unchecked_const_iterator<_Mylist,_Base>::_List_unchecked_const_iterator'
+d:\vs2015\vc\include\list(48): error C2143: syntax error: missing ';' before '*'
+d:\vs2015\vc\include\list(48): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(49): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(53): error C2143: syntax error: missing ';' before '->'
+d:\vs2015\vc\include\list(53): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(54): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(94): error C3646: '_Mynode': unknown override specifier
+d:\vs2015\vc\include\list(94): error C2059: syntax error: '('
+d:\vs2015\vc\include\list(95): error C2334: unexpected token(s) preceding '{'; skipping apparent function body
+d:\vs2015\vc\include\list(99): error C3646: '_Ptr': unknown override specifier
+d:\vs2015\vc\include\list(99): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(112): warning C4346: '_Nodeptr': dependent name is not a type
+  d:\vs2015\vc\include\list(112): note: prefix with 'typename' to indicate a type
+  d:\vs2015\vc\include\list(162): note: see reference to class template instantiation 'std::_List_unchecked_iterator<_Mylist>' being compiled
+d:\vs2015\vc\include\list(112): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(112): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(113): warning C4346: 'value_type': dependent name is not a type
+  d:\vs2015\vc\include\list(113): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(113): error C2061: syntax error: identifier 'value_type'
+d:\vs2015\vc\include\list(113): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(114): warning C4346: 'difference_type': dependent name is not a type
+  d:\vs2015\vc\include\list(114): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(114): error C2061: syntax error: identifier 'difference_type'
+d:\vs2015\vc\include\list(114): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(115): warning C4346: 'pointer': dependent name is not a type
+  d:\vs2015\vc\include\list(115): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(115): error C2061: syntax error: identifier 'pointer'
+d:\vs2015\vc\include\list(115): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(116): warning C4346: 'reference': dependent name is not a type
+  d:\vs2015\vc\include\list(116): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(116): error C2061: syntax error: identifier 'reference'
+d:\vs2015\vc\include\list(116): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(122): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(122): error C2535: 'std::_List_unchecked_iterator<_Mylist>::_List_unchecked_iterator(void)': member function already defined or declared
+  d:\vs2015\vc\include\list(118): note: see declaration of 'std::_List_unchecked_iterator<_Mylist>::_List_unchecked_iterator'
+d:\vs2015\vc\include\list(127): error C2143: syntax error: missing ';' before '*'
+d:\vs2015\vc\include\list(127): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(128): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(132): error C2143: syntax error: missing ';' before '->'
+d:\vs2015\vc\include\list(132): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(133): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(174): warning C4346: '_Nodeptr': dependent name is not a type
+  d:\vs2015\vc\include\list(174): note: prefix with 'typename' to indicate a type
+  d:\vs2015\vc\include\list(303): note: see reference to class template instantiation 'std::_List_const_iterator<_Mylist>' being compiled
+d:\vs2015\vc\include\list(174): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(174): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(175): warning C4346: 'value_type': dependent name is not a type
+  d:\vs2015\vc\include\list(175): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(175): error C2061: syntax error: identifier 'value_type'
+d:\vs2015\vc\include\list(175): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(176): warning C4346: 'difference_type': dependent name is not a type
+  d:\vs2015\vc\include\list(176): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(176): error C2061: syntax error: identifier 'difference_type'
+d:\vs2015\vc\include\list(176): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(177): warning C4346: 'const_pointer': dependent name is not a type
+  d:\vs2015\vc\include\list(177): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(177): error C2061: syntax error: identifier 'const_pointer'
+d:\vs2015\vc\include\list(177): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(178): warning C4346: 'const_reference': dependent name is not a type
+  d:\vs2015\vc\include\list(178): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(178): error C2061: syntax error: identifier 'const_reference'
+d:\vs2015\vc\include\list(178): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(185): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(185): error C2535: 'std::_List_const_iterator<_Mylist>::_List_const_iterator(void)': member function already defined or declared
+  d:\vs2015\vc\include\list(180): note: see declaration of 'std::_List_const_iterator<_Mylist>::_List_const_iterator'
+d:\vs2015\vc\include\list(203): error C2143: syntax error: missing ';' before '*'
+d:\vs2015\vc\include\list(203): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(204): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(307): warning C4346: '_Unchecked_type': dependent name is not a type
+  d:\vs2015\vc\include\list(307): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(307): error C2061: syntax error: identifier '_Unchecked_type'
+d:\vs2015\vc\include\list(313): error C2065: '_Mylist': undeclared identifier
+d:\vs2015\vc\include\list(313): error C2923: 'std::_List_const_iterator': '_Mylist' is not a valid template type argument for parameter '_Mylist'
+d:\vs2015\vc\include\list(314): error C2065: '_Mylist': undeclared identifier
+d:\vs2015\vc\include\list(314): error C2923: 'std::_List_const_iterator': '_Mylist' is not a valid template type argument for parameter '_Mylist'
+d:\vs2015\vc\include\list(315): error C2065: '_Mylist': undeclared identifier
+d:\vs2015\vc\include\list(315): error C2923: 'std::_List_const_iterator': '_Mylist' is not a valid template type argument for parameter '_Mylist'
+d:\vs2015\vc\include\list(317): error C2143: syntax error: missing ';' before '{'
+d:\vs2015\vc\include\list(317): error C2447: '{': missing function header (old-style formal list?)
+d:\vs2015\vc\include\list(331): warning C4346: '_Nodeptr': dependent name is not a type
+  d:\vs2015\vc\include\list(331): note: prefix with 'typename' to indicate a type
+  d:\vs2015\vc\include\list(394): note: see reference to class template instantiation 'std::_List_iterator<_Mylist>' being compiled
+d:\vs2015\vc\include\list(331): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(331): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(332): warning C4346: 'value_type': dependent name is not a type
+  d:\vs2015\vc\include\list(332): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(332): error C2061: syntax error: identifier 'value_type'
+d:\vs2015\vc\include\list(332): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(333): warning C4346: 'difference_type': dependent name is not a type
+  d:\vs2015\vc\include\list(333): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(333): error C2061: syntax error: identifier 'difference_type'
+d:\vs2015\vc\include\list(333): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(334): warning C4346: 'pointer': dependent name is not a type
+  d:\vs2015\vc\include\list(334): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(334): error C2061: syntax error: identifier 'pointer'
+d:\vs2015\vc\include\list(334): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(335): warning C4346: 'reference': dependent name is not a type
+  d:\vs2015\vc\include\list(335): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(335): error C2061: syntax error: identifier 'reference'
+d:\vs2015\vc\include\list(335): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(341): error C2061: syntax error: identifier '_Nodeptr'
+d:\vs2015\vc\include\list(341): error C2535: 'std::_List_iterator<_Mylist>::_List_iterator(void)': member function already defined or declared
+  d:\vs2015\vc\include\list(337): note: see declaration of 'std::_List_iterator<_Mylist>::_List_iterator'
+d:\vs2015\vc\include\list(359): error C2143: syntax error: missing ';' before '*'
+d:\vs2015\vc\include\list(359): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(360): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(364): error C2143: syntax error: missing ';' before '->'
+d:\vs2015\vc\include\list(364): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(365): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+d:\vs2015\vc\include\list(398): warning C4346: '_Unchecked_type': dependent name is not a type
+  d:\vs2015\vc\include\list(398): note: prefix with 'typename' to indicate a type
+d:\vs2015\vc\include\list(398): error C2061: syntax error: identifier '_Unchecked_type'
+d:\vs2015\vc\include\list(404): error C2065: '_Mylist': undeclared identifier
+d:\vs2015\vc\include\list(404): error C2923: 'std::_List_iterator': '_Mylist' is not a valid template type argument for parameter '_Mylist'
+d:\vs2015\vc\include\list(405): error C2065: '_Mylist': undeclared identifier
+d:\vs2015\vc\include\list(405): error C2923: 'std::_List_iterator': '_Mylist' is not a valid template type argument for parameter '_Mylist'
+d:\vs2015\vc\include\list(406): error C2065: '_Mylist': undeclared identifier
+d:\vs2015\vc\include\list(406): error C2923: 'std::_List_iterator': '_Mylist' is not a valid template type argument for parameter '_Mylist'
+d:\vs2015\vc\include\list(408): error C2143: syntax error: missing ';' before '{'
+d:\vs2015\vc\include\list(408): error C2447: '{': missing function header (old-style formal list?)
+d:\vs2015\vc\include\list(473): warning C4346: 'other': dependent name is not a type
+  d:\vs2015\vc\include\list(473): note: prefix with 'typename' to indicate a type
+  d:\vs2015\vc\include\list(496): note: see reference to class template instantiation 'std::_List_base_types<_Ty,_Alloc0>' being compiled
+d:\vs2015\vc\include\list(473): error C2061: syntax error: identifier 'other'
+d:\vs2015\vc\include\list(473): error C2238: unexpected token(s) preceding ';'
+d:\vs2015\vc\include\list(476): error C2065: '_Alty': undeclared identifier
+d:\vs2015\vc\include\list(476): error C2653: '_Alty': is not a class or namespace name
+d:\vs2015\vc\include\list(476): error C2065: 'pointer': undeclared identifier
+d:\vs2015\vc\include\list(476): error C2923: 'std::_Get_voidptr': '_Alty' is not a valid template type argument for parameter '_Alty'
+d:\vs2015\vc\include\list(476): fatal error C1003: error count exceeds 100; stopping compilation
