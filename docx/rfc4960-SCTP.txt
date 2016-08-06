@@ -1,11 +1,38 @@
- Summary of masquerade attacks　:
+ Summary of Masquerade Attacks　: 
+ wrote at 15:15 PM on 5 Aug 2016 by Jackie Zhang at GECOGAMING Office
+ 
  also called IP address spoofing  in TCP/IP architecture 
  see https://en.wikipedia.org/wiki/IP_address_spoofing for details
+ 
 IP spoofing is most frequently used in denial-of-service attacks. 
 In such attacks, the goal is to flood the victim with overwhelming amounts of traffic, 
 and the attacker does not care about receiving responses to the attack packets. 
 Packets with spoofed addresses are thus suitable for such attacks.
-wrote at 15:15 PM on 5 Aug 2016 by Jackie Zhang
+
+Defence of Flood Syn Attacks:
+when spoofed INIT packet incomes, the receiver responses with init ack to the forged
+sender, watiing for him to reply an INIT-ACK. But as source addresss is forged, 
+the forged sender does not know what the packet is and therefore will not reply an INIT-ACK.
+in such way, flood syn attacks are defeated. 
+
+Defence of Replay acctacks:
+INIT Replay Attack: 
+replayed INIT packets will be accepted and returns INIT-ACK to attacker,
+but no any resources kept
+
+INIT-ACK Replay Attack:  
+replayed INIT-ACK packets will be accpeted by receiver and return 
+COOKIE-ECHO to attacker, but no any resource kept.
+
+COOKIE-ECHO Replay Attack: 
+1) ip-spoofed-replayed COOKIE-ECHO packets will be discarded by validating the echoed cookie.
+2) replayed-COOKIE-ECHO packets will be accepted and do validate until cokkie exprires, 
+   attacker may request extend cookie life span. the only cost is cpu cycles of validating 
+   cookie within cokkie life span, no resource kept.
+   
+DATA-CHUNK Replay Attack:
+this is accepted as normal packet. the only cost is wast of cpu cycles, but no resource kept.
+
 
 Summary of HMAC:
 http://my.oschina.net/xinxingegeya/blog/290594
@@ -14,11 +41,16 @@ http://my.oschina.net/xinxingegeya/blog/290594
 均需要提供订单的MAC签名（用这个密钥计算得来）。
 因为公司有客户的密钥，所以自然能够验证此订单：
 1. 是否来自所声明的客户，2.是否被篡改了。
-wrote at 16:21 PM on 5 Aug 2016 by Jackie Zhang
+wrote at 16:21 PM on 5 Aug 2016 by Jackie Zhang at GECOGAMING Office
 
-Summary of signature:
+Summary of Signature:
 http://my.oschina.net/xinxingegeya/blog/264417
 
+Summary of Arithmetic
+Algorithm研究解决难题思路和方法的科学，他属于计算机科学领域。
+Arithmetic解决如何更快更精确计算的科学，属于数学领域。涉及到常用的运算：+ - x ÷。
+ wrote at 11:37 AM on 6 Aug 2016 by Jackie Zhang at UTS
+ 
 Network Working Group                                    R. Stewart, Ed.
 Request for Comments: 4960                                September 2007
 Obsoletes: 2960, 3309
@@ -292,10 +324,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    applications may find SCTP a good match to their requirements.
 
 
-
-
 Stewart                     Standards Track                     [Page 5]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -456,8 +485,8 @@ Stewart                     Standards Track                     [Page 8]
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
-   o  Slow-Start Threshold (ssthresh): An SCTP variable.  This is the
-      threshold that the endpoint will use to determine whether to
+   o  Slow-Start Threshold (ssthresh): An SCTP variable.  
+	  This is the threshold that the endpoint will use to determine whether to
       perform slow start or congestion avoidance on a particular
       destination transport address.  Ssthresh is in number of bytes.
 
@@ -674,9 +703,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    separate from sequenced stream delivery.
 
 
-
 Stewart                     Standards Track                    [Page 12]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -719,38 +746,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    an SCTP packet with an invalid CRC32c checksum silently discards the
    packet.
    
-   [1] blind masquerade attacks :
-   see https://en.wikipedia.org/wiki/IP_address_spoofing for details
-   also called IP address spoofing or IP spoofing is the creation of Internet Protocol (IP) 
-   packets with a forged (伪造) source IP address, with the purpose of concealing (隐瞒)
-   the identity of the sender or impersonating (假扮) another computing system.
-   
-   Defence of Flood Syn Attacks:
-   when spoofed INIT packet incomes, the receiver responses with init ack to the forged
-   sender, watiing for him to reply an INIT-ACK. But as source addresss is forged, 
-   the forged sender does not know what the packet is and therefore will not reply an INIT-ACK.
-   in such way, flood syn attacks are defeated. 
-   
-   Defence of Replay acctacks:
-   
-   INIT Replay Attack: 
-   replayed INIT packets will be accepted and returns INIT-ACK to attacker,
-   but no any resources kept
-   
-   INIT-ACK Replay Attack:  
-   replayed INIT-ACK packets will be accpeted by receiver and return 
-   COOKIE-ECHO to attacker, but no any resource kept.
-   
-   COOKIE-ECHO Replay Attack: 
-   1) ip-spoofed-replayed COOKIE-ECHO packets will be discarded by validating the echoed cookie.
-   2) replayed-COOKIE-ECHO packets will be accepted and do validate until cokkie exprires, 
-       attacker may request extend cookie life span. the only cost is cpu cycles of validating 
-       cookie within cokkie life span, no resource kept.
-       
-   DATA-CHUNK Replay Attack:
-    this is accepted as normal packet. the only cost is wast of cpu cycles, but no resource kept.
-   
-   
+  
 1.5.7.  Path Management
 
    The sending SCTP user is able to manipulate the set of transport
@@ -790,7 +786,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    It is essential to remember that the actual Transmission Sequence
    Number space is finite, though very large.  This space ranges from 0
-   to 2**32 - 1.  Since the space is finite, all arithmetic dealing with
+   to 2**32 - 1.  Since the space is finite, all arithmetic[ suan shu] dealing with
    Transmission Sequence Numbers must be performed modulo 2**32.  This
    unsigned arithmetic preserves the relationship of sequence numbers as
    they cycle from 2**32 - 1 to 0 again.  There are some subtleties to
@@ -816,7 +812,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 14]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
