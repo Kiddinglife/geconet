@@ -59,6 +59,11 @@ Arithmetic解决如何更快更精确计算的科学，属于数学领域。涉�
 Hightlight line 1153 at page 21 
 wrote at 20:23 PM on 6 Aug 2016 by Jackie Zhang at baukham hill home
 
+Hightlight line 1176 at page 21  
+If the receiver of an INIT chunk detects unrecognized parameters...
+wrote at 08:23 AM on 7 Aug 2016 by Jackie Zhang at baukham hill home
+
+
 Network Working Group                                    R. Stewart, Ed.
 Request for Comments: 4960                                September 2007
 Obsoletes: 2960, 3309
