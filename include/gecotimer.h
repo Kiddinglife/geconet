@@ -117,12 +117,12 @@ private:
 #define WHEEL_6BITS_MASK (WHEEL_6BITS_SIZE - 1)
 #define WHEEL_NUM 5
 
-const uint32_t threshold1 = WHEEL_8BITS_SIZE; // max time 256 ms
-const uint32_t threshold2 = 1 << (WHEEL_8BITS + WHEEL_6BITS); //max number of units  64 * (256)
-const uint32_t threshold3 = 1 << (WHEEL_8BITS + 2 * WHEEL_6BITS); //max number of units 64 * ( 64*(256) ) ms
-const uint32_t threshold4 = 1 << (WHEEL_8BITS + 3 * WHEEL_6BITS); //max number of units 64 * ( 64*(64*256) ) ms
-const uint32_t max_threshold = 1 << (WHEEL_8BITS + 4 * WHEEL_6BITS); /*max number of units 2^32 ms*/
-const uint32_t max_timeout_ms = max_threshold * GRANULARITY;
+const uint32 threshold1 = WHEEL_8BITS_SIZE; // max time 256 ms
+const uint32 threshold2 = 1 << (WHEEL_8BITS + WHEEL_6BITS); //max number of units  64 * (256)
+const uint32 threshold3 = 1 << (WHEEL_8BITS + 2 * WHEEL_6BITS); //max number of units 64 * ( 64*(256) ) ms
+const uint32 threshold4 = 1 << (WHEEL_8BITS + 3 * WHEEL_6BITS); //max number of units 64 * ( 64*(64*256) ) ms
+const uint32 max_threshold = 1 << (WHEEL_8BITS + 4 * WHEEL_6BITS); /*max number of units 2^32 ms*/
+const uint32 max_timeout_ms = max_threshold * GRANULARITY;
 
 struct slot_node_t
 {
