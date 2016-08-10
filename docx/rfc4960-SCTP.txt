@@ -1948,11 +1948,11 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
                     +++++++++++++++++++++++++++
                      |        a_rwnd = 4660                              |
                     +++++++++++++++++++++++++++
-                     | num of block=2 | num of dup=0  |
+                     | numofblock=2  |   numofdup=0    |
                     +++++++++++++++++++++++++++
-                     |block #1 strt=2 |block #1 end=3 |
+                     |block#1 strt=2  | block#1 end=3  |
                     +++++++++++++++++++++++++++
-                     |block #2 strt=5 |block #2 end=5 |
+                     | block#2 strt=5 | block#2 end=5  |
                     +++++++++++++++++++++++++++
 
    Duplicate TSN: 32 bits (unsigned integer)
@@ -1969,11 +1969,11 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 37]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.5.  Heartbeat Request (HEARTBEAT) (4)
+
    An endpoint should send this chunk to its peer endpoint to probe (detect) 
    the reachability of a particular destination transport address defined in
    the present association.
@@ -1985,7 +1985,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |   Type = 3        |    Chunk Flags   |                        Chunk Length                 |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /            Heartbeat Information TLV (Variable-Length)                         /
+       /            Heartbeat Information TLV (Variable-Length)                          /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Chunk Flags: 8 bits
@@ -1999,26 +1999,24 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       Defined as a variable-length parameter using the format described
       in Section 3.2.1, i.e.:
 
-         Variable Parameters                  Status     Type Value
-         -------------------------------------------------------------
-         Heartbeat Info                       Mandatory   1
+        Variable Parameters            Status               Type Value
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         Heartbeat Info                       Mandatory      1
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |    Heartbeat Info Type=1      |         HB Info Length        |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                  Sender-Specific Heartbeat Info               /
-       \                                                               \
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        0                                                        1                               2                               3                               4
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |   Heartbeat Info Type=1       |         HB Info Length                          |                                |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       /                                                   Sender-Specific Heartbeat Info                                           /
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
       The Sender-Specific Heartbeat Info field should normally include
       information about the sender's current time when this HEARTBEAT
 
 
-
 Stewart                     Standards Track                    [Page 38]
 RFC 4960          Stream Control Transmission Protocol    September 2007
+
 
       chunk is sent and the destination transport address to which this
       HEARTBEAT is sent (see Section 8.3).  This information is simply
@@ -2037,42 +2035,38 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    The parameter field contains a variable-length opaque data structure.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 5    | Chunk  Flags  |    Heartbeat Ack Length       |
+       |   Type = 3        |    Chunk Flags   |                        Chunk Length                 |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       \                                                               \
-       /            Heartbeat Information TLV (Variable-Length)        /
-       \                                                               \
+       /            Heartbeat Information TLV (Variable-Length)                          /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Chunk Flags: 8 bits
-
       Set to 0 on transmit and ignored on receipt.
 
    Heartbeat Ack Length: 16 bits (unsigned integer)
-
       Set to the size of the chunk in bytes, including the chunk header
       and the Heartbeat Information field.
 
    Heartbeat Information: variable length
-
       This field MUST contain the Heartbeat Information parameter of the
       Heartbeat Request to which this Heartbeat Acknowledgement is
       responding.
 
-         Variable Parameters                  Status     Type Value
-         -------------------------------------------------------------
-         Heartbeat Info                       Mandatory   1
+   Variable Parameters            Status               Type Value
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     Heartbeat Info                       Mandatory      1
 
-
-
-
+    0                                                        1                               2                               3                               4
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Heartbeat Info Type=1       |         HB Info Length                          |                                |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   /                                                   Sender-Specific Heartbeat Info                                           /
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
 Stewart                     Standards Track                    [Page 39]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -2087,32 +2081,26 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    the receiver.
 
    If an endpoint receives an ABORT with a format error or no TCB is
-   found, it MUST silently discard it.  Moreover, under any
-   circumstances, an endpoint that receives an ABORT MUST NOT respond to
-   that ABORT by sending an ABORT of its own.
+   found, it MUST silently discard it.  Moreover, under any circumstances, 
+   an endpoint that receives an ABORT MUST NOT respond to that ABORT 
+   by sending an ABORT of its own.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 6    |Reserved     |T|           Length              |
+       |      Type = 6     |   Reserved     |T|                            Length                            |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       \                                                               \
-       /                   zero or more Error Causes                   /
-       \                                                               \
+       /                                           zero or more Error Causes                                     /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Chunk Flags: 8 bits
-
       Reserved: 7 bits
-
       Set to 0 on transmit and ignored on receipt.
 
       T bit: 1 bit
-      
       Reflecting tag T bit = 0
       The T bit is set to 0 if the sender filled in the Verification Tag
       expected by the peer. this is reflecting tag
-     
+      
       Reflected tag T bit = 1
       The T bit is set to 1 if the sender filled in the Verification Tag
       of its own. this is reflected tag
@@ -2121,17 +2109,12 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       see Section 8.5.1 for details.
 
    Length: 16 bits (unsigned integer)
-
       Set to the size of the chunk in bytes, including the chunk header
-      and all the Error Cause fields present.
-
+      and all the Error Cause fields present. 
       See Section 3.3.10 for Error Cause definitions.
 
 
-
-
 Stewart                     Standards Track                    [Page 40]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -2141,65 +2124,51 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    graceful close of the association with its peer.  This chunk has the
    following format.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 7    | Chunk  Flags  |      Length = 8               |
+       |   Type = 7        |    Chunk Flags   |                 Chunk Length = 8                |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                      Cumulative TSN Ack                       |
+       |                                                 Cumulative TSN Ack                                           |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Chunk Flags: 8 bits
-
       Set to 0 on transmit and ignored on receipt.
 
    Length: 16 bits (unsigned integer)
-
       Indicates the length of the parameter.  Set to 8.
 
    Cumulative TSN Ack: 32 bits (unsigned integer)
-
       This parameter contains the TSN of the last chunk received in
       sequence before any gaps.
 
       Note: Since the SHUTDOWN message does not contain Gap Ack Blocks,
-      it cannot be used to acknowledge TSNs received out of order.  In a
-      SACK, lack of Gap Ack Blocks that were previously included
-      indicates that the data receiver reneged(违约，食言)on the associated DATA
-      chunks.  Since SHUTDOWN does not contain Gap Ack Blocks, the
-      receiver of the SHUTDOWN shouldn't interpret the lack of a Gap Ack
-      Block as a renege.  (See Section 6.2 for information on reneging.)
-
-3.3.9.  Shutdown Acknowledgement (SHUTDOWN ACK) (8)
-
-   This chunk MUST be used to acknowledge the receipt of the SHUTDOWN
-   chunk at the completion of the shutdown process; see Section 9.2 for
-   details.
-
-   The SHUTDOWN ACK chunk has no parameters.
-
-
-
-
-
-
-
+      it cannot be used to acknowledge TSNs received out of order.  In a SACK,
+      lack of Gap Ack Blocks that were previously included indicates that the 
+      data receiver reneged (违约，食言) on the associated DATA chunks.  
+      Since SHUTDOWN does not contain Gap Ack Blocks, the receiver of the 
+      SHUTDOWN shouldn't interpret the lack of a Gap Ack Block as a renege.  
+      (See Section 6.2 for information on reneging.)
 
 
 Stewart                     Standards Track                    [Page 41]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+3.3.9.  Shutdown Acknowledgement (SHUTDOWN ACK) (8)
+              See Section 9.2 for  details.
+              
+   This chunk MUST be used to acknowledge the receipt of the SHUTDOWN
+   chunk at the completion of the shutdown process.
+   
+   The SHUTDOWN ACK chunk has no parameters.
+   
+        0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 8    |Chunk  Flags   |      Length = 4               |
+       |   Type = 8        |    Chunk Flags   |                 Chunk Length = 4                |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-   Chunk Flags: 8 bits
-
-      Set to 0 on transmit and ignored on receipt.
+       
+   Chunk Flags (8Bits) : 
+        Set to 0 on transmit and ignored on receipt.
 
 3.3.10.  Operation Error (ERROR) (9)
 
@@ -2209,84 +2178,59 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    used with an ABORT chunk to report a fatal condition.  It has the
    following parameters:
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 9    | Chunk  Flags  |           Length              |
+       |   Type = 9        |    Chunk Flags   |                     Chunk Length                    |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       \                                                               \
-       /                    one or more Error Causes                   /
-       \                                                               \
+       /                    one or more Error Causes   (variable-length)                      /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Chunk Flags: 8 bits
-
       Set to 0 on transmit and ignored on receipt.
 
    Length: 16 bits (unsigned integer)
-
       Set to the size of the chunk in bytes, including the chunk header
       and all the Error Cause fields present.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 Stewart                     Standards Track                    [Page 42]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
    Error causes are defined as variable-length parameters using the
    format described in Section 3.2.1, that is:
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |           Cause Code          |       Cause Length            |
+       |                    Cause Code                  |                     Cause Length                    |                                    
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                    Cause-Specific Information                 /
-       \                                                               \
+       /                                    Cause-Specific Information                                          /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Cause Code: 16 bits (unsigned integer)
-
       Defines the type of error conditions being reported.
-
-         Cause Code
-         Value           Cause Code
-         ---------      ----------------
-          1              Invalid Stream Identifier
-          2              Missing Mandatory Parameter
-          3              Stale Cookie Error
-          4              Out of Resource
-          5              Unresolvable Address
-          6              Unrecognized Chunk Type
-          7              Invalid Mandatory Parameter
-          8              Unrecognized Parameters
-          9              No User Data
-         10              Cookie Received While Shutting Down
-         11              Restart of an Association with New Addresses
-         12              User Initiated Abort
-         13              Protocol Violation
+      
+     Value     Cause Code
+    +-+-+-+-+-+-+-+-+-++-+-++-+-++-+-++-+-++-+-++-+-++-+-++
+      1              Invalid Stream Identifier
+      2              Missing Mandatory Parameter
+      3              Stale Cookie Error
+      4              Out of Resource
+      5              Unresolvable Address
+      6              Unrecognized Chunk Type
+      7              Invalid Mandatory Parameter
+      8              Unrecognized Parameters
+      9              No User Data
+     10            Cookie Received While Shutting Down
+     11            Restart of an  Association with New Addresses
+     12            User Initiated Abort
+     13            Protocol Violation
 
    Cause Length: 16 bits (unsigned integer)
-
       Set to the size of the parameter in bytes, including the Cause
       Code, Cause Length, and Cause-Specific Information fields.
 
    Cause-Specific Information: variable length
-
       This field carries the details of the error condition.
 
    Section 3.3.10.1 - Section 3.3.10.13 define error causes for SCTP.
@@ -2294,91 +2238,65 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    discussed in Section 14.3.
 
 
-
-
-
-
 Stewart                     Standards Track                    [Page 43]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.10.1.  Invalid Stream Identifier (1)
-
-   Cause of error
-   ---------------
-
    Invalid Stream Identifier: Indicates endpoint received a DATA chunk
    sent to a nonexistent stream.
 
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=1              |      Cause Length=8           |
+       |                 Cause Code = 1             |                   Cause Length  = 8              |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |        Stream Identifier      |         (Reserved)            |
+       |        Stream Identifier                  |                           (Reserved)                     |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Stream Identifier: 16 bits (unsigned integer)
-
-      Contains the Stream Identifier of the DATA chunk received in
-      error.
+      Contains the Stream Identifier of the DATA chunk received in error.
 
    Reserved: 16 bits
+      This field is reserved.  It is set to all 0's on transmit and ignored on receipt.
 
-      This field is reserved.  It is set to all 0's on transmit and
-      ignored on receipt.
-
-3.3.10.2.  Missing Mandatory Parameter (2)
-
-   Cause of error
-   ---------------
-
+3.3.10.2.  Missing Mandatory Parameter of INIT CHUNKS (2)
    Missing Mandatory Parameter: Indicates that one or more mandatory TLV
    parameters are missing in a received INIT or INIT ACK.
 
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=2              |      Cause Length=8+N*2       |
+       |                 Cause Code = 2             |           Cause Length  = 8+N*2           |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                   Number of missing params=N                  |
+       |                                        Number of missing params=N                                 |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Missing Param Type #1       |   Missing Param Type #2       |
+       |   Missing Param Type #1          |         Missing Param Type #2             |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Missing Param Type #N-1     |   Missing Param Type #N       |
+       |   Missing Param Type #N-1     |        Missing Param Type #N             |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Number of Missing params: 32 bits (unsigned integer)
-
       This field contains the number of parameters contained in the
       Cause-Specific Information field.
 
-
-
+   Missing Param Type: 16 bits (unsigned integer)
+      Each field will contain the missing mandatory parameter number.
 
 
 Stewart                     Standards Track                    [Page 44]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
-   Missing Param Type: 16 bits (unsigned integer)
-
-      Each field will contain the missing mandatory parameter number.
-
 3.3.10.3.  Stale Cookie Error (3)
-
-   Cause of error
-   --------------
-
-   Stale Cookie Error: Indicates the receipt of a valid State Cookie
-   that has expired.
-
+   Indicates the receipt of a valid State Cookie that has expired.
+   
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=3              |       Cause Length=8          |
+       |                 Cause Code = 1             |                   Cause Length  = 8              |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                 Measure of Staleness (usec.)                  |
+       |                                       Measure of Staleness (usec.)                                   |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Measure of Staleness: 32 bits (unsigned integer)
-
       This field contains the difference, in microseconds, between the
       current time and the time the State Cookie expired.
 
@@ -2389,172 +2307,119 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       field to the value of zero.
 
 3.3.10.4.  Out of Resource (4)
-
-   Cause of error
-   ---------------
-
-   Out of Resource: Indicates that the sender is out of resource.  This
-   is usually sent in combination with or within an ABORT.
-
+   Out of Resource: Indicates that the sender is out of resource.  
+   This is usually sent in combination with or within an ABORT.
+   
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=4              |      Cause Length=4           |
+       |                 Cause Code = 4             |                   Cause Length  = 4              |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-
-
-
-
-
-
-
-
 
 
 Stewart                     Standards Track                    [Page 45]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.10.5.  Unresolvable Address (5)
-
-   Cause of error
-   ---------------
-
    Unresolvable Address: Indicates that the sender is not able to
    resolve the specified address parameter (e.g., type of address is not
-   supported by the sender).  This is usually sent in combination with
-   or within an ABORT.
+   supported by the sender).  
+   This is usually sent in combination with or within an ABORT.
 
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=5              |      Cause Length             |
+       |                 Cause Code = 5             |                        Cause Length                  |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                  Unresolvable Address                         /
-       \                                                               \
+       /         one or more Unresolvable Addresses  (variable length)          /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Unresolvable Address: variable length
-
       The Unresolvable Address field contains the complete Type, Length,
       and Value of the address parameter (or Host Name parameter) that
       contains the unresolvable address or host name.
 
 3.3.10.6.  Unrecognized Chunk Type (6)
-
-   Cause of error
-   ---------------
-
    Unrecognized Chunk Type: This error cause is returned to the
    originator of the chunk if the receiver does not understand the chunk
    and the upper bits of the 'Chunk Type' are set to 01 or 11.
 
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=6              |      Cause Length             |
+       |                 Cause Code = 6             |                        Cause Length                  |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                  Unrecognized Chunk                           /
-       \                                                               \
+       /             one or more Unrecognized Chunks  (variable length)          /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+       
    Unrecognized Chunk: variable length
-
       The Unrecognized Chunk field contains the unrecognized chunk from
       the SCTP packet complete with Chunk Type, Chunk Flags, and Chunk
       Length.
 
 
-
-
-
-
-
 Stewart                     Standards Track                    [Page 46]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.10.7.  Invalid Mandatory Parameter (7)
-
-   Cause of error
-   ---------------
-
-   Invalid Mandatory Parameter: This error cause is returned to the
-   originator of an INIT or INIT ACK chunk when one of the mandatory
-   parameters is set to an invalid value.
-
+   This error cause is returned to the originator of an INIT or INIT ACK chunk 
+   when one of the mandatory parameters is set to an invalid value.
+   
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=7              |      Cause Length=4           |
+       |                 Cause Code = 7             |                   Cause Length =4                 |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-3.3.10.8.  Unrecognized Parameters (8)
+3.3.10.8.  Unrecognized Parameters in INIT ACK (8)
+   This error cause is returned to the originator of the INIT ACK chunk 
+   if the receiver does not recognize one or more Optional TLV parameters
+   in the INIT ACK chunk.
 
-   Cause of error
-   ---------------
-
-   Unrecognized Parameters: This error cause is returned to the
-   originator of the INIT ACK chunk if the receiver does not recognize
-   one or more Optional TLV parameters in the INIT ACK chunk.
-
+  This error cause is normally contained in an ERROR chunk bundled with
+  the COOKIE ECHO chunk when responding to the INIT ACK, when the
+  sender of the COOKIE ECHO chunk wishes to report unrecognized
+  parameters.
+      
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=8              |      Cause Length             |
+       |                 Cause Code = 8             |                        Cause Length                  |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                  Unrecognized Parameters                      /
-       \                                                               \
+       /         one or more Unrecognized Parameters  (variable length)     /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+       
    Unrecognized Parameters: variable length
-
       The Unrecognized Parameters field contains the unrecognized
-      parameters copied from the INIT ACK chunk complete with TLV.  This
-      error cause is normally contained in an ERROR chunk bundled with
-      the COOKIE ECHO chunk when responding to the INIT ACK, when the
-      sender of the COOKIE ECHO chunk wishes to report unrecognized
-      parameters.
-
-
-
-
-
-
-
-
-
-
-
-
+      parameters copied from the INIT ACK chunk complete with TLV.  
 
 
 Stewart                     Standards Track                    [Page 47]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.10.9.  No User Data (9)
-
-   Cause of error:
-       No User Data: This error cause is returned to the originator of a
-       DATA chunk if a received DATA chunk has no user data.
-
+       This error cause is returned to the originator of a DATA chunk if 
+       a received DATA chunk has no user data.
+       This cause code is normally returned in an  ABORT chunk (see Section 6.2).
+       
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=9              |      Cause Length=8           |
+       |                 Cause Code = 9             |                        Cause Length = 8           |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                  TSN value                                    /
-       \                                                               \
+       |                                                      TSN value                                                            |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+       
    TSN value: 32 bits (unsigned integer)
       The TSN value field contains the TSN of the DATA chunk received
-      with no user data field. This cause code is normally returned in an 
-      ABORT chunk (see Section 6.2).
+      with no user data field. 
 
 3.3.10.10.  Cookie Received While Shutting Down (10)
-
-   Cause of error:
        Cookie Received While Shutting Down: A COOKIE ECHO was received while
        the endpoint was in the SHUTDOWN-ACK-SENT state.  This error is
        usually returned in an ERROR chunk bundled with the retransmitted
        SHUTDOWN ACK.
 
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |     Cause Code=10              |      Cause Length=4          |
+       |                 Cause Code = 10             |                        Cause Length = 4        |                                      
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
@@ -2563,21 +2428,17 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.10.11.  Restart of an Association with New Addresses (11)
+       An INIT was received on an existing association.  But the INIT added 
+       addresses to the association that were previously NOT part of the association.  
+       The new addresses are listed in the error code. 
+       
+       This ERROR is normally sent as part of an ABORT refusing the INIT (see Section 5.2).
 
-   Cause of error:
-       Restart of an association with new addresses: An INIT was received on
-       an existing association.  But the INIT added addresses to the
-       association that were previously NOT part of the association.  The
-       new addresses are listed in the error code.  This ERROR is normally
-       sent as part of an ABORT refusing the INIT (see Section 5.2).
-
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |         Cause Code=11         |      Cause Length=Variable    |
+       |                 Cause Code = 10             |                        Cause Length               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                       New Address TLVs                        /
-       \                                                               \
+       /             one or more New Address TLVs   (variable length)                 /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Note: Each New Address TLV is an exact copy of the TLV that was found
@@ -2585,42 +2446,24 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    Parameter Length.
 
 3.3.10.12.  User-Initiated Abort (12)
-
-   Cause of error
-   --------------
-
    This error cause MAY be included in ABORT chunks that are sent
    because of an upper-layer request.  The upper layer can specify an
    Upper Layer Abort Reason that is transported by SCTP transparently
    and MAY be delivered to the upper-layer protocol at the peer.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |         Cause Code=12         |      Cause Length=Variable    |
+       |                 Cause Code = 12             |                        Cause Length               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                    Upper Layer Abort Reason                   /
-       \                                                               \
+       /   one or more Upper Layer Abort Reasons   (variable length)        /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-
-
-
-
-
-
 
 
 Stewart                     Standards Track                    [Page 49]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 3.3.10.13.  Protocol Violation (13)
-
-   Cause of error
-   --------------
-
    This error cause MAY be included in ABORT chunks that are sent
    because an SCTP endpoint detects a protocol violation of the peer
    that is not covered by the error causes described in Section 3.3.10.1
@@ -2628,14 +2471,13 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    information specifying what kind of protocol violation has been
    detected.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       0                           1                               2                               3                                    4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |         Cause Code=13         |      Cause Length=Variable    |
+       |                 Cause Code = 13             |                        Cause Length               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                    Additional Information                     /
-       \                                                               \
+       /        one or more Additional Informations   (variable length)          /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 
 3.3.11.  Cookie Echo (COOKIE ECHO) (10)
 
@@ -2645,64 +2487,60 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    sent within the association, but MAY be bundled with one or more DATA
    chunks in the same packet.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 10   |Chunk  Flags   |         Length                |
+       |   Type = 10     |    Chunk Flags   |                     Chunk Length                    |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       /                     Cookie                                    /
-       \                                                               \
+       /                                         Cookie    (variable-length)                                       /
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+       
    Chunk Flags: 8 bit
-
       Set to 0 on transmit and ignored on receipt.
 
    Length: 16 bits (unsigned integer)
-
       Set to the size of the chunk in bytes, including the 4 bytes of
       the chunk header and the size of the cookie.
 
 
-
-
-
 Stewart                     Standards Track                    [Page 50]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
    Cookie: variable size
-
       This field must contain the exact cookie received in the State
       Cookie parameter from the previous INIT ACK.
 
       An implementation SHOULD make the cookie as small as possible to
       ensure interoperability.
 
-      Note: A Cookie Echo does NOT contain a State Cookie parameter;
-      instead, the data within the State Cookie's Parameter Value
-      becomes the data within the Cookie Echo's Chunk Value.  This
-      allows an implementation to change only the first 2 bytes of the
+  Note: 
+      A Cookie Echo does NOT contain a State Cookie parameter;
+      instead, the data within the State Cookie's Parameter Value becomes 
+      the data within the Cookie Echo's Chunk Value. 
+       
+      This allows an implementation to change only the first 2 bytes of the 
       State Cookie parameter to become a COOKIE ECHO chunk.
 
 3.3.12.  Cookie Acknowledgement (COOKIE ACK) (11)
 
    This chunk is used only during the initialization of an association.
-   It is used to acknowledge the receipt of a COOKIE ECHO chunk.  This
-   chunk MUST precede any DATA or SACK chunk sent within the
-   association, but MAY be bundled with one or more DATA chunks or SACK
-   chunk's in the same SCTP packet.
+   It is used to acknowledge the receipt of a COOKIE ECHO chunk.  
+   This chunk MUST precede [prɪˈsid 在…之前发生或出现] any DATA 
+   or SACK chunk sent within the association, but MAY be bundled 
+   with one or more DATA chunks or SACK chunk's in the same SCTP packet.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 11   |Chunk  Flags   |     Length = 4                |
+       |   Type = 11     |    Chunk Flags   |             Chunk Length = 4                     |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Chunk Flags: 8 bits
-
       Set to 0 on transmit and ignored on receipt.
+
+
+Stewart                     Standards Track                    [Page 51]
+RFC 4960          Stream Control Transmission Protocol    September 2007
+
 
 3.3.13.  Shutdown Complete (SHUTDOWN COMPLETE) (14)
 
@@ -2712,35 +2550,26 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    The SHUTDOWN COMPLETE chunk has no parameters.
 
-        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       0                          1                               2                                3                                   4
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 14   |Reserved     |T|      Length = 4               |
+       |   Type = 14     |   Reserved + T  |             Chunk Length = 4                     |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+       
    Chunk Flags: 8 bits
-
-
-
-
-Stewart                     Standards Track                    [Page 51]
-
-RFC 4960          Stream Control Transmission Protocol    September 2007
-
-
+   
       Reserved: 7 bits
-
          Set to 0 on transmit and ignored on receipt.
-
-         T bit: 1 bit
-
-      The T bit is set to 0 if the sender filled in the Verification Tag
-      expected by the peer.  If the Verification Tag is reflected, the T
-      bit MUST be set to 1.  Reflecting means that the sent Verification
-      Tag is the same as the received one.
+         
+      T bit: 1 bit
+          The T bit is set to 0 if the sender filled in the Verification Tag
+          expected by the peer. If the Verification Tag is reflected, 
+          the T  bit MUST be set to 1. Reflecting means that the sent 
+          Verification Tag is the same as the received one.
 
    Note: Special rules apply to this chunk for verification, please see
    Section 8.5.1 for details.
+
+
 
 4.  SCTP Association State Diagram
 
@@ -2748,12 +2577,10 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    association progresses from one state to another in response to
    various events.  The events that may potentially advance an
    association's state include:
-
+   
    o  SCTP user primitive calls, e.g., [ASSOCIATE], [SHUTDOWN], [ABORT],
-
    o  Reception of INIT, COOKIE ECHO, ABORT, SHUTDOWN, etc., control
       chunks, or
-
    o  Some timeout events.
 
    The state diagram in the figures below illustrates state changes,
@@ -2766,161 +2593,156 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    vs. State Cookie parameter.  If more than one event/message can occur
    that causes a state transition, it is labeled (A), (B), etc.
 
-
+    causing events         resulting actions
+    rcv ABORT                  [ABORT]  
+    
+    
+   The CLOSED state is used to indicate that an association is not
+   created (i.e., doesn't exist).
+   
+    
 Stewart                     Standards Track                    [Page 52]
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
-                      -----          -------- (from any state)
-                    /       \      /  rcv ABORT      [ABORT]
-rcv INIT    |         |    |   ----------  or ----------
---------------|        v   v   delete TCB     snd ABORT
-generate Cookie +----------+                 delete TCB
-snd INIT ACK       |CLOSED|
-                         +----------+
-                          /      \      [ASSOCIATE]
-                         /        \     ---------------
-                        |          |    CREATE TCB
-                        |          |    snd INIT
-                        |          |    strt init timer
-     rcv valid      |          |
- COOKIE  ECHO |          v
-1) ----------------   |      +-------------------+
- CREATE TCB    |      | COOKIE-WAIT | (2)
-snd COOKIEACK|     +--------------------+
-                        |          |
-                        |          |    rcv INIT ACK
-                        |          |    -----------------
-                        |          |    snd COOKIE ECHO
-                        |          |    stop init timer
-                        |          |    strt cookie timer
-                        |          v
-                        |      +-------------------------+
-                        |      | COOKIE-ECHOED  | (3)
-                        |      +-------------------------+
-                        |          |
-                        |          |    rcv COOKIE ACK
-                        |          |    -----------------
-                        |          |    stop cookie timer
-                        v          v
-                      +---------------------+
-                      | ESTABLISHED  |
-                      +---------------------+
+                                                      - - - - - - -              - - - - - - -(from any state)
+                                                    /                 \         /  rcv ABORT           [ABORT]
+                rcv INIT                   |                    |       |   - - - - - - - - - -    or  - - - - - - - - - -
+      (3)    - - - - - - - - - - - - - -  |                   v      v   delete TCB          snd ABORT
+               generate Cookie  \     +- - - - - - - - - -+                              delete TCB
+               snd INIT ACK             ---|     CLOSED   |
+                                                            +- - - - - - - - - -+
+                                                               /                    \      [ASSOCIATE] 
+                                                             /                        \     - - - - - - - - - - -  (1)
+                                                            |                           |    create TCB
+                                                            |                           |    snd INIT
+                                                            |                           |    strt T1-cookie TIMER                                        
+                      rcv valid                    |                           |
+                      COOKIE  ECHO      |                          v
+            (6)    - - - - - - - - - - - - - - -  |             +- - - - - - - - - - - --+   
+                     create TCB                |             | COOKIE-WAIT|    (2)
+                     snd COOKIE ACK   |            +- - - - - - - - - - - - -+   
+                                                             |                         |
+                                                             |                         |    rcv INIT ACK
+                                                             |                         |    - - - - - - - - - - - - - - - -  (4)  
+                                                             |                         |    snd COOKIE ECHO
+                                                             |                         |    stop init timer
+                                                             |                         |    strt T1-cookie TIMER
+                                                             |                        v 
+                                                             |             +- - - - - - - - - - - - - - -+
+                                                             |             | COOKIE-ECHOED|   (5)
+                                                             |             +- - - - - - - - - - - - - - -+
+                                                             |                         |
+                                                             |                         |    rcv COOKIE ACK
+                                                             |                         |    - - - - - - - - - - - - - - - -  (7)
+                                                             |                         |    stop cookie timer
+                                                             |                         |
+                                                             v                       v
+                                                      +- - - - - - - - - - - - - - -+
+                                                       |     ESTABLISHED   |  (8)
+                                                      +- - - - - - - - - - - - - - -+ 
 
+   2)    If the T1-init timer expires, the endpoint MUST retransmit INIT
+           and restart the T1-init timer without changing state.  This MUST
+           be repeated up to 'Max.Init.Retransmits' times.  After that, the
+           endpoint MUST abort the initialization process and report the
+           error to the SCTP user.
 
+   5)   If the T1-cookie timer expires, the endpoint MUST retransmit
+           COOKIE ECHO and restart the T1-cookie timer without changing
+           state.  This MUST be repeated up to 'Max.Init.Retransmits' times.
+           After that, the endpoint MUST abort the initialization process
+           and report the error to the SCTP user.
+       
+   6)    If the State Cookie in the received COOKIE ECHO is invalid (i.e.,
+           failed to pass the integrity check), the receiver MUST silently
+           discard the packet.  Or, if the received State Cookie is expired
+           (see Section 5.1.5), the receiver MUST send back an ERROR chunk.
+           In either case, the receiver stays in the CLOSED state.
+       
+       
 Stewart                     Standards Track                    [Page 53]
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
-                    (from the ESTABLISHED state only)
-                                  |
-                                  |
-                         /--------+--------\
-     [SHUTDOWN]         /                   \
-     -------------------|                   |
-     check outstanding  |                   |
-     DATA chunks        |                   |
-                        v                   |
-                   +---------+              |
-                   |SHUTDOWN-|              | rcv SHUTDOWN
-                   |PENDING  |              |------------------
-                   +---------+              | check outstanding
-                        |                   | DATA chunks
-   No more outstanding  |                   |
-   ---------------------|                   |
-   snd SHUTDOWN         |                   |
-   strt shutdown timer  |                   |
-                        v                   v
-                   +---------+        +-----------+
-               (4) |SHUTDOWN-|        | SHUTDOWN- |  (5,6)
-                   |SENT     |        | RECEIVED  |
-                   +---------+        +-----------+
-                        |  \                |
-   (A) rcv SHUTDOWN ACK  |   \               |
-   ----------------------|    \              |
-   stop shutdown timer   |     \rcv:SHUTDOWN |
-   send SHUTDOWN COMPLETE|      \  (B)       |
-   DELETE TCB            |       \           |
-                         |        \          | No more outstanding
-                         |         \         |-----------------
-                         |          \        | send SHUTDOWN ACK
-   (B)rcv SHUTDOWN       |           \       | strt shutdown timer
-   ----------------------|            \      |
-   send SHUTDOWN ACK     |             \     |
-   start shutdown timer  |              \    |
-   move to SHUTDOWN-     |               \   |
-   ACK-SENT              |                |  |
-                         |                v  |
-                         |             +-----------+
-                         |             | SHUTDOWN- | (7)
-                         |             | ACK-SENT  |
-                         |             +----------+-
-                         |                   | (C)rcv SHUTDOWN COMPLETE
-                         |                   |-----------------
-                         |                   | stop shutdown timer
-                         |                   | DELETE TCB 
-                         |                   |
+                                                        Figure 3: State Transition Diagram of SCTP
+                                                        
+                                                            (from the ESTABLISHED state only)
+                                                                                                 |
+                                                                                                 |
+                                                                    / - - - - - - - - - - - - - - - - - - - - - - - \
+                           [SHUTDOWN]         /                                                               \
+                 (1)  - - - - - - - - - - - - - - - - |                                                                  |                         
+                        check outstanding |                                                                  |
+                        DATA chunks            |                                                                  |
+                                                                v                                                                 |
+                                              +- - - - - - - - - - - - - - - - - - - - -+                            |          
+                                      (2)   |  SHUTDOWN PENDING  |                             |                                               
+                                              +- - - - - - - - - - - - - - - - - - - - -+                            |
+                                                                |                                                                  |               
+                                                                |                                                                  |
+                      No more                       |                                                                  |
+                      outstanding               |                                                                   |
+              (3)  - - - - - - - - - - - - - - - -   |                                                                  |
+                      snd SHUTDOWN      |                                                                  |
+                  strt shutdown timer  |                                                                   |
+                                                               |                                                                   |
+                                                                |                                                                  |                                                       
+                                                                |                                                                  |    rcv SHUTDOWN
+                                                                |                                                                  |    - - - - - - - - - - - - - - - -  (4)
+                                                                |                                                                  |    check outstanding
+                                                                |                                                                  |    DATA chunks
+                                                                |                                                                  | 
+                                                               v                                                                 v
+                                          +- - - - - - - - - - - - - - - - -+                    +- - - - - - - - - - - - - - - - -+
+                                  (5)   | SHUTDOWN SENT  |                      | SHUTDOWN RECV  |  (6)
+                                          +- - - - - - - - - - - - - - - - -+                    +- - - - - - - - - - - - - - - - -+                                                    
+                                                               |                                                                  |          
+                                                               |                                                                  |                                                                                                                                                                                                                      
+                                                               |                                                                  |                                                                                                                                                                                                         
+                                                               |                                                                  |     No more                                                                                        
+                                                               |                                                                  |     outstanding                                                                                  
+                                                               |                                                                  |     - - - - - - - - - - - - - - - -    (7)                                                                 
+                                                               |                                                                  |     snd SHUTDOWN ACK                                                                    
+                                                               |                                                                  |     strt shutdown timer                                                                    
+                                                               |                                                                  |                
+                                                               |                                            +- - - - - - - - - - - - - - - - - - - - -+
+                                                               |                                             | SHUTDOWN ACK SENT  |  (8)
+                                                               |                                            +- - - - - - - - - - - - - - - - - - - - -+                                                                                                                                      
+                                                               |                                                                  |
+                                                               |                                                                  |                                                                                                                                                                                                                                                                                                              
+        rcv                                                |                                                                   |
+        SHUTDOWN ACK                  |                                                                  |
+(9)  - - - - - - - - - - - - - - - - - - - - -    |                                                                  |
+        stop shutdown timer          |                                                                  |   
+        send                                             |                                                                  |
+        SHUTDOWN COMPLETE  |                                                                   |
+        DELETE TCB                            |                                                                   |
+                                                              |                                                                   | 
+                                                              |                                                                   |     rcv SHUTDOWN COMPLETE
+                                                              |                                                                   |     - - - - - - - - - - - - - - - - - - - - - - - - -     (10)    
+                                                              |                                                                   |    stop shutdown timer
+                                                              |                                                                   |    delete TCB
+                                                              |                                                                   |   
+                                                              |                                                                   |    
+                                                              |                                                                   |    
+                                                             v                                                                  v
+                                                  +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -+
+                                                   |                                    CLOSED                             |  (11)
+                                                  +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -+                      
 
+   5)  In the SHUTDOWN-SENT state, the endpoint MUST acknowledge any
+         received DATA chunks without delay.
 
-
-Stewart                     Standards Track                    [Page 54]
-
-RFC 4960          Stream Control Transmission Protocol    September 2007
-
-
-                         |                   | (D)rcv SHUTDOWN ACK
-                         |                   |--------------
-                         |                   | stop shutdown timer
-                         |                   | send SHUTDOWN COMPLETE
-                         |                   | delete TCB
-                         |                   |
-                         \    +---------+    /
-                          \-->| CLOSED  |<--/
-                              +---------+
-
-                Figure 3: State Transition Diagram of SCTP
-
-   Notes:
-
-   1)  If the State Cookie in the received COOKIE ECHO is invalid (i.e.,
-       failed to pass the integrity check), the receiver MUST silently
-       discard the packet.  Or, if the received State Cookie is expired
-       (see Section 5.1.5), the receiver MUST send back an ERROR chunk.
-       In either case, the receiver stays in the CLOSED state.
-
-   2)  If the T1-init timer expires, the endpoint MUST retransmit INIT
-       and restart the T1-init timer without changing state.  This MUST
-       be repeated up to 'Max.Init.Retransmits' times.  After that, the
-       endpoint MUST abort the initialization process and report the
-       error to the SCTP user.
-
-   3)  If the T1-cookie timer expires, the endpoint MUST retransmit
-       COOKIE ECHO and restart the T1-cookie timer without changing
-       state.  This MUST be repeated up to 'Max.Init.Retransmits' times.
-       After that, the endpoint MUST abort the initialization process
-       and report the error to the SCTP user.
-
-   4)  In the SHUTDOWN-SENT state, the endpoint MUST acknowledge any
-       received DATA chunks without delay.
-
-   5)  In the SHUTDOWN-RECEIVED state, the endpoint MUST NOT accept any
-       new send requests from its SCTP user.
-
-   6)  In the SHUTDOWN-RECEIVED state, the endpoint MUST transmit or
-       retransmit data and leave this state when all data in queue is
-       transmitted.
+   6)  In the SHUTDOWN-RECEIVED state, the endpoint MUST NOT accept any
+         new send requests from its SCTP user. the endpoint MUST transmit or retransmit
+         data and leave this state when all data in queue is transmitted.
 
    7)  In the SHUTDOWN-ACK-SENT state, the endpoint MUST NOT accept any
        new send requests from its SCTP user.
 
-   The CLOSED state is used to indicate that an association is not
-   created (i.e., doesn't exist).
-
-
-
 
 Stewart                     Standards Track                    [Page 55]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -2973,10 +2795,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       attacks.
 
 
-
-
 Stewart                     Standards Track                    [Page 56]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
