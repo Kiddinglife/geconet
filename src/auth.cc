@@ -34,7 +34,9 @@ documentation and/or software.
 #include "auth.h"
 #include "globals.h"
 
-// Constants for MD5Transform routine.
+
+/* Constants for MD5Transform routine.
+*/
 #define S11 7
 #define S12 12
 #define S13 17
@@ -51,116 +53,120 @@ documentation and/or software.
 #define S42 10
 #define S43 15
 #define S44 21
-
-///////////////////////////////////////////////
-
-// F, G, H and I are basic MD5 functions.
-inline MD5::uint4 MD5::F(uint4 x, uint4 y, uint4 z)
+static void MD5Transform(UINT4[4], unsigned char[64]);
+static void Encode(unsigned char *, UINT4 *, unsigned int);
+static void Decode(UINT4 *, unsigned char *, unsigned int);
+static unsigned char PADDING[64] =
+{ 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+/* F, G, H and I are basic MD5 functions.
+*/
+#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
+#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
+#define H(x, y, z) ((x) ^ (y) ^ (z))
+#define I(x, y, z) ((y) ^ ((x) | (~z)))
+/* ROTATE_LEFT rotates x left n bits.
+*/
+#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
+/* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
+Rotation is separate from addition to prevent recomputation.
+*/
+#define FF(a, b, c, d, x, s, ac) { \
+ (a) += F ((b), (c), (d)) + (x) + (UINT4)(ac); \
+ (a) = ROTATE_LEFT ((a), (s)); \
+ (a) += (b); \
+  }
+#define GG(a, b, c, d, x, s, ac) { \
+ (a) += G ((b), (c), (d)) + (x) + (UINT4)(ac); \
+ (a) = ROTATE_LEFT ((a), (s)); \
+ (a) += (b); \
+  }
+#define HH(a, b, c, d, x, s, ac) { \
+ (a) += H ((b), (c), (d)) + (x) + (UINT4)(ac); \
+ (a) = ROTATE_LEFT ((a), (s)); \
+ (a) += (b); \
+  }
+#define II(a, b, c, d, x, s, ac) { \
+ (a) += I ((b), (c), (d)) + (x) + (UINT4)(ac); \
+ (a) = ROTATE_LEFT ((a), (s)); \
+ (a) += (b); \
+  }
+/* MD5 initialization. Begins an MD5 operation, writing a new context.
+*/
+void MD5Init(MD5_CTX *context)
 {
-    return ((x&y) | (~x&z));
+    context->count[0] = context->count[1] = 0;
+    /* Load magic initialization constants.
+    */
+    context->state[0] = 0x67452301;
+    context->state[1] = 0xefcdab89;
+    context->state[2] = 0x98badcfe;
+    context->state[3] = 0x10325476;
 }
-
-inline MD5::uint4 MD5::G(uint4 x, uint4 y, uint4 z) {
-    return ((x&z) | (y&~z));
-}
-
-inline MD5::uint4 MD5::H(uint4 x, uint4 y, uint4 z) {
-    return x^y^z;
-}
-
-inline MD5::uint4 MD5::I(uint4 x, uint4 y, uint4 z) {
-    return y ^ (x | ~z);
-}
-
-// rotate_left rotates x left n bits.
-inline MD5::uint4 MD5::rotate_left(uint4 x, int n) {
-    return (x << n) | (x >> (32 - n));
-}
-
-// FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
-// Rotation is separate from addition to prevent recomputation.
-inline void MD5::FF(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac) {
-    a = rotate_left(a + F(b, c, d) + x + ac, s) + b;
-}
-
-inline void MD5::GG(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac) {
-    a = rotate_left(a + G(b, c, d) + x + ac, s) + b;
-}
-
-inline void MD5::HH(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac) {
-    a = rotate_left(a + H(b, c, d) + x + ac, s) + b;
-}
-
-inline void MD5::II(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac) {
-    a = rotate_left(a + I(b, c, d) + x + ac, s) + b;
-}
-
-//////////////////////////////////////////////
-
-// default ctor, just initailize
-MD5::MD5()
+/* MD5 block update operation. Continues an MD5 message-digest
+operation, processing another message block, and updating the
+context.
+*/
+void MD5Update(MD5_CTX *context, unsigned char *input, unsigned int inputLen)
 {
-    init();
-}
+    unsigned int i, index, partLen;
+    /* Compute number of bytes mod 64 */
+    index = (unsigned int)((context->count[0] >> 3) & 0x3F);
+    /* Update number of bits */
+    if ((context->count[0] += ((UINT4)inputLen << 3))
+        < ((UINT4)inputLen << 3))
+        context->count[1]++;
+    context->count[1] += ((UINT4)inputLen >> 29);
+    partLen = 64 - index;
+    /* Transform as many times as possible.  */
+    if (inputLen >= partLen)
+    {
+        MD5_memcpy((POINTER)&context->buffer[index], (POINTER)input,
+            partLen);
+        MD5Transform(context->state, context->buffer);
 
-//////////////////////////////////////////////
+        for (i = partLen; i + 63 < inputLen; i += 64)
+            MD5Transform(context->state, &input[i]);
 
-// nifty shortcut ctor, compute MD5 for string and finalize it right away
-MD5::MD5(const std::string &text)
-{
-    init();
-    update(text.c_str(), text.length());
-    finalize();
-}
-
-//////////////////////////////
-
-void MD5::init()
-{
-    finalized = false;
-
-    count[0] = 0;
-    count[1] = 0;
-
-    // load magic initialization constants.
-    state[0] = 0x67452301;
-    state[1] = 0xefcdab89;
-    state[2] = 0x98badcfe;
-    state[3] = 0x10325476;
-}
-
-//////////////////////////////
-
-// decodes input (unsigned char) into output (uint4). Assumes len is a multiple of 4.
-void MD5::decode(uint4 output[], const uint1 input[], size_type len)
-{
-    for (unsigned int i = 0, j = 0; j < len; i++, j += 4)
-        output[i] = ((uint4)input[j]) | (((uint4)input[j + 1]) << 8) |
-        (((uint4)input[j + 2]) << 16) | (((uint4)input[j + 3]) << 24);
-}
-
-//////////////////////////////
-
-// encodes input (uint4) into output (unsigned char). Assumes len is
-// a multiple of 4.
-void MD5::encode(uint1 output[], const uint4 input[], size_type len)
-{
-    for (size_type i = 0, j = 0; j < len; i++, j += 4) {
-        output[j] = input[i] & 0xff;
-        output[j + 1] = (input[i] >> 8) & 0xff;
-        output[j + 2] = (input[i] >> 16) & 0xff;
-        output[j + 3] = (input[i] >> 24) & 0xff;
+        index = 0;
     }
+    else
+        i = 0;
+    /* Buffer remaining input */
+    MD5_memcpy((POINTER)&context->buffer[index], (POINTER)&input[i],
+        inputLen - i);
 }
 
-//////////////////////////////
-
-// apply MD5 algo on a block
-void MD5::transform(const uint1 block[blocksize])
+/* MD5 finalization. Ends an MD5 message-digest operation, writing the
+the message digest and zeroizing the context.
+*/
+void MD5Final(unsigned char digest[16], MD5_CTX *context)
 {
-    uint4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
-    decode(x, block, blocksize);
+    unsigned char bits[8];
+    unsigned int index, padLen;
+    /* Save number of bits */
+    Encode(bits, context->count, 8);
+    /* Pad out to 56 mod 64.
+    */
+    index = (unsigned int)((context->count[0] >> 3) & 0x3f);
+    padLen = (index < 56) ? (56 - index) : (120 - index);
+    MD5Update(context, PADDING, padLen);
+    /* Append length (before padding) */
+    MD5Update(context, bits, 8);
+    /* Store state in digest */
+    Encode(digest, context->state, 16);
+    /* Zeroize sensitive information.
+    */
+    MD5_memset((POINTER)context, 0, sizeof(*context));
+}
 
+/* MD5 basic transformation. Transforms state based on block.
+*/
+static void MD5Transform(UINT4 state[4], unsigned char block[64])
+{
+    UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
+    Decode(x, block, 64);
     /* Round 1 */
     FF(a, b, c, d, x[0], S11, 0xd76aa478); /* 1 */
     FF(d, a, b, c, x[1], S12, 0xe8c7b756); /* 2 */
@@ -178,7 +184,6 @@ void MD5::transform(const uint1 block[blocksize])
     FF(d, a, b, c, x[13], S12, 0xfd987193); /* 14 */
     FF(c, d, a, b, x[14], S13, 0xa679438e); /* 15 */
     FF(b, c, d, a, x[15], S14, 0x49b40821); /* 16 */
-
     /* Round 2 */
     GG(a, b, c, d, x[1], S21, 0xf61e2562); /* 17 */
     GG(d, a, b, c, x[6], S22, 0xc040b340); /* 18 */
@@ -196,7 +201,6 @@ void MD5::transform(const uint1 block[blocksize])
     GG(d, a, b, c, x[2], S22, 0xfcefa3f8); /* 30 */
     GG(c, d, a, b, x[7], S23, 0x676f02d9); /* 31 */
     GG(b, c, d, a, x[12], S24, 0x8d2a4c8a); /* 32 */
-
     /* Round 3 */
     HH(a, b, c, d, x[5], S31, 0xfffa3942); /* 33 */
     HH(d, a, b, c, x[8], S32, 0x8771f681); /* 34 */
@@ -214,8 +218,7 @@ void MD5::transform(const uint1 block[blocksize])
     HH(d, a, b, c, x[12], S32, 0xe6db99e5); /* 46 */
     HH(c, d, a, b, x[15], S33, 0x1fa27cf8); /* 47 */
     HH(b, c, d, a, x[2], S34, 0xc4ac5665); /* 48 */
-
-    /* Round 4 */
+   /* Round 4 */
     II(a, b, c, d, x[0], S41, 0xf4292244); /* 49 */
     II(d, a, b, c, x[7], S42, 0x432aff97); /* 50 */
     II(c, d, a, b, x[14], S43, 0xab9423a7); /* 51 */
@@ -232,133 +235,56 @@ void MD5::transform(const uint1 block[blocksize])
     II(d, a, b, c, x[11], S42, 0xbd3af235); /* 62 */
     II(c, d, a, b, x[2], S43, 0x2ad7d2bb); /* 63 */
     II(b, c, d, a, x[9], S44, 0xeb86d391); /* 64 */
-
     state[0] += a;
     state[1] += b;
     state[2] += c;
     state[3] += d;
-
-    // Zeroize sensitive information.
-    memset(x, 0, sizeof x);
+    /* Zeroize sensitive information.  */
+    MD5_memset((POINTER)x, 0, sizeof(x));
 }
 
-//////////////////////////////
-
-// MD5 block update operation. Continues an MD5 message-digest
-// operation, processing another message block
-void MD5::update(const unsigned char input[], size_type length)
+/* Encodes input (UINT4) into output (unsigned char). Assumes len is
+a multiple of 4.
+*/
+static void Encode(unsigned char *output, UINT4 *input, unsigned int len)
 {
-    // compute number of bytes mod 64
-    size_type index = count[0] / 8 % blocksize;
-
-    // Update number of bits
-    if ((count[0] += (length << 3)) < (length << 3))
-        count[1]++;
-    count[1] += (length >> 29);
-
-    // number of bytes we need to fill in buffer
-    size_type firstpart = 64 - index;
-
-    size_type i;
-
-    // transform as many times as possible.
-    if (length >= firstpart)
+    unsigned int i, j;
+    for (i = 0, j = 0; j < len; i++, j += 4)
     {
-        // fill buffer first, transform
-        memcpy(&buffer[index], input, firstpart);
-        transform(buffer);
-
-        // transform chunks of blocksize (64 bytes)
-        for (i = firstpart; i + blocksize <= length; i += blocksize)
-            transform(&input[i]);
-
-        index = 0;
+        output[j] = (unsigned char)(input[i] & 0xff);
+        output[j + 1] = (unsigned char)((input[i] >> 8) & 0xff);
+        output[j + 2] = (unsigned char)((input[i] >> 16) & 0xff);
+        output[j + 3] = (unsigned char)((input[i] >> 24) & 0xff);
     }
-    else
-        i = 0;
-
-    // buffer remaining input
-    memcpy(&buffer[index], &input[i], length - i);
 }
 
-//////////////////////////////
-
-// for convenience provide a verson with signed char
-void MD5::update(const char input[], size_type length)
+/* Decodes input (unsigned char) into output (UINT4). Assumes len is
+a multiple of 4.
+*/
+static void Decode(UINT4 *output, unsigned char *input, unsigned int len)
 {
-    update((const unsigned char*)input, length);
+    unsigned int i, j;
+    for (i = 0, j = 0; j < len; i++, j += 4)
+        output[i] = ((UINT4)input[j]) | (((UINT4)input[j + 1]) << 8)
+        | (((UINT4)input[j + 2]) << 16)
+        | (((UINT4)input[j + 3]) << 24);
 }
 
-//////////////////////////////
-
-// MD5 finalization. Ends an MD5 message-digest operation, writing the
-// the message digest and zeroizing the context.
-MD5& MD5::finalize()
-{
-    static unsigned char padding[64] = {
-        0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-    };
-
-    if (!finalized)
-    {
-        // Save number of bits
-        unsigned char bits[8];
-        encode(bits, count, 8);
-
-        // pad out to 56 mod 64.
-        size_type index = count[0] / 8 % 64;
-        size_type padLen = (index < 56) ? (56 - index) : (120 - index);
-        update(padding, padLen);
-
-        // Append length (before padding)
-        update(bits, 8);
-
-        // Store state in digest
-        encode(digest, state, 16);
-
-        // Zeroize sensitive information.
-        memset(buffer, 0, sizeof buffer);
-        memset(count, 0, sizeof count);
-
-        finalized = true;
-    }
-
-    return *this;
-}
-
-//////////////////////////////
 
 // return hex representation of digest as string
-std::string MD5::hexdigest() const
+const char* hexdigest(uchar data[], int lenbytes)
 {
-    if (!finalized)
-        return "";
-
-    char buf[33];
-    for (int i = 0; i < 16; i++)
-        sprintf(buf + i * 2, "%02x", digest[i]);
-    buf[32] = 0;
-
-    return std::string(buf);
+    static char buf[4096];
+    for (int i = 0; i < lenbytes; i++)
+        sprintf(buf + i * 2, "%02x", data[i]);
+    buf[lenbytes * 2] = 0;
+    return buf;
 }
 
-//////////////////////////////
-
-std::ostream& operator<<(std::ostream& out, MD5 md5)
-{
-    return out << md5.hexdigest();
-}
-
-//////////////////////////////
-
-std::string md5(const std::string str)
-{
-    MD5 md5 = MD5(str);
-
-    return md5.hexdigest();
-}
+//std::ostream& operator<<(std::ostream& out, MD5 md5)
+//{
+//    return out << md5.hexdigest();
+//}
 
 
 #define BASE 65521L             /* largest prime smaller than 65536 */
@@ -457,7 +383,41 @@ static uint generate_crc32c(char *buffer, int length)
     return crc32;
 
 }
+unsigned int generate_md5_checksum(const void *data, int length)
+{
+    unsigned int	digest[4];
+    unsigned int	val;
+    MD5_CTX			ctx;
+    MD5Init(&ctx);
+    MD5Update(&ctx, (unsigned char *)data, length);
+    MD5Final((unsigned char *)digest, &ctx);
+    val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
+    return val;
+}
 
+
+
+
+int validate_md5_checksum(char *buffer, int length)
+{
+    /* save and zero checksum */
+    geco_packet_t *message = (geco_packet_t *)buffer;
+    uint original_md5 = ntohl(message->pk_comm_hdr.checksum);
+    EVENTLOG1(VERBOSE, "DEBUG Validation : original_md5 == %x", original_md5);
+    message->pk_comm_hdr.checksum = 0;
+    uint md5checksum = generate_md5_checksum(buffer, length);
+    EVENTLOG1(VERBOSE, "DEBUG Validation : md5checksum == %x", md5checksum);
+    return ((original_md5 == md5checksum) ? 1 : 0);
+}
+void set_md5_checksum(char *buffer, int length)
+{
+    /* check packet length */
+    if (length > NMAX || length < NMIN) return;
+    geco_packet_t *message = (geco_packet_t *)buffer;
+    message->pk_comm_hdr.checksum = 0L;
+    uint md5checksum = generate_md5_checksum(buffer, length);
+    message->pk_comm_hdr.checksum = htonl(md5checksum);
+}
 int validate_crc32_checksum(char *buffer, int length)
 {
     geco_packet_t *message;
@@ -471,18 +431,15 @@ int validate_crc32_checksum(char *buffer, int length)
     message->pk_comm_hdr.checksum = 0;
     crc32 = generate_crc32c(buffer, length);
     EVENTLOG1(VERBOSE, "DEBUG Validation : my crc32c == %x", crc32);
-
     return ((original_crc32 == crc32) ? 1 : 0);
 }
 int set_crc32_checksum(char *buffer, int length)
 {
     geco_packet_t *message;
     uint      crc32c;
-
     /* check packet length */
     if (length > NMAX || length < NMIN)
         return -1;
-
     message = (geco_packet_t *)buffer;
     message->pk_comm_hdr.checksum = 0L;
     crc32c = generate_crc32c(buffer, length);

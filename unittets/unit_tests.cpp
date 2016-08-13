@@ -179,19 +179,24 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
 #include "auth.h"
 TEST(AUTH_MODULE, test_md5)
 {
+    unsigned char	digest[HMAC_LEN];
+    MD5_CTX			ctx;
+
     const char* testdata = "202cb962ac59075b964b07152d234b70";
     const char* result = "d9b1d7db4cd6e70935368a1efb10e377";
-    MD5 md5_0(testdata);
-    EVENTLOG1(VERBOSE, "DGEST %s", md5_0.hexdigest().c_str());
-    EXPECT_STREQ(md5_0.hexdigest().c_str(), result);
+    MD5Init(&ctx);
+    MD5Update(&ctx, (uchar*)testdata, strlen(testdata));
+    MD5Final(digest, &ctx);
+    EVENTLOG1(VERBOSE, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
+    EXPECT_STREQ(hexdigest(digest, 16), result);
 
     testdata = "d9b1d7db4cd6e70935368a1efb10e377";
     result = "7363a0d0604902af7b70b271a0b96480";
-    MD5 md5_1(testdata);
-    EXPECT_STREQ(md5_1.hexdigest().c_str(), result);
-    EVENTLOG1(VERBOSE, "DGEST %s", md5_1.hexdigest().c_str());
-    int a = 123;
-    MD5 md5_2((const char*) &a);
+    MD5Init(&ctx);
+    MD5Update(&ctx, (uchar*)testdata, strlen(testdata));
+    MD5Final(digest, &ctx);
+    EVENTLOG1(VERBOSE, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
+    EXPECT_STREQ(hexdigest(digest, 16), result);
 }
 TEST(AUTH_MODULE, test_sockaddr2hashcode)
 {

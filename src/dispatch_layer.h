@@ -1722,14 +1722,15 @@ public:
         if (key == NULL)
             return -1;
 
-        MD5 md5;
-        md5.update((uchar*)cookieString, cookieLength);
-        md5.update(key, SECRET_KEYSIZE);
-        md5.finalize();
-        memcpy(cookieString->ck.hmac, md5.Digest(),
-            sizeof(cookieString->ck.hmac));
-        EVENTLOG1(INTERNAL_TRACE, "Computed MD5 signature : %s",
-            md5.hexdigest().c_str());
+        unsigned char	digest[HMAC_LEN];
+        MD5_CTX			ctx;
+        MD5Init(&ctx);
+        MD5Update(&ctx, (uchar*)cookieString, cookieLength);
+        MD5Update(&ctx, (uchar*)key, SECRET_KEYSIZE);
+        MD5Final(digest, &ctx);
+        memcpy(cookieString->ck.hmac, digest, sizeof(cookieString->ck.hmac));
+        EVENTLOG1(VERBOSE, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
+
         return 0;
     }
     int write_ecn_chunk(uint initAckID, uint initCID)
