@@ -11,8 +11,7 @@
 #include <list>
 #include <algorithm>
 #include "globals.h"
-#include "geco-ds-malloc.h"
-#include "basic-type.h"
+
 /**
  *  A singly linked list for timer events
  */

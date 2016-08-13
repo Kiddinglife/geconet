@@ -19,7 +19,6 @@
 #include <unistd.h>
 #endif
 
-geco::ds::single_client_alloc galloc;
 
 //++++++++++++++++++ logging ++++++++++++++++++++
 static bool globalTrace = true;

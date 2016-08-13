@@ -116,15 +116,15 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../../include;../../../../thirdparty/;../../../../thirdparty/cat/include/;../../../../thirdparty/openssl-1.0.0d/include;../../../../thirdparty/googletest/include/;../../../../thirdparty/googlemock/include/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../src;../../../../thirdparty/;../../../../thirdparty/cat/include/;../../../../thirdparty/openssl-1.0.0d/include;../../../../thirdparty/googletest/include/;../../../../thirdparty/googlemock/include/;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).exe</OutputFile>
-      <AdditionalDependencies>gmock_Debugx64.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gmock_Debugx64.lib;geco-protocol-stack_protocol-stack-lib_Debugx64.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\;../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
     </Link>
     <Lib>
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).exe</OutputFile>
@@ -166,7 +166,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../../include;../../../../thirdparty/;../../../../thirdparty/cat/include/;../../../../thirdparty/openssl-1.0.0d/include;../../../../thirdparty/googletest/include/;../../../../thirdparty/googlemock/include/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../src;../../../../thirdparty/;../../../../thirdparty/cat/include/;../../../../thirdparty/openssl-1.0.0d/include;../../../../thirdparty/googletest/include/;../../../../thirdparty/googlemock/include/;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -189,11 +189,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
-    <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
+    <None Include="..\..\..\..\docx\rfc-960-with-section-jumps.html" />
+    <None Include="..\..\..\..\unittets\readme.md" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\unittets\readme.md" />
+    <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
+    <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\..\..\docx\  Security Attacks Found Against.txt" />
@@ -205,6 +206,7 @@
     <Text Include="..\..\..\..\docx\(SCTP) - Dynamic Address Reconfiguration.txt" />
     <Text Include="..\..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt" />
     <Text Include="..\..\..\..\docx\Cumulative ASCONF chunk.txt" />
+    <Text Include="..\..\..\..\docx\draft-hohendorf-secure-sctp-22.txt" />
     <Text Include="..\..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt" />
     <Text Include="..\..\..\..\docx\Quick Failover Algorithm in SCTP.txt" />
     <Text Include="..\..\..\..\docx\rfc1191- ICMP Path MTU Discovery.txt" />
@@ -225,7 +227,6 @@
     <Text Include="..\..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt" />
     <Text Include="..\..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt" />
     <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt" />
-    <Text Include="..\..\..\..\docx\Secure SCTP.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,70 +1,147 @@
 ﻿  transport_layer.cc
-..\..\..\..\src\transport_layer.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(81): warning C4005: 'POLLIN' : macro redefinition
-          C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1617) : see previous definition of 'POLLIN'
-D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(82): warning C4005: 'POLLPRI' : macro redefinition
-          C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1618) : see previous definition of 'POLLPRI'
-D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(83): warning C4005: 'POLLOUT' : macro redefinition
-          C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1621) : see previous definition of 'POLLOUT'
-D:\VS2013WorkSpace\geco-protocol-stack\include\transport_layer.h(84): warning C4005: 'POLLERR' : macro redefinition
-          C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(1624) : see previous definition of 'POLLERR'
-d:\vs2013workspace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
-          command-line arguments :  see previous definition of '_DEBUG'
-d:\vs2013workspace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): warning C4346: 'geco::ds::malloc_alloc<inst>::oom_handler_t' : dependent name is not a type
-          prefix with 'typename' to indicate a type
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): error C2143: syntax error : missing ';' before 'geco::ds::malloc_alloc<inst>::oom_handler'
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): fatal error C1903: unable to recover from previous error(s); stopping compilation
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(81): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(82): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(83): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(84): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\config.h(15): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(277): warning C4244: 'initializing': conversion from 'time_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h(809): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h(1762): warning C4244: 'argument': conversion from 'unsigned __int64' to 'u_short', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(2238): note: see declaration of 'gethostbyname'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(89): warning C4244: 'argument': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(132): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: see declaration of 'inet_addr'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(201): warning C4312: 'type cast': conversion from 'NTSTATUS' to 'char *' of greater size
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(182): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(346): note: see declaration of 'strncpy'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(214): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(215): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(759): warning C4101: 'i': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(982): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1127): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1149): warning C4002: too many actual parameters for macro 'ERRLOG1'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1287): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: see declaration of 'inet_ntoa'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1564): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1575): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1582): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1604): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1625): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1615): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: see declaration of 'inet_addr'
   globals.cc
-..\..\..\..\src\globals.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-D:\VS2013WorkSpace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
-          command-line arguments :  see previous definition of '_DEBUG'
-d:\vs2013workspace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): warning C4346: 'geco::ds::malloc_alloc<inst>::oom_handler_t' : dependent name is not a type
-          prefix with 'typename' to indicate a type
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): error C2143: syntax error : missing ';' before 'geco::ds::malloc_alloc<inst>::oom_handler'
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): fatal error C1903: unable to recover from previous error(s); stopping compilation
+d:\vs-workspace\geco-protocol-stack\src\globals.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\config.h(15): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(46): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(52): warning C4996: 'fscanf': This function or variable may be unsafe. Consider using fscanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1193): note: see declaration of 'fscanf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(60): warning C4996: 'getpid': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _getpid. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\process.h(353): note: see declaration of 'getpid'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(62): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(63): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(111): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(123): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\time.h(505): note: see declaration of 'localtime'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(197): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(203): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(250): warning C4101: 'mi': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(342): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(348): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(300): warning C4101: 'mi': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(355): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(178): note: see declaration of 'strerror'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(456): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(449): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(491): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(484): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(674): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
   gecotimer.cc
-D:\VS2013WorkSpace\geco-protocol-stack\include\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
-          command-line arguments :  see previous definition of '_DEBUG'
-d:\vs2013workspace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): warning C4346: 'geco::ds::malloc_alloc<inst>::oom_handler_t' : dependent name is not a type
-          prefix with 'typename' to indicate a type
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): error C2143: syntax error : missing ';' before 'geco::ds::malloc_alloc<inst>::oom_handler'
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): fatal error C1903: unable to recover from previous error(s); stopping compilation
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\config.h(15): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(277): warning C4244: 'initializing': conversion from 'time_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
+  geco-malloc.cpp
   dispatch_layer.cc
-D:\VS2013WorkSpace\geco-protocol-stack\include\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
-          command-line arguments :  see previous definition of '_DEBUG'
-d:\vs2013workspace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): warning C4346: 'geco::ds::malloc_alloc<inst>::oom_handler_t' : dependent name is not a type
-          prefix with 'typename' to indicate a type
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): error C2143: syntax error : missing ';' before 'geco::ds::malloc_alloc<inst>::oom_handler'
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): fatal error C1903: unable to recover from previous error(s); stopping compilation
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\config.h(15): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h(809): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(277): warning C4244: 'initializing': conversion from 'time_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h(1762): warning C4244: 'argument': conversion from 'unsigned __int64' to 'u_short', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(81): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(82): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(83): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(84): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(596): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(2238): note: see declaration of 'gethostbyname'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1000): warning C4267: '=': conversion from 'size_t' to 'ushort', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1004): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1062): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1390): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1607): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1336): warning C4101: 'init_i_sent_cid': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2851): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3261): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3336): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3387): warning C4101: 'padding_len': unreferenced local variable
   auth.cc
-D:\VS2013WorkSpace\geco-protocol-stack\include\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-D:\VS2013WorkSpace\geco-protocol-stack\include\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-C:\Program Files (x86)\Windows Kits\8.1\Include\um\winnt.h(18582): warning C4005: 'KEY_READ' : macro redefinition
-          D:\VS2013WorkSpace\geco-protocol-stack\include\auth.h(86) : see previous definition of 'KEY_READ'
-d:\vs2013workspace\geco-protocol-stack\include\config.h(15): warning C4005: '_DEBUG' : macro redefinition
-          command-line arguments :  see previous definition of '_DEBUG'
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): warning C4346: 'geco::ds::malloc_alloc<inst>::oom_handler_t' : dependent name is not a type
-          prefix with 'typename' to indicate a type
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): error C2143: syntax error : missing ';' before 'geco::ds::malloc_alloc<inst>::oom_handler'
-d:\vs2013workspace\geco-protocol-stack\include\geco-ds-malloc.h(232): fatal error C1903: unable to recover from previous error(s); stopping compilation
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+c:\program files (x86)\windows kits\8.1\include\um\winnt.h(18582): warning C4005: 'KEY_READ': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\auth.h(86): note: see previous definition of 'KEY_READ'
+d:\vs-workspace\geco-protocol-stack\src\config.h(15): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(15): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.cc(112): warning C4267: 'argument': conversion from 'size_t' to 'MD5::size_type', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\auth.cc(341): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
   Generating Code...
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h(1657): warning C4700: uninitialized local variable 'initackchar' used
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-protocol-stack_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
+Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored
+Ws2_32.lib(WS2_32.dll) : warning LNK4221: This object file does not define any previously undefined public symbols, so it will not be used by any link operation that consumes this library
+  protocol-stack.vcxproj -> D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib
