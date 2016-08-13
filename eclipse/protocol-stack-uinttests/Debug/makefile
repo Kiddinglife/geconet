@@ -44,7 +44,7 @@ all: protocol-stack-uinttests
 protocol-stack-uinttests: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross G++ Linker'
-	g++ -L"/home/jackiez/20160219/geco-sctp-cplus/eclipse/protocol-stack-lib/Debug" -L/home/jackiez/20160219/geco-sctp-cplus/thirdparty/libs -o "protocol-stack-uinttests" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"/home/jackiez/20160219/geco-protocol-stack/eclipse/protocol-stack-lib/Debug" -L/home/jackiez/20160219/geco-protocol-stack/thirdparty/libs -o "protocol-stack-uinttests" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

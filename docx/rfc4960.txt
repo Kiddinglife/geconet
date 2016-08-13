@@ -307,12 +307,12 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
        _____________                                      _____________
       |  SCTP User  |                                    |  SCTP User  |
-      | Application |                                     | Application |
-      |-------------|                                          |-------------|
-      |    SCTP     |                                       |    SCTP     |
-      |  Transport  |                                      |  Transport  |
-      |   Service   |                                       |   Service   |
-      |-------------|                                           |-------------|
+      | Application |                                    | Application |
+      |-------------|                                    |-------------|
+      |    SCTP     |                                    |    SCTP     |
+      |  Transport  |                                    |  Transport  |
+      |   Service   |                                    |   Service   |
+      |-------------|                                    |-------------|
       |             |One or more    ----      One or more|             |
       | IP Network  |IP address      \/        IP address| IP Network  |
       |   Service   |appearances     /\       appearances|   Service   |
@@ -708,45 +708,13 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    the SCTP common header.  The Verification Tag value is chosen by each
    end of the association during association startup.  Packets received
    without the expected Verification Tag value are discarded, as a
-   protection against blind masquerade attacks [1] and against stale SCTP
+   protection against blind masquerade attacks and against stale SCTP
    packets from a previous association.  The CRC32c checksum should be
    set by the sender of each SCTP packet to provide additional
    protection against data corruption in the network.  The receiver of
    an SCTP packet with an invalid CRC32c checksum silently discards the
    packet.
-   
-   [1] blind masquerade attacks :
-   see https://en.wikipedia.org/wiki/IP_address_spoofing for details
-   also called IP address spoofing or IP spoofing is the creation of Internet Protocol (IP) 
-   packets with a forged (伪造) source IP address, with the purpose of concealing (隐瞒)
-   the identity of the sender or impersonating (假扮) another computing system.
-   
-   Defence of Flood Syn Attacks:
-   when spoofed INIT packet incomes, the receiver responses with init ack to the forged
-   sender, watiing for him to reply an INIT-ACK. But as source addresss is forged, 
-   the forged sender does not know what the packet is and therefore will not reply an INIT-ACK.
-   in such way, flood syn attacks are defeated. 
-   
-   Defence of Replay acctacks:
-   
-   INIT Replay Attack: 
-   replayed INIT packets will be accepted and returns INIT-ACK to attacker,
-   but no any resources kept
-   
-   INIT-ACK Replay Attack:  
-   replayed INIT-ACK packets will be accpeted by receiver and return 
-   COOKIE-ECHO to attacker, but no any resource kept.
-   
-   COOKIE-ECHO Replay Attack: 
-   1) ip-spoofed-replayed COOKIE-ECHO packets will be discarded by validating the echoed cookie.
-   2) replayed-COOKIE-ECHO packets will be accepted and do validate until cokkie exprires, 
-       attacker may request extend cookie life span. the only cost is cpu cycles of validating 
-       cookie within cokkie life span, no resource kept.
-       
-   DATA-CHUNK Replay Attack:
-    this is accepted as normal packet. the only cost is wast of cpu cycles, but no resource kept.
-   
-   
+
 1.5.7.  Path Management
 
    The sending SCTP user is able to manipulate the set of transport
@@ -766,7 +734,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    when other packet traffic is inadequate to provide this information
    and advises the SCTP user when reachability of any far-end transport
-   address changes. The path management function is also responsible
+   address changes.  The path management function is also responsible
    for reporting the eligible set of local transport addresses to the
    far end during association startup, and for reporting the transport
    addresses returned from the far end to the SCTP user.
@@ -809,6 +777,10 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    Number Arithmetic as defined in [RFC1982] where SERIAL_BITS = 16.
    All other arithmetic and comparisons in this document use normal
    arithmetic.
+
+
+
+
 
 
 Stewart                     Standards Track                    [Page 14]
@@ -1188,8 +1160,21 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 3.3.  SCTP Chunk Definitions
 
-   This section defines the format of the different SCTP chunk types
-   
+   This section defines the format of the different SCTP chunk types.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Stewart                     Standards Track                    [Page 21]
 
 RFC 4960          Stream Control Transmission Protocol    September 2007
@@ -1202,11 +1187,13 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |   Type = 0    |unsed|O|U|B|E|    Length             |
+       |   Type = 0    | Reserved|U|B|E|    Length                     |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                              TSN                                  |
+       |                              TSN                              |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |  Stream Identifier     |   Stream Seq Number    |
+       |      Stream Identifier S      |   Stream Sequence Number n    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                  Payload Protocol Identifier                  |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        \                                                               \
        /                 User Data (seq n of Stream S)                 /
@@ -1338,6 +1325,24 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    This chunk is used to initiate an SCTP association between two
    endpoints.  The format of the INIT chunk is shown below:
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Stewart                     Standards Track                    [Page 24]
 
 RFC 4960          Stream Control Transmission Protocol    September 2007
@@ -1374,12 +1379,11 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
           Variable Parameters                  Status     Type Value
           -------------------------------------------------------------
-          IPv4 Address (Note 1)               Optional    5 
-          IPv6 Address (Note 1)               Optional    6 
-          Cookie Preservative                 Optional    9 
-          Reserved for ECN Capable (Note 2)   Optional    32768 (0x8000) 
-          Host Name Address (Note 3)          Optional    11 
-          Supported Address Types (Note 4)    Optional    12
+          IPv4 Address (Note 1)               Optional    5 IPv6 Address
+          (Note 1)               Optional    6 Cookie Preservative
+          Optional    9 Reserved for ECN Capable (Note 2)   Optional
+          32768 (0x8000) Host Name Address (Note 3)          Optional
+          11 Supported Address Types (Note 4)    Optional    12
 
    Note 1: The INIT chunks can contain multiple addresses that can be
    IPv4 and/or IPv6 in any combination.
@@ -1435,7 +1439,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       This value represents the dedicated buffer space, in number of
       bytes, the sender of the INIT has reserved in association with
       this window.  During the life of the association, this buffer
-      space SHOULD NOT be lessened 变少 (i.e., dedicated buffers taken away
+      space SHOULD NOT be lessened (i.e., dedicated buffers taken away
       from this association); however, an endpoint MAY change the value
       of a_rwnd it sends in SACK chunks.
 
@@ -1559,11 +1563,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
       Note that not using any IP Address parameters in the INIT and INIT
       ACK is an alternative to make an association more likely to work
-      across a NAT box.This is because a nat router may change the IP Adress in a 
-      outbound IP Packet. the new IPAdress can be used for furture communication
-      Other IPAddresses parameter will not work. Often, a client is single-homed
-      in LAN while a server is often multi-homed in WAN. So, this often accounters
-      for impl in server side endpoint.
+      across a NAT box.
 
 
 
@@ -1659,6 +1659,25 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    The parameter part of INIT ACK is formatted similarly to the INIT
    chunk.  It uses two extra variable parameters: The State Cookie and
    the Unrecognized Parameter:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Stewart                     Standards Track                    [Page 30]
 
@@ -1976,6 +1995,26 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       DATA chunk received in this Gap Ack Block.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Stewart                     Standards Track                    [Page 36]
 
 RFC 4960          Stream Control Transmission Protocol    September 2007
@@ -2039,8 +2078,8 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 3.3.5.  Heartbeat Request (HEARTBEAT) (4)
 
-   An endpoint should send this chunk to its peer endpoint to probe (detect) 
-   the reachability of a particular destination transport address defined in
+   An endpoint should send this chunk to its peer endpoint to probe the
+   reachability of a particular destination transport address defined in
    the present association.
 
    The parameter field contains the Heartbeat Information, which is a
@@ -2089,15 +2128,17 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 38]
+
 RFC 4960          Stream Control Transmission Protocol    September 2007
+
 
       chunk is sent and the destination transport address to which this
       HEARTBEAT is sent (see Section 8.3).  This information is simply
       reflected back by the receiver in the HEARTBEAT ACK message (see
       Section 3.3.6).  Note also that the HEARTBEAT message is both for
-      Reachability Checking and for Path Verification (see Section 5.4).
+      reachability checking and for path verification (see Section 5.4).
       When a HEARTBEAT chunk is being used for path verification
-      purposes, it MUST hold a 64-bit random nonce.(随机数;现时;临时随机数)
+      purposes, it MUST hold a 64-bit random nonce.
 
 3.3.6.  Heartbeat Acknowledgement (HEARTBEAT ACK) (5)
 
@@ -2179,14 +2220,11 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       Set to 0 on transmit and ignored on receipt.
 
       T bit: 1 bit
-      
-      Reflecting tag T bit = 0
+
       The T bit is set to 0 if the sender filled in the Verification Tag
-      expected by the peer. this is reflecting tag
-     
-      Reflected tag T bit = 1
-      The T bit is set to 1 if the sender filled in the Verification Tag
-      of its own. this is reflected tag
+      expected by the peer.  If the Verification Tag is reflected, the T
+      bit MUST be set to 1.  Reflecting means that the sent Verification
+      Tag is the same as the received one.
 
       Note: Special rules apply to this chunk for verification; please
       see Section 8.5.1 for details.
@@ -2236,7 +2274,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       Note: Since the SHUTDOWN message does not contain Gap Ack Blocks,
       it cannot be used to acknowledge TSNs received out of order.  In a
       SACK, lack of Gap Ack Blocks that were previously included
-      indicates that the data receiver reneged(违约，食言)on the associated DATA
+      indicates that the data receiver reneged on the associated DATA
       chunks.  Since SHUTDOWN does not contain Gap Ack Blocks, the
       receiver of the SHUTDOWN shouldn't interpret the lack of a Gap Ack
       Block as a renege.  (See Section 6.2 for information on reneging.)
@@ -2735,7 +2773,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
    This chunk is used only during the initialization of an association.
    It is sent by the initiator of an association to its peer to complete
-   the initialization process.  This chunk MUST precede(之前) any DATA chunk
+   the initialization process.  This chunk MUST precede any DATA chunk
    sent within the association, but MAY be bundled with one or more DATA
    chunks in the same packet.
 
@@ -2880,21 +2918,21 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
                       -----          -------- (from any state)
                     /       \      /  rcv ABORT      [ABORT]
-rcv INIT        |         |    |   ----------  or ----------
----------------    |         v   v   delete TCB     snd ABORT
-generate Cookie +----------+                 delete TCB
-snd INIT ACK       |CLOSED|
-                         +----------+
+   rcv INIT        |         |    |   ----------  or ----------
+   --------------- |         v    v   delete TCB     snd ABORT
+   generate Cookie  \    +---------+                 delete TCB
+   snd INIT ACK       ---|  CLOSED |
+                         +---------+
                           /      \      [ASSOCIATE]
                          /        \     ---------------
-                        |          |    CREATE TCB
+                        |          |    create TCB
                         |          |    snd INIT
                         |          |    strt init timer
-     rcv valid      |          |
- COOKIE  ECHO |          v
-1) ----------------   |      +-------------------+
- CREATE TCB    |      | COOKIE-WAIT | (2)
-snd COOKIEACK|     +--------------------+
+         rcv valid      |          |
+       COOKIE  ECHO     |          v
+   (1) ---------------- |      +------------+
+       create TCB       |      | COOKIE-WAIT| (2)
+       snd COOKIE ACK   |      +------------+
                         |          |
                         |          |    rcv INIT ACK
                         |          |    -----------------
@@ -2902,17 +2940,17 @@ snd COOKIEACK|     +--------------------+
                         |          |    stop init timer
                         |          |    strt cookie timer
                         |          v
-                        |      +-------------------------+
-                        |      | COOKIE-ECHOED  | (3)
-                        |      +-------------------------+
+                        |      +--------------+
+                        |      | COOKIE-ECHOED| (3)
+                        |      +--------------+
                         |          |
                         |          |    rcv COOKIE ACK
                         |          |    -----------------
                         |          |    stop cookie timer
                         v          v
-                      +---------------------+
-                      | ESTABLISHED  |
-                      +---------------------+
+                      +---------------+
+                      |  ESTABLISHED  |
+                      +---------------+
 
 
 
@@ -2962,7 +3000,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    ----------------------|    \              |
    stop shutdown timer   |     \rcv:SHUTDOWN |
    send SHUTDOWN COMPLETE|      \  (B)       |
-   DELETE TCB            |       \           |
+   delete TCB            |       \           |
                          |        \          | No more outstanding
                          |         \         |-----------------
                          |          \        | send SHUTDOWN ACK
@@ -2980,7 +3018,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
                          |                   | (C)rcv SHUTDOWN COMPLETE
                          |                   |-----------------
                          |                   | stop shutdown timer
-                         |                   | DELETE TCB 
+                         |                   | delete TCB
                          |                   |
 
 
@@ -3134,8 +3172,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    them.
 
    An endpoint MUST send the INIT ACK to the IP address from which it
-   received the INIT. (the source address in ip header is always validate 
-   but the ones in address list may not be so. eg, NAT)
+   received the INIT.
 
    Note: T1-init timer and T1-cookie timer shall follow the same rules
    given in Section 6.3.
@@ -3149,6 +3186,10 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    cause parameters with the ABORT chunk.  The Verification Tag field in
    the common header of the outbound SCTP packet containing the ABORT
    chunk MUST be set to the Initiate Tag value of the peer.
+
+
+
+
 
 Stewart                     Standards Track                    [Page 57]
 
@@ -3363,7 +3404,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    should be used to verify the MAC.
 
    An implementation SHOULD make the cookie as small as possible to
-   ensure interoperability (互操作性).
+   ensure interoperability.
 
 
 
@@ -3496,61 +3537,45 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    In the following example, "A" initiates the association and then
    sends a user message to "Z", then "Z" sends two user messages to "A"
    later (assuming no bundling or fragmentation occurs):
-    
-    Endpoint A                                                  Endpoint Z
+
+    Endpoint A                                          Endpoint Z
     {app sets association with Z}
     (build TCB)
     INIT [I-Tag=Tag_A
-          & other info]        ----- ->\
-    (Start T1-init timer)               \
-    (Enter COOKIE-WAIT state)      \--------> (compose temp TCB and Cookie_Z)
-
-
-                                                           /<---- INIT ACK [
-                                                          /             Veri Tag=Tag_A,
-                                                         /               I-Tag=Tag_Z,
-    (Cancel T1-init timer)            <------/                 Cookie_Z, 
-                                                                         OtherInfos]
-                                                                         (destroy temp TCB)
-
-    COOKIE ECHO 
-    [Cookie_Z]              -------------- >\
-    (Start T1-init timer)                    \
-    (Enter COOKIE-ECHOED state)      \----> (build TCB)
-                                                                       (Enter ESTABLISHED state) 
-                                                                       
-                                                                                                                                            
-                                                        /<-----COOKIE-ACK
-                                                       /
-    (Cancel T1-init timer)           <-----/
-    (Enter ESTABLISHED state)
+          & other info]  ------\
+    (Start T1-init timer)       \
+    (Enter COOKIE-WAIT state)    \---> (compose temp TCB and Cookie_Z)
+                                    /-- INIT ACK [Veri Tag=Tag_A,
+                                   /             I-Tag=Tag_Z,
+    (Cancel T1-init timer) <------/              Cookie_Z, & other info]
+                                         (destroy temp TCB)
+    COOKIE ECHO [Cookie_Z] ------\
+    (Start T1-init timer)         \
+    (Enter COOKIE-ECHOED state)    \---> (build TCB enter ESTABLISHED
+                                          state)
+                                   /---- COOKIE-ACK
+                                  /
+    (Cancel T1-init timer, <-----/
+     Enter ESTABLISHED state)
     {app sends 1st user data; strm 0}
     DATA [TSN=initial TSN_A
-    Strm=0,Seq=0 & user data]          -----\
-    (Start T3-rtx timer)                              \
-                                                               \--> DATA 
-                                                                           ...
-
-                                                        /<------ SACK [ TSN Ack=init, TSN_A, Block=0 ]
-                                                       /
-    (Cancel T3-rtx timer)           <-----/
-                                                                           ...
-                                                                          {app sends 2 messages;strm 0}
-                                                   /<---------           DATA
-                                                 /                        [TSN=init TSN_ZStrm=0,
-                                               /                          Seq=0,
-                                             /                            user data 1]
-                                    <-----/
-                ...
-    SACK 
-    [TSN Ack=init TSN_Z,Block=0]               /<- DATA
-                             ----------------------  --->\   /        [TSN=init TSN_Z +1,
-                                                            \/          Strm=0,
-                                                            /\          Seq=1,
-                                                          /    \        user data 2]
-                                      ..          <----/       \
-                                                                  \
-                                                                   \------> ...
+        Strm=0,Seq=0 & user data]--\
+    (Start T3-rtx timer)            \
+                                     \->
+                                   /----- SACK [TSN Ack=init
+                                  /           TSN_A,Block=0]
+    (Cancel T3-rtx timer) <------/
+                                          ...
+                                         {app sends 2 messages;strm 0}
+                                   /---- DATA
+                                  /        [TSN=init TSN_Z
+                              <--/          Strm=0,Seq=0 & user data 1]
+    SACK [TSN Ack=init TSN_Z,      /---- DATA
+          Block=0]     --------\  /        [TSN=init TSN_Z +1,
+                                \/          Strm=0,Seq=1 & user data 2]
+                         <------/\
+                                  \
+                                   \------>
 
                         Figure 4: INITIATION Example
 
@@ -3590,19 +3615,19 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    The following scenarios can cause duplicated or unexpected chunks:
 
    A) The peer has crashed without being detected, restarted itself, and
-        sent out a new INIT chunk trying to restore the association.
-        (duplicate INIT sent to an endpoint with an exsting asscition)
+      sent out a new INIT chunk trying to restore the association,
 
-   B) Both sides are trying to initialize the association at about the same time.
-       (unexpected INIT sent to an endpoint without existing assciation)
+   B) Both sides are trying to initialize the association at about the
+      same time,
 
-   C) The chunk is from a stale packet (verfig tag inconsistent) that was used to
-        establish the present association or a past association that is no longer 
-        in existence.   
+   C) The chunk is from a stale packet that was used to establish the
+      present association or a past association that is no longer in
+      existence,
 
    D) The chunk is a false packet generated by an attacker, or
 
-   E) The peer never received the COOKIE ACK and is retransmitting its COOKIE ECHO.
+   E) The peer never received the COOKIE ACK and is retransmitting its
+      COOKIE ECHO.
 
    The rules in the following sections shall be applied in order to
    identify and correctly handle these cases.
@@ -3618,96 +3643,8 @@ Stewart                     Standards Track                    [Page 65]
 
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
-// TODO - draw all cases for duplicate or unexpected setup chunks
-5.2.1.  INIT Received in COOKIE-WAIT or COOKIE-ECHOED State (Item B)  
-          Precodition: both cases below have no channel found
 
-     //Upon receipt of an INIT in the COOKIE-WAIT state\\
-    Endpoint A                                                  Endpoint Z
-    send INIT                               -------->            recv INIT 
-    [COOKIE-WAIT]                                                    
-                                                                     {send INIT-ACK}
-    {recv INIT before INIT-ACK}    <-------           {send INIT}
-                                                                     [COOKIE-WAIT]                                                              
-    send INIT ACK                       -------->           recv INIT ACK 
-    recv COOKIE-ECHO               <---------          send COOKIE-ECHO
-    [ESTABLISHED] OR [ABORT]                        [COOKIE-ECHOED]  
-    send COOKIE-ACK OR ABORT ---------->         recv COOKIE-ACK OR ABORT
-    SERVER                                                    CLIENT
-     
-    Endpoint A                                                                          
-    {app sets association with Z}                                   
-    (build TCB)                                                   
-    INIT [I-Tag=Tag_A& other info]                          
-    (Start T1-init timer)                               
-    (Enter COOKIE-WAIT state)                                                                           
-                                                                          Endpoint Z                      
-                                                           /<---------- {app sends Duplicate INIT to A} 
-                                                          / 
-    (create temp TCB and Cookie_Z) ----/    
-    INIT ACK [   
-    Veri Tag= Veri Tag from INIT_Z,
-    I-Tag= I-Tag from INIT_A,
-    Cookie created used params from INIT_A, 
-    other info from INIT_A]
-    (T1-init timer shall be still running)
-    (TCB shall be still alive)                 
-    
-
-
-     //Upon receipt of an INIT in the  COOKIE-ECHOED state\\ 
-    Endpoint A                                                  Endpoint Z
-    send INIT                               -------->            recv INIT 
-    [COOKIE-WAIT] 
-    recv INIT-ACK                        <-------           send INIT-ACK           
-    
-    CASE 1: Z recv COOKIE-ECHO before sending INIT                                                  
-    send COOKIE-ECHO               --------->         recv COOKOE-ECHO
-    [COOKIE-ECHOED]                                     [ESTABLISHED] 
-                                                                    {send COOKIE-ACK}
-    {recv INIT before COOKIE-ACK}   <---------   {send INIT} 
-    validate if NO new addr added                   sill in  [ESTABLISHED] state   
-    send INIT-ACK                       ---------->        recv INIT ACK
-                                                                    discard INIT ACK other than COOKIE-WAIT
-    recv COOKIE-ACK
-    [ESTABLISHED] 
-    
-    CASE 2: Z send INIT before recving COOKIE-ECHO
-    send COOKIE-ECHO               --------->        {send COOKIE-ACK}
-    [COOKIE-ECHOED]                                     [COOKIE-WAIT]
-    
-                                                                                 Endpoint Z 
-                                                                     /<----INIT ACK [
-                                                                   /             Veri Tag=Tag_A,
-                                                                 /               I-Tag=Tag_Z,
-                                                               /                 Cookie_Z, 
-                                                             /                   OtherInfos]
-    Endpoint A                                    /                     (destroy temp TCB)
-    (Cancel T1-init timer) <-------/  
-    COOKIE ECHO 
-    [Cookie_Z]
-    (Start T1-init timer)                    
-    (Enter COOKIE-ECHOED state)  
-                                                                          
-                                                                                                                     
-                                                                       /<---{ app sends Duplicate INIT to A } 
-                                                                     / 
-    (create temp TCB and Cookie_Z) ----/    
-    INIT ACK [   
-    Veri Tag= Veri Tag from INIT_Z,
-    I-Tag= I-Tag from INIT_A,
-    Cookie created used params from INIT_A, 
-    other info from INIT_A]
-    (T1-init timer shall be still running)
-    (TCB shall be still alive)   
-    [same process when at COOKIE-WAIT state,
-    provided that no NEW address has been added to the forming association
-    If the INIT message indicates that a new address has been added to the
-    association, compared with the addres in the INIT-ACK received from Z. 
-    then the entire INIT MUST be discarded, and NO changes
-    should be made to the existing association]
-
-
+5.2.1.  INIT Received in COOKIE-WAIT or COOKIE-ECHOED State (Item B)
 
    This usually indicates an initialization collision, i.e., each
    endpoint is attempting, at about the same time, to establish an
@@ -4518,11 +4455,11 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    received again via retransmission.  In addition, the endpoint should
    take into account the dropped data when calculating its a_rwnd.
 
-   An endpoint SHOULD NOT revoke(取消)a SACK and discard data.Only in
+   An endpoint SHOULD NOT revoke a SACK and discard data.  Only in
    extreme circumstances should an endpoint use this procedure (such as
    out of buffer space).  The data receiver should take into account
    that dropping data that has been acked in Gap Ack Blocks can result
-   in suboptimal(欠佳)retransmission strategies in the data sender and thus
+   in suboptimal retransmission strategies in the data sender and thus
    in suboptimal performance.
 
 

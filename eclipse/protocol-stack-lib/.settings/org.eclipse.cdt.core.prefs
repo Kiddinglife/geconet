@@ -1,3 +1,11 @@
 eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.lib.debug.1541522630/RootPath/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.lib.debug.1541522630/RootPath/operation=append
+environment/project/cdt.managedbuild.config.gnu.lib.debug.1541522630/RootPath/value=/home/jackiez/20160219/geco-sctp-cplus
 environment/project/cdt.managedbuild.config.gnu.lib.debug.1541522630/append=true
 environment/project/cdt.managedbuild.config.gnu.lib.debug.1541522630/appendContributed=true
+environment/project/cdt.managedbuild.config.gnu.lib.release.1205161603/RootPath/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.lib.release.1205161603/RootPath/operation=append
+environment/project/cdt.managedbuild.config.gnu.lib.release.1205161603/RootPath/value=/home/jackiez/20160219/geco-sctp-cplus
+environment/project/cdt.managedbuild.config.gnu.lib.release.1205161603/append=true
+environment/project/cdt.managedbuild.config.gnu.lib.release.1205161603/appendContributed=true

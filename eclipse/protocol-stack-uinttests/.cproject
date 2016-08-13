@@ -33,7 +33,7 @@
 								<option id="gnu.cpp.compiler.option.include.paths.54534116" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="${RootPath}/thirdparty/googletest/include"/>
 									<listOptionValue builtIn="false" value="${RootPath}/thirdparty/googlemock/include"/>
-									<listOptionValue builtIn="false" value="${RootPath}/include"/>
+									<listOptionValue builtIn="false" value="${RootPath}/src"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.1099108256" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="SERVER_BUILD"/>
@@ -44,7 +44,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.1021595831" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.198628198" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
 								<option id="gnu.cpp.link.option.libs.221273142" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" useByScannerDiscovery="false" valueType="libs">
-									<listOptionValue builtIn="false" value="protocol-stack-d"/>
+									<listOptionValue builtIn="false" value="protocolstackd"/>
 									<listOptionValue builtIn="false" value="gmock"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 								</option>

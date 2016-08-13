@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lprotocol-stack-d -lgmock -lpthread
+LIBS := -lprotocolstackd -lgmock -lpthread
 
