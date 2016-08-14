@@ -44,7 +44,6 @@
 #include <linux/rtnetlink.h>
 #else
 #include <winsock2.h>
-#include <WS2tcpip.h>
 #include <Netioapi.h>
 #include <ws2def.h>
 #include <ws2ipdef.h>

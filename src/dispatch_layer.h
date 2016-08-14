@@ -512,7 +512,7 @@ public:
     bool abort_found_with_channel_not_nil;
     bool should_discard_curr_geco_packet_;
     bool found_existed_channel_from_init_chunks_;
-    int address_type_;
+    int dest_addr_type_;
     uint ip4_saddr_;
     in6_addr* ip6_saddr_;
     uint total_chunks_count_;
@@ -1432,8 +1432,7 @@ public:
     /**
      *   @return pointer to the retrieved association, or NULL
      */
-    geco_instance_t* find_geco_instance_by_transport_addr(
-        sockaddrunion* dest_addr, uint address_type);
+    geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr, ushort dest_port);
     bool cmp_geco_instance(const geco_instance_t& a,
         const geco_instance_t& b);
 

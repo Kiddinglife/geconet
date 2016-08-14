@@ -64,6 +64,7 @@
 #include <thread.h>
 #include <synch.h>
 #elif defined(GECO_WIN32THREADS)
+#define WIN32_LEAN_AND_MEAN 
 #include <windows.h>
 #endif
 

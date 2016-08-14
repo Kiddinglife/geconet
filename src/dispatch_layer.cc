@@ -1,8 +1,7 @@
-#include <algorithm>
 #include "dispatch_layer.h"
-#include "geco-ds-malloc.h"
 #include "transport_layer.h"
 #include "auth.h"
+#include "geco-ds-malloc.h"
 
 dispatch_layer_t::dispatch_layer_t()
 {
@@ -82,38 +81,44 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     if (last_src_port_ == 0 || last_dest_port_ == 0)
     {
         /* refers to RFC 4960 Section 3.1 at line 867 and line 874*/
-        ERRLOG(MINOR_ERROR,
-            " dispatch_layer_t::recv_geco_packet():: invalid ports number (0)\n");
+        ERRLOG(MINOR_ERROR, "dispatch_layer_t::recv_geco_packet():: invalid ports number (0)\n");
         last_src_port_ = 0;
         last_dest_port_ = 0;
         return;
     }
 
     /* 3) validate ip addresses
-     #include <netinet/in.h>
-     int IN6_IS_ADDR_UNSPECIFIED(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_LOOPBACK(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_MULTICAST(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_LINKLOCAL(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_SITELOCAL(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_V4MAPPED(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_V4COMPAT(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_MC_NODELOCAL(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_MC_LINKLOCAL(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_MC_SITELOCAL(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_MC_ORGLOCAL(const struct in6_addr * aptr);
-     int IN6_IS_ADDR_MC_GLOBAL(const struct in6_addr * aptr);
-     //返回值：非零表示IPv6地址是指定类型的，否则返回零 */
-    switch (saddr_family(dest_addr))
+    #include <netinet/in.h>
+    int IN6_IS_ADDR_UNSPECIFIED(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_LOOPBACK(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_MULTICAST(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_LINKLOCAL(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_SITELOCAL(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_V4MAPPED(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_V4COMPAT(const struct in6_addr * aptr);
+    // multicast macros
+    int IN6_IS_ADDR_MC_NODELOCAL(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_MC_LINKLOCAL(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_MC_SITELOCAL(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_MC_ORGLOCAL(const struct in6_addr * aptr);
+    int IN6_IS_ADDR_MC_GLOBAL(const struct in6_addr * aptr);
+    //返回值：非零表示IPv6地址是指定类型的，否则返回零
+    Note: A sender MUST NOT use an IPv4-mapped IPv6 address [RFC4291],
+    but should instead use an IPv4 Address parameter for an IPv4 address.
+    */
+    dest_addr_type_ = saddr_family(dest_addr);
+    if (dest_addr_type_ == AF_INET)
     {
-    case AF_INET:
+        dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV4; // peer snd us an IP4-formate address
         source_addr->sin.sin_port = curr_geco_packet_fixed_->src_port;
         dest_addr->sin.sin_port = curr_geco_packet_fixed_->dest_port;
-        address_type_ = SUPPORT_ADDRESS_TYPE_IPV4;
+
         ip4_saddr_ = ntohl(dest_addr->sin.sin_addr.s_addr);
-        if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_)
-            || IN_BADCLASS(ip4_saddr_) || (INADDR_ANY == ip4_saddr_)
-            || (INADDR_BROADCAST == ip4_saddr_))
+        if (IN_CLASSD(ip4_saddr_) ||
+            IN_EXPERIMENTAL(ip4_saddr_) ||
+            IN_BADCLASS(ip4_saddr_) ||
+            (INADDR_ANY == ip4_saddr_) ||
+            (INADDR_BROADCAST == ip4_saddr_))
             should_discard_curr_geco_packet_ = true;
 
         ip4_saddr_ = ntohl(source_addr->sin.sin_addr.s_addr);
@@ -121,85 +126,79 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             || IN_BADCLASS(ip4_saddr_) || (INADDR_ANY == ip4_saddr_)
             || (INADDR_BROADCAST == ip4_saddr_))
             should_discard_curr_geco_packet_ = true;
-        /* we should not should_discard_curr_geco_packet_ the msg
-         * sent to ourself
-         * if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr))
-         *  &&(source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr))
-         *  should_discard_curr_geco_packet_ = true;*/
+
+        /* COMMENT HERE MEANS msg sent to ourself is allowed
+        * if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr))
+        *  &&(source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr))
+        *  should_discard_curr_geco_packet_ = true;*/
         EVENTLOG1(VERBOSE,
-            "dispatch_layer_t::recv_geco_packet()::checking for correct IPV4 addresses (%d)\n",
+            "dispatch_layer_t::recv_geco_packet()::filter out IPV4 addresses result (%d)\n",
             should_discard_curr_geco_packet_);
-        break;
-    case AF_INET6:
-        EVENTLOG(VERBOSE,
-            "recv_geco_packet: checking for correct IPV6 addresses\n");
-        address_type_ = SUPPORT_ADDRESS_TYPE_IPV6;
+    }
+    else if (dest_addr_type_ == AF_INET6)
+    {
+        dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV6;// peer snd us an IP6-formate address
         source_addr->sin6.sin6_port = curr_geco_packet_fixed_->src_port;
         dest_addr->sin6.sin6_port = curr_geco_packet_fixed_->dest_port;
+
         ip6_saddr_ = &(dest_addr->sin6.sin6_addr);
-        if (IN6_IS_ADDR_UNSPECIFIED(
-            ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_))
+        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) ||
+            IN6_IS_ADDR_MULTICAST(ip6_saddr_) ||
+            IN6_IS_ADDR_V4COMPAT(ip6_saddr_) ||
+            IN6_IS_ADDR_V4MAPPED(ip6_saddr_) ||
+            IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
             should_discard_curr_geco_packet_ = true;
-        //            if (IN6_IS_ADDR_V4COMPAT(&(ip6_saddr_)))
-        //                should_discard_curr_geco_packet_ = true;
+
         ip6_saddr_ = &(source_addr->sin6.sin6_addr);
-        if (IN6_IS_ADDR_UNSPECIFIED(
-            ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_))
+        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) ||
+            IN6_IS_ADDR_MULTICAST(ip6_saddr_) ||
+            IN6_IS_ADDR_V4COMPAT(ip6_saddr_) ||
+            IN6_IS_ADDR_V4MAPPED(ip6_saddr_) ||
+            IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
             should_discard_curr_geco_packet_ = true;
-        //            if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr)))
-        //                should_discard_curr_geco_packet_ = true;
-                /*
-                 if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
-                 IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
-                 &(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true;
-                 */
+        /* comment here means msg sent to ourself is allowed
+        * if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
+        * IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
+        * &(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true;
+        */
         EVENTLOG1(VERBOSE,
-            "dispatch_layer_t::recv_geco_packet()::checking for correct IPV6 addresses (%d)\n",
+            "dispatch_layer_t::recv_geco_packet()::filter out IPV6 addresses result (%d)\n",
             should_discard_curr_geco_packet_);
-        break;
-    default:
-        ERRLOG(FALTAL_ERROR_EXIT,
-            "recv_geco_packet()::Unsupported AddressType Received !\n");
+    }
+    else
+    {
+        // we only supports IP archetecture either ip4 or ip6 so discard it
         should_discard_curr_geco_packet_ = true;
-        break;
     }
 
-#ifdef _DEBUG
     saddr2str(source_addr, src_addr_str_, MAX_IPADDR_STR_LEN, NULL);
     saddr2str(dest_addr, dest_addr_str_, MAX_IPADDR_STR_LEN, NULL);
-    EVENTLOG5(EXTERNAL_TRACE,
-        "recv_geco_packet : packet_val_len %d, sourceaddress : %s, src_port %u,dest: %s, dest_port %u",
-        dctp_packet_len, src_addr_str_, last_src_port_, dest_addr_str_,
-        last_dest_port_);
-#endif
-
     if (should_discard_curr_geco_packet_)
     {
         last_src_port_ = 0;
         last_dest_port_ = 0;
-        saddr2str(source_addr, src_addr_str_, MAX_IPADDR_STR_LEN, NULL);
-        saddr2str(dest_addr, dest_addr_str_, MAX_IPADDR_STR_LEN, NULL);
         EVENTLOG2(VERBOSE,
-            "recv_geco_packet()::discarding packet for incorrect address\n src addr : %s,\ndest addr%s",
-            src_addr_str_, dest_addr_str_);
+            "recv_geco_packet()::discarding packet for incorrect address\n src addr : %s:%d, dest addr%s:%d\n",
+            src_addr_str_, last_src_port_, dest_addr_str_, last_dest_port_);
         return;
     }
-
-    last_source_addr_ = source_addr;
-    last_dest_addr_ = dest_addr;
+    else
+    {
+        // we can assign addr as they are good to use now
+        last_source_addr_ = source_addr;
+        last_dest_addr_ = dest_addr;
+    }
 
     /*4) find the endpoint for this packet */
-    curr_channel_ = find_channel_by_transport_addr(last_source_addr_,
-        last_src_port_, last_dest_port_);
+    curr_channel_ = find_channel_by_transport_addr(last_source_addr_, last_src_port_, last_dest_port_);
     if (curr_channel_ != NULL)
     {
-        EVENTLOG(INTERNAL_TRACE, "Found channel from this packet!");
+        EVENTLOG(VERBOSE, "Found channel !\n");
         /*5) get the sctp instance for this packet from channel*/
         curr_geco_instance_ = curr_channel_->geco_inst;
         if (curr_geco_instance_ == NULL)
         {
-            ERRLOG(FALTAL_ERROR_EXIT,
-                "Foundchannel, but no geo Instance, FIXME !");
+            ERRLOG(MAJOR_ERROR, "Foundchannel, but no geo Instance -> abort app -> FIXME !\n");
             return;
         }
         else
@@ -215,17 +214,14 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
      *  it matches the packet's destination port) */
     else
     {
-        curr_geco_instance_ = find_geco_instance_by_transport_addr(dest_addr,
-            address_type_);
+        curr_geco_instance_ = find_geco_instance_by_transport_addr(dest_addr, last_dest_port_);
         if (curr_geco_instance_ == NULL)
         {
             /* 7) may be an an endpoint that is a client (with instance port 0) */
-            EVENTLOG1(VERBOSE,
-                "Couldn't find SCTP Instance for Port %u and Address in List !",
-                last_dest_port_);
-            // in default can handle ip4and6 packet
-            my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4
-                | SUPPORT_ADDRESS_TYPE_IPV6;
+            EVENTLOG1(VERBOSE, "Couldn't find SCTP Instance for Port %u and Address in List !", last_dest_port_);
+            // actually this is special case see validate_dest_addr() for details
+            // here we just give it a value, in default can handle ip4and6 packet 
+            my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
         }
         else
         {
@@ -244,8 +240,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
      * so we must call it right here */
     if (!validate_dest_addr(dest_addr))
     {
-        EVENTLOG(VERBOSE,
-            "recv_geco_packet()::this packet is not for me, DISCARDING !!!");
+        EVENTLOG(VERBOSE, "recv_geco_packet()::this packet is not for me, DISCARDING !!!");
         clear();
         return;
     }
@@ -254,7 +249,6 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
     chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk,
         curr_geco_packet_value_len_, &total_chunks_count_);
-
     tmp_peer_addreslist_size_ = 0;
     curr_uchar_init_chunk_ = NULL;
 
@@ -266,11 +260,11 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         || (init_chunk_num_ == 1 && total_chunks_count_ > 1))
     {
         /* silently should_discard_curr_geco_packet_ */
-        ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (init ack is not only one !)\n");
+        ERRLOG(MINOR_ERROR, "recv_geco_packet(): discarding illegal packet (init ack is not only one !)\n");
         clear();
         return;
     }
+
     init_chunk_num_ = contains_chunk(CHUNK_INIT_ACK, chunk_types_arr_);
     if (init_chunk_num_ > 1 || /*only one int ack with other type chunks*/
         (init_chunk_num_ == 1 && total_chunks_count_ > 1)
@@ -282,13 +276,13 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
         clear();
         return;
     }
+
     init_chunk_num_ = contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_);
     if (init_chunk_num_ > 1
         || (init_chunk_num_ == 1 && total_chunks_count_ > 1))
     {
         /* silently should_discard_curr_geco_packet_ */
-        ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)\n");
+        ERRLOG(MINOR_ERROR, "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)\n");
         clear();
         return;
     }
@@ -298,6 +292,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
     found_init_chunk_ = false;
     init_chunk_fixed_ = NULL;
     vlparam_fixed_ = NULL;
+
     /* founda matching channel using the source addr
      * from init chunk's addrlist vlp, default false*/
     found_existed_channel_from_init_chunks_ = false;
@@ -3168,8 +3163,8 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
             ERRLOG(MAJOR_ERROR,
                 "contains_local_host_addr():no such addr family!");
             ret = false;
-            }
-            }
+        }
+    }
 
     /*2) otherwise try to find from local addr list stored in curr geco instance*/
     if (curr_geco_instance_ != NULL)
@@ -3225,7 +3220,7 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
         }
     }
     return ret;
-        }
+}
 
 int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
     sockaddrunion* foundAddress, int supportedAddressTypes)
@@ -3578,22 +3573,23 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a,
     }
 }
 
-geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(
-    sockaddrunion* dest_addr, uint address_type)
+geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(sockaddrunion* dest_addr, ushort dest_port)
 {
     if (geco_instances_.size() == 0)
     {
-        geco_inst_not_found_reason_ = GECO_INST_NOT_STARTED;
+        ERRLOG(MAJOR_ERROR, "dispatch_layer_t::find_geco_instance_by_transport_addr()::geco_instances_.size() == 0");
         return NULL;
     }
 
     /* search for this endpoint from list*/
-    tmp_geco_instance_.local_port = last_dest_port_;
+    tmp_geco_instance_.local_port = dest_port;
     tmp_geco_instance_.local_addres_size = 1;
     tmp_geco_instance_.local_addres_list = dest_addr;
-    tmp_geco_instance_.supportedAddressTypes = address_type;
     tmp_geco_instance_.is_in6addr_any = false;
     tmp_geco_instance_.is_inaddr_any = false;
+    // as we use saddr_equals() to compare addr which internally compares addr type
+    // so it is not required actually can removed 
+    //tmp_geco_instance_.supportedAddressTypes = address_type;
 
     geco_instance_t* result = NULL;
     for (auto& i : geco_instances_)
@@ -3726,67 +3722,62 @@ bool dispatch_layer_t::cmp_channel(const channel_t& a, const channel_t& b)
 bool dispatch_layer_t::validate_dest_addr(sockaddrunion * dest_addr)
 {
     /* 1)
-     * this case will be specially treated
-     * after the call to validate_dest_addr()*/
-    if (curr_geco_instance_ == NULL && curr_channel_ == NULL)
-        return true;
+    this case will be specially treatedafter the call to validate_dest_addr()
+    reason is there is a special case that when channel not found as src addr unequals
+    and inst not found as dest addr unequals, if this packet is setup chunk, we probably stil can
+    find a previous channel with the a new src addr found in init chunk address parameters,
+    old src port and old dest port, and this precious channel must have a non-null inst
+     so here we return true to let the follwoing codes to handle this case.
+    */
+    if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return true;
 
     uint j;
+    // here we have checked src addr in find channel mtd now
+    // we need make sure dst src is also presenting in channel's local_addr_list
     if (curr_channel_ != NULL)
     {
-        /* 2) check if it is in curr_channel_'s local addresses list*/
+        /* 2) check if dest saadr and type in curr_channel_'s local addresses list*/
         for (j = 0; j < curr_channel_->local_addres_size; j++)
         {
+            // a channel will never have any local aadr nor any remote addrdiferent channels 
+            // will have the same local port same to the one in relative geco instance
+            // at this moment dest port in dest_addr must be equal to the one found in local addres list
             if (saddr_equals(&curr_channel_->local_addres[j], dest_addr))
             {
-                EVENTLOG2(VERBOSE,
-                    "dispatch_layer_t::validate_dest_addr()::Checking dest addr  %x, local %x",
-                    s4addr(dest_addr),
-                    s4addr(&(curr_channel_->local_addres[j])));
+                EVENTLOG(VVERBOSE, "dispatch_layer_t::validate_dest_addr()::found equal dest addr\n");
                 return true;
             }
         }
     }
 
+    /* 3) refer to 5.1.2 . Handle Address Parameters
+    IMPLEMENTATION NOTE: If an SCTP endpoint that only supports either
+    IPv4 or IPv6 receives IPv4 and IPv6 addresses in an INIT or INIT ACK
+    chunk from its peer, it MUST use all the addresses belonging to the
+    supported address family.  The other addresses MAY be ignored.  The
+    endpoint SHOULD NOT respond with any kind of error indication.
+    so, no matter what addr types we support here (ip4 or ip6 or ip4 and 6),
+    we have to return true so that we can process further other addrs contained
+    in this packet (as it may be INIT chunk with some addres we support).
+    we have found dest addr and dest port in find_geco_inst mtd previously
+    with curr_geco_instance_ != NULL, this means dest addr and type voth equals
+    */
     ushort af = saddr_family(dest_addr);
-    bool any_set = false;
-
-    /* 3) check whether _instance_ has INADDR_ANY
-     * curr_geco_instance_ MUST NOT be null at the moment */
     if (curr_geco_instance_ != NULL)
     {
-        if (curr_geco_instance_->is_inaddr_any)
-        {
-            any_set = true;
-
-            if (af == AF_INET)
-                return true;
-
-            if (af == AF_INET6)
-                return false;
+        if (curr_geco_instance_->is_inaddr_any && curr_geco_instance_->is_in6addr_any)
+        {//we supports both of ip4and6
+            if (af == AF_INET || af == AF_INET6) return true;
         }
-
-        if (curr_geco_instance_->is_in6addr_any)
-        {
-            any_set = true;
-
-            if (af == AF_INET || af == AF_INET6)
-                return true;
+        if (curr_geco_instance_->is_in6addr_any && !curr_geco_instance_->is_inaddr_any)
+        {//we only supports ip6
+            if (af == AF_INET6) return true;
         }
-
-        if (any_set)
-            return false;
-
-        /* 4) search through local address list of this dctp instance */
-        for (j = 0; j < curr_geco_instance_->local_addres_size; j++)
-        {
-            if (saddr_equals(dest_addr,
-                &(curr_geco_instance_->local_addres_list[j])))
-            {
-                return true;
-            }
+        if (!curr_geco_instance_->is_in6addr_any && curr_geco_instance_->is_inaddr_any)
+        {//we only supports ip4
+            if (af == AF_INET) return true;
         }
     }
-
     return false;
 }
+
