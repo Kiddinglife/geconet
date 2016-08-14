@@ -1433,8 +1433,7 @@ public:
      *   @return pointer to the retrieved association, or NULL
      */
     geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr, ushort dest_port);
-    bool cmp_geco_instance(const geco_instance_t& a,
-        const geco_instance_t& b);
+    bool cmp_geco_instance(const geco_instance_t& a,const geco_instance_t& b);
 
     /**
      * after geco_inst and  channel have been found for an

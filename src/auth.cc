@@ -427,10 +427,8 @@ int validate_crc32_checksum(char *buffer, int length)
     /* save and zero checksum */
     message = (geco_packet_t *)buffer;
     original_crc32 = ntohl(message->pk_comm_hdr.checksum);
-    EVENTLOG1(VERBOSE, "DEBUG Validation : old crc32c == %x", original_crc32);
     message->pk_comm_hdr.checksum = 0;
     crc32 = generate_crc32c(buffer, length);
-    EVENTLOG1(VERBOSE, "DEBUG Validation : my crc32c == %x", crc32);
     return ((original_crc32 == crc32) ? 1 : 0);
 }
 int set_crc32_checksum(char *buffer, int length)
