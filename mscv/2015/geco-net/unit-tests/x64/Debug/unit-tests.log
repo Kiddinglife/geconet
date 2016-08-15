@@ -19,8 +19,8 @@ d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h : warning C4819: The fi
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h(809): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h(1762): warning C4244: 'argument': conversion from 'unsigned __int64' to 'u_short', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(595): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h(1761): warning C4244: 'argument': conversion from 'unsigned __int64' to 'u_short', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(599): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(2238): note: see declaration of 'gethostbyname'
 d:\vs-workspace\geco-protocol-stack\unittets\unit_tests.cpp(188): warning C4267: 'argument': conversion from 'size_t' to 'unsigned int', possible loss of data
 d:\vs-workspace\geco-protocol-stack\unittets\unit_tests.cpp(196): warning C4267: 'argument': conversion from 'size_t' to 'unsigned int', possible loss of data
@@ -37,10 +37,9 @@ d:\vs-workspace\geco-protocol-stack\unittets\unit_tests.cpp(1016): warning C4996
 d:\vs-workspace\geco-protocol-stack\unittets\unit_tests.cpp(1390): warning C4305: 'initializing': truncation from 'int' to 'uchar'
 d:\vs-workspace\geco-protocol-stack\unittets\unit_tests.cpp(1390): warning C4309: 'initializing': truncation of constant value
 d:\vs-workspace\geco-protocol-stack\unittets\unit_tests.cpp(1391): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-  test-main.cc
-  Generating Code...
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1189,5): warning MSB8012: TargetPath(D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\unit-tests-ps-lib.exe) does not match the Linker's OutputFile property value (D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_unit-tests-ps-lib_Debugx64.exe). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1191,5): warning MSB8012: TargetName(unit-tests-ps-lib) does not match the Linker's OutputFile property value (geco-protocol-stack_unit-tests-ps-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+  LINK : D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_unit-tests-ps-lib_Debugx64.exe not found or not built by the last incremental link; performing full link
 gmock_Debugx64.lib(gmock-all.obj) : warning LNK4099: PDB 'gmock.pdb' was not found with 'gmock_Debugx64.lib(gmock-all.obj)' or at 'D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\gmock.pdb'; linking object as if no debug info
 gmock_Debugx64.lib(gtest-all.obj) : warning LNK4099: PDB 'gmock.pdb' was not found with 'gmock_Debugx64.lib(gtest-all.obj)' or at 'D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\gmock.pdb'; linking object as if no debug info
   unit-tests.vcxproj -> D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\unit-tests-ps-lib.exe

@@ -1400,7 +1400,9 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         }
 
         /* check if source address is in address list of this association.
-         tbd: check the draft if this is correct. */
+         tbd: check the draft if this is correct. 
+         thi can improved we can update src path when we retrive channel using src
+         */
         if (sourceAddressExists == FALSE)
         {
             for (i = 0; i < currentAssociation->noOfNetworks; i++)

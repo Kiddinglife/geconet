@@ -1368,6 +1368,9 @@ class dispatch_layer_t
          * TODO hash(src_addr, src_port, dest_port) as key for channel to
          * improve the performaces. */
         channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr, ushort src_port, ushort dest_port);
+
+        // this mothod will set last_src_path_ to the one found src's 
+        // index in channel's remote addr list
         bool cmp_channel(const channel_t& a, const channel_t& b);
 
         /**
