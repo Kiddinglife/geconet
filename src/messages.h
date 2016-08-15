@@ -131,9 +131,9 @@ struct chunk_fixed_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
 struct data_chunk_fixed_t
 {
-        uint trans_seq_num; // unrealiable msg has NO this field
+        uint trans_seq_num;  // unrealiable msg has NO this field
         ushort stream_identity;
-        ushort stream_seq_num; // unordered msg has NO this field
+        ushort stream_seq_num;  // unordered msg has NO this field
 };
 struct data_chunk_t
 {
@@ -150,7 +150,7 @@ struct data_chunk_fixed_notsn_t
 {
         //uint trans_seq_num; // unrealiable msg has NO this field
         ushort stream_identity;
-        ushort stream_seq_num; // unordered msg has NO this field
+        ushort stream_seq_num;  // unordered msg has NO this field
 };
 struct data_chunk_notsn_t
 {
@@ -165,7 +165,7 @@ struct data_chunk_notsn_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSN_SIZES)
 struct data_chunk_fixed_nossn_t
 {
-        uint trans_seq_num; // unrealiable msg has NO this field
+        uint trans_seq_num;  // unrealiable msg has NO this field
         ushort stream_identity;
         //ushort stream_seq_num; // unordered msg has NO this field
 };
@@ -473,13 +473,11 @@ struct error_cause_t
         uchar error_reason[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
-const static char* ECCSTRS[32] = { "ECC_INVALID_STREAM_ID",
-        "ECC_MISSING_MANDATORY_PARAM", "ECC_STALE_COOKIE_ERROR",
-        "ECC_OUT_OF_RESOURCE_ERROR", "ECC_UNRESOLVABLE_ADDRESS",
-        "ECC_UNRECOGNIZED_CHUNKTYPE", "ECC_INVALID_MANDATORY_PARAM",
-        "ECC_UNRECOGNIZED_PARAMS", "ECC_NO_USER_DATA",
-        "ECC_COOKIE_RECEIVED_DURING_SHUTDWN", "ECC_RESTART_WITH_NEW_ADDRESSES",
-        "ECC_USER_INITIATED_ABORT", "ECC_PROTOCOL_VIOLATION",
+const static char* ECCSTRS[32] =
+{ "ECC_INVALID_STREAM_ID", "ECC_MISSING_MANDATORY_PARAM", "ECC_STALE_COOKIE_ERROR", "ECC_OUT_OF_RESOURCE_ERROR",
+        "ECC_UNRESOLVABLE_ADDRESS", "ECC_UNRECOGNIZED_CHUNKTYPE", "ECC_INVALID_MANDATORY_PARAM",
+        "ECC_UNRECOGNIZED_PARAMS", "ECC_NO_USER_DATA", "ECC_COOKIE_RECEIVED_DURING_SHUTDWN",
+        "ECC_RESTART_WITH_NEW_ADDRESSES", "ECC_USER_INITIATED_ABORT", "ECC_PROTOCOL_VIOLATION",
         "ECC_PEER_INSTANCE_NOT_FOUND", "ECC_PEER_NOT_LISTENNING_PORT" };
 
 // Error reson codes
@@ -504,6 +502,7 @@ const static char* ECCSTRS[32] = { "ECC_INVALID_STREAM_ID",
 #define ECC_OP_REFUSED_NO_RESOURCES     17
 #define ECC_DELETE_SOURCE_ADDRESS       18
 #define ECC_INIT_CHUNK_VER_TAG_NOT_ZERO        19
+#define ECC_NO_DEST_PORT_OR_ADDR 20
 
 // Error REASON param defs
 struct stale_cookie_err_t
