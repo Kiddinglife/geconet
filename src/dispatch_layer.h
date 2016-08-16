@@ -502,9 +502,9 @@ class dispatch_layer_t
         bool do_dns_query_for_host_name_;
         char src_addr_str_[MAX_IPADDR_STR_LEN];
         char dest_addr_str_[MAX_IPADDR_STR_LEN];
-        bool init_found_with_channel_not_nil;
-        bool cookie_echo_found_with_channel_not_nil;
-        bool abort_found_with_channel_not_nil;
+        bool is_found_init_chunk_;
+        bool is_found_cookie_echo_;
+        bool is_found_abort_chunk_;
         bool should_discard_curr_geco_packet_;
         bool found_existed_channel_from_init_chunks_;
         int dest_addr_type_;
@@ -724,6 +724,7 @@ class dispatch_layer_t
                 ERRLOG(MAJOR_ERROR, "get_curr_channel_state: NULL");
                 return ChannelState::Closed;
             }
+#ifdef _DEBUG
             switch (smctrl->channel_state)
             {
                 case ChannelState::Closed:
@@ -755,6 +756,7 @@ class dispatch_layer_t
                     return ChannelState::Closed;
                     break;
             }
+#endif
             return smctrl->channel_state;
         }
 

@@ -1556,7 +1556,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 return;
             }
         }
-
+        
         if (!cookieEchoFound && !initFound && !abortFound
                 && lastInitiateTag != currentAssociation->tagLocal)
         {

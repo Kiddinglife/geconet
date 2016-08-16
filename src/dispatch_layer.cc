@@ -15,7 +15,7 @@ dispatch_layer_t::dispatch_layer_t()
     found_init_chunk_ = false;
     defaultlocaladdrlistsize_ = 0;
     found_existed_channel_from_init_chunks_ = false;
-    abort_found_with_channel_not_nil = false;
+    is_found_abort_chunk_ = false;
     tmp_peer_supported_types_ = 0;
     my_supported_addr_types_ = 0;
     curr_channel_ = NULL;
@@ -341,14 +341,15 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
         }
     }
 
-    init_found_with_channel_not_nil = false;
-    cookie_echo_found_with_channel_not_nil = false;
-    abort_found_with_channel_not_nil = false;
+    is_found_init_chunk_ = false;
+    is_found_cookie_echo_ = false;
+    is_found_abort_chunk_ = false;
 
     /* 13) process non-OOTB chunks that belong to a found channel */
     if (curr_channel_ != NULL)
     {
         EVENTLOG(VERBOSE, "recv_geco_packet()::Process non-OOTB chunks");
+
         /*13.1 valdate curr_geco_instance_*/
         if (curr_geco_instance_ == NULL)
         {
@@ -387,10 +388,9 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
          Tag set to 0, it should verify that the packet contains only an
          INIT chunk.  Otherwise, the receiver MUST silently should_discard_curr_geco_packet_ the
          packet.*/
-
         if (curr_uchar_init_chunk_ == NULL)  // we MAY have found it from 11) at line 290
-            curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
-                CHUNK_INIT);
+            curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk,
+                curr_geco_packet_value_len_, CHUNK_INIT);
 
         /*process_init_chunk() will furtherly handle this INIT chunk in the follwing method
          here we just validate some fatal errors*/
@@ -398,9 +398,10 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
         {
             // we have tested it INIT, init-ack and shutdown complete is the only chunk above
             // at 10) at line 240
-            init_found_with_channel_not_nil = true;
+            is_found_init_chunk_ = true;
 
-            // make sure init chunk has zero ver tag last_init_tag_ has be aisigned a value at above
+            // make sure init chunk has zero ver tag 
+            // last_init_tag_ has be aisigned a value at above
             if (last_init_tag_ != 0)
             {
                 ERRLOG(MINOR_ERROR,
@@ -446,31 +447,28 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
          */
         if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0)
         {
-            if (init_found_with_channel_not_nil)
-            {
-                EVENTLOG(VERBOSE, "Found ABORT with INIT chunk also presents-> should_discard_curr_geco_packet_!");
-                clear();
-                return;
-            }
-
-            EVENTLOG(VERBOSE, "recv_geco_packet()::Found ABORT with channel found -> processing!");
-            abort_found_with_channel_not_nil = true;
-            uchar* abortchunk = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_, CHUNK_ABORT);
+            uchar* abortchunk = find_first_chunk_of(curr_geco_packet_->chunk,
+                curr_geco_packet_value_len_, CHUNK_ABORT);
             bool is_tbit_set = ((chunk_fixed_t*)abortchunk)->chunk_flags == 1;
-
-            if (!(is_tbit_set && last_init_tag_ == curr_channel_->remote_tag)
-                && !(!is_tbit_set && last_init_tag_ == curr_channel_->local_tag))
+            if ((is_tbit_set && last_init_tag_ == curr_channel_->remote_tag) ||
+                (!is_tbit_set && last_init_tag_ == curr_channel_->local_tag))
             {
+#ifdef _DEBUG
+                EVENTLOG2(VERBOSE,
+                    "recv_geco_packet()::Found ABORT with channel found, is_tbit_set(%zu), last_init_tag_(%zu)-> processing!\n", is_tbit_set, last_init_tag_);
+#endif
+                is_found_abort_chunk_ = true;
+            }
+            else
+            {
+                EVENTLOG(VERBOSE,
+                    "recv_geco_packet()::Found ABORT with channel found, but verifi tag is illegal-> discard !\n");
                 clear();
-                EVENTLOG(VERBOSE, " T-BIT illegal -> should_discard_curr_geco_packet_!");
                 return;
             }
-            abort_found_with_channel_not_nil = true;
         }
 
-        /*13.4 CHUNK_SHUTDOWN_COMPLETE
-         see RFC 4960
-         8.5.1.  Exceptions in Verification Tag Rules
+        /*13.4)  see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
          C) Rules for packet carrying SHUTDOWN COMPLETE:
          -   When sending a SHUTDOWN COMPLETE, if the receiver of the SHUTDOWN
          ACK has a TCB, then the destination endpoint's tag MUST be used,
@@ -507,8 +505,7 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
             }
         }
 
-        /*13.5 CHUNK_SHUTDOWN_ACK
-         see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
+        /*13.5) see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
          see E) Rules for packet carrying a SHUTDOWN ACK
          -   If the receiver is in COOKIE-ECHOED or COOKIE-WAIT state the
          procedures in Section 8.4 SHOULD be followed; in other words, it
@@ -551,32 +548,21 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
             }
         }
 
-        /*13.6 CHUNK_COOKIE_ECHO
-         see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
+        /* 13.6) see RFC 4960 8.5.1.  Exceptions in Verification Tag Rules
          D) Rules for packet carrying a COOKIE ECHO
          -   When sending a COOKIE ECHO, the endpoint MUST use the value of
          the Initiate Tag received in the INIT ACK.
-         -   The receiver of a COOKIE ECHO follows the procedures in Section
-         5.2.1.*/
+         -   The receiver of a COOKIE ECHO follows the procedures in Section 5.2.1. */
         if (contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0)
         {
-            // this is treated as normal init pharse, give it to nomral precedures
-            // in section 5 to handle this, now we just validate ver tag
-            if (curr_geco_packet_fixed_->verification_tag != curr_channel_->local_tag)
-            {
-                EVENTLOG(WARNNING_ERROR,
-                    "recv_geco_packet()::Found CHUNK_COOKIE_ECHO in non-packet, ver tag != local tag -> should_discard_curr_geco_packet_!");
-                clear();
-                return;
-            }
-            else
-            {
-                EVENTLOG(VERBOSE, "recv_geco_packet()::Found CHUNK_COOKIE_ECHO in non-packet -> processing!");
-            }
-
+            // there are many deails in this case where we have to validate cookie jar, 
+            // here we just print it out and process further in another dedicated method
+#ifdef _DEBUG
+            EVENTLOG(VERBOSE, "recv_geco_packet()::Recv CHUNK_COOKIE_ECHO with channel found !\n");
+#endif
         }
 
-        /*13.6
+        /* 13.6)
          5.2.3.  Unexpected INIT ACK
          If an INIT ACK is received by an endpoint in any state other than the
          COOKIE-WAIT state, the endpoint should should_discard_curr_geco_packet_ the INIT ACK chunk.
@@ -602,14 +588,21 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
                 // need do DNS QUERY instead of simply ABORT
                 do_dns_query_for_host_name_ = true;
             }
+        }
 
-            if (curr_geco_packet_fixed_->verification_tag != curr_channel_->local_tag)
-            {
-                EVENTLOG(WARNNING_ERROR,
-                    "recv_geco_packet()::Found CHUNK_INIT_ACK in non-packet, ver tag != local tag -> should_discard_curr_geco_packet_!");
-                clear();
-                return;
-            }
+        /* 13.7)
+        // finally verify verifi tag in this packet
+        // init chunj must has zero verifi tag value except of it
+        // abort chunk has T bit set cannot that has its own filtering conditions */
+        if (!is_found_init_chunk_ &&
+            !is_found_abort_chunk_ &&
+            last_init_tag_ != curr_channel_->local_tag)
+        {
+
+            EVENTLOG(WARNNING_ERROR,
+                "recv_geco_packet()::non-ootb-packet with channel founs, but verifi tag != channel's local tag -> discard !\n!");
+            clear();
+            return;
         }
     }
     else  // (curr_channel_ == NULL)
@@ -2840,8 +2833,8 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
         default:
             ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
             ret = false;
-            }
         }
+    }
 
     /*2) otherwise try to find from local addr list stored in curr geco instance*/
     if (curr_geco_instance_ != NULL)
@@ -2892,7 +2885,7 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
         }
     }
     return ret;
-    }
+}
 
 int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n, sockaddrunion* foundAddress,
     int supportedAddressTypes)
