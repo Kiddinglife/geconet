@@ -184,6 +184,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\auth.cc" />
+    <ClCompile Include="..\..\..\..\src\chunk_factory.cpp" />
     <ClCompile Include="..\..\..\..\src\dispatch_layer.cc" />
     <ClCompile Include="..\..\..\..\src\geco-malloc.cpp" />
     <ClCompile Include="..\..\..\..\src\gecotimer.cc" />
@@ -193,6 +194,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\src\auth.h" />
     <ClInclude Include="..\..\..\..\src\basic-type.h" />
+    <ClInclude Include="..\..\..\..\src\chunk_factory.h" />
     <ClInclude Include="..\..\..\..\src\config.h" />
     <ClInclude Include="..\..\..\..\src\dispatch_layer.h" />
     <ClInclude Include="..\..\..\..\src\geco-ds-config.h" />
