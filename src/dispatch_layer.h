@@ -497,7 +497,7 @@ class dispatch_layer_t
         sockaddrunion *last_source_addr_;
         sockaddrunion *last_dest_addr_;
         sockaddrunion addr_from_init_or_ack_chunk_;
-        short last_src_path_;
+        int last_src_path_;
         ushort last_src_port_;
         ushort last_dest_port_;
         uint last_init_tag_;
@@ -546,13 +546,6 @@ class dispatch_layer_t
         ushort curr_ecc_code_;
         ushort curr_ecc_len_;
         const char* curr_ecc_reason_;
-        enum
-        {
-            GECO_INST_NOT_STARTED = 1,
-            DEST_PORT_NOT_FOUND = 2,
-            DEST_SADDR_NOT_FOUND = 3,
-        };
-        uint geco_inst_not_found_reason_;
 
         timer_mgr timer_mgr_;
         network_interface_t* transport_layer_;
@@ -1390,6 +1383,7 @@ class dispatch_layer_t
          */
         inline void lock_bundle_ctrl()
         {
+            EVENTLOG(VERBOSE, "lock_bundle_ctrl () !\n");
             bundle_controller_t* bundle_ctrl =
                     (bundle_controller_t*) get_bundle_controller(curr_channel_);
 

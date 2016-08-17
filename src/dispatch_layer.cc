@@ -931,46 +931,29 @@ void dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint d
 int dispatch_layer_t::disassemle_curr_geco_packet()
 {
     /*
-     Get first chunk-id and length, pass pointers & len on to relevant module :
-
-     CHUNK_INIT,
-     CHUNK_INIT_ACK,
-     CHUNK_COOKIE_ECHO,
-     CHUNK_COOKIE_ACK
-     CHUNK_SHUTDOWN,
-     CHUNK_SHUTDOWN_ACK
-     CHUNK_ABORT,
-     go to state machina controller (change of association state)
-
-     CHUNK_HBREQ,
-     CHUNK_HBACK
-     go to PATH_MAN instance
-
-     CHUNK_SACK
-     goes to RELIABLE_TRANSFER
-
-     CHUNK_ERROR
-     probably to SCTP_CONTROL as well  (at least there !)
-
-     CHUNK_DATA
-     goes to RX_CONTROL
+     sctp common header header has been verified
+     tag (if association is established) and CRC is okay
+     get first chunk-id and length, pass pointers & len on to relevant module :
+     - CHUNK_INIT, CHUNK_INIT_ACK,CHUNK_ABORT, CHUNK_SHUTDOWN,CHUNK_SHUTDOWN_ACK
+     CHUNK_COOKIE_ECHO,CHUNK_COOKIE_ACK go to SCTP_CONTROL (change of association state)
+     - CHUNK_HBREQ, CHUNK_HBACK go to PATH_MAN instance
+     - CHUNK_SACK goes to RELIABLE_TRANSFER
+     - CHUNK_ERROR probably to SCTP_CONTROL as well  (at least there !)
+     - CHUNK_DATA goes to RX_CONTROL
      */
+    lock_bundle_ctrl();
 
     uchar* curr_pos = curr_geco_packet_->chunk; /* points to the first chunk in this pdu */
     uint read_len = 0, chunk_len;
     uint padding_len;
     simple_chunk_t* chunk;
-
-    EVENTLOG(INTERNAL_TRACE, "Entered disassemle_curr_geco_packet()...... ");
-    lock_bundle_ctrl();
-
     while (read_len < curr_geco_packet_value_len_)
     {
-        if (curr_geco_packet_value_len_ - read_len < GECO_PACKET_FIXED_SIZE)
+        if (curr_geco_packet_value_len_ - read_len < CHUNK_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
-            unlock_bundle_ctrl();
+                    "dispatch_layer_t::disassemle_curr_geco_packet()::chunk corruption !-> return 1 !\n");
+            unlock_bundle_ctrl(&last_src_path_);
             return 1;
         }
 
@@ -980,12 +963,12 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
                 "disassemle_curr_geco_packet(address=%u) : len==%u, processed_len = %u, chunk_len=%u",
                 last_src_path_, curr_geco_packet_value_len_, read_len, chunk_len);
 
-        if (chunk_len < GECO_PACKET_FIXED_SIZE
+        if (chunk_len < CHUNK_FIXED_SIZE
                 || chunk_len + read_len > curr_geco_packet_value_len_)
         {
             EVENTLOG(WARNNING_ERROR,
-                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
-            unlock_bundle_ctrl();
+                    "dispatch_layer_t::disassemle_curr_geco_packet()::chunk corruption !-> return 1 !\n");
+            unlock_bundle_ctrl(&last_src_path_);
             return 1;
         }
 
@@ -1000,20 +983,20 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
         switch (chunk->chunk_header.chunk_id)
         {
             case CHUNK_DATA:
-                EVENTLOG(INTERNAL_TRACE, "***** Bundling received CHUNK_DATA");
+                EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_DATA\n");
                 handle_ret = process_data_chunk((data_chunk_t*) chunk, last_src_path_);
                 data_chunk_received = true;
                 break;
             case CHUNK_INIT:
-                EVENTLOG(INTERNAL_TRACE, "***** Bundling received CHUNK_INIT");
+                EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT\n");
                 handle_ret = process_init_chunk((init_chunk_t *) chunk);
                 break;
             case CHUNK_INIT_ACK:
-                EVENTLOG(INTERNAL_TRACE, "***** Bundling received CHUNK_INIT_ACK");
+                EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT_ACK\n");
                 handle_ret = process_init_ack_chunk((init_chunk_t *) chunk);
                 break;
             case CHUNK_SACK:
-                EVENTLOG(INTERNAL_TRACE, "***** Bundling received CHUNK_SACK");
+                EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_SACK\n");
                 handle_ret = process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
                 break;
             default:
@@ -3277,7 +3260,6 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a, const geco_in
     /* compare local port*/
     if (a.local_port != b.local_port)
     {
-        geco_inst_not_found_reason_ = DEST_PORT_NOT_FOUND;
         return false;
     }
 
@@ -3291,12 +3273,7 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a, const geco_in
             {
                 if (saddr_equals(&(a.local_addres_list[i]), &(b.local_addres_list[j]), true))
                 {
-                    geco_inst_not_found_reason_ = 0;
                     return true;
-                }
-                else
-                {
-                    geco_inst_not_found_reason_ = DEST_SADDR_NOT_FOUND;
                 }
             }
         }
@@ -3305,7 +3282,6 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a, const geco_in
     else
     {
         /* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
-        geco_inst_not_found_reason_ = 0;
         return true;
     }
 }
