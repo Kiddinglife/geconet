@@ -1000,6 +1000,17 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
                 handle_ret = process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
                 break;
             default:
+            default:
+                /* 00 - Stop processing this SCTP packet and discard it, do not process
+                 any further chunks within it.
+                 01 - Stop processing this SCTP packet and discard it, do not process
+                 any further chunks within it, and report the unrecognized
+                 parameter in an 'Unrecognized Parameter Type' (in either an
+                 ERROR or in the INIT ACK).
+                 10 - Skip this chunk and continue processing.
+                 11 - Skip this chunk and continue processing, but report in an ERROR
+                 Chunk using the 'Unrecognized Chunk Type' cause of error. */
+                //todo
                 break;
         }
         unlock_bundle_ctrl();
