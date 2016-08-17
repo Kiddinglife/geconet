@@ -108,8 +108,8 @@ struct chunk_fixed_t
         ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 };
 #define FLAG_NONE                 0x00
-#define FLAG_DESTROYED_TCB        0x00
-#define FLAG_NO_TCB               0x01
+#define FLAG_DELETED_CHANNEL        0x00
+#define FLAG_NO_CHANNEL               0x01
 
 /**************** chunk_value chunk *******************/
 #define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10
@@ -501,8 +501,6 @@ const static char* ECCSTRS[32] =
 #define ECC_DELETE_LAST_IP_FAILED       16
 #define ECC_OP_REFUSED_NO_RESOURCES     17
 #define ECC_DELETE_SOURCE_ADDRESS       18
-#define ECC_INIT_CHUNK_VER_TAG_NOT_ZERO        19
-#define ECC_NO_DEST_PORT_OR_ADDR 20
 
 // Error REASON param defs
 struct stale_cookie_err_t

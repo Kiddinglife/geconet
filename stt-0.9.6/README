@@ -1,0 +1,16 @@
+This tool supports:
+- RFC 2960
+- RFC 3309
+- draft-ietf-tsvwg-addip-sctp-07.txt
+- draft-ietftsvwg-prsctp-01.txt
+
+You can find a very good book about Scheme is available at
+http://www.scheme.com/tspl2d/
+
+Everything about guile is available at
+http://www.gnu.org/software/guile/guile.html
+
+The 5th report of scheme is available at
+http://www.swiss.ai.mit.edu/~jaffer/r5rs.pdf
+
+Happy hacking!

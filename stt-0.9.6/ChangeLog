@@ -1,0 +1,25 @@
+030723 Fixed a bug in make-init-ack-chunk to use the correct tag value.
+030826 Fixed some bugs reported by gcc 3.3.
+030830 Added make-add-ip-address-parameter.
+030830 Added make-delete-ip-address-parameter.
+030830 Added make-set-primary-address-parameter.
+030830 Added make-adation-layer-indication-parameter.
+030830 Added make-success-indication-parameter.
+030831 Added optional causes parameter to make-error-chunk.
+030831 Added optional causes parameter to make-abort-chunk.
+030831 Added make-error-cause-indication-parameter.
+030831 Added get-correlation-id.
+030831 Added get-address-parameter.
+030831 Added get-code-point.
+030831 Added get-asconf-error-causes.
+030831 Added make-asconf-chunk.
+030831 Added make-asconf-ack-chunk.
+030831 Added get-serial-number.
+030831 Modified get-parameters to support ASCONF and ASCONF-ACK chunks.
+030831 Added GPL header to all *.c and *.h files.
+030831 Added quickref.txt.t
+030831 Move init file to /usr/local/share/stt/.
+030831 Add support for ~/.stt.scm.
+030831 Added TODO.
+030901 Release as 0.9. 
+031211 Add sctp-send-raw and sctp-send-without-crc

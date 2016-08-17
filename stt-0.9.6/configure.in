@@ -1,0 +1,78 @@
+AC_INIT(testtool.c)
+AM_INIT_AUTOMAKE(stt, 0.9.6)
+AC_PROG_CC
+AC_CANONICAL_HOST
+
+case $host_os in
+linux*)
+    CFLAGS="$CFLAGS -DLINUX"
+    ;;
+cygwin*)
+    CFLAGS="$CFLAGS -DCYGWIN"
+    ;;
+darwin*)
+    CFLAGS="$CFLAGS -DDARWIN"
+    ;;
+freebsd*)
+    CFLAGS="$CFLAGS -DFREEBSD"
+    ;;
+esac
+
+AC_CHECK_FUNC(inet_ntop, [AC_DEFINE(TT_HAVE_INET_NTOP)])
+AC_CHECK_FUNC(inet_pton, [AC_DEFINE(TT_HAVE_INET_PTON)])
+
+AC_MSG_CHECKING(for sin_len)
+AC_TRY_COMPILE([#include <sys/types.h>
+#include <netinet/in.h>],
+         [struct sockaddr_in x; x.sin_len = 0;],
+         [AC_DEFINE(TT_HAVE_SIN_LEN)
+          AC_MSG_RESULT(yes)],
+         [AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for sin6_len)
+AC_TRY_COMPILE([#include <sys/types.h>
+#include <netinet/in.h>],
+         [struct sockaddr_in6 x; x.sin6_len = 0;],
+         [AC_DEFINE(TT_HAVE_SIN6_LEN)
+          AC_MSG_RESULT(yes)],
+         [AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for IP_HDRINCL)
+AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>],
+         [int fd=2; int on=1;
+          setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on));],
+         [AC_DEFINE(TT_HAVE_IP_HDRINCL)
+          AC_MSG_RESULT(yes)],
+         [AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for sockaddr_storage)
+AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/socket.h>],
+         [struct sockaddr_storage x; x.ss_family = AF_INET;],
+         [AC_DEFINE(TT_HAVE_SOCKADDR_STORAGE)
+          AC_MSG_RESULT(yes)],
+         [AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for AF_INET6)
+AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/socket.h>],
+         [int fd;
+          fd=socket(AF_INET6, SOCK_RAW, 132);],
+         [AC_DEFINE(TT_HAVE_AF_INET6)
+          AC_MSG_RESULT(yes)],
+         [AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for sockaddr_in6)
+AC_TRY_COMPILE([#include <sys/types.h>
+#include <netinet/in.h>],
+         [struct sockaddr_in6 x;],
+         [AC_DEFINE(TT_HAVE_SOCKADDR_IN6)
+          AC_MSG_RESULT(yes)],
+         [AC_MSG_RESULT(no)])
+
+GUILE_PROGS
+GUILE_FLAGS
+# CFLAGS="$GUILE_CFLAGS $CFLAGS"
+AC_OUTPUT(Makefile)

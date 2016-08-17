@@ -115,9 +115,11 @@ GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 
 /* Definition of levels for the logging of events */
 /* very VERBOSE logging of events   */
-#define VVERBOSE           6
+#define VVERBOSE           8
 /* more VERBOSE logging of events   */
-#define VERBOSE            5
+#define VERBOSE            7
+#define INFO 6
+#define NOTICE 5
 /* pure execution flow trace */
 #define INTERNAL_TRACE   4
 /* important inernal events */
@@ -130,7 +132,7 @@ GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
  VVERBOSE (6) means all events are prInt32ed.
  This parameter could also come from a command line option */
 #ifndef CURR_EVENT_LOG_LEVEL
-#define CURR_EVENT_LOG_LEVEL 6
+#define CURR_EVENT_LOG_LEVEL VERBOSE
 #endif
 
 /* Definition of levels for the logging of errors */
