@@ -34,6 +34,7 @@
 #include "gecotimer.h"
 #include "protoco-stack.h"
 #include "auth.h"
+#include "chunk_factory.h"
 
 /*------------------- Functions called by the ULP -----------------------*/
 /* This functions are defined in a seperate header file dctp.h
@@ -575,7 +576,7 @@ class dispatch_layer_t
          *  @param fromAddress        source address of DG
          *  @param portnum            bogus port number
          */
-        void recv_geco_packet(int socket_fd, char *buffer, uint bufferLength,
+        int recv_geco_packet(int socket_fd, char *buffer, uint bufferLength,
                 sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
         /*------------------- Functions called by the SCTP bundling --------------------------------------*/
@@ -1077,24 +1078,71 @@ class dispatch_layer_t
                 ushort noInStreams, uint initialTSN)
         {
             assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
-
-            init_chunk_t* initAckChunk = (init_chunk_t*) galloc.allocate(
-            INIT_CHUNK_TOTAL_SIZE);
-
-            initAckChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
-            initAckChunk->chunk_header.chunk_flags = 0;
-            initAckChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
-            initAckChunk->init_fixed.init_tag = htonl(initTag);
-            initAckChunk->init_fixed.rwnd = htonl(rwnd);
-            initAckChunk->init_fixed.outbound_streams = htons(noOutStreams);
-            initAckChunk->init_fixed.inbound_streams = htons(noInStreams);
-            initAckChunk->init_fixed.initial_tsn = htonl(initialTSN);
-
-            add2chunklist((simple_chunk_t*) initAckChunk,
-                    "create init ack chunk %u");
+            add2chunklist((simple_chunk_t*) build_init_ack_chunk(initTag, rwnd, noOutStreams,
+                    noInStreams, initialTSN), "create init ack chunk %u");
             return simple_chunk_index_;
         }
-
+        void enter_error_cause_unrecognized_chunk(chunk_id_t cid,
+                error_cause_t*ecause, uchar* errdata, uint errdatalen)
+        {
+            //error chunk is paramsless chunk so no need simple_chunks[cid] check
+            curr_write_pos_[cid] += put_error_cause_unrecognized_chunk(ecause, errdata, errdatalen);
+        }
+        void enter_error_cause(chunk_id_t chunkID, ushort errcode,
+                uchar* errdata, uint errdatalen)
+        {
+            if (simple_chunks_[chunkID] == NULL)
+            {
+                ERRLOG(MAJOR_ERROR,
+                        "enter_suppeorted_addr_types()::Invalid chunk ID\n");
+                return;
+            }
+            if (completed_chunks_[chunkID])
+            {
+                ERRLOG(MAJOR_ERROR,
+                        " enter_supported_addr_types()::chunk already completed!\n");
+                return;
+            }
+            if (simple_chunks_[chunkID]->chunk_header.chunk_id
+                    != CHUNK_ERROR && simple_chunks_[chunkID]->chunk_header.chunk_id
+                    != CHUNK_ABORT)
+            {
+                ERRLOG(MAJOR_ERROR,
+                        " enter_supported_addr_types()::Wrong chunk type !\n");
+                return;
+            }
+            error_cause_t* ecause =
+                    (error_cause_t*) &simple_chunks_[chunkID]->chunk_value[curr_write_pos_[chunkID]];
+            curr_write_pos_[chunkID] += put_error_cause(ecause, errcode, errdata, errdatalen);
+        }
+        void enter_supported_addr_types(chunk_id_t chunkID, bool with_ipv4,
+                bool with_ipv6, bool with_dns)
+        {
+            if (simple_chunks_[chunkID] == NULL)
+            {
+                ERRLOG(MAJOR_ERROR,
+                        "enter_suppeorted_addr_types()::Invalid chunk ID\n");
+                return;
+            }
+            if (completed_chunks_[chunkID])
+            {
+                ERRLOG(MAJOR_ERROR,
+                        " enter_supported_addr_types()::chunk already completed!\n");
+                return;
+            }
+            if (simple_chunks_[chunkID]->chunk_header.chunk_id
+                    != CHUNK_INIT && simple_chunks_[chunkID]->chunk_header.chunk_id
+                    != CHUNK_INIT_ACK)
+            {
+                ERRLOG(MAJOR_ERROR,
+                        " enter_supported_addr_types()::chunk type not init !\n");
+                return;
+            }
+            supported_address_types_t* param =
+                    (supported_address_types_t*) ((init_chunk_t*) simple_chunks_[chunkID])->variableParams;
+            curr_write_pos_[chunkID] +=
+                    put_vlp_supported_addr_types(param, with_ipv4, with_ipv6, with_dns);
+        }
         /*
          * swaps length INSIDE the packet and enters chunk into the current list
          * DO NOT need call  free_simple_chunk() !
@@ -1420,7 +1468,7 @@ class dispatch_layer_t
         channel_t *find_channel_by_transport_addr(sockaddrunion * src_addr,
                 ushort src_port, ushort dest_port);
 
-        // this mothod will set last_src_path_ to the one found src's 
+        // this mothod will set last_src_path_ to the one found src's
         // index in channel's remote addr list
         bool cmp_channel(const channel_t& a, const channel_t& b);
 
@@ -1585,9 +1633,9 @@ class dispatch_layer_t
          * @param [out] chunkid addres wrriten to this chunk
          * @param [in] local_addreslist  the addres that will be written to chunk
          */
-        int write_addrlist(uint chunkid,
+        int enter_vlp_addrlist(uint chunkid,
                 sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
-                int local_addreslist_size);
+                uint local_addreslist_size);
 
         /** check if endpoint is ADD-IP capable, store result, and put HIS chunk in cookie */
         int write_add_ip_chunk(uint initAckCID, uint initCID)

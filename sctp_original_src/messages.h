@@ -270,6 +270,7 @@ SCTP_ip_address;
 #define IS_IPV6_ADDRESS_PTR_HBO(p)  ((p->vlparam_header.param_type==VLPARAM_IPV6_ADDRESS)&&\
                                  (p->vlparam_header.param_length==20))
 
+//supported_address_types_t
 /* Supported Addresstypes */
 typedef struct SCTP_SUPPORTED_ADDRESSTYPES
 {

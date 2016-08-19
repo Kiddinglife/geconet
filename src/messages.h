@@ -460,6 +460,8 @@ struct cookie_param_t
  * Errorchunks: for error-chunks the SCTP_simple_chunk can be used since it contains
  * only varible length params.
  */
+#define ERROR_CHUNK_TOTAL_SIZE \
+(CHUNK_FIXED_SIZE+MAX_DATA_CHUNK_VALUE_SIZE)
 struct error_chunk_t
 {
         chunk_fixed_t chunk_header;

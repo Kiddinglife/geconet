@@ -10,6 +10,7 @@ src/dispatch_layer.o: \
  /home/jackiez/20160219/geco-protocol-stack/src/geco-ds-config.h \
  /home/jackiez/20160219/geco-protocol-stack/src/gecotimer.h \
  /home/jackiez/20160219/geco-protocol-stack/src/protoco-stack.h \
+ /home/jackiez/20160219/geco-protocol-stack/src/chunk_factory.h \
  /home/jackiez/20160219/geco-protocol-stack/src/transport_layer.h
 
 /home/jackiez/20160219/geco-protocol-stack/src/dispatch_layer.h:
@@ -31,5 +32,7 @@ src/dispatch_layer.o: \
 /home/jackiez/20160219/geco-protocol-stack/src/gecotimer.h:
 
 /home/jackiez/20160219/geco-protocol-stack/src/protoco-stack.h:
+
+/home/jackiez/20160219/geco-protocol-stack/src/chunk_factory.h:
 
 /home/jackiez/20160219/geco-protocol-stack/src/transport_layer.h:

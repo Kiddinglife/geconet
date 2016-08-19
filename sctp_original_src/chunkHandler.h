@@ -267,9 +267,11 @@ gboolean ch_getPRSCTPfromCookie(ChunkID cookieCID);
 
 /***** write to and read from error chunk *******************************************************/
 
+//extern error_chunk_t* build_error_chunk();
 ChunkID ch_makeErrorChunk(void);
 
 /* adds a VLP to an error chunk. may also be zero length (i.e. no) VLP */
+//uint put_error_cause(error_cause_t*ecause,ushort errcode, uchar* errdata, ushort errdatalen)
 void ch_enterErrorCauseData(ChunkID chunkID, unsigned short code,
                        unsigned short length, unsigned char* data);
 

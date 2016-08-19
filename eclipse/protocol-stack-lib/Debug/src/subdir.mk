@@ -11,6 +11,7 @@ CC_SRCS += \
 /home/jackiez/20160219/geco-protocol-stack/src/transport_layer.cc 
 
 CPP_SRCS += \
+/home/jackiez/20160219/geco-protocol-stack/src/chunk_factory.cpp \
 /home/jackiez/20160219/geco-protocol-stack/src/geco-malloc.cpp 
 
 CC_DEPS += \
@@ -22,6 +23,7 @@ CC_DEPS += \
 
 OBJS += \
 ./src/auth.o \
+./src/chunk_factory.o \
 ./src/dispatch_layer.o \
 ./src/geco-malloc.o \
 ./src/gecotimer.o \
@@ -29,11 +31,19 @@ OBJS += \
 ./src/transport_layer.o 
 
 CPP_DEPS += \
+./src/chunk_factory.d \
 ./src/geco-malloc.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
 src/auth.o: /home/jackiez/20160219/geco-protocol-stack/src/auth.cc
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C++ Compiler'
+	g++ -std=c++0x -DTEST -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/chunk_factory.o: /home/jackiez/20160219/geco-protocol-stack/src/chunk_factory.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -std=c++0x -DTEST -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
