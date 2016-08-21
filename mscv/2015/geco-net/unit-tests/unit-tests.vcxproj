@@ -193,6 +193,7 @@
     <None Include="..\..\..\..\unittets\readme.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\unittets\test-dispatcher-module.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
     <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
   </ItemGroup>

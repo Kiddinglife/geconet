@@ -15,6 +15,17 @@ GTEST_API_ int main(int argc, char** argv)
     // also responsible for initializing Google Test.  Therefore there's
     // no need for calling testing::InitGoogleTest() separately.
     testing::InitGoogleMock(&argc, argv);
-    //::testing::GTEST_FLAG(filter) = "GecoMemoryStreamTestCase.*";
+
+    //::testing::GTEST_FLAG(filter) = "GLOBAL_MODULE.*";
+
+    //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.*";
+   // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
+
+    //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_alloc_dealloc";
+
+    //::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
+
+    ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contains_chunk";
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_geco_instance_by_transport_addr";
     return RUN_ALL_TESTS();
 }

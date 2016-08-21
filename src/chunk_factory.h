@@ -53,12 +53,14 @@
 # define __INCLUDE_CHUNK_BUILDER_H
 #include "globals.h"
 
-
+//- - - - - - - - - - - - - - Error Chunk - - - - - - - - - - - - - - - - - - 
 extern error_chunk_t* build_error_chunk();
-extern uint put_error_cause_unrecognized_chunk(error_cause_t*ecause,
+extern uint put_ec_unrecognized_chunk(error_cause_t*ecause,
         uchar* errdata, uint errdatalen);
 extern uint put_error_cause(error_cause_t*ecause,
         ushort errcode, uchar* errdata,ushort errdatalen);
+//- - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 
 /*
  makes an init and initializes the the fixed part of init

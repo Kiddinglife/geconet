@@ -3278,12 +3278,12 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a, const geco_in
     else
     {
         /* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
+
         return true;
     }
 }
 
-geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
-    ushort dest_port)
+geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,ushort dest_port)
 {
     if (geco_instances_.size() == 0)
     {

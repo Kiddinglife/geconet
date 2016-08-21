@@ -21,11 +21,15 @@
     <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-dispatcher-module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\unittets\readme.md">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\..\..\..\docx\rfc-960-with-section-jumps.html" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\..\..\docx\  Security Attacks Found Against.txt" />
@@ -57,6 +61,6 @@
     <Text Include="..\..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt" />
     <Text Include="..\..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt" />
     <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt" />
-    <Text Include="..\..\..\..\docx\Secure SCTP.txt" />
+    <Text Include="..\..\..\..\docx\draft-hohendorf-secure-sctp-22.txt" />
   </ItemGroup>
 </Project>

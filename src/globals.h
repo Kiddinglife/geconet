@@ -562,7 +562,6 @@ extern unsigned long SuperFastHashFilePtr(FILE *fp);
 extern unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
         const sockaddrunion* peer_sa);
 extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
-
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
 #define MAX_INIT_RETRANS_ATTEMPTS    8

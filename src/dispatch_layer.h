@@ -1086,7 +1086,7 @@ public:
         error_cause_t*ecause, uchar* errdata, uint errdatalen)
     {
         //error chunk is paramsless chunk so no need simple_chunks[cid] check
-        curr_write_pos_[cid] += put_error_cause_unrecognized_chunk(ecause, errdata, errdatalen);
+        curr_write_pos_[cid] += put_ec_unrecognized_chunk(ecause, errdata, errdatalen);
     }
 
     /**
@@ -1527,7 +1527,8 @@ public:
      * Should be called after find_chunk_types().
      * The chunkArray parameter is inspected. This only really checks for chunks
      * with an ID <= 30. For all other chunks, it just guesses...
-     * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
+     * @return 0 NOT contains, 1 contains and only one, 
+     * 2 contains this one and also other type chunks, NOT means two of this
      * @pre: need call find_chunk_types() first
      */
     inline int contains_chunk(uint chunk_type, uint chunk_types)
