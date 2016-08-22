@@ -1515,12 +1515,8 @@ public:
     uint find_chunk_types(uchar* packet_value, uint len,
         uint* total_chunk_count = NULL);
 
-    /**
-     * check if local addr is found
-     * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
-     * */
-    bool contains_local_host_addr(sockaddrunion* addr_list,
-        uint addr_list_num);
+    /**check if local addr is found eg. ip4or6 loopback and non-loopback addres*/
+    bool contain_local_addr(sockaddrunion* addr_list,uint addr_list_num);
 
     /**
      * contains_chunk: looks for chunk_type in a newly received geco packet

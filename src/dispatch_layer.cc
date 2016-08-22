@@ -1907,7 +1907,7 @@ uint dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
     bool localHostFound = false, linkLocalFound = false, siteLocalFound = false;
     for (count = 0; count < numPeerAddresses; count++)
     {
-        localHostFound = contains_local_host_addr(peerAddress + count, 1);
+        localHostFound = contain_local_addr(peerAddress + count, 1);
         linkLocalFound = transport_layer_->typeofaddr(peerAddress + count, LinkLocalAddrType);
         siteLocalFound = transport_layer_->typeofaddr(peerAddress + count, SiteLocalAddrType);
     }
@@ -1938,7 +1938,7 @@ uint dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
          * (both are my local addr) by IP layer.
          *
          * at this moment, the received peer addr is 192.168.1.107 or  222.12,123
-         * when contains_local_host_addr() called,
+         * when contain_local_addr() called,
          * it CANNOT match peer addr of 192.168.1.107 or or  222.12,123.
          * So localHostFound will be set to FASLE, but actually I am sending to myself.
          *
@@ -2576,16 +2576,15 @@ int dispatch_layer_t::enter_vlp_addrlist(uint chunkid,
     uchar* vlp;
     if (simple_chunks_[chunkid]->chunk_header.chunk_id != CHUNK_ASCONF)
     {
-        vlp = &((init_chunk_t *) simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+        vlp = &((init_chunk_t *) simple_chunks_[chunkid])
+                ->variableParams[curr_write_pos_[chunkid]];
     }
     else
     {
-        vlp =
-                &((asconfig_chunk_t*) simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+        vlp = &((asconfig_chunk_t*) simple_chunks_[chunkid])
+                ->variableParams[curr_write_pos_[chunkid]];
     }
-    uint total_length = put_vlp_addrlist((ip_address_t*) vlp, local_addreslist,
-            local_addreslist_size);
-    curr_write_pos_[chunkid] += total_length;
+    curr_write_pos_[chunkid] += put_vlp_addrlist(vlp, local_addreslist, local_addreslist_size);
     return 0;
 }
 
@@ -2640,7 +2639,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
         /* determine the falgs from last source addr
          * then this falg will be used to validate other found addres*/
         bool b1, b2, b3;
-        if (!(b1 = contains_local_host_addr(last_source_addr_, 1)))
+        if (!(b1 = contain_local_addr(last_source_addr_, 1)))
         {
             /* this is from a normal address,
              * furtherly filter out except loopbacks */
@@ -2817,7 +2816,8 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
     }  // while
 
 // we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
-    if (!ignore_last_src_addr)
+    //    if (!ignore_last_src_addr )
+    if (!ignore_last_src_addr && (saddr_family(last_source_addr_) & my_supported_addr_types))
     {
         is_new_addr = true;
         for (idx = 0; idx < found_addr_number; idx++)
@@ -2865,7 +2865,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
     return found_addr_number;
 }
 
-inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list, uint addr_list_num)
+inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint addr_list_num)
 {
     bool ret = false;
     uint ii;
@@ -2922,9 +2922,8 @@ inline bool dispatch_layer_t::contains_local_host_addr(sockaddrunion* addr_list,
                 }
             }
         }
-        /*3 otherwise try to find from global local host addres list if geco instace local_addres_size is 0*/
         else
-        {
+        { /*3 otherwise try to find from global local host addres list if geco instace local_addres_size is 0*/
             for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
             {
                 for (ii = 0; ii < addr_list_num; ++ii)

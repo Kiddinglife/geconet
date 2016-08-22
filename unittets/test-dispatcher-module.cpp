@@ -22,7 +22,90 @@ static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst,
     inst.local_port = destport;
     dlt.geco_instances_.push_back(&inst);
 }
-static void init_channel(channel_t& channel, ushort srcport, ushort destport,
+// last run and passed on 21 Agu 2016
+TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
+{
+    /* 6) find dctp instancefor this packet
+     *  if this packet is for a server dctp instance,
+     *  we will find that dctp instance and let it handle this packet
+     *  (i.e. we have the dctp instance's localPort set and
+     *  it matches the packet's destination port)*/
+
+    dispatch_layer_t dlt;
+    geco_instance_t inst;
+    const int destaddrsize = 6;
+    const char* destipstrs[destaddrsize] =
+            { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
+                    "192.168.1.5" };
+    const ushort destport = 9989;
+    sockaddrunion dest_addrs[destaddrsize];
+    init_inst(dlt, inst, destport, destipstrs, destaddrsize, dest_addrs);
+
+    sockaddrunion* last_dest_addr;
+    ushort last_dest_port;
+    geco_instance_t* ret = 0;
+
+    // 1)  if is_in6addr_any and is_inaddr_any are both false
+    inst.is_in6addr_any = inst.is_inaddr_any = false;
+    // 1.1) if last_dest_port, last_dest_addr and addr family both matches
+    last_dest_port = inst.local_port;
+    for (uint i = 0; i < inst.local_addres_size; i++)
+    {
+        last_dest_addr = &inst.local_addres_list[i];
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
+        //  1.1.1) should found this inst
+        EXPECT_EQ(ret, &inst);
+    }
+    // 1.2) if last_dest_port NOT mathces
+    last_dest_port = inst.local_port - 1;
+    for (uint i = 0; i < inst.local_addres_size; i++)
+    {
+        last_dest_addr = &inst.local_addres_list[i];
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
+        //  1.2.1) should NOT found this inst
+        EXPECT_EQ(ret, nullptr);
+    }
+    // 1.3) if last_dest_addr NOT matches
+    last_dest_port = inst.local_port;
+    for (uint i = 0; i < inst.local_addres_size; i++)
+    {
+        sockaddrunion tmp = inst.local_addres_list[i];
+        s4addr(&tmp) -= 1;  // just minus to make it different
+        last_dest_addr = &tmp;
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
+        //  1.3.1) should NOT found this inst
+        EXPECT_EQ(ret, nullptr);
+    }
+    // 1.4) if addr family NOT matches
+    last_dest_port = inst.local_port;
+    for (uint i = 0; i < inst.local_addres_size; i++)
+    {
+        sockaddrunion tmp = inst.local_addres_list[i];
+        saddr_family(&tmp) == AF_INET ?
+        saddr_family(&tmp) = AF_INET6 :
+                                        saddr_family(&tmp) = AF_INET;
+        last_dest_addr = &tmp;
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
+        //  1.4.1) should NOT found this inst
+        EXPECT_EQ(ret, nullptr);
+    }
+    // 2)  if is_in6addr_any is true
+    inst.is_in6addr_any = true;
+    // 2.1) last_dest_addr and addr family ALL NOT match, but last_dest_port_matches
+    for (uint i = 0; i < inst.local_addres_size; i++)
+    {
+        sockaddrunion tmp = inst.local_addres_list[i];
+        s4addr(&tmp) -= 1;  // just minus to make it different
+        saddr_family(&tmp) == AF_INET ?
+        saddr_family(&tmp) = AF_INET6 :
+                                        saddr_family(&tmp) = AF_INET;
+        last_dest_addr = &tmp;
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
+        //  2.1.1) should still found this inst
+        EXPECT_EQ(ret, &inst);
+    }
+}
+static void init_channel(dispatch_layer_t& dlt, channel_t& channel, ushort srcport, ushort destport,
         const char** src_ips, uint src_ips_len,
         const char** dest_ips, uint dest_ips_len,
         sockaddrunion* src,
@@ -40,102 +123,203 @@ static void init_channel(channel_t& channel, ushort srcport, ushort destport,
     channel.local_addres = dest;
     channel.remote_port = srcport;
     channel.local_port = destport;
-    channel.remote_addres_size =src_ips_len;
+    channel.remote_addres_size = src_ips_len;
     channel.local_addres_size = dest_ips_len;
     channel.deleted = false;
     channel.is_IN6ADDR_ANY = false;
     channel.is_INADDR_ANY = false;
+    dlt.channels_.push_back(&channel);
 }
+// last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 {
-    /*
-     * 4) find the endpoint for this packet
-     */
-    int i;
-    const int addres_cnt = 6;
-    const char* addres[addres_cnt] =
-            { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
-                    "192.168.1.5" };
-    const ushort ports[addres_cnt] =
+    const int src_ips_size = 3;
+    const char* src_ips[src_ips_size] =
+            { "192.168.1.0", "192.168.1.1", "192.168.1.2" };
+    const int dest_ips_size = 3;
+    const char* dest_ips[dest_ips_size] =
+            { "192.168.1.3", "192.168.1.4", "192.168.1.5" };
+    const ushort ports[] =
             { 100, 101 };  // src-dest
-    sockaddrunion remote_addres[addres_cnt / 2];
-    sockaddrunion local_addres[addres_cnt / 2];
-
-    char buf[MAX_IPADDR_STR_LEN];
-    ushort port;
-    ushort af;
-    for (i = 0; i < addres_cnt; i++)
-    {
-        if (i < addres_cnt / 2)
-        {
-            str2saddr(&remote_addres[i], addres[i], ports[0], true);
-            saddr2str(&remote_addres[i], buf, sizeof(remote_addres[i]), &port);
-            af = remote_addres[i].sin.sin_family;
-        }
-        else
-        {
-            str2saddr(&local_addres[i], addres[i], ports[1], true);
-            saddr2str(&local_addres[i], buf, sizeof(local_addres[i]), &port);
-            af = local_addres[i].sin.sin_family;
-        }
-        EVENTLOG3(VERBOSE, "%s:%u:%u\n", buf, port, af);
-    }
+    sockaddrunion remote_addres[src_ips_size];
+    sockaddrunion local_addres[dest_ips_size];
 
     channel_t channel;
-    channel.remote_addres = remote_addres;
-    channel.local_addres = local_addres;
-    channel.remote_port = 100;
-    channel.local_port = 101;
-    channel.remote_addres_size = addres_cnt / 2;
-    channel.local_addres_size = addres_cnt / 2;
-    channel.deleted = false;
-
     dispatch_layer_t dlt;
-    dlt.channels_.push_back(&channel);
+    init_channel(dlt, channel,
+            ports[0], ports[1],
+            src_ips, src_ips_size, dest_ips, dest_ips_size,
+            remote_addres, local_addres);
 
+    //temps
     channel_t* found;
+    sockaddrunion* last_src_addr;
+    sockaddrunion* last_dest_addr;
+    ushort last_src_port = channel.remote_port;
+    ushort last_dest_port = channel.local_port;
+    sockaddrunion tmp_addr;
 
-    //1) not found as port NOT equals
-    dlt.last_source_addr_ = &remote_addres[1];  // "192.168.1.1 : 100"
-    dlt.last_dest_addr_ = &local_addres[1];  // "192.168.1.4 : 101"
-    dlt.last_src_port_ = 123;
-    dlt.last_dest_port_ = 101;
-    found = dlt.find_channel_by_transport_addr(dlt.last_source_addr_, dlt.last_src_port_,
-            dlt.last_dest_port_);
-    EXPECT_EQ(found, (channel_t*)NULL);
-    dlt.last_source_addr_ = &remote_addres[1];  // "192.168.1.1 : 100"
-    dlt.last_dest_addr_ = &local_addres[1];  // "192.168.1.4 : 101"
-    dlt.last_src_port_ = 100;
-    dlt.last_dest_port_ = 123;
-    found = dlt.find_channel_by_transport_addr(dlt.last_source_addr_, dlt.last_src_port_,
-            dlt.last_dest_port_);
-    EXPECT_EQ(found, (channel_t*)NULL);
-    dlt.last_source_addr_ = &remote_addres[1];  // "192.168.1.1 : 100"
-    dlt.last_dest_addr_ = &local_addres[1];  // "192.168.1.4 : 101"
-    dlt.last_src_port_ = 123;
-    dlt.last_dest_port_ = 123;
-    found = dlt.find_channel_by_transport_addr(dlt.last_source_addr_, dlt.last_src_port_,
-            dlt.last_dest_port_);
-    EXPECT_EQ(found, (channel_t*)NULL);
-    //2) not found as addr NOT equlas
-    sockaddrunion notfound;
-    str2saddr(&notfound, "192.168.0.0", 100, true);
-    dlt.last_source_addr_ = &notfound;
-    dlt.last_dest_addr_ = &local_addres[1];  // "192.168.1.4 : 101"
-    dlt.last_src_port_ = 100;
-    dlt.last_dest_port_ = 101;
-    found = dlt.find_channel_by_transport_addr(dlt.last_source_addr_, dlt.last_src_port_,
-            dlt.last_dest_port_);
-    EXPECT_EQ(found, (channel_t*)NULL);
-    //3) found
-    dlt.last_source_addr_ = &remote_addres[1];  // "192.168.1.1 : 100"
-    dlt.last_dest_addr_ = &local_addres[1];  // "192.168.1.4 : 101"
-    dlt.last_src_port_ = 100;
-    dlt.last_dest_port_ = 101;
-    found = dlt.find_channel_by_transport_addr(dlt.last_source_addr_, dlt.last_src_port_,
-            dlt.last_dest_port_);
-    EXPECT_EQ(found, &channel);
-
+    //1) if src port not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        last_dest_addr = &channel.local_addres[i];
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            last_src_addr = &channel.remote_addres[j];
+            last_src_port -= 1;  //just make it not equal to the one stored in channel
+            //1.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //2) if dest port not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        last_dest_addr = &channel.local_addres[i];
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            last_src_addr = &channel.remote_addres[j];
+            last_dest_port -= 1;            //just make it not equal to the one stored in channel
+            //2.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //2) if dest port not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        last_dest_addr = &channel.local_addres[i];
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            last_src_addr = &channel.remote_addres[j];
+            last_dest_port -= 1;            //just make it not equal to the one stored in channel
+            //2.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //3) if dest and src port not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        last_dest_addr = &channel.local_addres[i];
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            last_src_addr = &channel.remote_addres[j];
+            last_dest_port -= 1;            //just make it not equal to the one stored in channel
+            last_src_port -= 1;            //just make it not equal to the one stored in channel
+            //3.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //4) if dest addr not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        tmp_addr = channel.local_addres[i];
+        s4addr(&tmp_addr) -= 1;  // just minus to make it different
+        last_dest_addr = &tmp_addr;
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            last_src_addr = &channel.remote_addres[j];
+            //3.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //5) if  src addr not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        last_dest_addr = &channel.local_addres[i];
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            tmp_addr = channel.remote_addres[i];
+            s4addr(&tmp_addr) -= 1;  // just minus to make it different
+            last_src_addr = &tmp_addr;
+            //5.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //6) if  dest and addr not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        tmp_addr = channel.local_addres[i];
+        s4addr(&tmp_addr) -= 1;  // just minus to make it different
+        last_dest_addr = &tmp_addr;
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            sockaddrunion tmp_addr2;
+            tmp_addr2 = channel.remote_addres[i];
+            s4addr(&tmp_addr2) -= 1;  // just minus to make it different
+            last_src_addr = &tmp_addr2;
+            //6.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //7) if dest addr family not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        tmp_addr = channel.local_addres[i];
+        saddr_family(&tmp_addr) == AF_INET ?
+        saddr_family(&tmp_addr) = AF_INET6 :
+                                             saddr_family(&tmp_addr) = AF_INET;
+        last_dest_addr = &tmp_addr;
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            last_src_addr = &channel.remote_addres[j];
+            //7.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //8) if src addr family not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        last_dest_addr = &channel.local_addres[i];
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            tmp_addr = channel.remote_addres[i];
+            saddr_family(&tmp_addr) == AF_INET ?
+            saddr_family(&tmp_addr) = AF_INET6 :
+                                                 saddr_family(&tmp_addr) = AF_INET;
+            last_src_addr = &tmp_addr;
+            //5.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
+    //6) if  dest and addr not equal
+    for (uint i = 0; i < channel.local_addres_size; i++)
+    {
+        tmp_addr = channel.local_addres[i];
+        saddr_family(&tmp_addr) == AF_INET ?
+        saddr_family(&tmp_addr) = AF_INET6 :
+                                             saddr_family(&tmp_addr) = AF_INET;
+        last_dest_addr = &tmp_addr;
+        for (uint j = 0; j < channel.remote_addres_size; j++)
+        {
+            sockaddrunion tmp_addr2;
+            tmp_addr2 = channel.remote_addres[i];
+            saddr_family(&tmp_addr2) == AF_INET ?
+            saddr_family(&tmp_addr2) = AF_INET6 :
+                                                  saddr_family(&tmp_addr2) = AF_INET;
+            last_src_addr = &tmp_addr2;
+            //6.1) should not find channel
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
+            EXPECT_EQ(found, (channel_t*)NULL);
+        }
+    }
 }
 // last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_validate_dest_addr)
@@ -211,7 +395,7 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
     inst.is_in6addr_any = false;
     last_dest_addr = local_addres + 2;
     ret = dlt.validate_dest_addr(last_dest_addr);
-    EXPECT_EQ(ret, false);
+    EXPECT_EQ(ret, true);
 
     //3) test return true when curr_channel_  NULL inst NOT NULL, is_inaddr_any true, is_in6addr_any false;
     dlt.curr_channel_ = NULL;
@@ -238,16 +422,17 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
     inst.is_in6addr_any = false;
     last_dest_addr = remote_addres + 2;  // we use remote addr as local addr that will not be found
     ret = dlt.validate_dest_addr(last_dest_addr);
-    EXPECT_EQ(ret, false);
+    EXPECT_EQ(ret, true);
 
-    //3) test return false when curr_channel_  NOT NULL
+    //3) test return false when curr_channel_  NOT NULL,  is_inaddr_any false, is_in6addr_any false;
     dlt.curr_channel_ = &channel;
     dlt.curr_geco_instance_ = &inst;
     inst.is_inaddr_any = false;
     inst.is_in6addr_any = false;
     last_dest_addr = remote_addres + 2;  // we use remote addr as local addr that will not be found
     ret = dlt.validate_dest_addr(last_dest_addr);
-    EXPECT_EQ(ret, false);
+    //should return true
+    EXPECT_EQ(ret, true);
 
 }
 // last run and passed on 22 Agu 2016
@@ -537,8 +722,20 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
     wt += chunklen;
     EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK), (uchar*)NULL);
 }
+static void init_addrlist(bool isip4, ushort port, const char** ipstrs, uint len,
+        sockaddrunion* addrlist)
+{
+    for (uint i = 0; i < len; i++)
+    {
+        str2saddr(&addrlist[i], ipstrs[i], port, isip4);
+    }
+}
+// last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 {
+    EXPECT_EQ(sizeof(in_addr), 4);
+    EXPECT_EQ(sizeof(in6_addr), 16);
+
     geco_packet_t geco_packet;
     geco_packet.pk_comm_hdr.checksum = 0;
     geco_packet.pk_comm_hdr.dest_port = htons((generate_random_uint32() % USHRT_MAX));
@@ -556,44 +753,17 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
             { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     sockaddrunion local_addres[3];
     sockaddrunion local_addres6[2];
+    init_addrlist(true, 0, addres, 3, local_addres);
+    init_addrlist(false, 0, addres6, 2, local_addres6);
 
-    EXPECT_EQ(sizeof(in_addr), 4);
-    EXPECT_EQ(sizeof(in6_addr), 16);
+    uint offset = 0;
+    offset += put_vlp_addrlist(init_chunk->variableParams, local_addres, 3);
+    offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres6,2);
 
-    ip_address_t* ipaddr = (ip_address_t*) init_chunk->variableParams;
-    ushort len;
-    ushort offset = 0;
-    len = sizeof(in_addr) + VLPARAM_FIXED_SIZE;
-    EXPECT_EQ(len, 8);
-
-    for (i = 0; i < 3; i++)
-    {
-        str2saddr(&local_addres[i], addres[i], 0, true);
-        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
-        ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv4_addr = local_addres[i].sin.sin_addr.s_addr;
-        while (len % 4)
-            len++;
-        offset += len;
-        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
-    }
-
-    len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
-    EXPECT_EQ(len, 20);
-    for (i = 0; i < 2; i++)
-    {
-        str2saddr(&local_addres6[i], addres6[i], 0, false);
-        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
-        ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv6_addr = local_addres6[i].sin6.sin6_addr;
-        while (len % 4)
-            len++;
-        offset += len;
-        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
-    }
     EXPECT_EQ(offset, 64);
     init_chunk->chunk_header.chunk_length = htons(
     INIT_CHUNK_FIXED_SIZES + offset);
+
     sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES];
     dispatch_layer_t dlt;
     dlt.defaultlocaladdrlistsize_ = 0;
@@ -605,11 +775,14 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     dlt.last_source_addr_ = &last_source_addr;
     int ret;
 
+    uint peersupportedtypes = 0;
     str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0, false);
     ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
             offset + INIT_CHUNK_FIXED_SIZES,
-            SUPPORT_ADDRESS_TYPE_IPV4);
-    EXPECT_EQ(ret, 4);  //2 + last_source_addr_ = 3
+            SUPPORT_ADDRESS_TYPE_IPV4, &peersupportedtypes);
+    EXPECT_EQ(ret, 3);  //3 ip4 addrs  but last src addr ths is ip6 not supported by us
+    EXPECT_EQ(peersupportedtypes, SUPPORT_ADDRESS_TYPE_IPV4);
+
     for (i = 0; i < 3; ++i)
     {
         saddr2str(&peer_addreslist[i], buf, MAX_IPADDR_STR_LEN, &port);
@@ -618,7 +791,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
         EVENTLOG1(VERBOSE, "record ip4addr: %s\n", buf);
         EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres[i], true));
     }
-    EXPECT_TRUE(saddr_equals(&peer_addreslist[3], &last_source_addr, true));
+    //EXPECT_TRUE(saddr_equals(&peer_addreslist[3], &last_source_addr, true));
 
     str2saddr(&last_source_addr, "192.168.5.123", 0, true);
     ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
@@ -634,7 +807,6 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
         EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres6[i - 3], true));
     }
     EXPECT_TRUE(saddr_equals(&peer_addreslist[5], &last_source_addr, true));
-
     str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0, false);
     ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
             offset + INIT_CHUNK_FIXED_SIZES,
@@ -650,12 +822,13 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     }
     EXPECT_TRUE(saddr_equals(&peer_addreslist[2], &last_source_addr, true));
 }
-TEST(DISPATCHER_MODULE, test_contains_local_host_addr)
+// last run and passed on 22 Agu 2016
+TEST(DISPATCHER_MODULE, test_contain_local_addr)
 {
     /**
      * check if local addr is found
      * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
-     * contains_local_host_addr(sockaddrunion* addr_list,uint addr_list_num);*/
+     * containslocaladdr(sockaddrunion* addr_list,uint addr_list_num);*/
     int i;
     const char* addres[] =
             { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
@@ -682,27 +855,28 @@ TEST(DISPATCHER_MODULE, test_contains_local_host_addr)
 
     //1) test branch 1 curr geco_inst and curr channel both NULL
     //1.1) test no local addr presents
-    EXPECT_FALSE(dlt.contains_local_host_addr(local_addres, 3));
-    EXPECT_FALSE(dlt.contains_local_host_addr(local_addres6, 2));
+    EXPECT_FALSE(dlt.contain_local_addr(local_addres, 3));
+    EXPECT_FALSE(dlt.contain_local_addr(local_addres6, 2));
     //1.2) test  local addr presents
     tmpaddr = local_addres[1];
     str2saddr(&local_addres[1], "127.0.0.1", 0, true);
-    EXPECT_TRUE(dlt.contains_local_host_addr(local_addres, 3));
+    EXPECT_TRUE(dlt.contain_local_addr(local_addres, 3));
     local_addres[1] = tmpaddr;
     tmpaddr = local_addres6[1];
     str2saddr(&local_addres6[1], "::1", 0, false);
-    EXPECT_TRUE(dlt.contains_local_host_addr(local_addres6, 2));
+    EXPECT_TRUE(dlt.contain_local_addr(local_addres6, 2));
     local_addres6[1] = tmpaddr;
 
     //2) test branch 2 curr_geco_instance_ NOT NULL
     dlt.curr_geco_instance_ = &inst;
     //2.1) test local addr in curr gecio inst local addres list
     tmpaddr = local_addres[1];
-    EXPECT_TRUE(dlt.contains_local_host_addr(&tmpaddr, 1));
+    EXPECT_TRUE(dlt.contain_local_addr(&tmpaddr, 1));
     //2.1) test no local addr in curr gecio inst local addres list
     str2saddr(&tmpaddr, "221.123.45.12", 0, true);
-    EXPECT_FALSE(dlt.contains_local_host_addr(&tmpaddr, 1));
+    EXPECT_FALSE(dlt.contain_local_addr(&tmpaddr, 1));
 }
+// last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 {
     geco_packet_t geco_packet;
@@ -721,8 +895,7 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
     ((vlparam_fixed_t*) init_chunk->variableParams)->param_length = htons(4 + strlen(hn));
     strcpy((char*) (init_chunk->variableParams + 4), hn);
 
-    uint len = 4 + strlen(hn) +
-    INIT_CHUNK_FIXED_SIZES;
+    uint len = 4 + strlen(hn) + INIT_CHUNK_FIXED_SIZES;
     init_chunk->chunk_header.chunk_length = htons(len);
     while (len % 4)
         ++len;
@@ -733,6 +906,9 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 
     ret = dlt.find_vlparam_from_setup_chunk(geco_packet.chunk, len,
     VLPARAM_COOKIE);
+    EXPECT_EQ(ret, (uchar*)NULL);
+    ret = dlt.find_vlparam_from_setup_chunk(geco_packet.chunk, len,
+    VLPARAM_SUPPORTED_ADDR_TYPES);
     EXPECT_EQ(ret, (uchar*)NULL);
 
 }
@@ -1085,88 +1261,5 @@ TEST(DISPATCHER_MODULE, test_contains_chunk)
     EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_HBREQ, chunk_types), 2);
-}
-// last run and passed on 21 Agu 2016 
-TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
-{
-    /* 6) find dctp instancefor this packet
-     *  if this packet is for a server dctp instance,
-     *  we will find that dctp instance and let it handle this packet
-     *  (i.e. we have the dctp instance's localPort set and
-     *  it matches the packet's destination port)*/
-
-    dispatch_layer_t dlt;
-    geco_instance_t inst;
-    const int destaddrsize = 6;
-    const char* destipstrs[destaddrsize] =
-            { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
-                    "192.168.1.5" };
-    const ushort destport = 9989;
-    sockaddrunion dest_addrs[destaddrsize];
-    init_inst(dlt, inst, destport, destipstrs, destaddrsize, dest_addrs);
-
-    sockaddrunion* last_dest_addr;
-    ushort last_dest_port;
-    geco_instance_t* ret = 0;
-
-    // 1)  if is_in6addr_any and is_inaddr_any are both false
-    inst.is_in6addr_any = inst.is_inaddr_any = false;
-    // 1.1) if last_dest_port, last_dest_addr and addr family both matches
-    last_dest_port = inst.local_port;
-    for (uint i = 0; i < inst.local_addres_size; i++)
-    {
-        last_dest_addr = &inst.local_addres_list[i];
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
-        //  1.1.1) should found this inst
-        EXPECT_EQ(ret, &inst);
-    }
-    // 1.2) if last_dest_port NOT mathces 
-    last_dest_port = inst.local_port - 1;
-    for (uint i = 0; i < inst.local_addres_size; i++)
-    {
-        last_dest_addr = &inst.local_addres_list[i];
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
-        //  1.2.1) should NOT found this inst
-        EXPECT_EQ(ret, nullptr);
-    }
-    // 1.3) if last_dest_addr NOT matches
-    last_dest_port = inst.local_port;
-    for (uint i = 0; i < inst.local_addres_size; i++)
-    {
-        sockaddrunion tmp = inst.local_addres_list[i];
-        s4addr(&tmp) -= 1;  // just minus to make it different
-        last_dest_addr = &tmp;
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
-        //  1.3.1) should NOT found this inst
-        EXPECT_EQ(ret, nullptr);
-    }
-    // 1.4) if addr family NOT matches
-    last_dest_port = inst.local_port;
-    for (uint i = 0; i < inst.local_addres_size; i++)
-    {
-        sockaddrunion tmp = inst.local_addres_list[i];
-        saddr_family(&tmp) == AF_INET ?
-        saddr_family(&tmp) = AF_INET6 :
-                                        saddr_family(&tmp) = AF_INET;
-        last_dest_addr = &tmp;
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
-        //  1.4.1) should NOT found this inst
-        EXPECT_EQ(ret, nullptr);
-    }
-    // 2)  if is_in6addr_any is true
-    inst.is_in6addr_any = true;
-    // 2.1) last_dest_addr and addr family ALL NOT match, but last_dest_port_matches
-    for (uint i = 0; i < inst.local_addres_size; i++)
-    {
-        sockaddrunion tmp = inst.local_addres_list[i];
-        s4addr(&tmp) -= 1;  // just minus to make it different
-        saddr_family(&tmp) == AF_INET ?
-        saddr_family(&tmp) = AF_INET6 :
-                                        saddr_family(&tmp) = AF_INET;
-        last_dest_addr = &tmp;
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
-        //  2.1.1) should still found this inst
-        EXPECT_EQ(ret, &inst);
-    }
 }
 

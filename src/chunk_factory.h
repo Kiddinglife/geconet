@@ -58,9 +58,8 @@ extern error_chunk_t* build_error_chunk();
 extern uint put_ec_unrecognized_chunk(error_cause_t*ecause,
         uchar* errdata, uint errdatalen);
 extern uint put_error_cause(error_cause_t*ecause,
-        ushort errcode, uchar* errdata,ushort errdatalen);
+        ushort errcode, uchar* errdata, ushort errdatalen);
 //- - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 
 /*
  makes an init and initializes the the fixed part of init
@@ -86,14 +85,12 @@ extern init_chunk_t* build_init_chunk(
         unsigned short noInStreams,
         unsigned int initialTSN);
 
-
 extern init_chunk_t* build_init_ack_chunk(
         unsigned int initTag,
         unsigned int arwnd,
         unsigned short noOutStreams,
         unsigned short noInStreams,
         unsigned int initialTSN);
-
 
 /*
  function to add supported address types variable parameter to init (ack) chunk
@@ -112,7 +109,6 @@ extern init_chunk_t* build_init_ack_chunk(
  */
 extern uint put_vlp_supported_addr_types(supported_address_types_t* initchunk, bool with_ipv4,
         bool with_ipv6, bool with_dns);
-
 
 /*
  *  function to add user supported addresses to init (ack) chunk
@@ -160,7 +156,7 @@ extern uint put_vlp_supported_addr_types(supported_address_types_t* initchunk, b
  ACK is an alternative to make an association more likely to work
  across a NAT box.
  */
-extern uint put_vlp_addrlist(ip_address_t* ip_addr,
+extern uint put_vlp_addrlist(uchar* vlp_start,
         sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
         uint local_addreslist_size);
 #endif
