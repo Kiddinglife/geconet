@@ -49,8 +49,8 @@ unittets/unit_tests.o: \
  /home/jackiez/20160219/geco-protocol-stack/src/geco-ds-malloc.h \
  /home/jackiez/20160219/geco-protocol-stack/src/geco-ds-config.h \
  /home/jackiez/20160219/geco-protocol-stack/src/protoco-stack.h \
- /home/jackiez/20160219/geco-protocol-stack/src/dispatch_layer.h \
- /home/jackiez/20160219/geco-protocol-stack/src/auth.h
+ /home/jackiez/20160219/geco-protocol-stack/src/chunk_factory.h \
+ /home/jackiez/20160219/geco-protocol-stack/src/dispatch_layer.h
 
 /home/jackiez/20160219/geco-protocol-stack/thirdparty/googletest/include/gtest/gtest.h:
 
@@ -150,6 +150,6 @@ unittets/unit_tests.o: \
 
 /home/jackiez/20160219/geco-protocol-stack/src/protoco-stack.h:
 
-/home/jackiez/20160219/geco-protocol-stack/src/dispatch_layer.h:
+/home/jackiez/20160219/geco-protocol-stack/src/chunk_factory.h:
 
-/home/jackiez/20160219/geco-protocol-stack/src/auth.h:
+/home/jackiez/20160219/geco-protocol-stack/src/dispatch_layer.h:

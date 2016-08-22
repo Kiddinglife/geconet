@@ -16,3 +16,5 @@
 *.tlog
 *.pdb
 *.d
+*.exe
+*.la
