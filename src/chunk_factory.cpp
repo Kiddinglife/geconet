@@ -126,6 +126,7 @@ uint put_vlp_addrlist(uchar* vlp_start, sockaddrunion local_addreslist[MAX_NUM_A
             ip_addr->vlparam_header.param_length = htons(
                     sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
             ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
+            assert(sizeof(struct in_addr) + VLPARAM_FIXED_SIZE == 8);
             length += 8;
             break;
         case AF_INET6:
@@ -135,6 +136,7 @@ uint put_vlp_addrlist(uchar* vlp_start, sockaddrunion local_addreslist[MAX_NUM_A
                     sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
             memcpy(&ip_addr->dest_addr_un.ipv6_addr, &(s6addr(&(local_addreslist[i]))),
                     sizeof(struct in6_addr));
+            assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE ==20);
             length += 20;
             break;
         default:
