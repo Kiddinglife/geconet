@@ -50,10 +50,6 @@ dispatch_layer_t::dispatch_layer_t()
     curr_ecc_reason_ = NULL;
     transport_layer_ = NULL;
 
-    /*unit test variables initilitions*/
-#ifdef ENABLE_UNIT_TEST
-    branchtest_contains_chunk_abort_when_curr_channel_is_null_ = false;
-#endif
 }
 
 int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
@@ -921,7 +917,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     }  // 23 send_abort_ == true
 
     // forward packet value to bundle ctrl module for disassemblings
-    disassemle_curr_geco_packet();
+    //disassemle_curr_geco_packet();
 
     // no need to clear last_src_port_ and last_dest_port_ MAY be used by other functions
     last_src_path_ = -1;

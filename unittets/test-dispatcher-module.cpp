@@ -6,9 +6,8 @@
 #include "dispatch_layer.h"
 using namespace geco::ds;
 
-static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst,
-        ushort destport, const char** src_ips, uint src_ips_len,
-        sockaddrunion* dest)
+static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst, ushort destport,
+        const char** src_ips, uint src_ips_len, sockaddrunion* dest)
 {
     for (uint i = 0; i < src_ips_len; i++)
     {
@@ -35,8 +34,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
     geco_instance_t inst;
     const int destaddrsize = 6;
     const char* destipstrs[destaddrsize] =
-            { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
-                    "192.168.1.5" };
+        { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4", "192.168.1.5" };
     const ushort destport = 9989;
     sockaddrunion dest_addrs[destaddrsize];
     init_inst(dlt, inst, destport, destipstrs, destaddrsize, dest_addrs);
@@ -106,10 +104,8 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
     }
 }
 static void init_channel(dispatch_layer_t& dlt, channel_t& channel, ushort srcport, ushort destport,
-        const char** src_ips, uint src_ips_len,
-        const char** dest_ips, uint dest_ips_len,
-        sockaddrunion* src,
-        sockaddrunion* dest)
+        const char** src_ips, uint src_ips_len, const char** dest_ips, uint dest_ips_len,
+        sockaddrunion* src, sockaddrunion* dest)
 {
     for (uint i = 0; i < src_ips_len; i++)
     {
@@ -135,20 +131,18 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 {
     const int src_ips_size = 3;
     const char* src_ips[src_ips_size] =
-            { "192.168.1.0", "192.168.1.1", "192.168.1.2" };
+        { "192.168.1.0", "192.168.1.1", "192.168.1.2" };
     const int dest_ips_size = 3;
     const char* dest_ips[dest_ips_size] =
-            { "192.168.1.3", "192.168.1.4", "192.168.1.5" };
+        { "192.168.1.3", "192.168.1.4", "192.168.1.5" };
     const ushort ports[] =
-            { 100, 101 };  // src-dest
+        { 100, 101 };  // src-dest
     sockaddrunion remote_addres[src_ips_size];
     sockaddrunion local_addres[dest_ips_size];
 
     channel_t channel;
     dispatch_layer_t dlt;
-    init_channel(dlt, channel,
-            ports[0], ports[1],
-            src_ips, src_ips_size, dest_ips, dest_ips_size,
+    init_channel(dlt, channel, ports[0], ports[1], src_ips, src_ips_size, dest_ips, dest_ips_size,
             remote_addres, local_addres);
 
     //temps
@@ -331,11 +325,10 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
      */
     int i;
     const char* addres[6] =
-            { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
-                    "192.168.1.5" };
+        { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4", "192.168.1.5" };
     const int addres_cnt = 6;
     const ushort ports[addres_cnt] =
-            { 100, 101 };  // src-dest
+        { 100, 101 };  // src-dest
     sockaddrunion remote_addres[addres_cnt / 2];
     sockaddrunion local_addres[addres_cnt / 2];
 
@@ -748,9 +741,9 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 
     int i;
     const char* addres[] =
-            { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+        { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
     const char* addres6[] =
-            { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     sockaddrunion local_addres[3];
     sockaddrunion local_addres6[2];
     init_addrlist(true, 0, addres, 3, local_addres);
@@ -758,7 +751,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 
     uint offset = 0;
     offset += put_vlp_addrlist(init_chunk->variableParams, local_addres, 3);
-    offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres6,2);
+    offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres6, 2);
 
     EXPECT_EQ(offset, 64);
     init_chunk->chunk_header.chunk_length = htons(
@@ -831,9 +824,9 @@ TEST(DISPATCHER_MODULE, test_contain_local_addr)
      * containslocaladdr(sockaddrunion* addr_list,uint addr_list_num);*/
     int i;
     const char* addres[] =
-            { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+        { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
     const char* addres6[] =
-            { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     sockaddrunion local_addres[3];
     sockaddrunion local_addres6[2];
     for (i = 0; i < 3; i++)
@@ -912,6 +905,7 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
     EXPECT_EQ(ret, (uchar*)NULL);
 
 }
+
 TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
 {
     dispatch_layer_t dlt;
@@ -962,27 +956,32 @@ TEST(DISPATCHER_MODULE, test_alloc_complete_bundle_send_free_simple_chunk)
 
     //3) test sack + data+ctrl chunks bundled in one packet TODO
 }
+
 TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 {
     //fills up addreslist
     int i;
-    const char* addres[] =
-            { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
-    const char* addres6[] =
-            { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+    const int srcaddr4_size = 3;
+    const int srcaddr6_size = 2;
+    const char* srcaddr4_ipstrs[srcaddr4_size] =
+        { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+    const char* srcaddr6_ipstrs[srcaddr6_size] =
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
 
-    const char* dest_ips[] =
-            { "192.168.1.122", "192.168.1.131", "192.168.34.1" };
-    const char* dest_ips6[] =
-            { "2001:0db8:0a0b:12f0:0000:0000:0000:0002", "2607:f0d0:1002:0051:0000:0000:0000:0005" };
+    const int destaddr4_size = 3;
+    const int destaddr6_size = 2;
+    const char* destaddr4_ipstrs[destaddr4_size] =
+        { "192.168.1.122", "192.168.1.131", "192.168.34.1" };
+    const char* destaddr6_ipstrs[destaddr6_size] =
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0002", "2607:f0d0:1002:0051:0000:0000:0000:0005" };
 
     ushort sender_src_port = 123;
     ushort sender_dest_port = 456;
 
     const char* cannot_found_ips4[] =
-            { "192.168.1.123", "192.168.1.101", "192.168.34.5" };
+        { "192.168.1.123", "192.168.1.101", "192.168.34.5" };
     const char* cannot_found_ips6[] =
-            { "2001:0db8:0a0b:12f0:0000:0000:0000:0020", "2607:f0d0:1002:0051:0000:0000:0000:0100" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0020", "2607:f0d0:1002:0051:0000:0000:0000:0100" };
 
     sockaddrunion src_addres[3];  // sender src addr=receiver remote addr
     sockaddrunion src_addres6[2];  // sender src addr=receiver remote addr
@@ -990,126 +989,141 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     sockaddrunion dest_addres6[2];  // sender dest addr=receiver local addr
     sockaddrunion cannot_found_addres4[3];  // sender dest add is receiver local addr
     sockaddrunion cannot_found_addres6[2];  // sender dest addr=receiver local addr
+
     EXPECT_EQ(sizeof(in_addr), 4);
     EXPECT_EQ(sizeof(in6_addr), 16);
 
     geco_packet_t geco_packet;
-    int sfd = 123;
+    //int sfd = 123;
     geco_packet_t* dctp_packet = &geco_packet;
     uint dctp_packet_len;
     sockaddrunion source_addr;
     sockaddrunion dest_addr;
 
-    /*prepare an init chunk*/
     // fills up geco packet hdr
     geco_packet.pk_comm_hdr.checksum = 0;
     geco_packet.pk_comm_hdr.dest_port = htons(sender_dest_port);  //456
     geco_packet.pk_comm_hdr.src_port = htons(sender_src_port);  //123
     geco_packet.pk_comm_hdr.verification_tag = 0;
+
+    /*prepare an init chunk*/
+    unsigned int initTag = htonl(generate_random_uint32());
+    unsigned int arwnd = 512;
+    unsigned short noOutStreams = 5;
+    unsigned short noInStreams = 5;
+    unsigned int initialTSN = initTag;
+    init_chunk_t* init_chunk = build_init_chunk(initTag, arwnd, noOutStreams, noInStreams,
+            initialTSN);
     // fills up init chunk hdr
-    init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
-    init_chunk->chunk_header.chunk_id = CHUNK_INIT;
-    init_chunk->chunk_header.chunk_flags = 0;
-    init_chunk->init_fixed.inbound_streams = htons(5);
-    init_chunk->init_fixed.outbound_streams = htons(5);
-    init_chunk->init_fixed.init_tag = htonl(generate_random_uint32());
-    init_chunk->init_fixed.initial_tsn = init_chunk->init_fixed.init_tag;
-    init_chunk->init_fixed.rwnd = htonl(512);
-    ip_address_t* ipaddr = (ip_address_t*) init_chunk->variableParams;
-    ushort len;
-    ushort offset = 0;
-    len = sizeof(in_addr) + VLPARAM_FIXED_SIZE;
-    EXPECT_EQ(len, 8);
-    for (i = 0; i < 3; i++)
-    {
-        str2saddr(&src_addres[i], addres[i], sender_src_port, true);
-        str2saddr(&dest_addres[i], dest_ips[i], sender_dest_port, true);
-        str2saddr(&cannot_found_addres4[i], cannot_found_ips4[i], 0, true);
-        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
-        ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv4_addr = src_addres[i].sin.sin_addr.s_addr;
-        while (len % 4)
-            len++;
-        offset += len;
-        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
-    }
-    len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
-    EXPECT_EQ(len, 20);
-    for (i = 0; i < 2; i++)
-    {
-        str2saddr(&src_addres6[i], addres6[i], sender_src_port, false);
-        str2saddr(&dest_addres6[i], dest_ips6[i], sender_dest_port, false);
-        str2saddr(&cannot_found_addres6[i], cannot_found_ips6[i], 0, false);
+    init_addrlist(true, 0, srcaddr4_ipstrs, srcaddr4_size, src_addres);
+    init_addrlist(false, 0, srcaddr6_ipstrs, srcaddr6_size, src_addres6);
+    uint written = put_vlp_addrlist(init_chunk->variableParams, src_addres, srcaddr4_size);
+    written += put_vlp_addrlist(&init_chunk->variableParams[written], src_addres, srcaddr4_size);
+    put_vlp_supported_addr_types(&init_chunk->variableParams[written], true, true, false);
 
-        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
-        ipaddr->vlparam_header.param_length = htons(len);
-        ipaddr->dest_addr_un.ipv6_addr = src_addres6[i].sin6.sin6_addr;
-        while (len % 4)
-            len++;
-        offset += len;
-        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
-    }
-    EXPECT_EQ(offset, 64);
-    // fills up support types
-    len = sizeof(ushort) * 2 + 4;
-    vlparam_fixed_t* saddrtypes = (vlparam_fixed_t*) (init_chunk->variableParams + offset);
-    saddrtypes->param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
-    saddrtypes->param_length = htons(len);
-    *((ushort*) (init_chunk->variableParams + offset + 4)) = htons(
-    VLPARAM_IPV4_ADDRESS);
-    *((ushort*) (init_chunk->variableParams + offset + 4 + 2)) = htons(
-    VLPARAM_IPV6_ADDRESS);
-    while (len % 4)
-        len++;
-    offset += len;
-    EXPECT_EQ(offset, 72);
-
-    init_chunk->chunk_header.chunk_length = htons(
-    INIT_CHUNK_FIXED_SIZES + offset);
-    EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + offset, 92);
-
-    // setup default test variables, they may be manually changed
-    // to cater for specified test.
-    dispatch_layer_t dlt;
-    network_interface_t init;
-    int rwnd = 512;
-    init.init(&rwnd, true);
-    dlt.transport_layer_ = &init;
-    geco_instance_t inst;
-    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
-    inst.is_inaddr_any = false;
-    inst.is_in6addr_any = true;
-    inst.noOfInStreams = 12;
-    inst.noOfOutStreams = 12;
-    inst.local_port = sender_dest_port;
-    inst.local_addres_list = dest_addres6;
-    inst.local_addres_size = sizeof dest_addres6;
-    channel_t channel;
-    channel.channel_id = 123;
-    channel.remote_addres = src_addres6;
-    channel.remote_addres_size = sizeof src_addres6;
-    channel.local_addres = dest_addres6;
-    channel.local_addres_size = sizeof dest_addres6;
-    channel.remote_port = sender_src_port;
-    channel.local_port = sender_dest_port;
-    channel.deleted = false;
-    channel.geco_inst = &inst;
-    dlt.channels_.push_back(&channel);
-    dlt.geco_instances_.push_back(&inst);
-
-    // use INIT CHUNK as default packet, we may change its chunk id and so
-    // on to catter for specified needs. eg, set chunk id to chunk data to
-    // to test chunk_abort branch
-    dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE;
-    set_crc32_checksum((char*) &geco_packet,
-            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
+//    init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
+//    init_chunk->chunk_header.chunk_id = CHUNK_INIT;
+//    init_chunk->chunk_header.chunk_flags = 0;
+//    init_chunk->init_fixed.inbound_streams = htons(5);
+//    init_chunk->init_fixed.outbound_streams = htons(5);
+//    init_chunk->init_fixed.init_tag = htonl(generate_random_uint32());
+//    init_chunk->init_fixed.initial_tsn = init_chunk->init_fixed.init_tag;
+//    init_chunk->init_fixed.rwnd = htonl(512);
+//    ip_address_t* ipaddr = (ip_address_t*) init_chunk->variableParams;
+//    ushort len;
+//    ushort offset = 0;
+//    len = sizeof(in_addr) + VLPARAM_FIXED_SIZE;
+//    EXPECT_EQ(len, 8);
+//    for (i = 0; i < 3; i++)
+//    {
+//        str2saddr(&src_addres[i], addres[i], sender_src_port, true);
+//        str2saddr(&dest_addres[i], dest_ips[i], sender_dest_port, true);
+//        str2saddr(&cannot_found_addres4[i], cannot_found_ips4[i], 0, true);
+//        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
+//        ipaddr->vlparam_header.param_length = htons(len);
+//        ipaddr->dest_addr_un.ipv4_addr = src_addres[i].sin.sin_addr.s_addr;
+//        while (len % 4)
+//            len++;
+//        offset += len;
+//        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
+//    }
+//    len = sizeof(in6_addr) + VLPARAM_FIXED_SIZE;
+//    EXPECT_EQ(len, 20);
+//    for (i = 0; i < 2; i++)
+//    {
+//        str2saddr(&src_addres6[i], addres6[i], sender_src_port, false);
+//        str2saddr(&dest_addres6[i], dest_ips6[i], sender_dest_port, false);
+//        str2saddr(&cannot_found_addres6[i], cannot_found_ips6[i], 0, false);
+//
+//        ipaddr->vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
+//        ipaddr->vlparam_header.param_length = htons(len);
+//        ipaddr->dest_addr_un.ipv6_addr = src_addres6[i].sin6.sin6_addr;
+//        while (len % 4)
+//            len++;
+//        offset += len;
+//        ipaddr = (ip_address_t*) (init_chunk->variableParams + offset);
+//    }
+//    EXPECT_EQ(offset, 64);
+//    // fills up support types
+//    len = sizeof(ushort) * 2 + 4;
+//    vlparam_fixed_t* saddrtypes = (vlparam_fixed_t*) (init_chunk->variableParams + offset);
+//    saddrtypes->param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
+//    saddrtypes->param_length = htons(len);
+//    *((ushort*) (init_chunk->variableParams + offset + 4)) = htons(
+//    VLPARAM_IPV4_ADDRESS);
+//    *((ushort*) (init_chunk->variableParams + offset + 4 + 2)) = htons(
+//    VLPARAM_IPV6_ADDRESS);
+//    while (len % 4)
+//        len++;
+//    offset += len;
+//    EXPECT_EQ(offset, 72);
+//
+//    init_chunk->chunk_header.chunk_length = htons(
+//    INIT_CHUNK_FIXED_SIZES + offset);
+//    EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + offset, 92);
+//
+//    // setup default test variables, they may be manually changed
+//    // to cater for specified test.
+//    dispatch_layer_t dlt;
+//    network_interface_t init;
+//    //int rwnd = 512;
+//    //init.init(&rwnd, true);
+//    dlt.transport_layer_ = &init;
+//    geco_instance_t inst;
+//    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
+//    inst.is_inaddr_any = false;
+//    inst.is_in6addr_any = true;
+//    inst.noOfInStreams = 12;
+//    inst.noOfOutStreams = 12;
+//    inst.local_port = sender_dest_port;
+//    inst.local_addres_list = dest_addres6;
+//    inst.local_addres_size = sizeof dest_addres6;
+//    channel_t channel;
+//    channel.channel_id = 123;
+//    channel.remote_addres = src_addres6;
+//    channel.remote_addres_size = sizeof src_addres6;
+//    channel.local_addres = dest_addres6;
+//    channel.local_addres_size = sizeof dest_addres6;
+//    channel.remote_port = sender_src_port;
+//    channel.local_port = sender_dest_port;
+//    channel.deleted = false;
+//    channel.geco_inst = &inst;
+//    dlt.channels_.push_back(&channel);
+//    dlt.geco_instances_.push_back(&inst);
+//
+//    // use INIT CHUNK as default packet, we may change its chunk id and so
+//    // on to catter for specified needs. eg, set chunk id to chunk data to
+//    // to test chunk_abort branch
+//    dctp_packet_len = offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE;
+//    set_crc32_checksum((char*) &geco_packet,
+//            offset + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE);
 
     //1) branch line 364 - 12) try to find an channel for this packet from setup chunks
     // 1.2) test found an existed channel from setup chunks
-    str2saddr(&source_addr, cannot_found_ips6[1], sender_src_port, false);  //use unfoundable src addr
-    dest_addr = dest_addres6[1];  // use foundable dest addr
-    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len, &source_addr, &dest_addr);
-    EXPECT_EQ(dlt.curr_channel_, &channel);
+//    str2saddr(&source_addr, cannot_found_ips6[1], sender_src_port, false); //use unfoundable src addr
+//    dest_addr = dest_addres6[1];  // use foundable dest addr
+//    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len, &source_addr, &dest_addr);
+//    EXPECT_EQ(dlt.curr_channel_, &channel);
     //1.2) test Not found an existed channel from setup chunks
     //    str2saddr(&source_addr, cannot_found_ips6[1], sender_src_port, false);  //use unfoundable src addr
     //    dest_addr = dest_addres6[1];  // use foundable dest addr
@@ -1162,8 +1176,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     //    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
     //            &source_addr, &dest_addr);
 
-    offset -= len;
-    dctp_packet_len -= len;
+//    offset -= len;
+//    dctp_packet_len -= len;
 
     //    //2.1 test when is_in(6)addr_any both true and local addr and port All different,
     //    // should NOT found geco inst and Not find channel
@@ -1230,6 +1244,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     //    dlt.recv_geco_packet(sfd, (char*) dctp_packet, dctp_packet_len,
     //            &source_addr, &dest_addr);
 }
+
 // last run and passed on 21 Agu 2016 
 TEST(DISPATCHER_MODULE, test_contains_chunk)
 {

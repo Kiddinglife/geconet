@@ -4,8 +4,8 @@
 
 error_chunk_t* build_error_chunk()
 {
-    error_chunk_t* errorChunk =
-            (error_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
+    error_chunk_t* errorChunk = (error_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__,
+    __LINE__);
     if (errorChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(errorChunk, 0, ERROR_CHUNK_TOTAL_SIZE);
     errorChunk->chunk_header.chunk_id = CHUNK_ERROR;
@@ -36,21 +36,16 @@ uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata, ushor
     ecause->error_reason_code = htons(errcode);
     int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
     ecause->error_reason_length = htons(len);
-    if (errdatalen > 0 && errdata != NULL)
-    memcpy(ecause->error_reason, errdata, errdatalen);
+    if (errdatalen > 0 && errdata != NULL) memcpy(ecause->error_reason, errdata, errdatalen);
     while (len & 3)
         len++;
     return len;
 }
-init_chunk_t* build_init_chunk(
-        unsigned int initTag,
-        unsigned int arwnd,
-        unsigned short noOutStreams,
-        unsigned short noInStreams,
-        unsigned int initialTSN)
+init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
+        unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN)
 {
-    init_chunk_t* initChunk =
-            (init_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
+    init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__,
+    __LINE__);
     if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
     initChunk->chunk_header.chunk_id = CHUNK_INIT;
@@ -63,15 +58,11 @@ init_chunk_t* build_init_chunk(
     initChunk->init_fixed.initial_tsn = htonl(initialTSN);
     return initChunk;
 }
-init_chunk_t* build_init_ack_chunk(
-        unsigned int initTag,
-        unsigned int arwnd,
-        unsigned short noOutStreams,
-        unsigned short noInStreams,
-        unsigned int initialTSN)
+init_chunk_t* build_init_ack_chunk(unsigned int initTag, unsigned int arwnd,
+        unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN)
 {
-    init_chunk_t* initChunk =
-            (init_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
+    init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__,
+    __LINE__);
     if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
     initChunk->chunk_header.chunk_id = CHUNK_INIT;
@@ -84,20 +75,17 @@ init_chunk_t* build_init_ack_chunk(
     initChunk->init_fixed.initial_tsn = htonl(initialTSN);
     return initChunk;
 }
-uint put_vlp_supported_addr_types(supported_address_types_t* param, bool with_ipv4,
-        bool with_ipv6, bool with_dns)
+uint put_vlp_supported_addr_types(uchar* vlp_start, bool with_ipv4, bool with_ipv6, bool with_dns)
 {
     ushort num_of_types = 0, position = 0;
-    if (with_ipv4)
-    num_of_types++;
-    if (with_ipv6)
-    num_of_types++;
-    if (with_dns)
-    num_of_types++;
+    if (with_ipv4) num_of_types++;
+    if (with_ipv6) num_of_types++;
+    if (with_dns) num_of_types++;
     if (num_of_types == 0)
     ERRLOG(FALTAL_ERROR_EXIT,
             "put_supported_addr_types()::No Supported Address Types -- Program Error\n");
     ushort total_length = VLPARAM_FIXED_SIZE + num_of_types * sizeof(ushort);
+    supported_address_types_t* param = (supported_address_types_t*) vlp_start;
     param->vlparam_header.param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
     param->vlparam_header.param_length = htons(total_length);
     if (with_ipv4)
@@ -120,8 +108,7 @@ uint put_vlp_supported_addr_types(supported_address_types_t* param, bool with_ip
     return total_length;
 }
 
-uint put_vlp_addrlist(uchar* vlp_start,
-        sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
+uint put_vlp_addrlist(uchar* vlp_start, sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
         uint local_addreslist_size)
 {
     assert(vlp_start != 0 && local_addreslist != 0 && local_addreslist_size > 0);
@@ -134,27 +121,27 @@ uint put_vlp_addrlist(uchar* vlp_start,
         ip_addr = (ip_address_t*) (vlp_start + length);
         switch (saddr_family(&(local_addreslist[i])))
         {
-            case AF_INET:
-                ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
-                ip_addr->vlparam_header.param_length = htons(
-                        sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
-                ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
-                length += 8;
-                break;
-            case AF_INET6:
-                ip_addr->vlparam_header.param_type = htons(
-                VLPARAM_IPV6_ADDRESS);
-                ip_addr->vlparam_header.param_length = htons(
-                        sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
-                memcpy(&ip_addr->dest_addr_un.ipv6_addr, &(s6addr(&(local_addreslist[i]))),
-                        sizeof(struct in6_addr));
-                length += 20;
-                break;
-            default:
-                ERRLOG1(MAJOR_ERROR,
-                        "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
-                        saddr_family(&(local_addreslist[i])));
-                break;
+        case AF_INET:
+            ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
+            ip_addr->vlparam_header.param_length = htons(
+                    sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
+            ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
+            length += 8;
+            break;
+        case AF_INET6:
+            ip_addr->vlparam_header.param_type = htons(
+            VLPARAM_IPV6_ADDRESS);
+            ip_addr->vlparam_header.param_length = htons(
+                    sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
+            memcpy(&ip_addr->dest_addr_un.ipv6_addr, &(s6addr(&(local_addreslist[i]))),
+                    sizeof(struct in6_addr));
+            length += 20;
+            break;
+        default:
+            ERRLOG1(MAJOR_ERROR,
+                    "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
+                    saddr_family(&(local_addreslist[i])));
+            break;
         }
     }
     return length;  // no need to align because MUST be 4 bytes aliged
