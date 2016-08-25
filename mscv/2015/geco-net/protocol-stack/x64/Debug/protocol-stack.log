@@ -24,12 +24,12 @@ d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(83): warning C4005: 'P
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
 d:\vs-workspace\geco-protocol-stack\src\transport_layer.h(599): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(2238): note: see declaration of 'gethostbyname'
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1317): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1516): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1264): warning C4101: 'init_i_sent_cid': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3015): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3085): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3134): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1423): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1622): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1370): warning C4101: 'init_i_sent_cid': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3121): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3191): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3240): warning C4101: 'padding_len': unreferenced local variable
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h(1663): warning C4700: uninitialized local variable 'initackchar' used
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-protocol-stack_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).

@@ -1077,7 +1077,49 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     //0)if an INIT(ACK) CHUNK is received
     if (enable_0_if_recv_invalidate_packet_addr_port_length_integritycheck_and_so_on)
     {
+        sockaddrunion illegal_addr;
+        illegal_addr.sin.sin_family = AF_INET;
+        illegal_addr.sin.sin_port = 0;
 
+        // 0.1) if it is broadcast addr
+        illegal_addr.sin.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+        set_md5_checksum((char*)&geco_packet, MIN_GECO_PACKET_SIZE);
+        //      0.1.1) should return recv_geco_packet_but_addrs_formate_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_addrs_formate_check_failed);
+        // 0.2) if it is any addr
+        illegal_addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
+        set_md5_checksum((char*)&geco_packet, MIN_GECO_PACKET_SIZE);
+        //      0.2.1) should return recv_geco_packet_but_addrs_formate_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_addrs_formate_check_failed);
+        // 0.3) if either dest port or src port is zero,
+        ushort oldport = geco_packet.pk_comm_hdr.dest_port;
+        geco_packet.pk_comm_hdr.dest_port = 0;
+        set_md5_checksum((char*)&geco_packet, MIN_GECO_PACKET_SIZE);
+        //      0.3.1) should return recv_geco_packet_but_addrs_formate_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_port_numbers_check_failed);
+        geco_packet.pk_comm_hdr.dest_port = oldport;
+        // 0.4) if geco packet len is not %4
+        set_md5_checksum((char*)&geco_packet, MIN_GECO_PACKET_SIZE+1);
+        //      0.4.1) should return recv_geco_packet_but_integrity_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, MIN_GECO_PACKET_SIZE+1, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
+        // 0.5) if geco packet len < MIN_GECO_PACKET_SIZE
+        set_md5_checksum((char*)&geco_packet, 4);
+        //      0.5.1) should return recv_geco_packet_but_integrity_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, 4, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
+        // 0.6) if geco packet len  > MAX_GECO_PACKET_SIZE
+        set_md5_checksum((char*)&geco_packet, MAX_GECO_PACKET_SIZE+1);
+        //       0.6.1) should return recv_geco_packet_but_integrity_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, MAX_GECO_PACKET_SIZE+1, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
+        // 0.7) if VALIDATION OF checksum not equals,
+        //      0.7.1) should return recv_geco_packet_but_integrity_check_failed
+        ret = dlt.recv_geco_packet(0, (char*)dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr, &inst.local_addres_list[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     //1)if an INIT(ACK) CHUNK is received
@@ -1166,7 +1208,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         }
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
     //    //2) test branch at line 263 -> init, init ack or shutdown complete should be the only chunk
     //    //otherwise will be discarded.
     //    len = CHUNK_FIXED_SIZE;

@@ -55,15 +55,16 @@ dispatch_layer_t::dispatch_layer_t()
 int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
     sockaddrunion * source_addr, sockaddrunion * dest_addr)
 {
-    EVENTLOG3(VERBOSE, "recv_geco_packet()::recvied  %d bytes of data %s from dctp fd %d\n",
+    EVENTLOG3(NOTICE, "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
         dctp_packet_len, dctp_packet, socket_fd);
 
     /* 1) validate packet hdr size, checksum and if aligned 4 bytes */
-    if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_NETWORK_PACKET_HDR_SIZES
-        || dctp_packet_len > MAX_NETWORK_PACKET_HDR_SIZES
+    if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_GECO_PACKET_SIZE
+        || dctp_packet_len > MAX_GECO_PACKET_SIZE
         || !validate_md5_checksum(dctp_packet, dctp_packet_len))
     {
-        EVENTLOG(MINOR_ERROR, "recv_geco_packet()::received corrupted datagramm -> discard\n");
+        EVENTLOG(NOTICE, "received corrupted datagramm -> discard");
+        EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
         return recv_geco_packet_but_integrity_check_failed;
     }
 
@@ -75,9 +76,10 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     if (last_src_port_ == 0 || last_dest_port_ == 0)
     {
         /* refers to RFC 4960 Section 3.1 at line 867 and line 874*/
-        ERRLOG(MINOR_ERROR, "dispatch_layer_t::recv_geco_packet():: invalid ports number (0)\n");
+        ERRLOG(NOTICE, "dispatch_layer_t:: invalid ports number (0)");
         last_src_port_ = 0;
         last_dest_port_ = 0;
+        EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
         return recv_geco_packet_but_port_numbers_check_failed;
     }
 
@@ -106,43 +108,92 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     {
         dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV4;  // peer snd us an IP4-formate address
         dest_addr->sin.sin_port = curr_geco_packet_fixed_->dest_port;
-
         ip4_saddr_ = ntohl(dest_addr->sin.sin_addr.s_addr);
-        if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
-            || (INADDR_ANY == ip4_saddr_) || (INADDR_BROADCAST == ip4_saddr_))
+
+        if (IN_CLASSD(ip4_saddr_))
         {
+            EVENTLOG(VERBOSE, "IN_CLASSD(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
         }
+        else if (IN_EXPERIMENTAL(ip4_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN_EXPERIMENTAL(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN_BADCLASS(ip4_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN_BADCLASS(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (INADDR_ANY == ip4_saddr_)
+        {
+            EVENTLOG(VERBOSE, "INADDR_ANY(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (INADDR_BROADCAST == ip4_saddr_)
+        {
+            EVENTLOG(VERBOSE, "INADDR_BROADCAST(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        //if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
+        //    || (INADDR_ANY == ip4_saddr_) || (INADDR_BROADCAST == ip4_saddr_))
+        //{
+        //    should_discard_curr_geco_packet_ = true;
+        //}
 
         /* COMMENT HERE MEANS msg sent to ourself is allowed
          * if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr))
          *  &&(source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr))
          *  should_discard_curr_geco_packet_ = true;*/
-        EVENTLOG1(VERBOSE, "recv_geco_packet()::filter out dest IPV4 addre, discard(%d)\n",
-            should_discard_curr_geco_packet_);
     }
     else if (dest_addr_type_ == AF_INET6)
     {
         dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV6;  // peer snd us an IP6-formate address
         dest_addr->sin6.sin6_port = curr_geco_packet_fixed_->dest_port;
         ip6_saddr_ = &(dest_addr->sin6.sin6_addr);
-        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_)
-            || IN6_IS_ADDR_V4COMPAT(ip6_saddr_) || IN6_IS_ADDR_V4MAPPED(ip6_saddr_)
-            || IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_)) should_discard_curr_geco_packet_ =
-            true;
+
+        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_UNSPECIFIED(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN6_IS_ADDR_MULTICAST(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_MULTICAST(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN6_IS_ADDR_V4COMPAT(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4COMPAT(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN6_IS_ADDR_V4MAPPED(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4MAPPED(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else  if (IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6ADDR_ANY(dest_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+
+        //if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_)
+        //    || IN6_IS_ADDR_V4COMPAT(ip6_saddr_) || IN6_IS_ADDR_V4MAPPED(ip6_saddr_)
+        //    || IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_)) should_discard_curr_geco_packet_ =
+        //    true;
         /* comment here means msg sent to ourself is allowed
          * if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
          * IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
          * &(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true;
          */
-        EVENTLOG1(VERBOSE, "recv_geco_packet()::filter out dest IPV6 addresses, discard(%d)\n",
-            should_discard_curr_geco_packet_);
+         //EVENTLOG1(VERBOSE, "filter out dest IPV6 addresses, discard(%d)",
+         //    should_discard_curr_geco_packet_);
     }
     else
     {
         // we only supports IP archetecture either ip4 or ip6 so discard it
-        EVENTLOG1(VERBOSE, "recv_geco_packet()::filter out dest addr family, discard(%d)\n",
-            should_discard_curr_geco_packet_);
+        EVENTLOG(VERBOSE, "AddrFamily(dest_addr) -> discard!");
         should_discard_curr_geco_packet_ = true;
     }
 
@@ -150,32 +201,84 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     {
         source_addr->sin.sin_port = curr_geco_packet_fixed_->src_port;
         ip4_saddr_ = ntohl(source_addr->sin.sin_addr.s_addr);
-        if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
-            || (INADDR_ANY == ip4_saddr_) || (INADDR_BROADCAST == ip4_saddr_))
+
+        if (IN_CLASSD(ip4_saddr_))
         {
+            EVENTLOG(VERBOSE, "IN_CLASSD(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
         }
-        EVENTLOG1(VERBOSE, "recv_geco_packet()::filter out src addr->discard(%d)\n",
-            should_discard_curr_geco_packet_);
+        else if (IN_EXPERIMENTAL(ip4_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN_EXPERIMENTAL(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN_BADCLASS(ip4_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN_BADCLASS(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (INADDR_ANY == ip4_saddr_)
+        {
+            EVENTLOG(VERBOSE, "INADDR_ANY(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (INADDR_BROADCAST == ip4_saddr_)
+        {
+            EVENTLOG(VERBOSE, "INADDR_BROADCAST(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        //if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
+        //    || (INADDR_ANY == ip4_saddr_) || (INADDR_BROADCAST == ip4_saddr_))
+        //{
+        //    should_discard_curr_geco_packet_ = true;
+        //}
+        //EVENTLOG1(VERBOSE, "filter out src addr->discard(%d)",
+        //    should_discard_curr_geco_packet_);
     }
     else if (saddr_family(source_addr) == AF_INET6)
     {
         source_addr->sin6.sin6_port = curr_geco_packet_fixed_->src_port;
         ip6_saddr_ = &(source_addr->sin6.sin6_addr);
-        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_)
-            || IN6_IS_ADDR_V4COMPAT(ip6_saddr_) || IN6_IS_ADDR_V4MAPPED(ip6_saddr_)
-            || IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
+
+        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_))
         {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_UNSPECIFIED(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
         }
-        EVENTLOG1(VERBOSE, "recv_geco_packet()::filter out src addr6 -> discard(%d)\n",
-            should_discard_curr_geco_packet_);
+        else if (IN6_IS_ADDR_MULTICAST(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_MULTICAST(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN6_IS_ADDR_V4COMPAT(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4COMPAT(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else  if (IN6_IS_ADDR_V4MAPPED(ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4MAPPED(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+        else if (IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
+        {
+            EVENTLOG(VERBOSE, "IN6ADDR_ANY(source_addr) -> discard !");
+            should_discard_curr_geco_packet_ = true;
+        }
+
+        //if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_)
+        //    || IN6_IS_ADDR_V4COMPAT(ip6_saddr_) || IN6_IS_ADDR_V4MAPPED(ip6_saddr_)
+        //    || IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
+        //{
+        //    should_discard_curr_geco_packet_ = true;
+        //}
+        //EVENTLOG1(VERBOSE, "filter out src addr6 -> discard(%d)",
+        //    should_discard_curr_geco_packet_);
     }
     else
     {
         // we only supports IP archetecture either ip4 or ip6 so discard it
-        EVENTLOG1(VERBOSE, "recv_geco_packet()::filter out src addr family, discard(%d)\n",
-            should_discard_curr_geco_packet_);
+        EVENTLOG(VERBOSE, "AddrFamily((source_addr)) -> discard!");
         should_discard_curr_geco_packet_ = true;
     }
 
@@ -187,8 +290,9 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         last_src_port_ = 0;
         last_dest_port_ = 0;
         EVENTLOG4(VERBOSE,
-            "recv_geco_packet()::discarding packet for incorrect address\n src addr : %s:%d, dest addr%s:%d\n",
+            "discarding packet for incorrect address src addr : %s:%d, dest addr%s:%d",
             src_addr_str_, last_src_port_, dest_addr_str_, last_dest_port_);
+        EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
         return recv_geco_packet_but_addrs_formate_check_failed;
     }
     else
@@ -204,13 +308,13 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         last_dest_port_);
     if (curr_channel_ != NULL)
     {
-        EVENTLOG(VERBOSE, "Found channel !\n");
+        EVENTLOG(VERBOSE, "Found channel !");
         /*5) get the sctp instance for this packet from channel*/
         curr_geco_instance_ = curr_channel_->geco_inst;
         if (curr_geco_instance_ == NULL)
         {
             ERRLOG(MAJOR_ERROR,
-                "Foundchannel, but no geo Instance -> abort app -> FIXME imple errors !\n");
+                "Foundchannel, but no geo Instance -> abort app -> FIXME imple errors !");
             return recv_geco_packet_but_found_channel_has_no_instance;
         }
         else
@@ -236,14 +340,14 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
              */
             my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
             EVENTLOG3(VERBOSE,
-                "Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !\n", src_addr_str_, last_dest_port_, my_supported_addr_types_);
+                "Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !", src_addr_str_, last_dest_port_, my_supported_addr_types_);
         }
         else
         {
             // use user sepecified supported addr types
             my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
             EVENTLOG3(VERBOSE,
-                "Find an Instance with dest addr %s:%u, user sepecified support addr types:%u !\n",
+                "Find an Instance with dest addr %s:%u, user sepecified support addr types:%u !",
                 src_addr_str_, last_dest_port_, my_supported_addr_types_);
         }
     }
@@ -270,13 +374,13 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             }
             curr_ecc_reason_ = (const char*)&ipaddr;
             curr_ecc_len_ = ERR_CAUSE_FIXED_SIZE + ntohs(ipaddr.vlparam_header.param_length);
-            ERRLOG(MINOR_ERROR, "recv_geco_packet()::validate_dest_addr() failed "
-                "for invalid dest addr or port-> send ABORT with ecc unresolved addr error!\n");
+            ERRLOG(MINOR_ERROR, "validate_dest_addr() failed "
+                "for invalid dest addr or port-> send ABORT with ecc unresolved addr error!");
             goto SEND_ABORT;
         }
         else
         {
-            EVENTLOG(VERBOSE, "recv_geco_packet()::validate_dest_addr() failed -> discard it!\n");
+            EVENTLOG(VERBOSE, "validate_dest_addr() failed -> discard it!");
             clear();
             return recv_geco_packet_but_dest_addr_check_failed;
         }
@@ -299,7 +403,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         (init_chunk_num_ == 1 && total_chunks_count_ > 1)/*there are repeated init ack chunks*/)
     {
         ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (init is not only one !)\n");
+            "recv_geco_packet(): discarding illegal packet (init is not only one !)");
         clear();
         return recv_geco_packet_but_morethanone_init;
     }
@@ -308,7 +412,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     if (init_chunk_num_ > 1 || (init_chunk_num_ == 1 && total_chunks_count_ > 1))
     {
         ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (init ack is not only chunk!)\n");
+            "recv_geco_packet(): discarding illegal packet (init ack is not only chunk!)");
         clear();
         return recv_geco_packet_but_morethanone_init_ack;
     }
@@ -317,7 +421,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     if (init_chunk_num_ > 1 || (init_chunk_num_ == 1 && total_chunks_count_ > 1))
     {
         ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)\n");
+            "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)");
         clear();
         return recv_geco_packet_but_morethanone_shutdown_complete;
     }
@@ -348,7 +452,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                         last_dest_port_)) != NULL)
                     {
                         EVENTLOG(VERBOSE,
-                            "Found an existing channel  in INIT ACK chunk's addrlist vlp !\n");
+                            "Found an existing channel  in INIT ACK chunk's addrlist vlp !");
                         break;
                     }
                 }
@@ -361,7 +465,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                 if (curr_uchar_init_chunk_ != NULL)
                 {
                     EVENTLOG(VERBOSE,
-                        "recv_geco_packet()::Looking for source address in INIT CHUNK");
+                        "Looking for source address in INIT CHUNK");
                     tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
                         curr_uchar_init_chunk_, curr_geco_packet_value_len_,
                         my_supported_addr_types_) - 1;
@@ -372,7 +476,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                             last_dest_port_)) != NULL)
                         {
                             EVENTLOG(VERBOSE,
-                                "Found an existing channel in INIT chunk's addrlist vlp !\n");
+                                "Found an existing channel in INIT chunk's addrlist vlp !");
                             break;
                         }
                     }
@@ -389,7 +493,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             if (curr_channel_ != NULL)
             {
                 EVENTLOG(VERBOSE,
-                    "recv_geco_packet(): Found an existing channel from INIT (ACK) addrlist vlp\n");
+                    "recv_geco_packet(): Found an existing channel from INIT (ACK) addrlist vlp");
                 curr_geco_instance_ = curr_channel_->geco_inst;
                 my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
             }
@@ -397,7 +501,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(VERBOSE,
-                    "recv_geco_packet(): Not found an existing channel from INIT (ACK) addrlist vlp\n");
+                    "recv_geco_packet(): Not found an existing channel from INIT (ACK) addrlist vlp");
             }
 #endif
         }
@@ -410,7 +514,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     /* 13) process non-OOTB chunks that belong to a found channel */
     if (curr_channel_ != NULL)
     {
-        EVENTLOG(VERBOSE, "recv_geco_packet()::Process non-OOTB chunks\n");
+        EVENTLOG(VERBOSE, "Process non-OOTB chunks");
         /*13.1 validate curr_geco_instance_*/
         if (curr_geco_instance_ == NULL)
         {
@@ -424,7 +528,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
-                EVENTLOG(VERBOSE, "Assign inst with the one from found channel!\n");
+                EVENTLOG(VERBOSE, "Assign inst with the one from found channel!");
             }
         }
         else if (curr_channel_->geco_inst != curr_geco_instance_)
@@ -458,7 +562,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          here we just validate some fatal errors*/
         if (curr_uchar_init_chunk_ != NULL)
         {
-            EVENTLOG(VERBOSE, "Find an INIT CHUNK\n");
+            EVENTLOG(VERBOSE, "Find an INIT CHUNK");
 
             // we have tested it INIT, init-ack and shutdown complete is the only chunk above
             // at 10) at line 240
@@ -469,7 +573,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             if (last_veri_tag_ != 0)
             {
                 ERRLOG(MINOR_ERROR,
-                    "Found INIT chunk  in non-ootb-packet, but its verifi tag != 0 ->discard !\n");
+                    "Found INIT chunk  in non-ootb-packet, but its verifi tag != 0 ->discard !");
                 clear();
                 return recv_geco_packet_but_init_chunk_has_zero_verifi_tag;
             }
@@ -478,14 +582,14 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             // if you need send ABORT later on
             // (i.e.for peer requests 0 streams), this give you the right tag
             last_init_tag_ = ntohl(init_chunk_fixed_->init_tag);
-            EVENTLOG1(VERBOSE, "Its initiation-tag is %u\n", last_init_tag_);
+            EVENTLOG1(VERBOSE, "Its initiation-tag is %u", last_init_tag_);
 
             vlparam_fixed_ = (vlparam_fixed_t*)find_vlparam_from_setup_chunk(
                 curr_uchar_init_chunk_, curr_geco_packet_value_len_,
                 VLPARAM_HOST_NAME_ADDR);
             if (vlparam_fixed_ != NULL)
             {
-                EVENTLOG(VERBOSE, "Found VLPARAM_HOST_NAME_ADDR  ->  do dns\n");
+                EVENTLOG(VERBOSE, "Found VLPARAM_HOST_NAME_ADDR  ->  do dns");
                 // @TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parameters DNS QUERY
                 do_dns_query_for_host_name_ = true;
             }
@@ -493,7 +597,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(VERBOSE,
-                    "Not found VLPARAM_HOST_NAME_ADDR from INIT CHUNK -> Not do DNS!\n");
+                    "Not found VLPARAM_HOST_NAME_ADDR from INIT CHUNK -> Not do DNS!");
             }
 #endif
         }
@@ -525,7 +629,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             {
 #ifdef _DEBUG
                 EVENTLOG2(VERBOSE,
-                    "recv_geco_packet()::Found ABORT  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!\n",
+                    "Found ABORT  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!",
                     is_tbit_set, last_init_tag_);
 #endif
                 is_found_abort_chunk_ = true;
@@ -533,7 +637,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(NOTICE,
-                    "recv_geco_packet()::Found ABORT  in non-ootb-packet, but verifi tag is illegal-> discard !\n");
+                    "Found ABORT  in non-ootb-packet, but verifi tag is illegal-> discard !");
                 clear();
                 return recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag;
             }
@@ -556,8 +660,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         {
             if (get_curr_channel_state() != ChannelState::ShutdownAckSent)
             {
-                EVENTLOG(VERBOSE, "recv_geco_packet()::Found SHUTDOWN_COMPLETE  in non-ootb-packet,"
-                    "at state other than SHUTDOWNACK_SENT -> discard !\n");
+                EVENTLOG(VERBOSE, "Found SHUTDOWN_COMPLETE  in non-ootb-packet,"
+                    "at state other than SHUTDOWNACK_SENT -> discard !");
                 clear();
                 return recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate;
             }
@@ -570,7 +674,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             {
 #ifdef _DEBUG
                 EVENTLOG2(VERBOSE,
-                    "recv_geco_packet()::Found SHUTDOWN_COMPLETE  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!\n",
+                    "Found SHUTDOWN_COMPLETE  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!",
                     is_tbit_set, last_init_tag_);
 #endif
                 is_found_abort_chunk_ = true;
@@ -578,7 +682,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(NOTICE,
-                    "recv_geco_packet()::Found SHUTDOWN_COMPLETE  in non-ootb-packet, but verifi tag is illegal-> discard !\n");
+                    "Found SHUTDOWN_COMPLETE  in non-ootb-packet, but verifi tag is illegal-> discard !");
                 clear();
                 return recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal;
             }
@@ -601,7 +705,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             uint state = get_curr_channel_state();
             if (state == ChannelState::CookieEchoed || state == ChannelState::CookieWait)
             {
-                EVENTLOG(NOTICE, "recv_geco_packet()::Found SHUTDOWN_ACK "
+                EVENTLOG(NOTICE, "Found SHUTDOWN_ACK "
                     " in non-ootb-packet  at state cookie echoed or cookie wait state, "
                     "-> send SHUTDOWN_COMPLETE to the peer!");
                 // should be treated as an Out Of The Blue packet. so use FLAG_NO_CHANNEL
@@ -622,8 +726,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                 // this is normal shutdown pharse, give it to nomral precedures to
                 // handle this, we here just validate the state
                 ERRLOG(MINOR_ERROR,
-                    "recv_geco_packet()::Found SHUTDOWN_ACK  in non-ootb-packet at wrong state"
-                    "-> DISCARD !\n");
+                    "Found SHUTDOWN_ACK  in non-ootb-packet at wrong state"
+                    "-> DISCARD !");
                 clear();
                 return recv_geco_packet_but_nootb_sdack_otherthan_sds_state;
             }
@@ -640,7 +744,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         if (contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0)
         {
             EVENTLOG(VERBOSE,
-                "recv_geco_packet()::Found CHUNK_COOKIE_ECHO in non-ootb-packet -> process further!\n");
+                "Found CHUNK_COOKIE_ECHO in non-ootb-packet -> process further!");
         }
 #endif
 
@@ -679,16 +783,16 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             && last_veri_tag_ != curr_channel_->local_tag)
         {
             ERRLOG(WARNNING_ERROR,
-                "recv_geco_packet()::found channel:non-ootb-packet:check verifi-tag:"
-                "this packet's verifi-tag != channel's local-tag -> discard !\n!");
+                "found channel:non-ootb-packet:check verifi-tag:"
+                "this packet's verifi-tag != channel's local-tag -> discard !!");
             clear();
             return recv_geco_packet_but_nootb_packet_verifitag_illegal;
         }
 #ifdef _DEBUG
         else
         {
-            EVENTLOG(NOTICE, "recv_geco_packet()::found channel:non-ootb-packet:check verifi-tag:"
-                "this packet's verifi-tag == channel's local-tag -> start disassemble it!\n");
+            EVENTLOG(NOTICE, "found channel:non-ootb-packet:check verifi-tag:"
+                "this packet's verifi-tag == channel's local-tag -> start disassemble it!");
         }
 #endif
     }
@@ -697,7 +801,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         /* 14)
          * filtering and pre-process OOB chunks that have no channel found
          * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets */
-        EVENTLOG(VERBOSE, "recv_geco_packet()::Process OOTB Packet!\n");
+        EVENTLOG(VERBOSE, "Process OOTB Packet!");
 
         /*15)
          * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (2)
@@ -706,7 +810,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          * no need to fetch ecc from it as at this moment we have not connected*/
         if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0)
         {
-            EVENTLOG(NOTICE, "recv_geco_packet()::Found ABORT in ootb-packet, discarding it !");
+            EVENTLOG(NOTICE, "Found ABORT in ootb-packet, discarding it !");
             clear();
             return recv_geco_packet_but_it_is_ootb_abort_discard;
         }
@@ -721,8 +825,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          that the Verification Tag is reflected*/
         if (contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0)
         {
-            EVENTLOG(NOTICE, "recv_geco_packet()::Found SHUTDOWN_ACK in ootb-packet "
-                "-> send SHUTDOWN_COMPLETE and return!\n");
+            EVENTLOG(NOTICE, "Found SHUTDOWN_ACK in ootb-packet "
+                "-> send SHUTDOWN_COMPLETE and return!");
             uchar shutdown_complete_cid = alloc_simple_chunk(
                 CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_CHANNEL);
             simple_chunk_t_ptr_ = complete_simple_chunk(shutdown_complete_cid);
@@ -743,7 +847,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         if (contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_) > 0)
         {
             EVENTLOG(NOTICE,
-                "recv_geco_packet()::Found SHUTDOWN_COMPLETE in OOB packet, discard !\n");
+                "Found SHUTDOWN_COMPLETE in OOB packet, discard !");
             clear();
             return recv_geco_packet_but_it_is_ootb_sdc_discard;
         }
@@ -754,7 +858,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         if (contains_chunk(CHUNK_COOKIE_ACK, chunk_types_arr_) > 0)
         {
             EVENTLOG(NOTICE,
-                "recv_geco_packet()::Found CHUNK_COOKIE_ACK  in OOB packet, discarding it\n!");
+                "Found CHUNK_COOKIE_ACK  in OOB packet, discarding it!");
             clear();
             return recv_geco_packet_but_it_is_ootb_cookie_ack_discard;
         }
@@ -766,7 +870,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             ECC_STALE_COOKIE_ERROR))
         {
             EVENTLOG(NOTICE,
-                "recv_geco_packet()::Found ECC_STALE_COOKIE_ERROR  in OOB packet,discarding it\n!");
+                "Found ECC_STALE_COOKIE_ERROR  in OOB packet,discarding it!");
             clear();
             return recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard;
         }
@@ -789,10 +893,10 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         if (curr_uchar_init_chunk_ != NULL)
         {
             EVENTLOG(VERBOSE,
-                "recv_geco_packet()::Found INIT CHUNK in OOB packet -> processing it\n");
+                "Found INIT CHUNK in OOB packet -> processing it");
             if (last_veri_tag_ != 0)
             {
-                EVENTLOG(NOTICE, " but verification_tag in INIT != 0 -> DISCARD! \n");
+                EVENTLOG(NOTICE, " but verification_tag in INIT != 0 -> DISCARD! ");
                 return recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag;
             }
 
@@ -808,12 +912,12 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                 if (curr_geco_instance_->local_port == 0)
                 {
                     EVENTLOG(MAJOR_ERROR,
-                        "an instance found, but curr_geco_instance's local port is 0 -> discard !\n");
+                        "an instance found, but curr_geco_instance's local port is 0 -> discard !");
                     return recv_geco_packet_but_local_instance_has_zero_portnum;
                 }
 
 #ifdef _DEBUG
-                EVENTLOG(VERBOSE, "curr_geco_instance found -> processing!\n");
+                EVENTLOG(VERBOSE, "curr_geco_instance found -> processing!");
 #endif
 
                 vlparam_fixed_ = (vlparam_fixed_t*)find_vlparam_from_setup_chunk(
@@ -828,9 +932,9 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                 }
 #ifdef _DEBUG
                 else
-                    EVENTLOG(VERBOSE, "Not VLPARAM_HOST_NAME_ADDR from INIT CHUNK ---> NOT DO DNS!\n");
+                    EVENTLOG(VERBOSE, "Not VLPARAM_HOST_NAME_ADDR from INIT CHUNK ---> NOT DO DNS!");
                 EVENTLOG(VERBOSE,
-                    "---> Start to pass this INIT CHUNK to disassembl() for further processing!\n");
+                    "---> Start to pass this INIT CHUNK to disassembl() for further processing!");
 #endif
             }  // if (curr_geco_instance_ != NULL) at line 460
             else
@@ -872,7 +976,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
              * If the packet contains a COOKIE ECHO in the first chunk, process
              *  it as described in Section 5.1. */
             EVENTLOG(INTERNAL_TRACE,
-                "recv_geco_packet()::Found CHUNK_COOKIE_ECHO in ootb packet -> processing it");
+                "Found CHUNK_COOKIE_ECHO in ootb packet -> processing it");
 
             // validate that cookie echo chunk must be the first chunk
             if (((chunk_fixed_t*)(curr_geco_packet_->chunk))->chunk_id != CHUNK_COOKIE_ECHO)
@@ -915,7 +1019,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
              receiver of the OOTB packet shall should_discard  the OOTB packet and
              take no further action.*/
             EVENTLOG(NOTICE,
-                "recv_geco_packet()::Found unexpected chunk type in ootb packet -> send ABORT with Tbit set !\n");
+                "Found unexpected chunk type in ootb packet -> send ABORT with Tbit set !");
             send_abort_ = true;
             curr_ecc_code_ = ECC_UNRECOGNIZED_CHUNKTYPE;
             curr_ecc_len_ = sizeof(ushort) + sizeof(ushort);
@@ -930,12 +1034,12 @@ SEND_ABORT:
         if (!send_abort_for_oob_packet_ && curr_channel_ == NULL)
         {
             EVENTLOG(VERBOSE,
-                "this is ootb packet AND send_abort_for_oob_packet_==FALSE -> not send abort !\n");
+                "this is ootb packet AND send_abort_for_oob_packet_==FALSE -> not send abort !");
             clear();
             return recv_geco_packet_but_not_send_abort_for_ootb_packet;
         }
 
-        EVENTLOG1(NOTICE, "recv_geco_packet()::Send ABORT with ecc code %u\n", curr_ecc_code_);
+        EVENTLOG1(NOTICE, "Send ABORT with ecc code %u", curr_ecc_code_);
         uchar abort_cid = (
             curr_channel_ == NULL ?
             alloc_simple_chunk(CHUNK_ABORT, FLAG_NO_CHANNEL) :
@@ -966,6 +1070,8 @@ SEND_ABORT:
     // no need to clear last_src_port_ and last_dest_port_ MAY be used by other functions
     last_src_path_ = -1;
     do_dns_query_for_host_name_ = false;
+
+    EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
     return geco_return_enum::good;
 }
 
@@ -991,7 +1097,7 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
         if (curr_geco_packet_value_len_ - read_len < CHUNK_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "dispatch_layer_t::disassemle_curr_geco_packet()::chunk corruption !-> return 1 !\n");
+                "dispatch_layer_t::disassemle_curr_geco_packet()::chunk corruption !-> return 1 !");
             unlock_bundle_ctrl(&last_src_path_);
             return 1;
         }
@@ -1005,7 +1111,7 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
         if (chunk_len < CHUNK_FIXED_SIZE || chunk_len + read_len > curr_geco_packet_value_len_)
         {
             EVENTLOG(WARNNING_ERROR,
-                "dispatch_layer_t::disassemle_curr_geco_packet()::chunk corruption !-> return 1 !\n");
+                "dispatch_layer_t::disassemle_curr_geco_packet()::chunk corruption !-> return 1 !");
             unlock_bundle_ctrl(&last_src_path_);
             return 1;
         }
@@ -1021,20 +1127,20 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
         switch (chunk->chunk_header.chunk_id)
         {
         case CHUNK_DATA:
-            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_DATA\n");
+            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_DATA");
             handle_ret = process_data_chunk((data_chunk_t*)chunk, last_src_path_);
             data_chunk_received = true;
             break;
         case CHUNK_INIT:
-            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT\n");
+            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT");
             handle_ret = process_init_chunk((init_chunk_t *)chunk);
             break;
         case CHUNK_INIT_ACK:
-            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT_ACK\n");
+            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT_ACK");
             handle_ret = process_init_ack_chunk((init_chunk_t *)chunk);
             break;
         case CHUNK_SACK:
-            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_SACK\n");
+            EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_SACK");
             handle_ret = process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
             break;
         default:
@@ -1053,19 +1159,19 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
             {
             case 0x0:  //00
                 read_len = curr_geco_packet_value_len_;
-                ERRLOG1(MINOR_ERROR, "00: Unknown chunktype %u\n", chunk->chunk_header.chunk_id);
+                ERRLOG1(MINOR_ERROR, "00: Unknown chunktype %u", chunk->chunk_header.chunk_id);
                 break;
             case 0x40:  //01
                 read_len = curr_geco_packet_value_len_;
                 //todo
                 handle_ret = send_error_chunk_unrecognized_chunk_type((uchar*)chunk, chunk_len);
-                ERRLOG1(MINOR_ERROR, "01: Unknown chunktype %u\n ", chunk->chunk_header.chunk_id);
+                ERRLOG1(MINOR_ERROR, "01: Unknown chunktype %u ", chunk->chunk_header.chunk_id);
                 break;
             case 0x80:  //10
                 ERRLOG1(MINOR_ERROR, "10: Unknown chunktype %u\nc", chunk->chunk_header.chunk_id);
                 break;
             case 0xC0:  //11
-                ERRLOG1(MINOR_ERROR, "11: Unknown chunktype %u \n", chunk->chunk_header.chunk_id);
+                ERRLOG1(MINOR_ERROR, "11: Unknown chunktype %u ", chunk->chunk_header.chunk_id);
                 handle_ret = send_error_chunk_unrecognized_chunk_type((uchar*)chunk, chunk_len);
                 break;
             default:  // never reach here
@@ -1470,7 +1576,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
                 /* send all bundled chunks to ensure init ack is the only chunk sent
                  * in the whole geco packet*/
-                EVENTLOG1(VERBOSE, "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
+                EVENTLOG1(VERBOSE, "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)",
                     get_bundle_total_size(get_bundle_controller()));
                 unlock_bundle_ctrl();
                 send_bundled_chunks();
@@ -1582,7 +1688,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                     ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                 }
                 /*send all bundled chunks to ensure init ack is the only chunk sent*/
-                EVENTLOG1(VERBOSE, "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
+                EVENTLOG1(VERBOSE, "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)",
                     get_bundle_total_size(get_bundle_controller()));
                 assert(
                     get_bundle_total_size(get_bundle_controller()) == UDP_GECO_PACKET_FIXED_SIZES);
@@ -1614,7 +1720,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             uint shutdownackcid = alloc_simple_chunk(CHUNK_SHUTDOWN_ACK,
                 FLAG_NONE);
             /*send all bundled chunks to ensure init ack is the only chunk sent*/
-            EVENTLOG1(VERBOSE, "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)\n",
+            EVENTLOG1(VERBOSE, "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)",
                 get_bundle_total_size(get_bundle_controller()));
             unlock_bundle_ctrl();
             send_bundled_chunks();
@@ -1665,7 +1771,7 @@ int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID, uint 
         if (total_len_vlps - read_len < VLPARAM_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
             return -1;
         }
         init_ack_str = chunk->variableParams + curr_write_pos_[AckCID];
@@ -2574,7 +2680,7 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index
         ++bundle_ctrl->ctrl_position;
 
     EVENTLOG3(VERBOSE,
-        "bundle_ctrl_chunk() : chunklen %u + UDP_GECO_PACKET_FIXED_SIZES(%u) = Total buffer size now (includes pad): %u\n",
+        "bundle_ctrl_chunk() : chunklen %u + UDP_GECO_PACKET_FIXED_SIZES(%u) = Total buffer size now (includes pad): %u",
         get_chunk_length((chunk_fixed_t *)chunk), UDP_GECO_PACKET_FIXED_SIZES,
         get_bundle_total_size(bundle_ctrl));
     return 0;
@@ -2651,7 +2757,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
         if (len - read_len < VLPARAM_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
             return -1;
         }
 
@@ -2941,7 +3047,7 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
                     {
                         ret = true;
                         EVENTLOG(VERBOSE,
-                            "contains_local_host_addr():Found same address from curr_geco_instance_\n");
+                            "contains_local_host_addr():Found same address from curr_geco_instance_");
                     }
                 }
             }
@@ -2956,7 +3062,7 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
                     {
                         ret = true;
                         EVENTLOG(VERBOSE,
-                            "contains_local_host_addr():Found same address from defaultlocaladdrlist_\n");
+                            "contains_local_host_addr():Found same address from defaultlocaladdrlist_");
                     }
                 }
             }
@@ -2973,7 +3079,7 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
                 {
                     ret = true;
                     EVENTLOG(VERBOSE,
-                        "contains_local_host_addr():Found same address from defaultlocaladdrlist_\n");
+                        "contains_local_host_addr():Found same address from defaultlocaladdrlist_");
                 }
             }
         }
@@ -2989,14 +3095,14 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
     if (chunk_len < read_len)
     {
         EVENTLOG(WARNNING_ERROR,
-            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
         return -1;
     }
 
     if (foundAddress == NULL || n < 1 || n > MAX_NUM_ADDRESSES)
     {
         EVENTLOG(FALTAL_ERROR_EXIT,
-            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
         return -1;
     }
 
@@ -3025,7 +3131,7 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
         if (len - read_len < VLPARAM_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
             return -1;
         }
 
@@ -3094,7 +3200,7 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value, uint packet_v
         if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG(MINOR_ERROR,
-                "find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+                "find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
             return NULL;
         }
 
@@ -3104,14 +3210,14 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value, uint packet_v
         if (chunk_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG1(MINOR_ERROR,
-                "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!\n",
+                "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!",
                 chunk_len);
             return NULL;
         }
         if (chunk_len + read_len > packet_val_len)
         {
             ERRLOG3(MINOR_ERROR,
-                "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!\n",
+                "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!",
                 chunk_len, read_len, packet_val_len);
             return NULL;
         }
@@ -3144,7 +3250,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value, uint packet_va
         if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
             EVENTLOG(MINOR_ERROR,
-                "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+                "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
             return false;
         }
 
@@ -3164,7 +3270,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value, uint packet_va
                 if (chunk_len - CHUNK_FIXED_SIZE - err_param_len < VLPARAM_FIXED_SIZE)
                 {
                     EVENTLOG(MINOR_ERROR,
-                        "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+                        "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
                     return false;
                 }
 
@@ -3226,7 +3332,7 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len
         if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG(MINOR_ERROR,
-                "find_chunk_types()::INCOMPLETE CHUNK_FIXED_SIZE(4 bytes) invalid !\n");
+                "find_chunk_types()::INCOMPLETE CHUNK_FIXED_SIZE(4 bytes) invalid !");
             return result;
         }
 
@@ -3236,14 +3342,14 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len
         if (chunk_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG1(MINOR_ERROR,
-                "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!\n",
+                "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!",
                 chunk_len);
             return result;
         }
         if (chunk_len + read_len > packet_val_len)
         {
             ERRLOG3(MINOR_ERROR,
-                "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!\n",
+                "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!",
                 chunk_len, read_len, packet_val_len);
             return result;
         }
@@ -3252,14 +3358,14 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len
         {
             result |= (1 << chunk->chunk_id);
             EVENTLOG2(VERBOSE,
-                "dispatch_layer_t::find_chunk_types()::Chunk type==%u, result == %s\n",
+                "dispatch_layer_t::find_chunk_types()::Chunk type==%u, result == %s",
                 chunk->chunk_id, Bitify(sizeof(result) * 8, (char*)&result));
         }
         else
         {
             result |= (1 << 31);
             EVENTLOG2(VERBOSE,
-                "dispatch_layer_t::find_chunk_types()::Chunk type==%u setting bit 31 --> result == %s\n",
+                "dispatch_layer_t::find_chunk_types()::Chunk type==%u setting bit 31 --> result == %s",
                 chunk->chunk_id, Bitify(sizeof(result) * 8, (char*)&result));
         }
 
@@ -3394,13 +3500,13 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(sockaddrunion * src_
         if (result->deleted)
         {
             EVENTLOG1(VERBOSE,
-                "find_channel_by_transport_addr():Found channel that should be deleted, with id %u\n",
+                "find_channel_by_transport_addr():Found channel that should be deleted, with id %u",
                 result->channel_id);
             result = NULL;
         }
         else
         {
-            EVENTLOG1(VERBOSE, "find_channel_by_transport_addr():Found valid channel with id %u\n",
+            EVENTLOG1(VERBOSE, "find_channel_by_transport_addr():Found valid channel with id %u",
                 result->channel_id);
         }
     }
@@ -3415,7 +3521,7 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(sockaddrunion * src_
 
 bool dispatch_layer_t::cmp_channel(const channel_t& tmp_channel, const channel_t& b)
 {
-    EVENTLOG2(VERBOSE, "cmp_endpoint_by_addr_port(): checking ep A[id=%d] and ep B[id=%d]\n",
+    EVENTLOG2(VERBOSE, "cmp_endpoint_by_addr_port(): checking ep A[id=%d] and ep B[id=%d]",
         tmp_channel.channel_id, b.channel_id);
     if (tmp_channel.remote_port == b.remote_port && tmp_channel.local_port == b.local_port)
     {
@@ -3427,14 +3533,14 @@ bool dispatch_layer_t::cmp_channel(const channel_t& tmp_channel, const channel_t
             //            ushort port;
             //            saddr2str(&(a.remote_addres[i]), buf, sizeof(a.remote_addres[i].sin),
             //                    &port);
-            //            EVENTLOG3(VERBOSE, "a.remote_addres[%d]::%s:%u\n", i, buf,
+            //            EVENTLOG3(VERBOSE, "a.remote_addres[%d]::%s:%u", i, buf,
             //                    port);
 
             for (j = 0; j < b.remote_addres_size; j++)
             {
                 //                saddr2str(&(b.remote_addres[j]), buf,
                 //                        sizeof(b.remote_addres[j]), &port);
-                //                EVENTLOG3(VERBOSE, "b.remote_addres[%d]::%s:%u\n", j, buf,
+                //                EVENTLOG3(VERBOSE, "b.remote_addres[%d]::%s:%u", j, buf,
                 //                        port);
 
                 if (saddr_equals(&(tmp_channel.remote_addres[i]), &(b.remote_addres[j]), true))
@@ -3492,7 +3598,7 @@ bool dispatch_layer_t::validate_dest_addr(sockaddrunion * dest_addr)
             if (saddr_equals(&curr_channel_->local_addres[j], dest_addr))
             {
                 EVENTLOG(VVERBOSE,
-                    "dispatch_layer_t::validate_dest_addr()::found equal dest addr\n");
+                    "dispatch_layer_t::validate_dest_addr()::found equal dest addr");
                 return true;
             }
         }

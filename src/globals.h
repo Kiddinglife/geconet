@@ -135,7 +135,7 @@ const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 
 /* src port + dest port + ver tag + checksum +
  chunk type + chunk flag + chunk length = 16 bytes*/
-#define MIN_NETWORK_PACKET_HDR_SIZES \
+#define MIN_GECO_PACKET_SIZE \
 GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 #define MAX_NETWORK_PACKET_HDR_SIZES 5552
 

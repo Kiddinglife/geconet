@@ -15,6 +15,6 @@
 #define _DEBUG
 #define GECO_ASSERTIONS
 #define GECO_PRINTS
-#define CURR_EVENT_LOG_LEVEL 7 //VERBOSE
+#define CURR_EVENT_LOG_LEVEL 7 //VERBOSE =7
 #define ENABLE_UNIT_TEST
 #endif /* MY_CONFIG_H_ */
