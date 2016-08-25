@@ -527,7 +527,7 @@ class dispatch_layer_t
         geco_instance_t tmp_geco_instance_;
         sockaddrunion tmp_local_addreslist_[MAX_NUM_ADDRESSES];
         int tmp_local_addreslist_size_;
-        int my_supported_addr_types_;
+        uint my_supported_addr_types_;
         sockaddrunion tmp_peer_addreslist_[MAX_NUM_ADDRESSES];
         int tmp_peer_addreslist_size_;
         uint tmp_peer_supported_types_;
