@@ -61,7 +61,10 @@ extern uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata
 //- - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- makes an init and initializes the the fixed part of init
+ @brief makes an init and initializes the the fixed part of init.
+ @note: why we use malloc to allocate init on heap is because
+ init may have large anounts of vlp,which may exceeds the default
+ buffer inside itself.
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  |   Type = 1    |  Chunk Flags  |      Chunk Length             |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -79,12 +82,11 @@ extern uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata
  */
 extern init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
         unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN);
-
-extern init_chunk_t* build_init_ack_chunk(unsigned int initTag, unsigned int arwnd,
+extern void put_init_chunk_fixed(init_chunk_t* init,unsigned int initTag, unsigned int arwnd,
         unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN);
 
 /*
- function to add supported address types variable parameter to init (ack) chunk
+ @brief function to add supported address types variable parameter to init (ack) chunk.
  @ret the toal length of param including param type, param len and pram value
 
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -102,7 +104,7 @@ extern uint put_vlp_supported_addr_types(uchar* vlp_start, bool with_ipv4,
         bool with_ipv6, bool with_dns);
 
 /*
- *  function to add user supported addresses to init (ack) chunk
+ @brief function to add user supported addresses to init (ack) chunk.
  @ret the toal length of param including param type, param len and pram value
 
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

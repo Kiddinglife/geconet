@@ -517,6 +517,7 @@ class dispatch_layer_t
         int init_chunk_num_;
         bool send_abort_;
         bool found_init_chunk_;
+        bool is_there_at_least_one_equal_dest_port_;
         init_chunk_fixed_t* init_chunk_fixed_;
         vlparam_fixed_t* vlparam_fixed_;
 
@@ -1053,7 +1054,7 @@ class dispatch_layer_t
         {
             assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
             add2chunklist(
-                    (simple_chunk_t*) build_init_ack_chunk(initTag, rwnd, noOutStreams, noInStreams,
+                    (simple_chunk_t*) build_init_chunk(initTag, rwnd, noOutStreams, noInStreams,
                             initialTSN), "create init ack chunk %u");
             return simple_chunk_index_;
         }

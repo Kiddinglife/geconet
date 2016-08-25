@@ -58,11 +58,9 @@ init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
     initChunk->init_fixed.initial_tsn = htonl(initialTSN);
     return initChunk;
 }
-init_chunk_t* build_init_ack_chunk(unsigned int initTag, unsigned int arwnd,
+void put_init_chunk_fixed(init_chunk_t* initChunk, unsigned int initTag, unsigned int arwnd,
         unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN)
 {
-    init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__,
-    __LINE__);
     if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
     initChunk->chunk_header.chunk_id = CHUNK_INIT;
@@ -73,7 +71,6 @@ init_chunk_t* build_init_ack_chunk(unsigned int initTag, unsigned int arwnd,
     initChunk->init_fixed.outbound_streams = htons(noOutStreams);
     initChunk->init_fixed.inbound_streams = htons(noInStreams);
     initChunk->init_fixed.initial_tsn = htonl(initialTSN);
-    return initChunk;
 }
 uint put_vlp_supported_addr_types(uchar* vlp_start, bool with_ipv4, bool with_ipv6, bool with_dns)
 {

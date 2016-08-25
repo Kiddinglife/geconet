@@ -76,10 +76,10 @@
 #include "config.h"
 #include "messages.h"
 
-
-enum geco_return_enum:int
-{
-    good,
+enum geco_return_enum
+    :int
+    {
+        good,
     discard,
     reply_abort,
     recv_geco_packet_but_integrity_check_failed,
@@ -181,23 +181,23 @@ GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 #define CURR_ERROR_LOG_LEVEL 4
 
 #define EVENTLOG(x,y)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y))
 #define EVENTLOG1(x,y,z)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z))
 #define EVENTLOG2(x,y,z,i)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i))
 #define EVENTLOG3(x,y,z,i,j)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i), (j))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j))
 #define EVENTLOG4(x,y,z,i,j,k)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k))
 #define EVENTLOG5(x,y,z,i,j,k,l)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l))
 #define EVENTLOG6(x,y,z,i,j,k,l,m)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m))
 #define EVENTLOG7(x,y,z,i,j,k,l,m,n)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n))
 #define EVENTLOG8(x,y,z,i,j,k,l,m,n,o)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, (y), (z), (i), (j),(k),(l),(m),(n),(o))
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o))
 
 #define ERRLOG(x,y)  \
 if (CURR_ERROR_LOG_LEVEL >= x) error_log1((x), __FILE__, __LINE__, (y))
@@ -293,8 +293,8 @@ extern void perr_abort(const char *infostring);
  The conversion specification must be contained in log_info.
  @author     H�zlwimmer
  */
-extern void event_log1(short event_loglvl, const char *module_name,
-        const char *log_info, ...);
+extern void event_log1(short event_loglvl, const char *module_name, int line, const char *log_info,
+        ...);
 
 /* This function logs errors.
  Parameters:
@@ -317,8 +317,8 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
  @param log_info :        the info that is prInt32ed with the modulename and error text.
  @author     H�zlwimmer
  */
-extern void error_log_sys1(short error_loglvl, const char *module_name,
-        int line_no, short errnumber);
+extern void error_log_sys1(short error_loglvl, const char *module_name, int line_no,
+        short errnumber);
 
 //<---------------- time-------------------->
 typedef uint TimerID;
@@ -432,11 +432,9 @@ extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
  * field is initialized to 0 before starting the computation
  */
 extern ushort in_check(uchar *buf, int sz);
-int sort_ssn(const internal_stream_data_t& one,
-        const internal_stream_data_t& two);
+int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two);
 // function that correctly sorts TSN values, minding wrapround
-extern int sort_tsn(const internal_data_chunk_t& one,
-        const internal_data_chunk_t& two);
+extern int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two);
 
 /*=========== help functions =================*/
 #define BITS_TO_BYTES(x) (((x)+7)>>3)
@@ -521,32 +519,27 @@ struct transport_addr_t
  *  port number will be always >0
  *  default  is IPv4
  *  @return 0 for success, else -1.*/
-extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0,
-        bool ip4 = true);
-extern int saddr2str(sockaddrunion *su, char * buf, size_t len,
-        ushort* portnum = NULL);
-inline extern bool saddr_equals(sockaddrunion *a, sockaddrunion *b,
-        bool ignore_port = false)
+extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0, bool ip4 = true);
+extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum = NULL);
+inline extern bool saddr_equals(sockaddrunion *a, sockaddrunion *b, bool ignore_port = false)
 {
 //	EVENTLOG2(VERBOSE, "a af%d, b af%d\n", a->sin.sin_family,
 //			b->sin.sin_family);
     switch (saddr_family(a))
     {
-        case AF_INET:
-            return saddr_family(b) == AF_INET &&
-            s4addr(&a->sin) == s4addr(&b->sin)
-                    && (ignore_port || a->sin.sin_port == b->sin.sin_port);
-            break;
-        case AF_INET6:
-            return saddr_family(b) == AF_INET6
-                    && (ignore_port || a->sin6.sin6_port == b->sin6.sin6_port)
-                    && (memcmp(s6addr(&a->sin6), s6addr(&b->sin6), 16) == 0);
-            break;
-        default:
-            ERRLOG1(MAJOR_ERROR, "Address family %d not supported",
-                    saddr_family(a));
-            return false;
-            break;
+    case AF_INET:
+        return saddr_family(b) == AF_INET &&
+        s4addr(&a->sin) == s4addr(&b->sin) && (ignore_port || a->sin.sin_port == b->sin.sin_port);
+        break;
+    case AF_INET6:
+        return saddr_family(b) == AF_INET6
+                && (ignore_port || a->sin6.sin6_port == b->sin6.sin6_port)
+                && (memcmp(s6addr(&a->sin6), s6addr(&b->sin6), 16) == 0);
+        break;
+    default:
+        ERRLOG1(MAJOR_ERROR, "Address family %d not supported", saddr_family(a));
+        return false;
+        break;
     }
 }
 
@@ -555,8 +548,7 @@ inline extern bool saddr_equals(sockaddrunion *a, sockaddrunion *b,
 //! Also note http://burtleburtle.net/bob/hash/doobs.html, which shows that this is 20%
 //! faster than the one on that page but has more collisions
 extern unsigned long SuperFastHash(const char * data, int length);
-extern unsigned long SuperFastHashIncremental(const char * data, int len,
-        unsigned int lastHash);
+extern unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int lastHash);
 extern unsigned long SuperFastHashFile(const char * filename);
 extern unsigned long SuperFastHashFilePtr(FILE *fp);
 extern unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
@@ -607,8 +599,8 @@ struct applicaton_layer_cbs_t
          *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
          *  @param 8 pointer to ULP data
          */
-        void (*dataArriveNotif)(unsigned int, unsigned short, unsigned int,
-                unsigned short, unsigned int, unsigned int, unsigned int, void*);
+        void (*dataArriveNotif)(unsigned int, unsigned short, unsigned int, unsigned short,
+                unsigned int, unsigned int, unsigned int, void*);
         /**
          * indicates a send failure (chapter 10.2.B).
          *  @param 1 associationID
@@ -617,8 +609,8 @@ struct applicaton_layer_cbs_t
          *  @param 4 pointer to context from sendChunk
          *  @param 5 pointer to ULP data
          */
-        void (*sendFailureNotif)(unsigned int, unsigned char *, unsigned int,
-                unsigned int *, void*);
+        void (*sendFailureNotif)(unsigned int, unsigned char *, unsigned int, unsigned int *,
+                void*);
         /**
          * indicates a change of network status (chapter 10.2.C).
          *  @param 1 associationID
@@ -626,8 +618,7 @@ struct applicaton_layer_cbs_t
          *  @param 3 newState
          *  @param 4 pointer to ULP data
          */
-        void (*networkStatusChangeNotif)(unsigned int, short, unsigned short,
-                void*);
+        void (*networkStatusChangeNotif)(unsigned int, short, unsigned short, void*);
         /**
          * indicates that a association is established (chapter 10.2.D).
          *  @param 1 associationID
@@ -639,8 +630,8 @@ struct applicaton_layer_cbs_t
          *  @param 7 pointer to ULP data, usually NULL
          *  @return the callback is to return a pointer, that will be transparently returned with every callback
          */
-        void* (*communicationUpNotif)(unsigned int, int, unsigned int,
-                unsigned short, unsigned short, int, void*);
+        void* (*communicationUpNotif)(unsigned int, int, unsigned int, unsigned short,
+                unsigned short, int, void*);
         /**
          * indicates that communication was lost to peer (chapter 10.2.E).
          *  @param 1 associationID
