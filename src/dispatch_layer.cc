@@ -888,7 +888,9 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet,
             bundle_ctrl_chunk(simple_chunk_t_ptr_);
             unlock_bundle_ctrl();
             send_bundled_chunks();
+            printf("sinple chunk id %u\n", shutdown_complete_cid);
             free_simple_chunk(shutdown_complete_cid);
+            printf("sinple chunk id %u\n", shutdown_complete_cid);
             clear();
 
             EVENTLOG(NOTICE,
@@ -2749,7 +2751,8 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
 
     /* try to bundle ctrl or/and sack chunks with data chunks in an packet*/
     char* send_buffer = NULL;
-    int ret, send_len = 0;
+    int ret = 0; 
+    int send_len = 0;
     if (bundle_ctrl->sack_in_buffer)
     {
         stop_sack_timer();

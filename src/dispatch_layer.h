@@ -1319,6 +1319,7 @@ class dispatch_layer_t
          */
         void free_simple_chunk(uint chunkID)
         {
+            printf("sinple chunk id %u\n", chunkID);
             if (simple_chunks_[chunkID] != NULL)
             {
                 EVENTLOG1(INFO, "freed simple chunk %u", chunkID);
@@ -1356,8 +1357,7 @@ class dispatch_layer_t
 
         void add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL)
         {
-            simple_chunk_index_ = ((simple_chunk_index_ + 1)
-                    & MAX_CHUNKS_SIZE_MASK);
+            simple_chunk_index_ = ((simple_chunk_index_ + 1)% MAX_CHUNKS_SIZE_MASK);
             EVENTLOG1(INFO, log_text, simple_chunk_index_);
             simple_chunks_[simple_chunk_index_] = chunk;
             curr_write_pos_[simple_chunk_index_] = 0;
