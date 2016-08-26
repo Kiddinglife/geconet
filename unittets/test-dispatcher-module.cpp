@@ -1019,8 +1019,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     bool enable_1_ifanINITACKCHUNKisreceived = true; // passed
     bool enable_2_if_recv_init_initack_shoutdowncomplete = false; // passed
     bool enable_3_if_recv_ABORT_CHUNK = false; //passed
-    bool enable_4_if_recv_SHUTDOWN_ACK = false;//passed
-    bool enable_5_if_recv_SHUTDOWN_COMPLETE = false;//passed
+    bool enable_4_if_recv_SHUTDOWN_ACK = false; //passed
+    bool enable_5_if_recv_SHUTDOWN_COMPLETE = false; //passed
     /////////////////////////////////////////////////////////////////////////////////////
     EXPECT_EQ(sizeof(in_addr), 4);
     EXPECT_EQ(sizeof(in6_addr), 16);
@@ -1154,14 +1154,14 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 
         // 0.1) if it is broadcast addr
         illegal_addr.sin.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         //      0.1.1) should return recv_geco_packet_but_addrs_formate_check_failed
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 &illegal_addr, &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_addrs_formate_check_failed);
         // 0.2) if it is any addr
         illegal_addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         //      0.2.1) should return recv_geco_packet_but_addrs_formate_check_failed
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 &illegal_addr, &inst.local_addres_list[0]);
@@ -1169,26 +1169,26 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         // 0.3) if either dest port or src port is zero,
         ushort oldport = geco_packet.pk_comm_hdr.dest_port;
         geco_packet.pk_comm_hdr.dest_port = 0;
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         //      0.3.1) should return recv_geco_packet_but_addrs_formate_check_failed
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 &illegal_addr, &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_port_numbers_check_failed);
         geco_packet.pk_comm_hdr.dest_port = oldport;
         // 0.4) if geco packet len is not %4
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE + 1);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE + 1);
         //      0.4.1) should return recv_geco_packet_but_integrity_check_failed
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet,
         MIN_GECO_PACKET_SIZE + 1, &illegal_addr, &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
         // 0.5) if geco packet len < MIN_GECO_PACKET_SIZE
-        set_md5_checksum((char*) &geco_packet, 4);
+        gset_checksum((char*) &geco_packet, 4);
         //      0.5.1) should return recv_geco_packet_but_integrity_check_failed
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, 4, &illegal_addr,
                 &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
         // 0.6) if geco packet len  > MAX_GECO_PACKET_SIZE
-        set_md5_checksum((char*) &geco_packet, MAX_GECO_PACKET_SIZE + 1);
+        gset_checksum((char*) &geco_packet, MAX_GECO_PACKET_SIZE + 1);
         //       0.6.1) should return recv_geco_packet_but_integrity_check_failed
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet,
         MAX_GECO_PACKET_SIZE + 1, &illegal_addr, &inst.local_addres_list[0]);
@@ -1234,14 +1234,13 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
                 INIT_CHUNK_FIXED_SIZES + written);
                 memcpy(geco_packet.chunk, init_chunk,
                         dctp_packet_len - GECO_PACKET_FIXED_SIZE);
-                set_md5_checksum((char*) &geco_packet, dctp_packet_len);
+                gset_checksum((char*) &geco_packet, dctp_packet_len);
                 EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + written, 92);
                 ret = dlt.recv_geco_packet(0, (char*) dctp_packet,
                         dctp_packet_len, last_src_addr, last_dest_addr);
                 //1.2.2) should find an existed channel
                 ASSERT_EQ(ret, geco_return_enum::good);
                 ASSERT_EQ(dlt.curr_channel_, &channel);
-                //ASSERT_EQ(dlt.last_src_path_, 0);
 
                 //1.3) there is NO matched src addres in INIT chunk
                 //  1.3.1) fills up init with unmatched addrlist
@@ -1255,14 +1254,17 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
                 INIT_CHUNK_FIXED_SIZES + written);
                 memcpy(geco_packet.chunk, init_chunk,
                         dctp_packet_len - GECO_PACKET_FIXED_SIZE);
-                set_md5_checksum((char*) &geco_packet, dctp_packet_len);
+                gset_checksum((char*) &geco_packet, dctp_packet_len);
                 EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + written, 28);
                 ret = dlt.recv_geco_packet(0, (char*) dctp_packet,
                         dctp_packet_len, last_src_addr, last_dest_addr);
                 //1.3.2) should NOT find an existed channel
                 ASSERT_EQ(ret, geco_return_enum::good);
                 ASSERT_EQ(dlt.curr_channel_, (channel_t*)NULL);
+
+                break;
             }
+            break;
         }
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1291,7 +1293,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         {
             ((chunk_fixed_t*) geco_packet.chunk)->chunk_id = chunktypes[i];
             //2.2) the packet should be discarded
-            set_md5_checksum((char*) &geco_packet, dctp_packet_len);
+            gset_checksum((char*) &geco_packet, dctp_packet_len);
             ret = dlt.recv_geco_packet(0, (char*) dctp_packet, dctp_packet_len,
                     last_src_addr, last_dest_addr);
             ASSERT_EQ(ret, reterrnos[i]);
@@ -1307,7 +1309,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         //3.1 if ootb packet
         last_src_addr = &all_cannot_found_addres[0];
         //  3.1.1 should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_it_is_ootb_abort_discard);
@@ -1317,7 +1319,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_flags = 0x01;
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.remote_tag);
         //      3.2.1.1) should go on
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
@@ -1326,7 +1328,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_flags = 0;
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag);
         //      3.2.1) should go on
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
@@ -1335,7 +1337,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_flags = 0;
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.remote_tag);
         //  3.3.1)should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret,
@@ -1353,7 +1355,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         //3.1 if ootb packet
         last_src_addr = &all_cannot_found_addres[0];
         //  3.1.1 should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_it_is_ootb_sdack_send_sdc);
@@ -1363,14 +1365,14 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         channel.state_machine_control->channel_state =
                 ChannelState::ShutdownSent;
         //      3.2.1.1) should go on
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
         //  3.2.2)if curr channel state is either cookie echoed or cookie wait
         channel.state_machine_control->channel_state = ChannelState::CookieWait;
         //      3.2.2.1) should send shutdown complete chunk to the peer
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, discard);
@@ -1379,7 +1381,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         channel.state_machine_control->channel_state =
                 ChannelState::ShutdownSent;
         //      3.2.3.1) should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_nootb_packet_verifitag_illegal);
@@ -1388,7 +1390,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     //4) if recv SHUTDOWN_COMPLETE
     if (enable_5_if_recv_SHUTDOWN_COMPLETE)
     {
-        ((chunk_fixed_t*) geco_packet.chunk)->chunk_id = CHUNK_SHUTDOWN_COMPLETE;
+        ((chunk_fixed_t*) geco_packet.chunk)->chunk_id =
+        CHUNK_SHUTDOWN_COMPLETE;
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_flags = 0;
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_length = htons(4);
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag);
@@ -1396,34 +1399,35 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         //4.1 if ootb packet
         last_src_addr = &all_cannot_found_addres[0];
         //  4.1.1 should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_it_is_ootb_sdc_discard);
         //4.2 if non-ootb packet
         last_src_addr = &channel.remote_addres[0];
         //  4.2.1)if curr channel state is not ShutdownAckSent
-        channel.state_machine_control->channel_state =
-                ChannelState::Connected;
+        channel.state_machine_control->channel_state = ChannelState::Connected;
         //      4.2.1.1) should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
-        ASSERT_EQ(ret, recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate);
+        ASSERT_EQ(ret,
+                recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate);
         //  4.2.2)if curr channel state is ShutdownAckSent
-        channel.state_machine_control->channel_state = ChannelState::ShutdownAckSent;
+        channel.state_machine_control->channel_state =
+                ChannelState::ShutdownAckSent;
         //      4.2.2.1) if verifi tag matched
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_flags = 0;
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag);
         //          4.2.2.2 should go on
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
         //  3.2.3)if veri tag unmatched
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag - 1);
         //      3.2.3.1) should discard
-        set_md5_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
+        gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
                 last_src_addr, &channel.local_addres[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal);

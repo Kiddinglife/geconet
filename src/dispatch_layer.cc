@@ -3818,29 +3818,32 @@ bool dispatch_layer_t::cmp_channel(const channel_t& tmp_channel,
         /*find if at least there is an ip addr thate quals*/
         for (i = 0; i < tmp_channel.remote_addres_size; i++)
         {
-            //            char buf[MAX_IPADDR_STR_LEN];
-            //            ushort port;
-            //            saddr2str(&(a.remote_addres[i]), buf, sizeof(a.remote_addres[i].sin),
-            //                    &port);
-            //            EVENTLOG3(VERBOSE, "a.remote_addres[%d]::%s:%u", i, buf,
-            //                    port);
-
+#ifdef _DEBUG
+            char buf[MAX_IPADDR_STR_LEN];
+            saddr2str(&tmp_channel.remote_addres[i], buf, MAX_IPADDR_STR_LEN,
+            NULL);
+            EVENTLOG2(VERBOSE, "temp.remote_addres[%d]::%s", i, buf);
+#endif
             for (j = 0; j < b.remote_addres_size; j++)
             {
-                //                saddr2str(&(b.remote_addres[j]), buf,
-                //                        sizeof(b.remote_addres[j]), &port);
-                //                EVENTLOG3(VERBOSE, "b.remote_addres[%d]::%s:%u", j, buf,
-                //                        port);
-
+#ifdef _DEBUG
+                saddr2str(&(b.remote_addres[j]), buf, MAX_IPADDR_STR_LEN, NULL);
+                EVENTLOG2(VERBOSE, "b.remote_addres[%d]::%s", j, buf);
+#endif
                 if (saddr_equals(&(tmp_channel.remote_addres[i]),
                         &(b.remote_addres[j]), true))
                 {
                     if (!tmp_channel.deleted && !b.deleted)
                     {
+#ifdef _DEBUG
+                        saddr2str(&(b.remote_addres[j]), buf,
+                        MAX_IPADDR_STR_LEN, NULL);
+                        EVENTLOG2(VERBOSE,
+                                "cmp_endpoint_by_addr_port():found equal channel"
+                                        "set last_src_path_ to index %u, addr %s",
+                                j, buf);
+#endif
                         last_src_path_ = j;
-                        EVENTLOG1(VERBOSE,
-                                "cmp_endpoint_by_addr_port():found equal channel,"
-                                "set last_src_path_ to %u", j);
                         return true;
                     }
                 }
