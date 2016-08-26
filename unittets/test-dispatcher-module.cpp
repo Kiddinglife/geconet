@@ -1135,10 +1135,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     channel.deleted = false;
     channel.geco_inst = &inst;
     state_machine_controller_t smt;
-    smt.channel_state = ChannelState::Closed;
     channel.state_machine_control = &smt;
-    bundle_controller_t bctrl = { 0 };
-    bctrl.ctrl_position = bctrl.data_position = bctrl.sack_position = UDP_GECO_PACKET_FIXED_SIZES;
+    bundle_controller_t bctrl;
     channel.bundle_control = &bctrl;
     ///////////////////////////////////////////////////////////////////////////////////////
     sockaddrunion* last_src_addr;
