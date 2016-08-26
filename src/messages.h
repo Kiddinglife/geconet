@@ -107,9 +107,10 @@ struct chunk_fixed_t
         uchar chunk_flags; /* usually 0    */
         ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 };
-#define FLAG_NONE                 0x00
-#define FLAG_DELETED_CHANNEL        0x00
-#define FLAG_NO_CHANNEL               0x01
+#define FLAG_TBIT_UNSET       0x00
+#define FLAG_DELETED_CHANNEL  0x00
+#define FLAG_TBIT_SET         0x01
+#define FLAG_UNFOUND_CHANNEL  0x01
 
 /**************** chunk_value chunk *******************/
 #define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10

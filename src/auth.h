@@ -82,7 +82,10 @@
 #endif
 #define MAX_DEST    16
 
-extern int set_crc32_checksum(char *buffer, int length);
+extern void (*gset_checksum)(char *buffer, int length);
+extern int (*gvalidate_checksum)(char *buffer, int length);
+
+extern void set_crc32_checksum(char *buffer, int length);
 extern uchar* get_secre_key(int operation_code);
 
 extern int validate_md5_checksum(char *buffer, int length);

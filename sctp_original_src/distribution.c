@@ -302,28 +302,20 @@ gint CheckForAddressInInstance(gconstpointer a, gconstpointer b)
             "DEBUG: CheckForAddressInInstance, comparing instance a port %u, instance b port %u",
             ai->localPort, bi->localPort);
 
-    if (ai->localPort < bi->localPort)
-        return -1;
-    else if (ai->localPort > bi->localPort)
-        return 1;
+    if (ai->localPort < bi->localPort) return -1;
+    else if (ai->localPort > bi->localPort) return 1;
 
     else
     {
         /* one has IN(6)ADDR_ANY : return equal ! */
-        if (ai->has_IN6ADDR_ANY_set && bi->has_IN6ADDR_ANY_set)
-            return 0;
-        if (ai->has_INADDR_ANY_set && bi->has_INADDR_ANY_set)
-            return 0;
-        if (ai->has_INADDR_ANY_set && bi->has_IN6ADDR_ANY_set)
-            return 0;
-        if (ai->has_IN6ADDR_ANY_set && bi->has_INADDR_ANY_set)
-            return 0;
+        if (ai->has_IN6ADDR_ANY_set && bi->has_IN6ADDR_ANY_set) return 0;
+        if (ai->has_INADDR_ANY_set && bi->has_INADDR_ANY_set) return 0;
+        if (ai->has_INADDR_ANY_set && bi->has_IN6ADDR_ANY_set) return 0;
+        if (ai->has_IN6ADDR_ANY_set && bi->has_INADDR_ANY_set) return 0;
         if ((ai->has_IN6ADDR_ANY_set || ai->has_INADDR_ANY_set)
-                && !(bi->has_IN6ADDR_ANY_set || bi->has_INADDR_ANY_set))
-            return 0;
+                && !(bi->has_IN6ADDR_ANY_set || bi->has_INADDR_ANY_set)) return 0;
         if (!(ai->has_IN6ADDR_ANY_set || ai->has_INADDR_ANY_set)
-                && (bi->has_IN6ADDR_ANY_set || bi->has_INADDR_ANY_set))
-            return 0;
+                && (bi->has_IN6ADDR_ANY_set || bi->has_INADDR_ANY_set)) return 0;
         /* both do not have an INADDR_ANY : use code below */
         found = FALSE;
         for (acount = 0; acount < ai->noOfLocalAddresses; acount++)
@@ -332,22 +324,18 @@ gint CheckForAddressInInstance(gconstpointer a, gconstpointer b)
             {
                 /* if addresses are equal: set found TRUE and break; */
                 if (adl_equal_address(&(ai->localAddressList[acount]),
-                        &(bi->localAddressList[bcount])) == TRUE)
-                    found = TRUE;
+                        &(bi->localAddressList[bcount])) == TRUE) found = TRUE;
 
                 event_logiii(VVERBOSE,
                         "DEBUG: CheckForAddressInInstance, acount %u, bcount %u, found = %s",
                         acount, bcount, (found == TRUE) ? "TRUE" : "FALSE");
 
-                if (found == TRUE)
-                    break;
+                if (found == TRUE) break;
             }
-            if (found == TRUE)
-                break;
+            if (found == TRUE) break;
         }
         /* if address was not found, it is not in this instance */
-        if (found == FALSE)
-            return -1; /* to continue search */
+        if (found == FALSE) return -1; /* to continue search */
     }
     return 0;
 
@@ -356,13 +344,10 @@ gint CheckForAddressInInstance(gconstpointer a, gconstpointer b)
 gint CompareInstanceNames(gconstpointer a, gconstpointer b)
 {
     if ((((SCTP_instance*) a)->sctpInstanceName)
-            < ((SCTP_instance*) b)->sctpInstanceName)
-        return -1;
+            < ((SCTP_instance*) b)->sctpInstanceName) return -1;
     else if ((((SCTP_instance*) a)->sctpInstanceName)
-            > ((SCTP_instance*) b)->sctpInstanceName)
-        return 1;
-    else
-        return 0;
+            > ((SCTP_instance*) b)->sctpInstanceName) return 1;
+    else return 0;
 }
 
 /**
@@ -408,12 +393,9 @@ gint compareAssociationIDs(gconstpointer a, gconstpointer b)
 {
     /* two associations are equal if there local tags (in this implementation also used as
      association ID) are equal. */
-    if (((Association*) a)->assocId == ((Association*) b)->assocId)
-        return 0;
-    else if (((Association*) a)->assocId < ((Association*) b)->assocId)
-        return -1;
-    else
-        return 1;
+    if (((Association*) a)->assocId == ((Association*) b)->assocId) return 0;
+    else if (((Association*) a)->assocId < ((Association*) b)->assocId) return -1;
+    else return 1;
 }
 
 /**
@@ -617,8 +599,8 @@ Association *retrieveAssociationByTransportAddress(
             assocr = NULL;
         }
         if (assocr != NULL)
-            event_logi(VERBOSE, "Found valid assoc assoc with id %u",
-                    assocr->assocId);
+        event_logi(VERBOSE, "Found valid assoc assoc with id %u",
+                assocr->assocId);
         return assocr;
     }
     else
@@ -653,9 +635,8 @@ static short checkForExistingAssociations(Association * assoc_new)
     result = g_list_find_custom(AssociationList, assoc_new, equalAssociations);
 
     if (result) /* then one of addresses of assoc A was in set of addresses of B */
-        return 1;
-    else
-        return 0;
+    return 1;
+    else return 0;
 }
 
 /*------------------- Internal port management Functions -----------------------------------------*/
@@ -684,8 +665,7 @@ static unsigned short seizePort(void)
     unsigned short seizePort = 0;
 
     /* problem: no more available ports ?! */
-    if (numberOfSeizedPorts >= 0xFBFF)
-        return 0x0000;
+    if (numberOfSeizedPorts >= 0xFBFF) return 0x0000;
 
     seizePort = (unsigned short) (adl_random() % 0xFFFF);
 
@@ -793,8 +773,7 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
     gboolean any_set = FALSE;
 
     /* this case will be specially treated after the call to mdi_destination_address_okay() */
-    if (sctpInstance == NULL && currentAssociation == NULL)
-        return TRUE;
+    if (sctpInstance == NULL && currentAssociation == NULL) return TRUE;
 
     /*
      if (sctpInstance == NULL && currentAssociation == NULL) return FALSE;
@@ -859,8 +838,7 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
 
             }
         }
-        if (any_set == TRUE)
-            return FALSE;
+        if (any_set == TRUE) return FALSE;
         /* if not, search through the list */
         for (i = 0; i < sctpInstance->noOfLocalAddresses; i++)
         {
@@ -962,27 +940,23 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         addressType = SUPPORT_ADDRESS_TYPE_IPV4;
         event_log(VERBOSE,
                 "mdi_receiveMessage: checking for correct IPV4 addresses");
-        if (IN_CLASSD(ntohl(dest_addr->sin.sin_addr.s_addr)))
-            discard = TRUE;
-        if (IN_EXPERIMENTAL(ntohl(dest_addr->sin.sin_addr.s_addr)))
-            discard = TRUE;
-        if (IN_BADCLASS(ntohl(dest_addr->sin.sin_addr.s_addr)))
-            discard = TRUE;
-        if (INADDR_ANY == ntohl(dest_addr->sin.sin_addr.s_addr))
-            discard = TRUE;
-        if (INADDR_BROADCAST == ntohl(dest_addr->sin.sin_addr.s_addr))
-            discard = TRUE;
+        if (IN_CLASSD(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = TRUE;
+        if (IN_EXPERIMENTAL(ntohl(dest_addr->sin.sin_addr.s_addr))) discard =
+                TRUE;
+        if (IN_BADCLASS(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = TRUE;
+        if (INADDR_ANY == ntohl(dest_addr->sin.sin_addr.s_addr)) discard = TRUE;
+        if (INADDR_BROADCAST == ntohl(dest_addr->sin.sin_addr.s_addr)) discard =
+                TRUE;
 
-        if (IN_CLASSD(ntohl(source_addr->sin.sin_addr.s_addr)))
-            discard = TRUE;
-        if (IN_EXPERIMENTAL(ntohl(source_addr->sin.sin_addr.s_addr)))
-            discard = TRUE;
-        if (IN_BADCLASS(ntohl(source_addr->sin.sin_addr.s_addr)))
-            discard = TRUE;
-        if (INADDR_ANY == ntohl(source_addr->sin.sin_addr.s_addr))
-            discard = TRUE;
-        if (INADDR_BROADCAST == ntohl(source_addr->sin.sin_addr.s_addr))
-            discard = TRUE;
+        if (IN_CLASSD(ntohl(source_addr->sin.sin_addr.s_addr))) discard = TRUE;
+        if (IN_EXPERIMENTAL(ntohl(source_addr->sin.sin_addr.s_addr))) discard =
+                TRUE;
+        if (IN_BADCLASS(ntohl(source_addr->sin.sin_addr.s_addr))) discard =
+                TRUE;
+        if (INADDR_ANY == ntohl(source_addr->sin.sin_addr.s_addr)) discard =
+                TRUE;
+        if (INADDR_BROADCAST == ntohl(source_addr->sin.sin_addr.s_addr)) discard =
+                TRUE;
 
         /*  if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr)) &&
          (source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr)) discard = TRUE;
@@ -1216,7 +1190,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                     "mdi_receiveMsg: Found SHUTDOWN_ACK chunk, send SHUTDOWN_COMPLETE !");
             /* section 8.4.5 : return SHUTDOWN_COMPLETE with peers veri-tag and T-Bit set */
             shutdownCompleteCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_COMPLETE,
-                    FLAG_NO_TCB);
+            FLAG_NO_TCB);
             bu_put_Ctrl_Chunk(ch_chunkString(shutdownCompleteCID), NULL);
             bu_unlock_sender(NULL);
             /* should send it to last address */
@@ -1262,7 +1236,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
 
         /* section 8.4.7) : Discard the datagram, if it contains a STALE-COOKIE ERROR */
         if (rbu_scanDatagramForError(message->sctp_pdu, len,
-                ECC_STALE_COOKIE_ERROR) == TRUE)
+        ECC_STALE_COOKIE_ERROR) == TRUE)
         {
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found STALE COOKIE ERROR, discarding packet !");
@@ -1430,8 +1404,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             return;
         }
 
-        if (sourceAddressExists)
-            lastFromPath = i;
+        if (sourceAddressExists) lastFromPath = i;
 
         /* check for verification tag rules --> see section 8.5 */
         if ((initPtr = rbu_findChunk(message->sctp_pdu, len, CHUNK_INIT))
@@ -1519,7 +1492,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                         "mdi_receive_message: shutdownAck in state %u, send SHUTDOWN_COMPLETE ! ",
                         state);
                 shutdownCompleteCID = ch_makeSimpleChunk(
-                        CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
+                CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
                 bu_put_Ctrl_Chunk(ch_chunkString(shutdownCompleteCID), NULL);
                 bu_sendAllChunks(NULL);
                 ch_deleteChunk(shutdownCompleteCID);
@@ -1556,7 +1529,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 return;
             }
         }
-        
+
         if (!cookieEchoFound && !initFound && !abortFound
                 && lastInitiateTag != currentAssociation->tagLocal)
         {
@@ -1771,8 +1744,8 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                         counter++)
                 {
                     if (adl_equal_address(&(addressList[ii]),
-                            &(sctpInstance->localAddressList[counter])) == TRUE)
-                        result = TRUE;
+                            &(sctpInstance->localAddressList[counter])) == TRUE) result =
+                            TRUE;
                 }
             }
             else
@@ -1784,8 +1757,8 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                         if (sockunion_family(&myAddressList[counter]) == AF_INET)
                         {
                             if (adl_equal_address(&(addressList[ii]),
-                                    &(myAddressList[counter])) == TRUE)
-                                result = TRUE;
+                                    &(myAddressList[counter])) == TRUE) result =
+                                    TRUE;
                         }
                     }
                 }
@@ -1794,8 +1767,8 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                     for (counter = 0; counter < myNumberOfAddresses; counter++)
                     {
                         if (adl_equal_address(&(addressList[ii]),
-                                &(myAddressList[counter])) == TRUE)
-                            result = TRUE;
+                                &(myAddressList[counter])) == TRUE) result =
+                                TRUE;
                     }
                 }
             }
@@ -1816,8 +1789,7 @@ gboolean mdi_checkForCorrectAddress(union sockunion* su)
     switch (sockunion_family(su))
     {
     case AF_INET:
-        if (sock2ip(su) == INADDR_ANY)
-            return FALSE;
+        if (sock2ip(su) == INADDR_ANY) return FALSE;
         break;
 #ifdef HAVE_IPV6
         case AF_INET6:
@@ -1835,8 +1807,8 @@ gboolean mdi_checkForCorrectAddress(union sockunion* su)
 
     for (counter = 0; counter < myNumberOfAddresses; counter++)
     {
-        if (adl_equal_address(su, &(myAddressList[counter])) == TRUE)
-            found = TRUE;
+        if (adl_equal_address(su, &(myAddressList[counter])) == TRUE) found =
+                TRUE;
     }
     return found;
 }
@@ -1918,7 +1890,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     {
         sctpInstance = old_Instance;
         currentAssociation = old_assoc;
-        error_log(ERROR_MAJOR, "User gave incorrect address !"); LEAVE_LIBRARY("sctp_registerInstance");
+        error_log(ERROR_MAJOR, "User gave incorrect address !");LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_WRONG_ADDRESS;
     }
 
@@ -1937,8 +1909,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         }
         else
         {
-            if (su.sa.sa_family == AF_INET)
-                with_ipv4 = TRUE;
+            if (su.sa.sa_family == AF_INET) with_ipv4 = TRUE;
 
 #ifdef HAVE_IPV6
             if (su.sa.sa_family == AF_INET6) with_ipv6 = TRUE;
@@ -2039,8 +2010,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     }
 
     sctpInstance->supportedAddressTypes = 0;
-    if (with_ipv4)
-        sctpInstance->supportedAddressTypes |= SUPPORT_ADDRESS_TYPE_IPV4;
+    if (with_ipv4) sctpInstance->supportedAddressTypes |=
+            SUPPORT_ADDRESS_TYPE_IPV4;
 #ifdef HAVE_IPV6
     if (with_ipv6) sctpInstance->supportedAddressTypes |= SUPPORT_ADDRESS_TYPE_IPV6;
 #endif
@@ -2063,7 +2034,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
                 free(sctpInstance);
                 sctpInstance = old_Instance;
                 currentAssociation = old_assoc;
-                error_log(ERROR_MAJOR, "User gave incorrect address !"); LEAVE_LIBRARY("sctp_registerInstance");
+                error_log(ERROR_MAJOR, "User gave incorrect address !");LEAVE_LIBRARY("sctp_registerInstance");
                 return SCTP_WRONG_ADDRESS;
             }
         }
@@ -2086,7 +2057,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         free(sctpInstance);
         sctpInstance = old_Instance;
         currentAssociation = old_assoc;
-        error_log(ERROR_MAJOR, "Instance already existed ! Returning error !"); LEAVE_LIBRARY("sctp_registerInstance");
+        error_log(ERROR_MAJOR, "Instance already existed ! Returning error !");LEAVE_LIBRARY("sctp_registerInstance");
         return 0;
     }
 
@@ -2118,13 +2089,13 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     {
         sctp_socket = adl_get_sctpv4_socket();
         if (!sctp_socket)
-            error_log(ERROR_FATAL, "IPv4 socket creation failed");
+        error_log(ERROR_FATAL, "IPv4 socket creation failed");
 
         adl_rscb_code = adl_register_socket_cb(sctp_socket,
                 &mdi_dummy_callback);
         if (!adl_rscb_code)
-            error_log(ERROR_FATAL,
-                    "registration of IPv4 socket call back function failed");
+        error_log(ERROR_FATAL,
+                "registration of IPv4 socket call back function failed");
     }
     if (with_ipv4 == TRUE)
     {
@@ -2215,8 +2186,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
         if (with_ipv6 == TRUE) ipv6_users--;
         event_logi(VERBOSE, "sctp_unregisterInstance : ipv6_users: %u ",ipv6_users);
 #endif
-        if (with_ipv4 == TRUE)
-            ipv4_users--;
+        if (with_ipv4 == TRUE) ipv4_users--;
         event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv4: %s ",
                 (with_ipv4 == TRUE) ? "TRUE" : "FALSE");
         event_logi(VERBOSE, "sctp_unregisterInstance : ipv4_users: %u ",
@@ -2284,7 +2254,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
     {
         event_logi(INTERNAL_EVENT_0, "SCTP Instance %u not in list",
                 instance_name);
-    } LEAVE_LIBRARY("sctp_unregisterInstance");
+    }LEAVE_LIBRARY("sctp_unregisterInstance");
     return SCTP_INSTANCE_NOT_FOUND;
 
 }
@@ -2327,7 +2297,7 @@ int sctp_deleteAssociation(unsigned int associationID)
         {
             currentAssociation = NULL;
             error_log(ERROR_MAJOR,
-                    "Deleted-Flag not set, returning from sctp_deleteAssociation !"); LEAVE_LIBRARY("sctp_deleteAssociation");
+                    "Deleted-Flag not set, returning from sctp_deleteAssociation !");LEAVE_LIBRARY("sctp_deleteAssociation");
             return SCTP_SPECIFIC_FUNCTION_ERROR;
         }
         /* remove the association from the list */
@@ -2343,7 +2313,7 @@ int sctp_deleteAssociation(unsigned int associationID)
     else
     {
         event_logi(INTERNAL_EVENT_0, "association %08x not in list",
-                associationID); LEAVE_LIBRARY("sctp_deleteAssociation");
+                associationID);LEAVE_LIBRARY("sctp_deleteAssociation");
         return SCTP_ASSOC_NOT_FOUND;
     }
     /* should not be reached */
@@ -2436,10 +2406,9 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     }
     sctpInstance = (SCTP_instance*) result->data;
 
-    if (((SCTP_instance*) result->data)->localPort == 0)
-        zlocalPort = seizePort();
-    else
-        zlocalPort = ((SCTP_instance*) result->data)->localPort;
+    if (((SCTP_instance*) result->data)->localPort == 0) zlocalPort =
+            seizePort();
+    else zlocalPort = ((SCTP_instance*) result->data)->localPort;
 
     event_logi(VERBOSE, "Chose local port %u for associate !", zlocalPort);
 
@@ -2811,8 +2780,7 @@ int sctp_changeHeartBeat(unsigned int associationID, short path_id,
                     "Setting HB interval for address %d to %u msecs, result: %d !",
                     path_id, timeIntervall, result);
         }
-        else
-            result = pm_disableHB(path_id);
+        else result = pm_disableHB(path_id);
         event_logii(VERBOSE, "Disabling HB for address %d, result: %d !",
                 path_id, result);
     }
@@ -3271,12 +3239,12 @@ int sctp_setAssocDefaults(unsigned short SCTP_InstanceName,
     {
         error_logi(ERROR_MINOR,
                 "sctp_setAssocDefaults : Did not find Instance Number %u",
-                SCTP_InstanceName); LEAVE_LIBRARY("sctp_setAssocDefaults");
+                SCTP_InstanceName);LEAVE_LIBRARY("sctp_setAssocDefaults");
         return SCTP_INSTANCE_NOT_FOUND;
     }
     if (params == NULL)
     {
-        error_log(ERROR_MINOR, "sctp_setAssocDefaults : Passed NULL Pointer !"); LEAVE_LIBRARY("sctp_setAssocDefaults");
+        error_log(ERROR_MINOR, "sctp_setAssocDefaults : Passed NULL Pointer !");LEAVE_LIBRARY("sctp_setAssocDefaults");
         return SCTP_PARAMETER_PROBLEM;
     }
     instance->default_rtoInitial = params->rtoInitial;
@@ -3332,18 +3300,17 @@ int sctp_getAssocDefaults(unsigned short SCTP_InstanceName,
     {
         error_logi(ERROR_MINOR,
                 "sctp_getAssocDefaults : Did not find Instance Number %u",
-                SCTP_InstanceName); LEAVE_LIBRARY("sctp_getAssocDefaults");
+                SCTP_InstanceName);LEAVE_LIBRARY("sctp_getAssocDefaults");
         return SCTP_INSTANCE_NOT_FOUND;
     }
     if (params == NULL)
     {
-        error_log(ERROR_MINOR, "sctp_getAssocDefaults : Passed NULL Pointer !"); LEAVE_LIBRARY("sctp_getAssocDefaults");
+        error_log(ERROR_MINOR, "sctp_getAssocDefaults : Passed NULL Pointer !");LEAVE_LIBRARY("sctp_getAssocDefaults");
         return SCTP_PARAMETER_PROBLEM;
     }
-    if (instance->noOfLocalAddresses > SCTP_MAX_NUM_ADDRESSES)
-        numOfAddresses = SCTP_MAX_NUM_ADDRESSES;
-    else
-        numOfAddresses = instance->noOfLocalAddresses;
+    if (instance->noOfLocalAddresses > SCTP_MAX_NUM_ADDRESSES) numOfAddresses =
+            SCTP_MAX_NUM_ADDRESSES;
+    else numOfAddresses = instance->noOfLocalAddresses;
 
     if (numOfAddresses == 0)
     {
@@ -3798,7 +3765,7 @@ unsigned int sctp_startTimer(unsigned int seconds, unsigned int microseconds,
     ENTER_LIBRARY("sctp_startTimer");
     CHECK_LIBRARY;
     result = adl_startMicroTimer(seconds, microseconds, timer_cb,
-            TIMER_TYPE_USER, param1, param2);
+    TIMER_TYPE_USER, param1, param2);
     LEAVE_LIBRARY("sctp_startTimer");
     return result;
 }
@@ -3971,10 +3938,8 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
                     lastInitiateTag, mdi_readLastDestPort(),
                     mdi_readLastFromPort());
 
-            if (sctpInstance != NULL)
-                tos = sctpInstance->default_ipTos;
-            else
-                tos = IPTOS_DEFAULT;
+            if (sctpInstance != NULL) tos = sctpInstance->default_ipTos;
+            else tos = IPTOS_DEFAULT;
         }
     }
     else
@@ -4354,8 +4319,7 @@ void mdi_communicationUpNotif(unsigned short status)
         {
             primaryPath = 0;
         }
-        if (primaryPath >= currentAssociation->noOfNetworks)
-            primaryPath = 0;
+        if (primaryPath >= currentAssociation->noOfNetworks) primaryPath = 0;
 
         /* set number of paths and primary path at pathmanegement and start heartbeat */
         pm_setPaths(currentAssociation->noOfNetworks, primaryPath);
@@ -4389,7 +4353,7 @@ void mdi_communicationUpNotif(unsigned short status)
                     if (pm_readState((short) pathNum) == PM_ACTIVE)
                     {
                         mdi_networkStatusChangeNotif((short) pathNum,
-                                PM_ACTIVE);
+                        PM_ACTIVE);
                     }
                 }
             }
@@ -4844,10 +4808,9 @@ short mdi_getIndexForAddress(union sockunion* address)
         for (index = 0; index < currentAssociation->noOfNetworks; index++)
             if (adl_equal_address(
                     &(currentAssociation->destinationAddresses[index]),
-                    address))
-                break;
+                    address)) break;
         if (index == currentAssociation->noOfNetworks) /* not found */
-            return -1;
+        return -1;
 
     }
     return index;
@@ -4880,8 +4843,7 @@ void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES],
                 noOfAddresses * sizeof(union sockunion));
 
         if (currentAssociation->destinationAddresses == NULL)
-            error_log(ERROR_FATAL,
-                    "mdi_writeDestinationAddresses: out of memory");
+        error_log(ERROR_FATAL, "mdi_writeDestinationAddresses: out of memory");
 
         memcpy(currentAssociation->destinationAddresses, addresses,
                 noOfAddresses * sizeof(union sockunion));
@@ -4914,8 +4876,7 @@ unsigned short mdi_readLocalInStreams(void)
         temporary.has_IN6ADDR_ANY_set = FALSE;
         temporary.localPort = lastDestPort;
         temporary.noOfLocalAddresses = 1;
-        if (lastDestAddress)
-            temporary.localAddressList = lastDestAddress;
+        if (lastDestAddress) temporary.localAddressList = lastDestAddress;
         else
         error_log(ERROR_FATAL,
                 "lastDestAddress NULL in mdi_readLocalInStreams() - FIXME !");
@@ -4971,8 +4932,7 @@ unsigned short mdi_readLocalOutStreams(void)
         temporary.has_INADDR_ANY_set = FALSE;
         temporary.has_IN6ADDR_ANY_set = FALSE;
         temporary.noOfLocalAddresses = 1;
-        if (lastDestAddress)
-            temporary.localAddressList = lastDestAddress;
+        if (lastDestAddress) temporary.localAddressList = lastDestAddress;
         else
         error_log(ERROR_FATAL,
                 "lastDestAddress NULL in mdi_readLocalInStreams() - FIXME !");
@@ -5068,8 +5028,8 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         /* this is from a normal address, get all except loopback */
         if (linkLocalFound)
         {
-            filterFlags = (AddressScopingFlags) (flag_Default
-                    | LoopBackAddrType);
+            filterFlags =
+                    (AddressScopingFlags) (flag_Default | LoopBackAddrType);
         }
         else if (siteLocalFound)
         {
@@ -5078,7 +5038,8 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         }
         else
         {
-            filterFlags = (AddressScopingFlags) (flag_Default | AllLocalAddrTypes);
+            filterFlags = (AddressScopingFlags) (flag_Default
+                    | AllLocalAddrTypes);
         }
     }
     else /* if ((receivedFromPeer == TRUE) && (localHostFound == TRUE)) */
@@ -5133,12 +5094,14 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                     }
                 }
                 break;
-                case AF_INET6 :
+            case AF_INET6:
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV6) != 0)
                 {
-                    if ( adl_filterInetAddress(&(myAddressList[tmp]), filterFlags) == TRUE)
+                    if (adl_filterInetAddress(&(myAddressList[tmp]),
+                            filterFlags) == TRUE)
                     {
-                        memcpy(&(laddresses[count]), &(myAddressList[tmp]),sizeof(union sockunion));
+                        memcpy(&(laddresses[count]), &(myAddressList[tmp]),
+                                sizeof(union sockunion));
                         count++;
                     }
                 }
@@ -5217,50 +5180,38 @@ gboolean mdi_supportsPRSCTP(void)
 
 gboolean mdi_peerSupportsPRSCTP(void)
 {
-    if (currentAssociation == NULL)
-        return FALSE;
+    if (currentAssociation == NULL) return FALSE;
     return currentAssociation->peerSupportsPRSCTP;
 }
 
 int mdi_getDefaultRtoInitial(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_rtoInitial;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_rtoInitial;
 }
 int mdi_getDefaultValidCookieLife(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_validCookieLife;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_validCookieLife;
 }
 int mdi_getDefaultAssocMaxRetransmits(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_assocMaxRetransmits;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_assocMaxRetransmits;
 }
 int mdi_getDefaultPathMaxRetransmits(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_pathMaxRetransmits;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_pathMaxRetransmits;
 }
 int mdi_getDefaultMaxInitRetransmits(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_maxInitRetransmits;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_maxInitRetransmits;
 }
 int mdi_getDefaultMyRwnd()
 {
-    if (sctpInstance == NULL)
-        return -1;
+    if (sctpInstance == NULL) return -1;
     else
     {
         event_logi(VVERBOSE, " mdi_getDefaultMyRwnd is %u",
@@ -5270,66 +5221,49 @@ int mdi_getDefaultMyRwnd()
 }
 int mdi_getDefaultRtoMin(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_rtoMin;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_rtoMin;
 }
 
 int mdi_getDefaultRtoMax(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_rtoMax;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_rtoMax;
 }
 
 int mdi_getDefaultMaxBurst(void)
 {
-    if (sctpInstance == NULL)
-        return DEFAULT_MAX_BURST;
-    else if (currentAssociation == NULL)
-        return DEFAULT_MAX_BURST;
-    else
-        return (currentAssociation->sctpInstance->default_maxBurst);
+    if (sctpInstance == NULL) return DEFAULT_MAX_BURST;
+    else if (currentAssociation == NULL) return DEFAULT_MAX_BURST;
+    else return (currentAssociation->sctpInstance->default_maxBurst);
 }
 
 int mdi_getDefaultDelay(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_delay;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_delay;
 }
 
 int mdi_getDefaultIpTos(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_ipTos;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_ipTos;
 }
 int mdi_getDefaultMaxSendQueue(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_maxSendQueue;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_maxSendQueue;
 }
 int mdi_getDefaultMaxRecvQueue(void* sctpInstance)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return ((SCTP_instance*) sctpInstance)->default_maxRecvQueue;
+    if (sctpInstance == NULL) return -1;
+    else return ((SCTP_instance*) sctpInstance)->default_maxRecvQueue;
 }
 
 unsigned int mdi_getSupportedAddressTypes(void)
 {
-    if (sctpInstance == NULL)
-        return -1;
-    else
-        return sctpInstance->supportedAddressTypes;
+    if (sctpInstance == NULL) return -1;
+    else return sctpInstance->supportedAddressTypes;
 }
 
 /*------------- functions to set and clear the association data ----------------------------------*/
@@ -5349,8 +5283,8 @@ unsigned int mdi_getSupportedAddressTypes(void)
 unsigned short mdi_setAssociationData(unsigned int associationID)
 {
     if (currentAssociation != NULL)
-        error_log(ERROR_MINOR,
-                "mdi_setAssociationData: previous assoc not cleared");
+    error_log(ERROR_MINOR,
+            "mdi_setAssociationData: previous assoc not cleared");
 
     /* retrieve association from list */
     currentAssociation = retrieveAssociation(associationID);
@@ -5428,7 +5362,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     }
 
     if (!instance)
-        error_log(ERROR_MAJOR, "instance is NULL ! Segfault !");
+    error_log(ERROR_MAJOR, "instance is NULL ! Segfault !");
 
     event_logiiiii(VERBOSE,
             " mdi_newAssociation: Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",

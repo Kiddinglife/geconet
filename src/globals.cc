@@ -439,10 +439,11 @@ char* Bitify(size_t mWritePosBits, char* mBuffer)
             if ((mBuffer[outter] >> inner) & 1) out[strIndex++] = '1';
             else out[strIndex++] = '0';
         }
-        out[strIndex++] = '\n';
+        //out[strIndex++] = '\n';
+        out[strIndex++] = ' ';
     }
 
-    out[strIndex++] = '\n';
+    //out[strIndex++] = '\n';
     out[strIndex++] = 0;
 
     return out;
@@ -470,10 +471,11 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
             if ((mBuffer[outter] >> inner) & 1) out[strIndex++] = '1';
             else out[strIndex++] = '0';
         }
-        out[strIndex++] = '\n';
+        //out[strIndex++] = '\n';
+        out[strIndex++] = ' ';
     }
 
-    out[strIndex++] = '\n';
+    //out[strIndex++] = '\n';
     out[strIndex++] = 0;
 
 }

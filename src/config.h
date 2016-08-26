@@ -12,9 +12,15 @@
 //#define HAVE_SIN_LEN
 //#define HAVE_IPV6_RECVPKTINFO
 //#define USE_UDP
-#define _DEBUG
+
+//comment those macros before running unit tests
+//uncomment those macros after running unit tests
+//otherwise these functions will never be invoked
+//#define enable_disassemle_curr_geco_packet
+//#define enable_dispatch_layer_t_send_bundled_chunks_send_geco_packet
+
+#define _DEBUG //uncommnet this in release version
 #define GECO_ASSERTIONS
 #define GECO_PRINTS
 #define CURR_EVENT_LOG_LEVEL 7 //VERBOSE =7
-#define ENABLE_UNIT_TEST
 #endif /* MY_CONFIG_H_ */
