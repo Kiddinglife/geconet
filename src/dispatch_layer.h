@@ -30,7 +30,7 @@
 #endif
 
 #include "globals.h"
-#include "geco-ds-malloc.h"
+#include "geco-malloc.h"
 #include "gecotimer.h"
 #include "protoco-stack.h"
 #include "auth.h"
@@ -571,7 +571,7 @@ public:
     /* unit test extra variables*/
     bool branchtest_contains_chunk_abort_when_curr_channel_is_null_;
 #endif
-    geco::ds::single_client_alloc galloc;
+
     dispatch_layer_t();
 
     /**
@@ -1078,7 +1078,8 @@ public:
     {
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
         simple_chunk_t* simple_chunk_ptr =
-            (simple_chunk_t*)galloc.allocate(SIMPLE_CHUNK_SIZE);
+            (simple_chunk_t*)geco_malloc_ext(SIMPLE_CHUNK_SIZE, __FILE__, __LINE__);
+            //(simple_chunk_t*)galloc.allocate(SIMPLE_CHUNK_SIZE);
 
         simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
         simple_chunk_ptr->chunk_header.chunk_flags = flag;
@@ -1332,7 +1333,8 @@ public:
         if (simple_chunks_[chunkID] != NULL)
         {
             EVENTLOG1(INFO, "freed simple chunk %u", chunkID);
-            galloc.deallocate(simple_chunks_[chunkID], SIMPLE_CHUNK_SIZE);
+            geco_free_ext(simple_chunks_[chunkID], __FILE__, __LINE__);
+            //galloc.deallocate(simple_chunks_[chunkID], SIMPLE_CHUNK_SIZE);
             simple_chunks_[chunkID] = NULL;
         }
         else

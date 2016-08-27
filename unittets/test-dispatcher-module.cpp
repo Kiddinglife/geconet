@@ -6,6 +6,8 @@
 //#include "geco-ds-malloc.h"
 #include "transport_layer.h"
 #include "dispatch_layer.h"
+#include "geco-ds-malloc.h"
+#include "geco-malloc.h"
 using namespace geco::ds;
 
 static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst,

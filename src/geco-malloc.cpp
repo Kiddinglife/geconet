@@ -18,9 +18,10 @@
  *
  */
 
-// created on 02-June-2016 by Jackie Zhang
+ // created on 02-June-2016 by Jackie Zhang
 
 #include "geco-malloc.h"
+#include "geco-ds-malloc.h"
 
 static void* _DefaultMalloc(size_t size)
 {
@@ -41,19 +42,26 @@ GecoMalloc geco_malloc = _DefaultMalloc;
 GecoRealloc geco_realloc = _DefaultRealloc;
 GecoFree geco_free = _DefaultFree;
 
+static geco::ds::single_client_alloc galloc;
 static void* _DefaultMalloc_Ex(size_t size, const char *file, unsigned int line)
 {
-    return malloc(size);
+    char* buf = (char*)galloc.allocate(size + sizeof(int));
+    *(int*)buf = size + sizeof(int);
+    return (buf + sizeof(int));
 }
-static void* _DefaultRealloc_Ex(void *p, size_t size, const char *file,
-        unsigned int line)
+static void* _DefaultRealloc_Ex(void *p, size_t newsize, const char *file,
+    unsigned int line)
 {
-    return realloc(p, size);
+    int oldsize = ((int*)((char*)p - sizeof(int)))[0];
+    char* buf = (char*)galloc.reallocate(p, oldsize, newsize + sizeof(int));
+    ((int*)buf)[0] = newsize;
+    return buf + sizeof(int);
 }
-static void _DefaultFree_Ex(void *p, size_t size, const char *file,
-        unsigned int line)
+static void _DefaultFree_Ex(void *p, const char *file,unsigned int line)
 {
-    free(p);
+    char* ptr = (char*)p - sizeof(int);
+    int size = *(int*)ptr;
+    galloc.deallocate(ptr, size);
 }
 /*function with ext for debug*/
 GecoMallocExt geco_malloc_ext = _DefaultMalloc_Ex;

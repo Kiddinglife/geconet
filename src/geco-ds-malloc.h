@@ -426,6 +426,10 @@ class default_alloc
         tmp_unit = 0;
     }
 
+    ~default_alloc()
+    {
+        this->destroy();
+    }
     //! 向上舍入操作
     //! 解释一下, ALIGN - 1指明的是实际内存对齐的粒度
     //! 例如ALIGN = 8时, 我们只需要7就可以实际表示8个数(0~7)

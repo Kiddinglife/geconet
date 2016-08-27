@@ -4,7 +4,15 @@
 //#include "geco-ds-malloc.h"
 #include "transport_layer.h"
 #include "dispatch_layer.h"
+#include "geco-ds-malloc.h"
+#include "geco-malloc.h"
 using namespace geco::ds;
+
+struct alloc_t
+{
+    void* ptr;
+    size_t allocsize;
+};
 
 TEST(test_case_logging, test_read_trace_levels)
 {
@@ -80,7 +88,6 @@ TEST(TIMER_MODULE, test_operations_on_time)
     EXPECT_TRUE(result.tv_sec == 0);
     EXPECT_TRUE(result.tv_usec == 0);
 }
-
 // last run on 21 Agu 2016 and passed
 TEST(GLOBAL_MODULE, test_saddr_str)
 {
@@ -114,15 +121,129 @@ TEST(GLOBAL_MODULE, test_saddr_str)
     EXPECT_EQ(saddr_equals(&saddr1, &saddr2), false);
 }
 
+
+TEST(MALLOC_MODULE, test_geco_new_delete)
+{
+    int j;
+    int total = 30000;
+    /*max is 5120 we use 5121 to have the max*/
+    size_t allocsize;
+    size_t dealloc_idx;
+    std::list<alloc_t*> allos;
+    std::list<alloc_t*>::iterator it;
+
+    int alloccnt = 0;
+    int deallcnt = 0;
+    for (j = 0; j < total; j++)
+    {
+        if (rand() % 2)
+        {
+            alloc_t* at = geco_new<alloc_t>(__FILE__, __LINE__);
+            at->allocsize = 1;
+            allos.push_back(at);
+            alloccnt++;
+
+            uint s = (rand() * UINT32_MAX) % 1024 +1;
+            at = geco_new_array<alloc_t>(s,__FILE__, __LINE__);
+            at->allocsize = s;
+            allos.push_back(at);
+            alloccnt+=s;
+        }
+        else
+        {
+            size_t s = allos.size();
+            if (s > 0)
+            {
+                dealloc_idx = rand() % s;
+                it = allos.begin();
+                std::advance(it, dealloc_idx);
+                if ((*it)->allocsize ==1)
+                {
+                    deallcnt++;
+                    geco_delete<alloc_t>(*it, __FILE__, __LINE__);
+                    allos.erase(it);
+                }
+                else
+                {
+                    deallcnt += (*it)->allocsize;
+                    geco_delete_array<alloc_t>(*it, __FILE__, __LINE__);
+                    allos.erase(it);
+                }
+            }
+        }
+    }
+    for (auto& p : allos)
+    {
+        if (p->allocsize == 1)
+        {
+            deallcnt++;
+            geco_delete<alloc_t>(p, __FILE__, __LINE__);
+        }
+        else
+        {
+            deallcnt += p->allocsize;
+            geco_delete_array<alloc_t>(p, __FILE__, __LINE__);
+        }
+    }
+    allos.clear();
+    EXPECT_EQ(alloccnt, deallcnt);
+    EXPECT_EQ(allos.size(), 0);
+}
+TEST(MALLOC_MODULE, test_geco_alloc_dealloc)
+{
+    int j;
+    int total = 1000000;
+    /*max is 5120 we use 5121 to have the max*/
+    size_t allocsize;
+    size_t dealloc_idx;
+    std::list<alloc_t> allos;
+    std::list<alloc_t>::iterator it;
+
+    int alloccnt = 0;
+    int deallcnt = 0;
+    int less_than_max_byte_cnt = 0;
+    int zero_alloc_cnt = 0;
+    for (j = 0; j < total; j++)
+    {
+        if (rand() % 2)
+        {
+            allocsize = (rand() * UINT32_MAX) % 2049;
+            if (allocsize <= 1512) ++less_than_max_byte_cnt;
+            if (allocsize == 0) ++zero_alloc_cnt;
+            alloc_t at;
+            at.ptr = geco_malloc_ext(allocsize, __FILE__, __LINE__);
+            at.allocsize = allocsize;
+            allos.push_back(at);
+            alloccnt++;
+        }
+        else
+        {
+            size_t s = allos.size();
+            if (s > 0)
+            {
+                dealloc_idx = rand() % s;
+                it = allos.begin();
+                std::advance(it, dealloc_idx);
+                geco_free_ext(it->ptr, __FILE__, __LINE__);
+                allos.erase(it);
+                deallcnt++;
+            }
+        }
+    }
+    for (auto& p : allos)
+    {
+        geco_free_ext(p.ptr, __FILE__, __LINE__);
+        deallcnt++;
+    }
+    allos.clear();
+    EXPECT_EQ(alloccnt, deallcnt);
+    EXPECT_EQ(allos.size(), 0);
+    EVENTLOG5(VERBOSE, "alloccnt %d, dealloccnt %d, < 1512 cnt %d, %d, zer alloc cnt %d\n", alloccnt, deallcnt,
+        less_than_max_byte_cnt, alloccnt - less_than_max_byte_cnt, zero_alloc_cnt);
+}
 // last run on 21 Agu 2016 and passed
 TEST(MALLOC_MODULE, test_alloc_dealloc)
 {
-    struct alloc_t
-    {
-        void* ptr;
-        size_t allocsize;
-    };
-
     single_client_alloc allocator;
     int j;
     int total = 1000000;

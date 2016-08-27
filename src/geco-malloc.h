@@ -49,7 +49,7 @@ typedef void * (*GecoMallocExt)(size_t size, const char *file,
         unsigned int line);
 typedef void * (*GecoReallocExt)(void *p, size_t size, const char *file,
         unsigned int line);
-typedef void (*GecoFreeExt)(void *p, size_t size, const char *file,
+typedef void (*GecoFreeExt)(void *p, const char *file,
         unsigned int line);
 extern  GecoMallocExt geco_malloc_ext;
 extern  GecoReallocExt geco_realloc_ext;
@@ -117,10 +117,9 @@ template<class Type>
 template<class Type>
  void geco_delete(Type *buff, const char *file, unsigned int line)
 {
-    if (buff == 0)
-        return;
+    if (buff == 0) return;
     buff->~Type();
-    (geco_free_ext)((char*) buff, sizeof(Type), file, line);
+    geco_free_ext(buff, file, line);
 
 }
 
@@ -130,15 +129,16 @@ template<class Type>
 {
     if (buff == 0)
         return;
-
-    int count = ((int*) ((char*) buff - sizeof(int)))[0];
-    Type *t;
+    char* ptr = (char*)buff - sizeof(int);
+    int count = *(int*)ptr;
+    Type* tmp = (Type*)(ptr+ sizeof(int));
     for (int i = 0; i < count; i++)
     {
-        t = buff + i;
-        t->~Type();
+        (tmp + i)->~Type();
     }
-    (geco_free_ext)(buff - sizeof(int), sizeof(Type), file, line);
+
+
+    (geco_free_ext)(ptr, file, line);
 
 }
 
