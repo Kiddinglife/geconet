@@ -18,10 +18,13 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
 
         //::testing::GTEST_FLAG(filter) = "GLOBAL_MODULE.*";
         //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.*";
-        // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
-       // ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_alloc_dealloc";
-        //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_alloc_dealloc";
-        ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_new_delete";
+		//::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
+
+		::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.*";
+		//::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_alloc_dealloc";
+		//::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_alloc_dealloc";
+		//::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_new_delete";
+
         //::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
         //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
