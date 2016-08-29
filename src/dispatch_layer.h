@@ -873,22 +873,23 @@ public:
      */
     inline void stop_sack_timer(void)
     {
-        recv_controller_t* rctrl = get_recv_controller(curr_channel_);
-        if (rctrl == NULL)
+        if (curr_channel_ != NULL && curr_channel_->receive_control != NULL)
         {
-            ERRLOG(MINOR_ERROR,
-                "stop_sack_timer()::recv_controller_t instance not set !");
-            return;
+            /*also make sure free all received duplicated data chunks */
+            curr_channel_->receive_control->duplicated_data_chunks_list.clear();
+            /* stop running sack timer*/
+            if (curr_channel_->receive_control->is_timer_running)
+            {
+                timer_mgr_.delete_timer(curr_channel_->receive_control->sack_timer_id);
+                curr_channel_->receive_control->sack_timer_id = timer_mgr_.timers.end();
+                curr_channel_->receive_control->is_timer_running = false;
+                EVENTLOG(DEBUG, "stop_sack_timer()::Stopped Timer");
+            }
         }
-        /*also make sure free all received duplicated data chunks */
-        rctrl->duplicated_data_chunks_list.clear();
-        /* stop running sack timer*/
-        if (rctrl->is_timer_running)
+        else
         {
-            timer_mgr_.delete_timer(rctrl->sack_timer_id);
-            rctrl->sack_timer_id = timer_mgr_.timers.end();
-            rctrl->is_timer_running = false;
-            EVENTLOG(INTERNAL_TRACE, "stop_sack_timer()::Stopped Timer");
+            ERRLOG(MAJOR_ERROR,
+                "stop_sack_timer()::recv_controller_t instance not set !");
         }
     }
 
@@ -1079,7 +1080,7 @@ public:
         //create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
         simple_chunk_t* simple_chunk_ptr =
             (simple_chunk_t*)geco_malloc_ext(SIMPLE_CHUNK_SIZE, __FILE__, __LINE__);
-            //(simple_chunk_t*)galloc.allocate(SIMPLE_CHUNK_SIZE);
+        //(simple_chunk_t*)galloc.allocate(SIMPLE_CHUNK_SIZE);
 
         simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
         simple_chunk_ptr->chunk_header.chunk_flags = flag;
@@ -1428,7 +1429,7 @@ public:
     {
         if (channel == NULL)
         {
-            ERRLOG(VERBOSE, "get_recv_controller: association not set");
+            ERRLOG(MINOR_ERROR, "get_recv_controller: association not set");
             return NULL;
         }
         else

@@ -145,9 +145,10 @@ GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 
 /* Definition of levels for the logging of events */
 /* very VERBOSE logging of events   */
-#define VVERBOSE           8
+#define VVERBOSE           9
 /* more VERBOSE logging of events   */
-#define VERBOSE            7
+#define VERBOSE            8
+#define DEBUG 7
 #define INFO 6
 #define NOTICE 5
 /* pure execution flow trace */
