@@ -16,8 +16,8 @@
 //comment those macros before running unit tests
 //uncomment those macros after running unit tests
 //otherwise these functions will never be invoked
-//#define enable_disassemle_curr_geco_packet
-//#define enable_dispatch_layer_t_send_bundled_chunks_send_geco_packet
+#define enable_mock_dispatcher_disassemle_curr_geco_packet 1
+#define enable_mock_dispatch_send_geco_packet 1
 
 #define _DEBUG //uncommnet this in release version
 #define GECO_ASSERTIONS
