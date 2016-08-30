@@ -21,7 +21,7 @@
 #define __INCLUDE_PROTOCOL_STACK_H
 
 /* the possible 7 states of an association */
-enum ChannelState
+enum ChannelState:uint
 {
     Closed,
     CookieWait,
@@ -36,7 +36,7 @@ enum ChannelState
 
 /* Return codes for a number of functions that treat incoming chunks */
 /* these are used in  bundle controller !                          */
-enum ChunkProcessResult
+enum ChunkProcessResult:uint
 {
     Good,
     Stop,
@@ -50,7 +50,7 @@ enum ChunkProcessResult
 };
 
 /* for COMMUNICATION LOST or COMMUNICATION UP callbacks */
-enum ConnectionLostReason
+enum ConnectionLostReason:uint
 {
     PeerAbortConnection,
     PeerUnreachable,

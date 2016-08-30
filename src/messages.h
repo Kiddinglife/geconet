@@ -409,9 +409,11 @@ struct forward_tsn_chunk_t
 #include "auth.h"
 /* cookie chunks fixed params length including chunk header */
 #ifdef MD5_HMAC
+#define HMAC_SIZE (16*sizeof(uchar))
 #define COOKIE_FIXED_SIZE  \
 (16*sizeof(uchar)+8*sizeof(ushort)+4*sizeof(uint) +2*INIT_CHUNK_FIXED_SIZE)
 #elif SHA_HMAC
+#define HMAC_SIZE (5*sizeof(uint))
 #define COOKIE_FIXED_SIZE  \
 (5*sizeof(uint)+8*sizeof(ushort)+4*sizeof(uint) +2*INIT_CHUNK_FIXED_SIZE)
 #endif
@@ -426,9 +428,9 @@ struct cookie_fixed_t
         uint sendingTime;
         uint cookieLifetime;
 #ifdef MD5_HMAC
-        uchar hmac[16];
+        uchar hmac[HMAC_SIZE];
 #elif SHA_HMAC
-        uint hmac[5];
+        uint hmac[HMAC_SIZE];
 #endif
         ushort no_local_ipv4_addresses;
         ushort no_remote_ipv4_addresses;

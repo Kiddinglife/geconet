@@ -332,6 +332,16 @@ typedef uint TimerID;
 #define   TIMER_TYPE_USER       6
 #define   MAX(a,b) (a>b)?(a):(b)
 
+/**
+ return the current system time converted to a value of  milliseconds.
+ to make representation in millisecs possible.
+ This done by taking the remainder of a division by OVERFLOW_SECS =
+ 15x24x60x60, restarting millisecs count every 15 days.
+ @return unsigned 32 bit value representing system time in milliseconds.
+ span of time id 15 days
+ */
+extern uint get_safe_time_ms(void);
+
 /*helper to init timeval struct with ms interval*/
 #define fills_timeval(timeval_ptr, time_t_inteval)\
 (timeval_ptr)->tv_sec = (time_t_inteval) / 1000;\

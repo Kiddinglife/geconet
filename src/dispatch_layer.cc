@@ -1496,7 +1496,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
         EVENTLOG1(EXTERNAL_TRACE, "received INIT chunk in state %02u",
                 channel_state);
         int primary_path = get_primary_path();
-        my_supported_addr_types_;
+        //my_supported_addr_types_;
         uint init_i_sent_cid;
         int rett;
         switch (channel_state)
@@ -1991,27 +1991,6 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID,
         sockaddrunion local_Addresses[], uint num_local_Addresses,
         sockaddrunion peer_Addresses[], uint num_peer_Addresses)
 {
-    /*                         5.1.3.  Generating State Cookie
-     When sending an INIT ACK as a response to an INIT chunk, the sender
-     of INIT ACK creates a State Cookie and sends it in the State Cookie
-     parameter of the INIT ACK.  Inside this State Cookie, the sender
-     should include a MAC (see [RFC2104] for an example), a timestamp on
-     when the State Cookie is created, and the lifespan of the State
-     Cookie, along with all the information necessary for it to establish
-     the association.
-
-     The following steps SHOULD be taken to generate the State Cookie:
-     1)  Create an association TCB using information from both the
-     received INIT and the outgoing INIT ACK chunk,
-     2)  In the TCB, set the creation time to the current time of day, and
-     the lifespan to the protocol parameter 'Valid.Cookie.Life' (see
-     Section 15),
-     3)  From the TCB, identify and collect the minimal subset of
-     information needed to re-create the TCB, and generate a MAC using
-     this subset of information and a secret key (see [RFC2104] for an
-     example of generating a MAC), and
-     4)  Generate the State Cookie by combining this subset of information
-     and the resultant MAC.*/
     init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckID]);
     if (initack == NULL)
     {
@@ -2031,54 +2010,11 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID,
 
     cookie_param_t* cookie = (cookie_param_t*) (initack->variableParams
             + curr_write_pos_[initAckID]);
-    cookie->vlparam_header.param_type = htons(VLPARAM_COOKIE);
-    cookie->ck.local_initack = *local_initack;
-    cookie->ck.peer_init = *peer_init;
-    cookie->ck.local_tie_tag = htonl(local_tie_tag);
-    cookie->ck.peer_tie_tag = htonl(peer_tie_tag);
-    cookie->ck.src_port = last_src_port;
-    cookie->ck.dest_port = last_dest_port;
+    put_vlp_cookie_fixed(cookie, peer_init, local_initack, cookieLifetime,
+            local_tie_tag, peer_tie_tag, last_dest_port, last_src_port,
+            local_Addresses, num_local_Addresses, peer_Addresses,
+            num_peer_Addresses);
 
-    uint count;
-    uint no_local_ipv4_addresses = 0;
-    uint no_remote_ipv4_addresses = 0;
-    uint no_local_ipv6_addresses = 0;
-    uint no_remote_ipv6_addresses = 0;
-    for (count = 0; count < num_local_Addresses; count++)
-    {
-        switch (saddr_family(&(local_Addresses[count])))
-        {
-        case AF_INET:
-            no_local_ipv4_addresses++;
-            break;
-        case AF_INET6:
-            no_local_ipv6_addresses++;
-            break;
-        default:
-            ERRLOG(FALTAL_ERROR_EXIT, "write_cookie: Address Type Error !");
-            break;
-        }
-    }
-    for (count = 0; count < num_peer_Addresses; count++)
-    {
-        switch (saddr_family(&(peer_Addresses[count])))
-        {
-        case AF_INET:
-            no_remote_ipv4_addresses++;
-            break;
-        case AF_INET6:
-            no_remote_ipv6_addresses++;
-            break;
-        default:
-            ERRLOG(FALTAL_ERROR_EXIT, "write_cookie: Address Type Error !");
-            break;
-        }
-    }
-
-    cookie->ck.no_local_ipv4_addresses = htons(no_local_ipv4_addresses);
-    cookie->ck.no_remote_ipv4_addresses = htons(no_remote_ipv4_addresses);
-    cookie->ck.no_local_ipv6_addresses = htons(no_local_ipv6_addresses);
-    cookie->ck.no_remote_ipv6_addresses = htons(no_remote_ipv6_addresses);
     uint wr = curr_write_pos_[initAckID];
     curr_write_pos_[initAckID] += COOKIE_PARAM_SIZE;
 
@@ -2089,43 +2025,39 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID,
 
     /* append peer unre to init ack will align internally */
     int peer_support_unre = write_vlp_unreliability(initCID, initAckID);
-
+    /* if both support PRSCTP, enter our PRSCTP parameter to INIT ACK chunk */
+    if ((peer_support_unre >= 0) && support_unreliability())
+    {
+        /* this is variable-length-data, this fuction will internally do alignment */
+        curr_write_pos_[initAckID] += put_init_vlp(
+                &initack->variableParams[curr_write_pos_[initAckID]],
+                VLPARAM_UNRELIABILITY, 0, NULL);
+    }
     /* check if endpoint is ADD-IP capable, store result, and put HIS chunk in cookie */
     if (write_add_ip_chunk(initAckID, initCID) > 0)
     {  //todo impl these two enpty fucntions
         /* check for set primary chunk ? Maybe add this only after Cookie Chunk ! */
         write_set_primary_chunk(initAckID, initCID);
     }
+    write_ecn_chunk(initAckID, initCID);
 
-    /* total length of cookie including vlp fixed, cookie fixed except of hmac*/
+    /* total length of cookie = vlp fixed+cookie fixed*/
     cookie->vlparam_header.param_length = htons(
             curr_write_pos_[initAckID] - wr);
 
-    /* hmac */
-    cookie->ck.sendingTime = get_safe_time_ms();
-    cookie->ck.cookieLifetime = cookieLifetime;
-    cookie->ck.hmac[0] = 0;
-    cookie->ck.hmac[1] = 0;
-    cookie->ck.hmac[2] = 0;
-    cookie->ck.hmac[3] = 0;
-    write_hmac(cookie);
+    /* calculate and write hmac when other fields are all filled*/
+    if (put_hmac(cookie) < 0)
+    {
+        ERRLOG(FALTAL_ERROR_EXIT, "put_hmac() failed!");
+    }
 
     /* cookie params is all filledup and now let us align it to 4
      * by default cookie SHOULD be self-aligned as all internal variables are
      * 4 bytes aligned, here we just double check that
      * the rest of ecn and unre will have a aligned start writing pos
      * they may need do align internally */
-    while ((curr_write_pos_[initAckID] % 4) != 0)
+    while (curr_write_pos_[initAckID] & 3)
         curr_write_pos_[initAckID]++;
-
-    write_ecn_chunk(initAckID, initCID);
-
-    /* if both support PRSCTP, enter our PRSCTP parameter to INIT ACK chunk */
-    if ((peer_support_unre >= 0) && support_unreliability())
-    {
-        /* this is variable-length-data, this fuction will internally do alignment */
-        write_vlp_to_init_chunk(initAckID, VLPARAM_UNRELIABILITY, 0, NULL);
-    }
 
     return 0;
 }
@@ -2661,8 +2593,8 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length,
                 curr_channel_->remote_port);
     }  // curr_channel_ != NULL
 
-    /*9) calc checksum and insert it TODO - use MD5*/
-    set_crc32_checksum((geco_packet + UDP_PACKET_FIXED_SIZE),
+    /*9) calc checksum and insert it MD5*/
+    gset_checksum((geco_packet + UDP_PACKET_FIXED_SIZE),
             length - UDP_PACKET_FIXED_SIZE);
 
     switch (saddr_family(dest_addr_ptr))
@@ -2703,7 +2635,7 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
 // no channel exists, so we take the global bundling buffer
     if (bundle_ctrl == NULL)
     {
-        EVENTLOG(VERBOSE, "Copying Control Chunk to global bundling buffer ");
+        EVENTLOG(VERBOSE, "use global bundling buffer");
         bundle_ctrl = &default_bundle_ctrl_;
     }
 
@@ -2751,7 +2683,7 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
 
     /* try to bundle ctrl or/and sack chunks with data chunks in an packet*/
     char* send_buffer = NULL;
-    int ret = 0; 
+    int ret = 0;
     int send_len = 0;
     if (bundle_ctrl->sack_in_buffer)
     {
@@ -2861,7 +2793,7 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
     return ret;
 }
 
-int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
+void dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
         int * dest_index /*= NULL*/)
 {
 
@@ -2871,16 +2803,14 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     /*1) no channel exists, so we take the global bundling buffer */
     if (bundle_ctrl == NULL)
     {
-        EVENTLOG(VERBOSE,
-                "bundle_ctrl_chunk()::Copying Control Chunk to global bundling buffer ");
+        EVENTLOG(VERBOSE, "bundle_ctrl_chunk()::use global bundle_ctrl");
         bundle_ctrl = &default_bundle_ctrl_;
     }
 
     ushort chunk_len = get_chunk_length((chunk_fixed_t* )chunk);
     uint bundle_size = get_bundle_total_size(bundle_ctrl);
 
-    if (bundle_size + chunk_len >= MAX_GECO_PACKET_SIZE
-            && bundle_size > UDP_GECO_PACKET_FIXED_SIZES)
+    if ((bundle_size + chunk_len) > MAX_GECO_PACKET_SIZE)
     {
         /*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
         EVENTLOG5(VERBOSE,
@@ -2914,13 +2844,12 @@ int dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk,
     bundle_ctrl->ctrl_position += chunk_len;
     bundle_ctrl->ctrl_chunk_in_buffer = true;
     while (bundle_ctrl->ctrl_position & 3)
-        ++bundle_ctrl->ctrl_position;
+        bundle_ctrl->ctrl_position++;
 
     EVENTLOG3(VERBOSE,
             "bundle_ctrl_chunk():chunklen %u + UDP_GECO_PACKET_FIXED_SIZES(%u) = Total buffer size now (includes pad): %u",
             get_chunk_length((chunk_fixed_t *)chunk),
             UDP_GECO_PACKET_FIXED_SIZES, get_bundle_total_size(bundle_ctrl));
-    return 0;
 }
 
 int dispatch_layer_t::enter_vlp_addrlist(uint chunkid,

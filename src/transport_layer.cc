@@ -627,7 +627,6 @@ int reactor_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
         void* data)
 {
     if (lock != NULL) lock(data);
-
     int msecs = poll_timers();
     if (unlock != NULL) unlock(data);
 

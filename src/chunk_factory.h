@@ -151,4 +151,12 @@ extern uint put_vlp_supported_addr_types(uchar* vlp_start, bool with_ipv4,
  */
 extern uint put_vlp_addrlist(uchar* vlp_start, sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
         uint local_addreslist_size);
+extern int put_init_vlp(uchar *vlPtr,uint pCode, uint len,uchar* data);
+extern int put_hmac(cookie_param_t* cookieString);
+extern void put_vlp_cookie_fixed(cookie_param_t* cookie,
+        init_chunk_fixed_t* peer_init, init_chunk_fixed_t* local_initack,
+        uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
+        ushort last_dest_port, ushort last_src_port,
+        sockaddrunion local_Addresses[], uint num_local_Addresses,
+        sockaddrunion peer_Addresses[], uint num_peer_Addresses);
 #endif
