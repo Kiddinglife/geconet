@@ -457,7 +457,7 @@ TEST(TRANSPORT_MODULE, test_add_remove_fd)
 {
 	// !!! comment wsaselect() in poller::set_event_on_win32_sdespt()
 	// if you run this unit test
-	reactor_t poller;
+	selector poller;
 	poller.cbunion_.socket_cb_fun = fd_action_sctp;
 	poller.set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,
 			poller.cbunion_, (void*) 1);

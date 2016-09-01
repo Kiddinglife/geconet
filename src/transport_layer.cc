@@ -218,7 +218,7 @@ int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum)
     return 0;
 }
 
-void reactor_t::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
+void selector::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
 {
     if (fd_index > MAX_FD_SIZE)
     ERRLOG(FALTAL_ERROR_EXIT, "FD_Index bigger than MAX_FD_SIZE ! bye !\n");
@@ -277,7 +277,7 @@ void reactor_t::set_expected_event_on_fd_(int fd_index, int sfd, int event_mask)
 #endif
 }
 
-int reactor_t::remove_socket_despt(int sfd)
+int selector::remove_socket_despt(int sfd)
 {
     int counter = 0;
     int i, j;
@@ -337,12 +337,12 @@ int reactor_t::remove_socket_despt(int sfd)
     EVENTLOG2(VERBOSE, "remove %d sfd(%d)\n", counter, sfd);
     return counter;
 }
-int reactor_t::remove_event_handler(int sfd)
+int selector::remove_event_handler(int sfd)
 {
     safe_close_soket(sfd);
     return remove_socket_despt(sfd);
 }
-void reactor_t::set_expected_event_on_fd(int sfd, int eventcb_type,
+void selector::set_expected_event_on_fd(int sfd, int eventcb_type,
         int event_mask, cbunion_t action, void* userData)
 {
 
@@ -366,7 +366,7 @@ void reactor_t::set_expected_event_on_fd(int sfd, int eventcb_type,
     event_callbacks[index].action = action;
     event_callbacks[index].userData = userData;
 }
-int reactor_t::poll_timers()
+int selector::poll_timers()
 {
     if (this->timer_mgr_.empty()) return -1;
 
@@ -380,7 +380,7 @@ int reactor_t::poll_timers()
     return result;
 }
 
-void reactor_t::fire_event(int num_of_events)
+void selector::fire_event(int num_of_events)
 {
 #ifdef _WIN32
     if (num_of_events == socket_despts_size_ && stdin_input_data_.len > 0)
@@ -589,7 +589,7 @@ static DWORD fdwMode, fdwOldMode;
 HANDLE hStdIn;
 HANDLE stdin_thread_handle;
 #endif
-void reactor_t::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
+void selector::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 {
     stdin_input_data_.stdin_cb_ = stdincb;
     cbunion_.user_cb_fun = read_stdin;
@@ -613,7 +613,7 @@ void reactor_t::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 #endif
 }
 
-int reactor_t::remove_stdin_cb()
+int selector::remove_stdin_cb()
 {
     // restore console mode when exit
 #ifdef WIN32
@@ -623,7 +623,7 @@ int reactor_t::remove_stdin_cb()
     return remove_event_handler(STD_INPUT_FD);
 }
 
-int reactor_t::poll(void (*lock)(void* data), void (*unlock)(void* data),
+int selector::poll(void (*lock)(void* data), void (*unlock)(void* data),
         void* data)
 {
     if (lock != NULL) lock(data);
@@ -728,7 +728,7 @@ int network_interface_t::init(int * myRwnd, bool ip4)
     return 0;
 }
 
-int reactor_t::poll_fds(socket_despt_t* despts, int* count, int timeout,
+int selector::poll_fds(socket_despt_t* despts, int* count, int timeout,
         void (*lock)(void* data), void (*unlock)(void* data), void* data)
 {
     int i;

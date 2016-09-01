@@ -215,7 +215,7 @@ struct socket_despt_t
 #include "dispatch_layer.h"
 struct network_interface_t;
 
-struct reactor_t
+struct selector
 {
 #ifdef _WIN32
 	HANDLE win32events_[MAX_FD_SIZE];
@@ -246,7 +246,7 @@ struct reactor_t
 	dispatch_layer_t dispatch_layer_;
 	cbunion_t cbunion_;
 
-	reactor_t()
+	selector()
 	{
 		internal_udp_buffer_ = (char*) malloc(USE_UDP_BUFSZ);
 		internal_dctp_buffer = (char*) malloc(MAX_MTU_SIZE + 20);
@@ -264,7 +264,7 @@ struct reactor_t
 		}
 	}
 
-	~reactor_t()
+	~selector()
 	{
 		free(internal_udp_buffer_);
 		free(internal_dctp_buffer);
@@ -394,7 +394,7 @@ struct network_interface_t
 	uint stat_recv_bytes_;
 	uint stat_send_bytes_;
 
-	reactor_t poller_;
+	selector poller_;
 	cbunion_t cbunion_;
 
 	network_interface_t()
