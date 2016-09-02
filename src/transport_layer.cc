@@ -565,6 +565,7 @@ static DWORD WINAPI stdin_read_thread(void *param)
 static void read_stdin(int fd, short int revents, int* settled_events,
         void* usrdata)
 {
+    EVENTLOG(VERBOSE, "read_stdin() CALLED");
     if (fd != 0)
     ERRLOG1(FALTAL_ERROR_EXIT, "this sgould be stdin fd 0! instead of %d\n",
             fd);
@@ -591,6 +592,7 @@ HANDLE stdin_thread_handle;
 #endif
 void selector::add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 {
+    EVENTLOG(VERBOSE, "ENTER selector::add_stdin_cb()");
     stdin_input_data_.stdin_cb_ = stdincb;
     cbunion_.user_cb_fun = read_stdin;
     set_expected_event_on_fd(STD_INPUT_FD, EVENTCB_TYPE_USER, POLLIN | POLLPRI,

@@ -417,8 +417,8 @@ static bool timer_cb(timer_id_t& tid, void* a1, void* a2)
 {
 	EVENTLOG2(VERBOSE, "timer_cb(id %d, type->%d)::\n", tid->timer_id,
 			tid->timer_type);
-	if (timercb_cnt < 3)
-		nit.restart_timer(tid, 1000);
+	if (timercb_cnt < 5)
+		nit.restart_timer(tid, 10000);
 	else
 		flag = false;
 	timercb_cnt++;
@@ -434,7 +434,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, nit.cbunion_, 0);
 	// you have to put stdin as last because we test it
 	nit.poller_.add_stdin_cb(process_stdin);
-	nit.start_timer(1000, timer_cb, TIMER_TYPE_INIT, 0, 0);
+	nit.start_timer(10000, timer_cb, TIMER_TYPE_INIT, 0, 0);
 	while (flag)
 		nit.poller_.poll();
 	nit.poller_.timer_mgr_.timers.clear();

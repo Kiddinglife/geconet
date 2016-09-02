@@ -22,5 +22,5 @@
 #define _DEBUG //uncommnet this in release version
 #define GECO_ASSERTIONS
 #define GECO_PRINTS
-#define CURR_EVENT_LOG_LEVEL 8 // = VERBOSE
+#define CURR_EVENT_LOG_LEVEL 10 // = VERBOSE
 #endif /* MY_CONFIG_H_ */
