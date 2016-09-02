@@ -22,6 +22,8 @@
 #ifndef MY_GLOBALS_H_
 #define MY_GLOBALS_H_
 
+#include "basic-type.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -75,7 +77,6 @@
 #endif
 #endif
 #endif
-
 #define MAX_COUNT_LOCAL_IP_ADDR 8
 
 #if defined( __linux__) || defined(__unix__)
