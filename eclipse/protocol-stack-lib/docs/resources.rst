@@ -1,7 +1,0 @@
-Resources
-=========
-
-.. toctree::
-   :glob:
-
-   resource-*
