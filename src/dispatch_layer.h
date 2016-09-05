@@ -1233,7 +1233,8 @@ class dispatch_layer_t
             uint chunkid = scptr->chunk_header.chunk_id;
             if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
             {
-                return ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
+                ushort osnum =  ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
+				return osnum;
             }
             else
             {
@@ -1255,7 +1256,8 @@ class dispatch_layer_t
             uint chunkid = scptr->chunk_header.chunk_id;
             if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
             {
-                return ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
+				ushort isnum = ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
+				return isnum;
             }
             else
             {
@@ -1276,7 +1278,8 @@ class dispatch_layer_t
             uint chunkid = scptr->chunk_header.chunk_id;
             if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
             {
-                return ntohl(((init_chunk_t*) scptr)->init_fixed.init_tag);
+                uint initag = ntohl(((init_chunk_t*) scptr)->init_fixed.init_tag);
+				return initag;
             }
             else
             {
