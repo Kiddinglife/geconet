@@ -1,0 +1,482 @@
+<!-- Example Init response -->
+    <Init>
+        <Parameters ccy="GBP">
+            <parameter name="min_stake" value="0.01"/>
+            <max_stake>500.00</max_stake>
+            <default_stake>0.10</default_stake>
+            <max_win>50000.00</max_win>
+            <stake_incr>0.01 0.02 0.04 0.06 0.08 0.10 0.20 0.50 1.00 2.00 5.00 10.00 20.00 50.00</stake_incr>
+        </Parameters>
+        <GECOSlot>
+            <Definition>
+                <num_reels>5</num_reels>
+                <view_size>3</view_size>
+                <num_win_lines>20></num_win_lines>
+                <symbol_pos>
+                    <row>0 1 2 3 4</row>
+                    <row>5 6 7 8 9</row>
+                    <row>10 11 12 13 14</row>
+                </symbol_pos>
+            </Definition>
+            <Symbol ref="0" is_wild="False">Jack</Symbol>
+            <Symbol ref="12" key="W" is_wild="True">Waiter</Symbol>
+            <ReelSet type="R" ref="0">
+                <Reel ref="0">0 8 3 4 0 1 4 10</Reel>
+                <Reel ref="1">3 8 7 3 0 3 5 6 8 2 12</Reel>
+                ...
+            </ReelSet>
+            <ReelSet type="B" ref="1">
+                <Reel ref="0">0 8 3 4 0 1 4 10</Reel>
+                <Reel ref="1">3 8 7 3 0 3 5 6 8 2 12</Reel>
+                ...
+            </ReelSet>
+            <WinLine ref="0">1 1 1 1 1</WinLine>
+            <WinLine ref="1">0 0 0 0 0</WinLine>
+            <WinLine ref="2">2 2 2 2 2</WinLine>
+            ...
+            <WinDef type="scatter" ref="10:3">
+                <symbol>0</symbol>
+                <freq>3</freq>
+                <payout_factor>2.0</payout_factor>
+            </WinDef>
+            <WinDef type="line" ref="4:5">
+                <symbol>4</symbol>
+                <freq>5</freq>
+                <payout_factor>750.0</payout_factor>
+            </WinDef>
+            <Prize type="freespins" ref="FreeSpins10" name="Bigtime Bonus!">
+                <Factor>5.0</Factor>
+                <Factor>10.0</Factor>
+            </PrizeDef>
+        </GECOSlot>
+    </Init>
+
+
+<!-- Pattern of standard response-->
+<Gameplay>
+    <Gamestate stake="0.20" win="4.01" game_status="[F(inished)|P(laying)]"  action="[spin|freespin|gamble]">
+        <Spin reel_set_index="0" current_play='0' current_winnings='4.01' bonus_winnings='200.00' total_winnings='204.01' num_free_spins='0' [depth="1"] [wild_single_multiplier="88.0"] stake_per_line="0.01" selected="[L<n>|0,1,2,8,9,10]">
+            <stake>0.20</stake>
+            <win>4.01</win>
+            <game_status>P</game_status>
+            <Grid stop="56 30 28 57 2">
+                <Nodes>
+                    <node ref='0' symbol_ref='0'/>
+                    <node ref='1' symbol_ref='5'/>
+                    <node ref='2' symbol_ref='2'/>
+                    <node ref='3' symbol_ref='12'/>
+                    <node ref='4' symbol_ref='0'/>
+                    <node ref='5' symbol_ref='0'/>
+                    <node ref='6' symbol='5'/>
+                    <node ref='7' symbol='2'/>
+                    <node ref='8' symbol='12'/>
+                    <node ref='9' symbol='0'/>
+                    <node ref='10' symbol='0'/>
+                    <node ref='11' symbol='5'/>
+                    <node ref='12' symbol='13'/>
+                    <node ref='13' symbol='0'/>
+                    <node ref='14' symbol='0'/>
+                </Nodes>
+                <Wilds>
+                    <Wild symbol_index='12' ref="3" factor='2.0' />
+                    <Wild symbol_index='12' ref="8" factor='2.0' />
+                </Wilds>
+                <Overlay>
+                    <Wild lifetime="2" symbol_index='13' ref="12" factor='1.0' />
+                </Overlay>
+            </Grid>
+            <Wins>
+                <Win type="scatter" index="10:3">
+                    <payout_factor>1.0</payout_factor>
+                    <winnings>4.00</winnings>
+                    <symbol_pos>4 10 12</symbol_pos>
+                    <Prize type="freespins" index="FreeSpins10">
+                        <new_depth>1</new_depth>
+                        <multiplier>2.0</multiplier>
+                        <num_spins>10</num_spins>
+                    </Prize>
+                </Win>
+                <Win type="line" index='5:4'> 
+                    <symbol_pos>0 1 2</symbol_pos>
+                    <payout_factor>10.0</payout_factor><!--(will include depth multipliers but not wild multipliers)-->
+                    <wild_multiplier>1.0</wild_multiplier> 
+                    <winnings>0.01</winnings>
+                    <winline>11</winline>
+                    <stake>0.01</stake>
+                </Win>
+                <Win type="bonus">
+                    <Prize type="ladder">
+                        <payout_factor>20.0</payout_factor>
+                        <winnings>200.00</winnings>
+                        <symbol_pos>11</symbol_pos>
+                    </Prize>
+                </Win>
+            </Wins>
+        </Spin>
+        <links>
+              <geco:link rel="latest-gameplay" method="get" href="http://dev.geco.io/gameplay/211"/>
+              <geco:link rel="choice" id="feature-accept" method="post" type="application/vnd.geco.slots.accept-v1+xml" href="${ROUTE_URL}"/>
+              <geco:link rel="choice" id="feature-replay" method="post" type="application/vnd.geco.slots.repaly-v1+xml" href="http://dev.geco.io/host/15"/>
+              <geco:link rel="choice" id="feature-mystery" method="post" type="application/vnd.geco.slots.spin-v1+xml" href="http://dev.geco.io/host/15"/>
+
+        </links>    
+    </GameState>
+</Gameplay>
+
+<!-- Gamble request --
+<!-- Player won 20.00 and gambled half of it; 5.0 on on sel, 5 on another -->
+<?xml version='1.0' encoding='UTF-8'?>
+<GameRequest>
+    <Header>
+        <Game host_game_id="5" host_id="12" gclass="Nautilus" />
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"](always optional) />
+        [<Player host_player_id="2e39aead"/>(optional for freeplay)] 
+    </Header>
+    <Close/>
+    <Gameplay action="gamble" gameplay_id="39483948">
+        <Gamestate selected='1' action='gamble' game_status='P' current_play='1' 
+        current_winnings='20.00' bonus_winnings='0.00' total_winnings='30.00' num_free_spins='0' stake='10.00'>
+    		<Gamble>
+    			<Bet stake="5.00" selected="(index from init)"/>
+    			<Bet stake="5.00" selected="(another index from init)"/>
+    		</Gamble>
+        </Gamestate>
+	</Gameplay>
+</GameRequest>
+'selected' comes from unuique id in the init
+
+<!-- Pattern of gamble response-->
+<?xml version='1.0' encoding='UTF-8'?>
+<GameResponse>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="[True|False]"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        <Player [host_player_id="2e39aead"(required for realplay)]>
+            <Account new_balance="9.81" ccy_code="GBP" />
+        </Player>
+    </Header>
+    <Gameplay stake="10.00" win="30.00" gameplay_id="1499303029">
+        <Gamestate selected='1' action='gamble' game_status='P' current_play='1' 
+		current_winnings='20.00' bonus_winnings='0.00' total_winnings='30.00' num_free_spins='0' stake='10.00'>
+            <!-- Pattern of Double Up response -->
+            <Gamble>
+				<Bet stake="5.00" selected="(selected from request)" win="0.00" />
+				<Bet stake="5.00" selected="(selected from request)" win="10.00" />
+			</Gamble>
+		</Gamestate>
+	</Gameplay>
+</GameResponse>
+
+<!-- Example play during freespins -->
+<GameRequest>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="False"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        [<Player host_player_id="2e39aead"/>(optional for freeplay)] 
+    </Header>
+    <Gameplay gameplay_id="8347347" action="freespin">
+		<Spin stake="0.20" stake_per_line="0.01" depth="1" selected="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19" />
+	</Gameplay>
+</GameRequest>
+
+<?xml version='1.0' encoding='UTF-8'?>
+<GameResponse>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="False"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        <Player>
+            <Account [host_player_id="2e39aead"(optional for freeplay)] ccy_code="GBP" />
+        </Player>
+    </Header>
+    <Gameplay stake="0.20" stake_per_line="0.01" win="0.00" gameplay_id="24342"(will be the same through multi-state play) realplay="False" game_status="P">
+        <Gamestate selected='0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19' 
+                   action='freespin' 
+                   current_play='5' 
+                   current_winnings='0.40' (this spin)
+                   bonus_winnings='5.40' (total for freespins)
+                   total_winnings='5.60'(total for this _stake_ including the original scatter) 
+                   num_free_spins='15'(the new amount)
+                   stake='0.00' 
+                   stake_per_line='0.00'(the amount actually paid for this state transition) >
+            <Spin stop='56,30,28,57,2' reel_set_index='2' depth="1" [wild_single_multiplier="88.0"](if wild multiplier applies to all wild wins) [multiplier="2.0"](if multiplier applies to all wins)>
+                <Row index='0' symbol_indexes='0,4,9,8,8' />
+                <Row index='1' symbol_indexes='0,5,1,7,2' />
+                <Row index='2' symbol_indexes='6,0,5,3,0' /> (shows original symbols before overlay)
+                <Overlay>
+                    <WildSymbol symbol_index='13' row='2' column='2' lifetime_remaining='3' lifetime='3' />
+                </Overlay>
+                <Wins>
+                    <LineWin id="0" index="8:3" symbol_mask="496" payout_factor='1.00' winnings='0.20' win_line='11' stake='0.01' wild_multiplier="2.0"/>
+                    <ScatterWin id="1"(unique id for this list) index='10:3' payout_factor='1.00' winnings='4.00' symbol_mask='176' />
+                </Wins> (<Wins /> if no wins)
+                <BonusWins>
+                    <Prize id="FreeSpins10" depth="2" multiplier="3.0" prize_type="freespin" win="0.00" num_spins="10" reel_set_index="2" symbol_mask='176' win_id="1"/>
+                </BonusWins> (<BonusWins /> if no bonus wins)
+                </Wins>  
+                <BonusWins/>
+            </Spin>
+        </GameState>
+    </Gameplay>
+</GameResponse>
+
+
+<!-- Example client save state request for freeplay where result has been given (eg. ladder bonus) -->
+<GameRequest>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="False"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        [<Player host_player_id="2e39aead"/>(optional for freeplay)] 
+    </Header>
+    <SaveState gameplay_id="<GAMEPLAY_ID_PREVIOUSLY_SUPPLIED>">
+        <any/>
+        <nodes and="" attributes="" you="" like=""/>
+    </SaveState>
+</GameRequest>
+
+<?xml version='1.0' encoding='UTF-8'?>
+<GameResponse>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="[False|True]"/>
+        <Session gameplay_id="8723874" host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        [<Player host_player_id="2e39aead" />]
+    </Header>
+    <SaveState gameplay_id="(GAMEPLAY_ID_PREVIOUSLY_SUPPLIED)">
+        <any/>
+        <nodes and="" attributes="" you="" like=""/>
+    </SaveState>
+</GameResponse>
+Each request for that gameplay will return the savestate node until it is cancelled with <SaveState gameplay_id="123879128"/>
+It is up to the client to read and append any updates - the node for the key of gameplay_id will
+be replaced by any PlayerPreference ndoe sent by the client.
+
+<!----------------->
+<!-- player preference save and response -->
+<GameRequest>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="False"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        <Player host_player_id="2e39aead"/> 
+    </Header>
+    <PlayerPreference>
+        <any/>
+        <nodes and="" attributes="" you="" like=""/>
+    </PlayerPreference>
+</GameRequest>
+
+<?xml version='1.0' encoding='UTF-8'?>
+<GameResponse>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="[False|True]"/>
+        <Session gameplay_id="8723874" host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        <Player host_player_id="2e39aead" />
+    </Header>
+    <PlayerPreference>
+        <any/>
+        <nodes and="" attributes="" you="" like=""/>
+    </PlayerPreference>
+</GameResponse>
+Each request for this player, game, host and interface will return the Playerpreference node.
+It is up to the client to read and append any updates - the node for the key of (host,player,game,interface) will
+be replaced by any PlayerPreference ndoe sent by the client.
+
+<!------------------------>
+<!-- Roulette -->
+<?xml version='1.0' encoding='UTF-8'?>
+<GameRequest>
+    <Header>
+        <Game host_game_id="5" host_id="12" gclass="EuropeanRoulette" realplay="[True/False]" />
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"](always optional) />
+        [<Player host_player_id="2e39aead"(optional for freeplay) [ccy_code="GBP"(optional for freeplay)] />
+    </Header>
+    <Init />
+</GameRequest>
+
+<!-- Example Init response -->
+<GameResponse>
+    <Header>
+        <Game host_game_id="5" host_id="12" gclass="EuropeanRoulette" realplay="False"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        <Player>
+            <Account [host_player_id="2e39aead"(optional for freeplay)] new_balance="1000.00" ccy_code="GBP" />
+        </Player>
+    </Header>
+    <Init min_stake="0.01" max_stake="500.00" default_stake="0.10" max_win="50000.00" 
+	stake_incr="0.50|1.00|2.00|5.00|10.00|20.00|50.00|100.00|250.00|500.00|1000.00"  la_partage="True">
+		<Group name="outside" min_stake="5.00" max_stake="2000.00" la_partage_seln="True">
+		<Group name="inside"  min_stake="5.00" max_stake="2000.00" la_partage_seln="False">
+			
+        <BetSeln name='Column_1_34' seln='1|4|7|10|13|16|19|22|25|28|31|34' payout='3.0000' group="outside"/>
+        <BetSeln name='Column_2_35' seln='2|5|8|11|14|17|20|23|26|29|32|35' payout='3.0000' group="outside" />
+        <BetSeln name='Column_3_36' seln='3|6|9|12|15|18|21|24|27|30|33|36' payout='3.0000' group="outside" />
+        <BetSeln name='Corner_0_1_2_3' seln='0|1|2|3' payout='9.0000' group="inside"/>
+        <BetSeln name='Corner_10_11_13_14' seln='10|11|13|14' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_11_12_14_15' seln='11|12|14|15' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_13_14_16_17' seln='13|14|16|17' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_14_15_17_18' seln='14|15|17|18' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_16_17_19_20' seln='16|17|19|20' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_17_18_20_21' seln='17|18|20|21' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_19_20_22_23' seln='19|20|22|23' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_1_2_4_5' seln='1|2|4|5' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_20_21_23_24' seln='20|21|23|24' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_22_23_25_26' seln='22|23|25|26' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_23_24_26_27' seln='23|24|26|27' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_25_26_28_29' seln='25|26|28|29' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_26_27_29_30' seln='26|27|29|30' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_28_29_31_32' seln='28|29|31|32' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_29_30_32_33' seln='29|30|32|33' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_2_3_5_6' seln='2|3|5|6' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_31_32_34_35' seln='31|32|34|35' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_32_33_35_36' seln='32|33|35|36' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_4_5_7_8' seln='4|5|7|8' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_5_6_8_9' seln='5|6|8|9' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_7_8_10_11' seln='7|8|10|11' payout='9.0000' group="inside" />
+        <BetSeln name='Corner_8_9_11_12' seln='8|9|11|12' payout='9.0000' group="inside" />
+        <BetSeln name='Dozen_13_24' seln='13|14|15|16|17|18|19|20|21|22|23|24' payout='3.0000' type="outside" />
+        <BetSeln name='Dozen_1_12' seln='1|2|3|4|5|6|7|8|9|10|11|12' payout='3.0000' type="outside" />
+        <BetSeln name='Dozen_25_36' seln='25|26|27|28|29|30|31|32|33|34|35|36' payout='3.0000' type="outside" />
+        <BetSeln name='Outside_Black' seln='2|4|6|8|10|11|13|15|17|20|22|24|26|28|29|31|33|35' la_partage_seln='True' payout='2.0000' type="outside" />
+        <BetSeln name='Outside_Even' seln='2|4|6|8|10|12|14|16|18|20|22|24|26|28|30|32|34|36' la_partage_seln='True' payout='2.0000' type="outside" />
+        <BetSeln name='Outside_High' seln='19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36' la_partage_seln='True' payout='2.0000' type="outside" />
+        <BetSeln name='Outside_Low' seln='1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18' la_partage_seln='True' payout='2.0000' type="outside" />
+        <BetSeln name='Outside_Odd' seln='1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35' la_partage_seln='True' payout='2.0000' type="outside" />
+        <BetSeln name='Outside_Red' seln='1|3|5|7|9|12|14|16|18|19|21|23|25|27|30|32|34|36' la_partage_seln='True' payout='2.0000' type="outside" />
+        <BetSeln name='PICK_1' seln='1' type='E' payout='36.0000' group="inside" />
+        <BetSeln name='Six_10_15' seln='10|11|12|13|14|15' payout='6.0000' group="inside" />
+        <BetSeln name='Six_13_18' seln='13|14|15|16|17|18' payout='6.0000' group="inside" />
+        <BetSeln name='Six_16_21' seln='16|17|18|19|20|21' payout='6.0000' group="inside" />
+        <BetSeln name='Six_19_24' seln='19|20|21|22|23|24' payout='6.0000' group="inside" />
+        <BetSeln name='Six_1_6' seln='1|2|3|4|5|6' payout='6.0000' group="inside" />
+        <BetSeln name='Six_22_27' seln='22|23|24|25|26|27' payout='6.0000' group="inside" />
+        <BetSeln name='Six_25_30' seln='25|26|27|28|29|30' payout='6.0000' group="inside" />
+        <BetSeln name='Six_28_33' seln='28|29|30|31|32|33' payout='6.0000' group="inside" />
+        <BetSeln name='Six_31_36' seln='31|32|33|34|35|36' payout='6.0000' group="inside" />
+        <BetSeln name='Six_4_9' seln='4|5|6|7|8|9' payout='6.0000' group="inside" />
+        <BetSeln name='Six_7_12' seln='7|8|9|10|11|12' payout='6.0000' group="inside" />
+        <BetSeln name='SplitColumn_1_35' seln='1|2|4|5|7|8|10|11|13|14|16|17|19|20|22|23|25|26|28|29|31|32|34|35' payout='1.5000' group="inside" />
+        <BetSeln name='SplitColumn_2_36' seln='2|3|5|6|8|9|11|12|14|15|17|18|20|21|23|24|26|27|29|30|32|33|35|36' payout='1.5000' group="inside" />
+        <BetSeln name='SplitDozen_13_36' seln='13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36' payout='1.5000' group="inside" />
+        <BetSeln name='SplitDozen_1_24' seln='1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24' payout='1.5000' group="inside" />
+        <BetSeln name='Split_0_1' seln='0|1' payout='18.0000' group="inside" />
+        <BetSeln name='Split_0_2' seln='0|2' payout='18.0000' group="inside" />
+        <BetSeln name='Split_0_3' seln='0|3' payout='18.0000' group="inside" />
+        <BetSeln name='Split_10_11' seln='10|11' payout='18.0000' group="inside" />
+        <BetSeln name='Split_10_13' seln='10|13' payout='18.0000' group="inside" />
+        <BetSeln name='Split_11_12' seln='11|12' payout='18.0000' group="inside" />
+        <BetSeln name='Split_11_14' seln='11|14' payout='18.0000' group="inside" />
+        <BetSeln name='Split_12_15' seln='12|15' payout='18.0000' group="inside" />
+        <BetSeln name='Split_13_14' seln='13|14' payout='18.0000' group="inside" />
+        <BetSeln name='Split_13_16' seln='13|16' payout='18.0000' group="inside" />
+        <BetSeln name='Split_14_15' seln='14|15' payout='18.0000' group="inside" />
+        <BetSeln name='Split_14_17' seln='14|17' payout='18.0000' group="inside" />
+        <BetSeln name='Split_16_17' seln='16|17' payout='18.0000' group="inside" />
+        <BetSeln name='Split_15_18' seln='15|18' payout='18.0000' group="inside" />
+        <BetSeln name='Split_16_17' seln='16|17' payout='18.0000' group="inside" />
+        <BetSeln name='Split_16_19' seln='16|19' payout='18.0000' group="inside" />
+        <BetSeln name='Split_17_18' seln='17|18' payout='18.0000' group="inside" />
+        <BetSeln name='Split_17_20' seln='17|20' payout='18.0000' group="inside" />
+        <BetSeln name='Split_18_21' seln='18|21' payout='18.0000' group="inside" />
+        <BetSeln name='Split_19_20' seln='19|20' payout='18.0000' group="inside" />
+        <BetSeln name='Split_19_22' seln='19|22' payout='18.0000' group="inside" />
+        <BetSeln name='Split_1_2' seln='1|2' payout='18.0000' group="inside" />
+        <BetSeln name='Split_1_4' seln='1|4' payout='18.0000' group="inside" />
+        <BetSeln name='Split_20_21' seln='20|21' payout='18.0000' group="inside" />
+        <BetSeln name='Split_20_23' seln='20|23' payout='18.0000' group="inside" />
+        <BetSeln name='Split_21_24' seln='21|24' payout='18.0000' group="inside" />
+        <BetSeln name='Split_22_23' seln='22|23' payout='18.0000' group="inside" />
+        <BetSeln name='Split_22_25' seln='22|25' payout='18.0000' group="inside" />
+        <BetSeln name='Split_23_24' seln='23|24' payout='18.0000' group="inside" />
+        <BetSeln name='Split_23_26' seln='23|26' payout='18.0000' group="inside" />
+        <BetSeln name='Split_24_27' seln='24|27' payout='18.0000' group="inside" />
+        <BetSeln name='Split_25_26' seln='25|26' payout='18.0000' group="inside" />
+        <BetSeln name='Split_25_28' seln='25|28' payout='18.0000' group="inside" />
+        <BetSeln name='Split_26_27' seln='26|27' payout='18.0000' group="inside" />
+        <BetSeln name='Split_26_29' seln='26|29' payout='18.0000' group="inside" />
+        <BetSeln name='Split_27_30' seln='27|30' payout='18.0000' group="inside" />
+        <BetSeln name='Split_28_29' seln='28|29' payout='18.0000' group="inside" />
+        <BetSeln name='Split_28_31' seln='28|31' payout='18.0000' group="inside" />
+        <BetSeln name='Split_29_30' seln='29|30' payout='18.0000' group="inside" />
+        <BetSeln name='Split_29_32' seln='29|32' payout='18.0000' group="inside" />
+        <BetSeln name='Split_2_3' seln='2|3' payout='18.0000' group="inside" />
+        <BetSeln name='Split_2_5' seln='2|5' payout='18.0000' group="inside" />
+        <BetSeln name='Split_30_33' seln='30|33' payout='18.0000' group="inside" />
+        <BetSeln name='Split_31_32' seln='31|32' payout='18.0000' group="inside" />
+        <BetSeln name='Split_31_34' seln='31|34' payout='18.0000' group="inside" />
+        <BetSeln name='Split_32_33' seln='32|33' payout='18.0000' group="inside" />
+        <BetSeln name='Split_32_35' seln='32|35' payout='18.0000' group="inside" />
+        <BetSeln name='Split_33_36' seln='33|36' payout='18.0000' group="inside" />
+        <BetSeln name='Split_34_35' seln='34|35' payout='18.0000' group="inside" />
+        <BetSeln name='Split_35_36' seln='35|36' payout='18.0000' group="inside" />
+        <BetSeln name='Split_3_6' seln='3|6' payout='18.0000' group="inside" />
+        <BetSeln name='Split_4_5' seln='4|5' payout='18.0000' group="inside" />
+        <BetSeln name='Split_4_7' seln='4|7' payout='18.0000' group="inside" />
+        <BetSeln name='Split_5_6' seln='5|6' payout='18.0000' group="inside" />
+        <BetSeln name='Split_5_8' seln='5|8' payout='18.0000' group="inside" />
+        <BetSeln name='Split_6_9' seln='6|9' payout='18.0000' group="inside" />
+        <BetSeln name='Split_7_10' seln='7|10' payout='18.0000' group="inside" />
+        <BetSeln name='Split_7_8' seln='7|8' payout='18.0000' group="inside" />
+        <BetSeln name='Split_8_11' seln='8|11' payout='18.0000' group="inside" />
+        <BetSeln name='Split_8_9' seln='8|9' payout='18.0000' group="inside" />
+        <BetSeln name='Split_9_12' seln='9|12' payout='18.0000' group="inside" />
+        <BetSeln name='Street_0_1_2' seln='0|1|2' payout='12.0000' group="inside" />
+        <BetSeln name='Street_0_2_3' seln='0|2|3' payout='12.0000' group="inside" />
+        <BetSeln name='Street_10_11_12' seln='10|11|12' payout='12.0000' group="inside" />
+        <BetSeln name='Street_13_14_15' seln='13|14|15' payout='12.0000' group="inside" />
+        <BetSeln name='Street_16_17_18' seln='16|17|18' payout='12.0000' group="inside" />
+        <BetSeln name='Street_19_20_21' seln='19|20|21' payout='12.0000' group="inside" />
+        <BetSeln name='Street_1_2_3' seln='1|2|3' payout='12.0000' group="inside" />
+        <BetSeln name='Street_22_23_24' seln='22|23|24' payout='12.0000' group="inside" />
+        <BetSeln name='Street_25_26_27' seln='25|26|27' payout='12.0000' group="inside" />
+        <BetSeln name='Street_28_29_30' seln='28|29|30' payout='12.0000' group="inside" />
+        <BetSeln name='Street_31_32_33' seln='31|32|33' payout='12.0000' group="inside" />
+        <BetSeln name='Street_34_35_36' seln='34|35|36' payout='12.0000' group="inside" />
+        <BetSeln name='Street_4_5_6' seln='4|5|6' payout='12.0000' group="inside" />
+        <BetSeln name='Street_7_8_9' seln='7|8|9' payout='12.0000' group="inside" />
+     </Init>
+    [<Gameplay ...
+    </Gameplay>(on recovery)]
+</GameResponse>
+
+<!-- Standard request -->
+<?xml version='1.0' encoding='UTF-8'?>
+<GameRequest>
+    <Header>
+        <Game host_game_id="5" host_id="12" gclass="EuropeanRoulette" realplay="[True/False]" />
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"](always optional) />
+        [<Player host_player_id="2e39aead"/>(optional for freeplay)] 
+    </Header>
+    <Close/>
+    <Gameplay stake="6.00" realplay="[True|False]" action="spin">
+        <Bets num_bets="6">
+            <Bet name="Corner_25_26_28_29" seln="" stake="1.00"/>
+            <Bet name="Split_20_21" seln="" stake="1.00"/>
+            <Bet name="PICK_1" seln="8" stake="1.00"/>
+            <Bet name="Dozen_1_12" seln="" stake="1.00"/>
+            <Bet name="Split_0_2" seln="" stake="1.00"/>
+            <Bet name="Column_3_36" seln="" stake="1.00"/>
+        </Bets>
+    </Gameplay>
+</GameRequest>
+
+
+<!-- Pattern of standard response-->
+<?xml version='1.0' encoding='UTF-8'?>
+<GameResponse>
+    <Header>
+        <Game host_game_id="5" host_id="12" realplay="[True|False]"/>
+        <Session host_session_id="HOST_SESSION_ID1" [channel="WEB"] />
+        <Player [host_player_id="2e39aead"(required for realplay)]>
+            <Account new_balance="9.81" ccy_code="GBP" />
+        </Player>
+    </Header>
+    [<Close />(to close previous gameplay if relevant)]
+    <Gameplay stake="6.00" win="3.00" gameplay_id="1499303029" realplay="[True|False]">
+        <Gamestate action='spin' game_status='F(inished)' drawn="13">
+            <SettledBet name="Corner_25_26_28_29" stake="1.00" winnings="0.00" seln=""/>
+            <Bet name="Split_20_21" stake="1.00" winnings="0.00" seln=""/>
+            <Bet name="PICK_1" stake="1.00" winnings="0.00" seln="8"/>
+            <Bet name="Dozen_1_12" stake="1.00" winnings="0.00" seln=""/>
+            <Bet name="Split_0_2" stake="1.00" winnings="0.00" seln=""/>
+            <Bet name="Column_3_36" stake="1.00" winnings="3.00" seln=""/>
+        </GameState>
+    </Gameplay>
+</GameResponse>

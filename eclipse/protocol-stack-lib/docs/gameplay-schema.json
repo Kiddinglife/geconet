@@ -1,0 +1,58 @@
+{
+    "$schema": "http://json-schemas.geco.io/general/gameplay-v1.json",
+    "_links": [
+        {"rel": "self", "href": "http://qa.geco.io/gameplay/376"}
+    ],
+    "game": {
+        "name": "nauticus",
+        "host": "coral-bingo",
+        "interface": "virtue-fusion",
+        "currency": "GBP",
+        "_links": [
+            {"rel": "gameplay-client-state-save", "type": "application/octet-stream", "method": "PUT", "href": "http://localhost:6543/gameplay/738/client_state"},
+            {"rel": "new-game", "type": "application/vnd.geco.slots.spin-v1+xml", "method": "POST", "href": "http://localhost:6543/game/46?ccy=GBP"}
+        ]
+    },
+    "player": {
+        "balance": {"amount": 49975.67, "currency": "GBP"},
+        "_links": [
+            {"rel": "player-client-state-save", "type": "application/octet-stream", "method": "PUT", "href": "http://localhost:6543/game/1/10/1/client_state"}
+        ]
+    },
+    "status": "FINISHED",
+    "gamestate": {
+        "stake": 1.00,
+        "win": 1.00,
+        "action": "spin",
+        "currentPlay": 0,
+        "currentWinnings": 0.00,
+        "totalWinnings": 0.00,
+        "freespinWinnings": 0.00,
+        "numFreeSpins": 0,
+        "stakePerLine": 0.25,
+        "selected": ["0", "1", "2", "3", "4", "5"],
+        "totalStake": 3.00,
+        "stopList": [59, 54, 55, 38, 74],
+        "view": [
+            ["6", "1", "0", "10", "10"],
+            ["0", "0", "12", "1", "4"],
+            ["0", "12", "6", "10", "6"]
+        ],
+        "wilds": [{"symbol": "12", "symbolPos": "7", "factor": 1.0},
+                  {"symbol": "12", "symbolPos": "11", "factor": 1.0}],
+        "wins": [
+            {"type": "line", "id": "0:3",
+             "payoutFactor": 1.0, "winnings": 0.25,
+             "symbolPos": ["5", "6", "7"],
+             "stake": 0.25, "winLine": "0",
+             "wildMultiplier": 1.0},
+            {"type": "scatter", "id": "10:3",
+             "payoutFactor": 1.0, "winnings": 0.25,
+             "symbolPos": ["3", "4", "13"],
+             "stake": 3.00,
+             "prize": [{"type": "freespins", "id": "FreeSpins10",
+                        "multiplier": 1.0, "numSpins": 10}]
+            }
+        ]
+    }
+}

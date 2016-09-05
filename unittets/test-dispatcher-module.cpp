@@ -10,9 +10,104 @@
 #include "geco-malloc.h"
 using namespace geco::ds;
 
-static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst,
-        ushort destport, const char** src_ips, uint src_ips_len,
-        sockaddrunion* dest)
+#define init() \
+           const int srcaddr4_size = 3;const int srcaddr6_size = 2;\
+           const char* srcaddr4_ipstrs[srcaddr4_size] =\
+               { "192.168.1.121", "192.168.1.132", "192.168.34.2" };\
+           const char* srcaddr6_ipstrs[srcaddr6_size] =\
+               { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };\
+           const int destaddr4_size = 3;\
+           const int destaddr6_size = 2;\
+           const char* destaddr4_ipstrs[destaddr4_size] =\
+               { "192.168.1.122", "192.168.1.131", "192.168.34.1" };\
+           const char* destaddr6_ipstrs[destaddr6_size] =\
+               { "2001:0db8:0a0b:12f0:0000:0000:0000:0002", "2607:f0d0:1002:0051:0000:0000:0000:0005" };\
+           const int cannot_found_ips4_size = 3;const int cannot_found_ips6_size = 2;\
+           const char* cannot_found_ips4[cannot_found_ips4_size] =\
+               { "192.168.1.123", "192.168.1.101", "192.168.34.5" };\
+           const char* cannot_found_ips6[cannot_found_ips6_size] =\
+               { "2001:0db8:0a0b:12f0:0000:0000:0000:0020", "2607:f0d0:1002:0051:0000:0000:0000:0100" };\
+           sockaddrunion src_addres[srcaddr4_size]; \
+           sockaddrunion src_addres6[srcaddr6_size]; \
+           sockaddrunion dest_addres[destaddr4_size];\
+           sockaddrunion dest_addres6[destaddr6_size]; \
+           sockaddrunion cannot_found_addres4[cannot_found_ips4_size]; \
+           sockaddrunion cannot_found_addres6[cannot_found_ips6_size]; \
+           init_addrlist(true, 0, cannot_found_ips4, cannot_found_ips4_size, cannot_found_addres4);\
+           init_addrlist(false, 0, cannot_found_ips6, cannot_found_ips6_size, cannot_found_addres6);\
+           init_addrlist(true, 0, srcaddr4_ipstrs, srcaddr4_size, src_addres);\
+           init_addrlist(false, 0, srcaddr6_ipstrs, srcaddr6_size, src_addres6);\
+           init_addrlist(true, 0, destaddr4_ipstrs, destaddr4_size, dest_addres);\
+           init_addrlist(false, 0, destaddr6_ipstrs, destaddr6_size, dest_addres6);\
+           sockaddrunion local_addres[destaddr4_size + destaddr6_size];\
+           sockaddrunion remote_addres[srcaddr4_size + srcaddr6_size];\
+           for (i = 0; i < destaddr4_size; i++)\
+           {\
+               local_addres[i] = dest_addres[i];\
+               remote_addres[i] = src_addres[i];\
+           }\
+           for (int j = 0; j < destaddr6_size; j++)\
+           {\
+               local_addres[i + j] = dest_addres6[j];\
+               remote_addres[i + j] = src_addres6[j];\
+           }\
+           const int all_cannot_found_size = cannot_found_ips4_size + cannot_found_ips6_size;\
+           sockaddrunion all_cannot_found_addres[all_cannot_found_size];\
+           for (i = 0; i < cannot_found_ips4_size; i++)\
+           {\
+               all_cannot_found_addres[i] = cannot_found_addres4[i];\
+           }\
+           for (int j = 0; j < cannot_found_ips6_size; j++)\
+           {\
+               all_cannot_found_addres[i + j] = cannot_found_addres6[j];\
+           }\
+           ushort sender_src_port = 123;\
+           ushort sender_dest_port = 456;\
+           geco_packet_t geco_packet;\
+           geco_packet_t* dctp_packet = &geco_packet;\
+           geco_packet.pk_comm_hdr.checksum = 0;\
+           geco_packet.pk_comm_hdr.dest_port = htons(sender_dest_port);  \
+           geco_packet.pk_comm_hdr.src_port = htons(sender_src_port);  \
+           geco_packet.pk_comm_hdr.verification_tag = 0;\
+           dispatch_layer_t dlt;\
+           channel_t channel;\
+           geco_instance_t inst;\
+           network_interface_t init;\
+           dlt.transport_layer_ = &init;\
+           dlt.channels_.push_back(&channel);\
+           dlt.geco_instances_.push_back(&inst);\
+           int rwnd = 512;\
+           inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;\
+           inst.is_inaddr_any = false;\
+           inst.is_in6addr_any = false;\
+           inst.noOfInStreams = 6;\
+           inst.noOfOutStreams = 6;\
+           inst.local_port = sender_dest_port;\
+           inst.local_addres_list = local_addres;\
+           inst.local_addres_size = destaddr4_size + destaddr6_size;\
+           channel.channel_id = 123;\
+           channel.remote_addres = remote_addres;\
+           channel.remote_addres_size = srcaddr4_size + srcaddr6_size;\
+           channel.local_addres = local_addres;\
+           channel.local_addres_size = destaddr4_size + destaddr6_size;\
+           channel.remote_port = sender_src_port;\
+           channel.local_port = sender_dest_port;\
+           channel.remote_tag = 123;\
+           channel.local_tag = 456;\
+           channel.deleted = false;\
+           channel.geco_inst = &inst;\
+           state_machine_controller_t smt;\
+           channel.state_machine_control = &smt;\
+           bundle_controller_t bctrl;\
+           channel.bundle_control = &bctrl;\
+           sockaddrunion* last_src_addr;\
+           sockaddrunion* last_dest_addr;\
+           uint written = 0;\
+           uint dctp_packet_len = 0;\
+           int ret = good
+
+static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst, ushort destport,
+        const char** src_ips, uint src_ips_len, sockaddrunion* dest)
 {
     for (uint i = 0; i < src_ips_len; i++)
     {
@@ -23,10 +118,9 @@ static void init_inst(dispatch_layer_t& dlt, geco_instance_t& inst,
     inst.local_port = destport;
     dlt.geco_instances_.push_back(&inst);
 }
-static void init_channel(dispatch_layer_t& dlt, channel_t& channel,
-        ushort srcport, ushort destport, const char** src_ips, uint src_ips_len,
-        const char** dest_ips, uint dest_ips_len, sockaddrunion* src,
-        sockaddrunion* dest)
+static void init_channel(dispatch_layer_t& dlt, channel_t& channel, ushort srcport, ushort destport,
+        const char** src_ips, uint src_ips_len, const char** dest_ips, uint dest_ips_len,
+        sockaddrunion* src, sockaddrunion* dest)
 {
     for (uint i = 0; i < src_ips_len; i++)
     {
@@ -47,14 +141,15 @@ static void init_channel(dispatch_layer_t& dlt, channel_t& channel,
     channel.is_INADDR_ANY = false;
     dlt.channels_.push_back(&channel);
 }
-static void init_addrlist(bool isip4, ushort port, const char** ipstrs,
-        uint len, sockaddrunion* addrlist)
+static void init_addrlist(bool isip4, ushort port, const char** ipstrs, uint len,
+        sockaddrunion* addrlist)
 {
     for (uint i = 0; i < len; i++)
     {
         str2saddr(&addrlist[i], ipstrs[i], port, isip4);
     }
 }
+
 
 // last run and passed on 21 Agu 2016
 TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
@@ -69,8 +164,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
     geco_instance_t inst;
     const int destaddrsize = 6;
     const char* destipstrs[destaddrsize] =
-        { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3",
-                "192.168.1.4", "192.168.1.5" };
+        { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4", "192.168.1.5" };
     const ushort destport = 9989;
     sockaddrunion dest_addrs[destaddrsize];
     init_inst(dlt, inst, destport, destipstrs, destaddrsize, dest_addrs);
@@ -86,8 +180,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
     for (uint i = 0; i < inst.local_addres_size; i++)
     {
         last_dest_addr = &inst.local_addres_list[i];
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr,
-                last_dest_port);
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
         //  1.1.1) should found this inst
         EXPECT_EQ(ret, &inst);
     }
@@ -96,8 +189,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
     for (uint i = 0; i < inst.local_addres_size; i++)
     {
         last_dest_addr = &inst.local_addres_list[i];
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr,
-                last_dest_port);
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
         //  1.2.1) should NOT found this inst
         EXPECT_EQ(ret, nullptr);
     }
@@ -108,8 +200,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
         sockaddrunion tmp = inst.local_addres_list[i];
         s4addr(&tmp) -= 1;  // just minus to make it different
         last_dest_addr = &tmp;
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr,
-                last_dest_port);
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
         //  1.3.1) should NOT found this inst
         EXPECT_EQ(ret, nullptr);
     }
@@ -122,8 +213,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
         saddr_family(&tmp) = AF_INET6 :
                                         saddr_family(&tmp) = AF_INET;
         last_dest_addr = &tmp;
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr,
-                last_dest_port);
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
         //  1.4.1) should NOT found this inst
         EXPECT_EQ(ret, nullptr);
     }
@@ -138,8 +228,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
         saddr_family(&tmp) = AF_INET6 :
                                         saddr_family(&tmp) = AF_INET;
         last_dest_addr = &tmp;
-        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr,
-                last_dest_port);
+        ret = dlt.find_geco_instance_by_transport_addr(last_dest_addr, last_dest_port);
         //  2.1.1) should still found this inst
         EXPECT_EQ(ret, &inst);
     }
@@ -160,8 +249,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 
     channel_t channel;
     dispatch_layer_t dlt;
-    init_channel(dlt, channel, ports[0], ports[1], src_ips, src_ips_size,
-            dest_ips, dest_ips_size, remote_addres, local_addres);
+    init_channel(dlt, channel, ports[0], ports[1], src_ips, src_ips_size, dest_ips, dest_ips_size,
+            remote_addres, local_addres);
 
     //temps
     channel_t* found;
@@ -180,8 +269,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
             last_src_addr = &channel.remote_addres[j];
             last_src_port -= 1; //just make it not equal to the one stored in channel
             //1.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -194,8 +283,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
             last_src_addr = &channel.remote_addres[j];
             last_dest_port -= 1; //just make it not equal to the one stored in channel
             //2.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -208,8 +297,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
             last_src_addr = &channel.remote_addres[j];
             last_dest_port -= 1; //just make it not equal to the one stored in channel
             //2.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -223,8 +312,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
             last_dest_port -= 1; //just make it not equal to the one stored in channel
             last_src_port -= 1; //just make it not equal to the one stored in channel
             //3.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -238,8 +327,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
         {
             last_src_addr = &channel.remote_addres[j];
             //3.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -253,8 +342,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
             s4addr(&tmp_addr) -= 1;  // just minus to make it different
             last_src_addr = &tmp_addr;
             //5.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -271,8 +360,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
             s4addr(&tmp_addr2) -= 1;  // just minus to make it different
             last_src_addr = &tmp_addr2;
             //6.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -288,8 +377,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
         {
             last_src_addr = &channel.remote_addres[j];
             //7.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -306,8 +395,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
                                                  AF_INET;
             last_src_addr = &tmp_addr;
             //5.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -329,8 +418,8 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
                                                   AF_INET;
             last_src_addr = &tmp_addr2;
             //6.1) should not find channel
-            found = dlt.find_channel_by_transport_addr(last_src_addr,
-                    last_src_port, last_dest_port);
+            found = dlt.find_channel_by_transport_addr(last_src_addr, last_src_port,
+                    last_dest_port);
             EXPECT_EQ(found, (channel_t*)NULL);
         }
     }
@@ -345,8 +434,7 @@ TEST(DISPATCHER_MODULE, test_validate_dest_addr)
      */
     int i;
     const char* addres[6] =
-        { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3",
-                "192.168.1.4", "192.168.1.5" };
+        { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4", "192.168.1.5" };
     const int addres_cnt = 6;
     const ushort ports[addres_cnt] =
         { 100, 101 };  // src-dest
@@ -461,12 +549,9 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
      */
     geco_packet_t geco_packet;
     geco_packet.pk_comm_hdr.checksum = 0;
-    geco_packet.pk_comm_hdr.dest_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.src_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.verification_tag = htons(
-            (generate_random_uint32()));
+    geco_packet.pk_comm_hdr.dest_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.src_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.verification_tag = htons((generate_random_uint32()));
 
     // one data chunk
     uint offset = 0;
@@ -495,8 +580,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
     {
         chunklen++;
     }
-    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
-            CHUNK_SACK);
+    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id, CHUNK_SACK);
     offset += chunklen;
     EXPECT_EQ(offset, 164);
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SACK);
@@ -512,8 +596,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
         chunklen++;
     }
     EXPECT_EQ(geco_packet.chunk + offset, wt);
-    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
-            CHUNK_INIT);
+    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id, CHUNK_INIT);
     offset += chunklen;
     EXPECT_EQ(offset, 208);  // 164+4+16+21= 205
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT);
@@ -528,8 +611,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
     {
         chunklen++;
     }
-    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
-            CHUNK_INIT_ACK);
+    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id, CHUNK_INIT_ACK);
     offset += chunklen;
     EXPECT_EQ(offset, 252);  // 208+20+21 = 228+21=249
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT_ACK);
@@ -564,8 +646,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
     //1) test good chunks
     dispatch_layer_t dlt;
     uint total_chunks_count;
-    uint chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset,
-            &total_chunks_count);
+    uint chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset, &total_chunks_count);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 2);
@@ -583,8 +664,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
     EXPECT_EQ(offset, 268);  // 264+4 = 268
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_COMPLETE);
     wt += 4;
-    chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset,
-            &total_chunks_count);
+    chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset, &total_chunks_count);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 2);
@@ -595,8 +675,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
     EXPECT_EQ(total_chunks_count, 6);
 
     //3) test branch chunk_len + read_len > packet_val_len line 3395
-    chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset - 4,
-            &total_chunks_count);
+    chunk_types = dlt.find_chunk_types(geco_packet.chunk, offset - 4, &total_chunks_count);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_DATA, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_INIT, chunk_types), 2);
@@ -657,12 +736,9 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
 {
     geco_packet_t geco_packet;
     geco_packet.pk_comm_hdr.checksum = 0;
-    geco_packet.pk_comm_hdr.dest_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.src_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.verification_tag = htons(
-            (generate_random_uint32()));
+    geco_packet.pk_comm_hdr.dest_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.src_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.verification_tag = htons((generate_random_uint32()));
 
     // put one data chunk
     uint offset = 0;
@@ -705,23 +781,17 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
     {
         chunklen++;
     }
-    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
-            CHUNK_SACK);
+    EXPECT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id, CHUNK_SACK);
     offset += chunklen;
     EXPECT_EQ(offset, 212);
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SACK);
     wt += chunklen;
 
     dispatch_layer_t dlt;
-    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
-            geco_packet.chunk);
-    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
-            wt - chunklen);
-    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
-            (uchar*)NULL);
-    EXPECT_EQ(
-            dlt.find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
-            (uchar*)NULL);
+    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA), geco_packet.chunk);
+    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK), wt - chunklen);
+    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT), (uchar*)NULL);
+    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK), (uchar*)NULL);
 
     //　branchtest:  chunk_len < CHUNK_FIXED_SIZE
     chunklen = 3;
@@ -735,9 +805,7 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
     EXPECT_EQ(offset, 216);
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
     wt += chunklen;
-    EXPECT_EQ(
-            dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK),
-            (uchar*)NULL);
+    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK), (uchar*)NULL);
 
     // branchtest: chunk_len + read_len > packet_val_len
     offset -= chunklen;
@@ -754,9 +822,7 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
     EXPECT_EQ(offset, 216);
     EXPECT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT_ACK);
     wt += chunklen;
-    EXPECT_EQ(
-            dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK),
-            (uchar*)NULL);
+    EXPECT_EQ(dlt.find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK), (uchar*)NULL);
 }
 // last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
@@ -766,12 +832,9 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     //////////////////////////////////////////////////////////////////////////////
     geco_packet_t geco_packet;
     geco_packet.pk_comm_hdr.checksum = 0;
-    geco_packet.pk_comm_hdr.dest_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.src_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.verification_tag = htons(
-            (generate_random_uint32()));
+    geco_packet.pk_comm_hdr.dest_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.src_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.verification_tag = htons((generate_random_uint32()));
     //////////////////////////////////////////////////////////////////////////////
     init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
     init_chunk->chunk_header.chunk_id = CHUNK_INIT;
@@ -781,8 +844,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     const char* addres[] =
         { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
     const char* addres6[] =
-        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
-                "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     sockaddrunion local_addres[3];
     sockaddrunion local_addres6[2];
     init_addrlist(true, 0, addres, 3, local_addres);
@@ -790,8 +852,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     //////////////////////////////////////////////////////////////////////////////
     uint offset = 0;
     offset += put_vlp_addrlist(init_chunk->variableParams, local_addres, 3);
-    offset += put_vlp_addrlist(init_chunk->variableParams + offset,
-            local_addres6, 2);
+    offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres6, 2);
     //////////////////////////////////////////////////////////////////////////////
     EXPECT_EQ(offset, 64);
     init_chunk->chunk_header.chunk_length = htons(
@@ -809,8 +870,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     int ret;
     //////////////////////////////////////////////////////////////////////////////
     uint peersupportedtypes = 0;
-    str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0,
-            false);
+    str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0, false);
     ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
             offset + INIT_CHUNK_FIXED_SIZES,
             SUPPORT_ADDRESS_TYPE_IPV4, &peersupportedtypes);
@@ -837,12 +897,10 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     }
     for (i = 3; i < 5; ++i)
     {
-        EXPECT_TRUE(
-                saddr_equals(&peer_addreslist[i], &local_addres6[i - 3], true));
+        EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres6[i - 3], true));
     }
     EXPECT_TRUE(saddr_equals(&peer_addreslist[5], &last_source_addr, true));
-    str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0,
-            false);
+    str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0, false);
     ret = dlt.read_peer_addreslist(peer_addreslist, geco_packet.chunk,
             offset + INIT_CHUNK_FIXED_SIZES,
             SUPPORT_ADDRESS_TYPE_IPV6);
@@ -868,8 +926,7 @@ TEST(DISPATCHER_MODULE, test_contain_local_addr)
     const char* addres[] =
         { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
     const char* addres6[] =
-        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
-                "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     sockaddrunion local_addres[3];
     sockaddrunion local_addres6[2];
     for (i = 0; i < 3; i++)
@@ -917,12 +974,9 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 {
     geco_packet_t geco_packet;
     geco_packet.pk_comm_hdr.checksum = 0;
-    geco_packet.pk_comm_hdr.dest_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.src_port = htons(
-            (generate_random_uint32() % USHRT_MAX));
-    geco_packet.pk_comm_hdr.verification_tag = htons(
-            (generate_random_uint32()));
+    geco_packet.pk_comm_hdr.dest_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.src_port = htons((generate_random_uint32() % USHRT_MAX));
+    geco_packet.pk_comm_hdr.verification_tag = htons((generate_random_uint32()));
     //////////////////////////////////////////////////////////////////////////////
     init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
     init_chunk->chunk_header.chunk_id = CHUNK_INIT;
@@ -931,8 +985,7 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
     const char* hn = "www.baidu.com";
     ((vlparam_fixed_t*) init_chunk->variableParams)->param_type = htons(
     VLPARAM_HOST_NAME_ADDR);
-    ((vlparam_fixed_t*) init_chunk->variableParams)->param_length = htons(
-            4 + strlen(hn));
+    ((vlparam_fixed_t*) init_chunk->variableParams)->param_length = htons(4 + strlen(hn));
     strcpy((char*) (init_chunk->variableParams + 4), hn);
     //////////////////////////////////////////////////////////////////////////////
     uint len = 4 + strlen(hn) + INIT_CHUNK_FIXED_SIZES;
@@ -969,28 +1022,19 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
     //////////////////////////////////////////////////////////////////////////////
     uint cid = dlt.alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
     FLAG_TBIT_SET);
-    EXPECT_EQ(
-            dlt.simple_chunks_[cid]->chunk_header.chunk_flags,
-            0x01);
+    EXPECT_EQ(dlt.simple_chunks_[cid]->chunk_header.chunk_flags, 0x01);
     dlt.curr_write_pos_[cid] += 24;
-    simple_chunk_t* simple_chunk_t_ptr_ = dlt.complete_simple_chunk(
-            cid);
-    EXPECT_EQ(
-            dlt.simple_chunks_[cid]->chunk_header.chunk_length,
-            htons(28));
+    simple_chunk_t* simple_chunk_t_ptr_ = dlt.complete_simple_chunk(cid);
+    EXPECT_EQ(dlt.simple_chunks_[cid]->chunk_header.chunk_length, htons(28));
     EXPECT_EQ(dlt.completed_chunks_[cid], true);
     dlt.free_simple_chunk(cid);
     dlt.default_bundle_ctrl_.reset();
 
     cid = dlt.alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
     FLAG_TBIT_UNSET);
-    EXPECT_EQ(
-            dlt.simple_chunks_[cid]->chunk_header.chunk_flags,
-            0);
+    EXPECT_EQ(dlt.simple_chunks_[cid]->chunk_header.chunk_flags, 0);
     simple_chunk_t_ptr_ = dlt.complete_simple_chunk(cid);
-    EXPECT_EQ(
-            dlt.simple_chunks_[cid]->chunk_header.chunk_length,
-            htons(4));
+    EXPECT_EQ(dlt.simple_chunks_[cid]->chunk_header.chunk_length, htons(4));
     EXPECT_EQ(dlt.completed_chunks_[cid], true);
     dlt.free_simple_chunk(cid);
     dlt.default_bundle_ctrl_.reset();
@@ -1021,17 +1065,13 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
     //2) if packet length == max_geco_packet_length
     cid = dlt.alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
     FLAG_TBIT_SET);
-    dlt.curr_write_pos_[cid] += MAX_NETWORK_PACKET_VALUE_SIZE
-            - 4;
+    dlt.curr_write_pos_[cid] += MAX_NETWORK_PACKET_VALUE_SIZE - 4;
     simple_chunk_t_ptr_ = dlt.complete_simple_chunk(cid);
-    EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length),
-            MAX_NETWORK_PACKET_VALUE_SIZE);
-    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
-            UDP_GECO_PACKET_FIXED_SIZES);
+    EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), MAX_NETWORK_PACKET_VALUE_SIZE);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), UDP_GECO_PACKET_FIXED_SIZES);
     //  2.1 should not force send
     dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
-            MAX_GECO_PACKET_SIZE);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), MAX_GECO_PACKET_SIZE);
     dlt.free_simple_chunk(cid);
     //3) if packet length > max_geco_packet_length
     cid = dlt.alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
@@ -1042,40 +1082,13 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
     EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), 1480);
     //  3.1 should force send && get_bundle_total_size == UDP_GECO_PACKET_FIXED_SIZES+8
     dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_),
-            UDP_GECO_PACKET_FIXED_SIZES+8);
+    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), UDP_GECO_PACKET_FIXED_SIZES+8);
     dlt.free_simple_chunk(cid);
-//    //3) if sack + data+ctrl chunks bundled in one packet
-//    // 3.1) bundle ctrl chunk
-//    dlt.default_bundle_ctrl_.reset();
-//    cid = dlt.alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,FLAG_TBIT_UNSET);
-//    dlt.curr_write_pos_[cid] = 4;
-//    simple_chunk_t_ptr_ = dlt.complete_simple_chunk(cid);
-//    dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-//    EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 8);
-//    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), UDP_GECO_PACKET_FIXED_SIZES+8);
-//    // 3.2) bundle sack chunk
-//    cid = dlt.alloc_simple_chunk(CHUNK_SACK,FLAG_TBIT_UNSET);
-//    dlt.curr_write_pos_[cid] = 28;
-//    simple_chunk_t_ptr_ = dlt.complete_simple_chunk(cid);
-//    dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-//    EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 32);
-//    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), UDP_GECO_PACKET_FIXED_SIZES+8+32);
-//    //3.3) bundle data chunk
-//    cid = dlt.alloc_simple_chunk(CHUNK_DATA,FLAG_TBIT_UNSET);
-//    dlt.curr_write_pos_[cid] = 64;
-//    simple_chunk_t_ptr_ = dlt.complete_simple_chunk(cid);
-//    dlt.bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-//    EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 68);
-//    EXPECT_EQ(dlt.get_bundle_total_size(&dlt.default_bundle_ctrl_), UDP_GECO_PACKET_FIXED_SIZES+8+32+68);
-//    //3.4) explicitely send bundle
-//    dlt.send_bundled_chunks();
 }
 // last run and passed on 26 Agu 2016
 TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 {
-    bool enable_0_if_recv_invalidate_packet_addr_port_length_integritycheck_and_so_on =
-            false; // passed
+    bool enable_0_if_recv_invalidate_packet_addr_port_length_integritycheck_and_so_on = true; // passed
     bool enable_1_ifanINITACKCHUNKisreceived = true; // passed
     bool enable_2_if_recv_init_initack_shoutdowncomplete = true; // passed
     bool enable_3_if_recv_ABORT_CHUNK = true; //passed
@@ -1092,24 +1105,21 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     const char* srcaddr4_ipstrs[srcaddr4_size] =
         { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
     const char* srcaddr6_ipstrs[srcaddr6_size] =
-        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
-                "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0001", "2607:f0d0:1002:0051:0000:0000:0000:0004" };
     ////////////////////////////////////////////////////////////////////////////////////
     const int destaddr4_size = 3;
     const int destaddr6_size = 2;
     const char* destaddr4_ipstrs[destaddr4_size] =
         { "192.168.1.122", "192.168.1.131", "192.168.34.1" };
     const char* destaddr6_ipstrs[destaddr6_size] =
-        { "2001:0db8:0a0b:12f0:0000:0000:0000:0002",
-                "2607:f0d0:1002:0051:0000:0000:0000:0005" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0002", "2607:f0d0:1002:0051:0000:0000:0000:0005" };
     ////////////////////////////////////////////////////////////////////////////////////
     const int cannot_found_ips4_size = 3;
     const int cannot_found_ips6_size = 2;
     const char* cannot_found_ips4[cannot_found_ips4_size] =
         { "192.168.1.123", "192.168.1.101", "192.168.34.5" };
     const char* cannot_found_ips6[cannot_found_ips6_size] =
-        { "2001:0db8:0a0b:12f0:0000:0000:0000:0020",
-                "2607:f0d0:1002:0051:0000:0000:0000:0100" };
+        { "2001:0db8:0a0b:12f0:0000:0000:0000:0020", "2607:f0d0:1002:0051:0000:0000:0000:0100" };
     ////////////////////////////////////////////////////////////////////////////////////
     sockaddrunion src_addres[srcaddr4_size]; // sender src addr=receiver remote addr
     sockaddrunion src_addres6[srcaddr6_size]; // sender src addr=receiver remote addr
@@ -1118,10 +1128,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     sockaddrunion cannot_found_addres4[cannot_found_ips4_size]; // sender dest add is receiver local addr
     sockaddrunion cannot_found_addres6[cannot_found_ips6_size]; // sender dest addr=receiver local addr
     //////////////////////////////////////////////////////////////////////////////////////
-    init_addrlist(true, 0, cannot_found_ips4, cannot_found_ips4_size,
-            cannot_found_addres4);
-    init_addrlist(false, 0, cannot_found_ips6, cannot_found_ips6_size,
-            cannot_found_addres6);
+    init_addrlist(true, 0, cannot_found_ips4, cannot_found_ips4_size, cannot_found_addres4);
+    init_addrlist(false, 0, cannot_found_ips6, cannot_found_ips6_size, cannot_found_addres6);
     init_addrlist(true, 0, srcaddr4_ipstrs, srcaddr4_size, src_addres);
     init_addrlist(false, 0, srcaddr6_ipstrs, srcaddr6_size, src_addres6);
     init_addrlist(true, 0, destaddr4_ipstrs, destaddr4_size, dest_addres);
@@ -1140,8 +1148,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         remote_addres[i + j] = src_addres6[j];
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
-    const int all_cannot_found_size = cannot_found_ips4_size
-            + cannot_found_ips6_size;
+    const int all_cannot_found_size = cannot_found_ips4_size + cannot_found_ips6_size;
     sockaddrunion all_cannot_found_addres[all_cannot_found_size];
     for (i = 0; i < cannot_found_ips4_size; i++)
     {
@@ -1173,8 +1180,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     int rwnd = 512;
     //init.init(&rwnd, true);
     ////////////////////////////////////////////////////////////////////////////////////////
-    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4
-            | SUPPORT_ADDRESS_TYPE_IPV6;
+    inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
     inst.is_inaddr_any = false;
     inst.is_in6addr_any = false;
     inst.noOfInStreams = 6;
@@ -1217,23 +1223,23 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         illegal_addr.sin.sin_addr.s_addr = htonl(INADDR_BROADCAST);
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         //      0.1.1) should return recv_geco_packet_but_addrs_formate_check_failed
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                &illegal_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_addrs_formate_check_failed);
         // 0.2) if it is any addr
         illegal_addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         //      0.2.1) should return recv_geco_packet_but_addrs_formate_check_failed
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                &illegal_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_addrs_formate_check_failed);
         // 0.3) if either dest port or src port is zero,
         ushort oldport = geco_packet.pk_comm_hdr.dest_port;
         geco_packet.pk_comm_hdr.dest_port = 0;
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
         //      0.3.1) should return recv_geco_packet_but_addrs_formate_check_failed
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                &illegal_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_port_numbers_check_failed);
         geco_packet.pk_comm_hdr.dest_port = oldport;
         // 0.4) if geco packet len is not %4
@@ -1256,8 +1262,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
         // 0.7) if VALIDATION OF checksum not equals,
         //      0.7.1) should return recv_geco_packet_but_integrity_check_failed
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                &illegal_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, &illegal_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_integrity_check_failed);
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1270,35 +1276,31 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         unsigned short noOutStreams = 5;
         unsigned short noInStreams = 5;
         unsigned int initialTSN = initTag;
-        init_chunk_t* init_chunk = build_init_chunk(initTag, rwnd, noOutStreams,
-                noInStreams, initialTSN);
+        init_chunk_t* init_chunk = build_init_chunk(initTag, rwnd, noOutStreams, noInStreams,
+                initialTSN);
 
         for (i = 0; i < all_cannot_found_size; i++)
         {  //1.1) if channel is NOT found as src addr not matched
             last_src_addr = &all_cannot_found_addres[i];
-            for (uint j = 0; j < channel.local_addres_size; j++)
-            {
+//            for (uint j = 0; j < channel.local_addres_size; j++)
+//            {
+                uint j = 0;
                 last_dest_addr = &channel.local_addres[j];
                 //1.2) but there is matched src addres in INIT chunk
                 //1.2.1) fills up init with matched addrlist
-                written = put_vlp_addrlist(init_chunk->variableParams,
-                        src_addres, srcaddr4_size);
-                written += put_vlp_addrlist(
-                        &init_chunk->variableParams[written], src_addres6,
+                written = put_vlp_addrlist(init_chunk->variableParams, src_addres, srcaddr4_size);
+                written += put_vlp_addrlist(&init_chunk->variableParams[written], src_addres6,
                         srcaddr6_size);
-                written += put_vlp_supported_addr_types(
-                        &init_chunk->variableParams[written], true, true,
-                        false);
-                dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES
-                        + GECO_PACKET_FIXED_SIZE;
+                written += put_vlp_supported_addr_types(&init_chunk->variableParams[written], true,
+                        true, false);
+                dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE;
                 init_chunk->chunk_header.chunk_length = htons(
                 INIT_CHUNK_FIXED_SIZES + written);
-                memcpy(geco_packet.chunk, init_chunk,
-                        dctp_packet_len - GECO_PACKET_FIXED_SIZE);
+                memcpy(geco_packet.chunk, init_chunk, dctp_packet_len - GECO_PACKET_FIXED_SIZE);
                 gset_checksum((char*) &geco_packet, dctp_packet_len);
                 EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + written, 92);
-                ret = dlt.recv_geco_packet(0, (char*) dctp_packet,
-                        dctp_packet_len, last_src_addr, last_dest_addr);
+                ret = dlt.recv_geco_packet(0, (char*) dctp_packet, dctp_packet_len, last_src_addr,
+                        last_dest_addr);
                 //1.2.2) should find an existed channel
                 ASSERT_EQ(ret, geco_return_enum::good);
                 ASSERT_EQ(dlt.curr_channel_, &channel);
@@ -1307,22 +1309,21 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
                 //  1.3.1) fills up init with unmatched addrlist
                 written = 0;
                 dctp_packet_len = 0;
-                written += put_vlp_supported_addr_types(
-                        init_chunk->variableParams, true, true, false);
-                dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES
-                        + GECO_PACKET_FIXED_SIZE;
+                written += put_vlp_supported_addr_types(init_chunk->variableParams, true, true,
+                        false);
+                dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE;
                 init_chunk->chunk_header.chunk_length = htons(
                 INIT_CHUNK_FIXED_SIZES + written);
-                memcpy(geco_packet.chunk, init_chunk,
-                        dctp_packet_len - GECO_PACKET_FIXED_SIZE);
+                memcpy(geco_packet.chunk, init_chunk, dctp_packet_len - GECO_PACKET_FIXED_SIZE);
                 gset_checksum((char*) &geco_packet, dctp_packet_len);
                 EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + written, 28);
-                ret = dlt.recv_geco_packet(0, (char*) dctp_packet,
-                        dctp_packet_len, last_src_addr, last_dest_addr);
+                printf("========================================================================\n");
+                ret = dlt.recv_geco_packet(0, (char*) dctp_packet, dctp_packet_len, last_src_addr,
+                        last_dest_addr);
                 //1.3.2) should NOT find an existed channel
                 ASSERT_EQ(ret, geco_return_enum::good);
                 ASSERT_EQ(dlt.curr_channel_, (channel_t*)NULL);
-            }
+            //}
         }
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1336,8 +1337,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         uchar chunktypes[3] =
             { CHUNK_INIT_ACK, CHUNK_INIT, CHUNK_SHUTDOWN_COMPLETE };
         uint reterrnos[3] =
-            { recv_geco_packet_but_morethanone_init_ack,
-                    recv_geco_packet_but_morethanone_init,
+            { recv_geco_packet_but_morethanone_init_ack, recv_geco_packet_but_morethanone_init,
                     recv_geco_packet_but_morethanone_shutdown_complete };
 
         ((chunk_fixed_t*) &geco_packet.chunk[4])->chunk_id = CHUNK_DATA;
@@ -1352,9 +1352,9 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
             ((chunk_fixed_t*) geco_packet.chunk)->chunk_id = chunktypes[i];
             //2.2) the packet should be discarded
             gset_checksum((char*) &geco_packet, dctp_packet_len);
-            ret = dlt.recv_geco_packet(0, (char*) dctp_packet, dctp_packet_len,
-                    last_src_addr, last_dest_addr);
-            ASSERT_EQ(ret, reterrnos[i]);
+            ret = dlt.recv_geco_packet(0, (char*) dctp_packet, dctp_packet_len, last_src_addr,
+                    last_dest_addr);
+            ASSERT_EQ(ret, (uint )reterrnos[i]);
         }
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1368,8 +1368,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         last_src_addr = &all_cannot_found_addres[0];
         //  3.1.1 should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_it_is_ootb_abort_discard);
         //3.2 if non-ootb packet
         last_src_addr = &channel.remote_addres[0];
@@ -1378,8 +1378,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.remote_tag);
         //      3.2.1.1) should go on
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
         ASSERT_EQ(dlt.is_found_abort_chunk_, true);
         //  3.2)if !is_tbit_set && last_veri_tag_ == curr_channel_->local_tag)
@@ -1387,8 +1387,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag);
         //      3.2.1) should go on
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
         ASSERT_EQ(dlt.is_found_abort_chunk_, true);
         //  3.3)if tbit and verifi tag not matched
@@ -1396,10 +1396,9 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.remote_tag);
         //  3.3.1)should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
-        ASSERT_EQ(ret,
-                recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag);
     }
     /////////////////////////////////////////////////////////////////////////////////////
     //3) if recv SHUTDOWN_ACK
@@ -1414,34 +1413,32 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         last_src_addr = &all_cannot_found_addres[0];
         //  3.1.1 should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_it_is_ootb_sdack_send_sdc);
         //3.2 if non-ootb packet
         last_src_addr = &channel.remote_addres[0];
         //  3.2.1)if curr channel state is neither cookie echoed nor cookie wait
-        channel.state_machine_control->channel_state =
-                ChannelState::ShutdownSent;
+        channel.state_machine_control->channel_state = ChannelState::ShutdownSent;
         //      3.2.1.1) should go on
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
         //  3.2.2)if curr channel state is either cookie echoed or cookie wait
         channel.state_machine_control->channel_state = ChannelState::CookieWait;
         //      3.2.2.1) should send shutdown complete chunk to the peer
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, discard);
         //  3.2.3)if veri tag unmatched channel local tag
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag - 1);
-        channel.state_machine_control->channel_state =
-                ChannelState::ShutdownSent;
+        channel.state_machine_control->channel_state = ChannelState::ShutdownSent;
         //      3.2.3.1) should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_nootb_packet_verifitag_illegal);
     }
     /////////////////////////////////////////////////////////////////////////////////////
@@ -1458,8 +1455,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         last_src_addr = &all_cannot_found_addres[0];
         //  4.1.1 should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &inst.local_addres_list[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &inst.local_addres_list[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_it_is_ootb_sdc_discard);
         //4.2 if non-ootb packet
         last_src_addr = &channel.remote_addres[0];
@@ -1467,27 +1464,25 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
         channel.state_machine_control->channel_state = ChannelState::Connected;
         //      4.2.1.1) should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
-        ASSERT_EQ(ret,
-                recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
+        ASSERT_EQ(ret, recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate);
         //  4.2.2)if curr channel state is ShutdownAckSent
-        channel.state_machine_control->channel_state =
-                ChannelState::ShutdownAckSent;
+        channel.state_machine_control->channel_state = ChannelState::ShutdownAckSent;
         //      4.2.2.1) if verifi tag matched
         ((chunk_fixed_t*) geco_packet.chunk)->chunk_flags = 0;
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag);
         //          4.2.2.2 should go on
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, good);
         //  3.2.3)if veri tag unmatched
         geco_packet.pk_comm_hdr.verification_tag = htonl(channel.local_tag - 1);
         //      3.2.3.1) should discard
         gset_checksum((char*) &geco_packet, MIN_GECO_PACKET_SIZE);
-        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE,
-                last_src_addr, &channel.local_addres[0]);
+        ret = dlt.recv_geco_packet(0, (char*) dctp_packet, MIN_GECO_PACKET_SIZE, last_src_addr,
+                &channel.local_addres[0]);
         ASSERT_EQ(ret, recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal);
     }
 }
@@ -1523,5 +1518,11 @@ TEST(DISPATCHER_MODULE, test_contains_chunk)
     EXPECT_EQ(dlt.contains_chunk(CHUNK_SACK, chunk_types), 2);
     EXPECT_EQ(dlt.contains_chunk(CHUNK_HBREQ, chunk_types), 2);
     //////////////////////////////////////////////////////////////////////////////
+}
+
+
+TEST(DISPATCHER_MODULE, test_disassemble_packet)
+{
+
 }
 
