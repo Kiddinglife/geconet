@@ -575,9 +575,11 @@ class dispatch_layer_t
         char hoststr_[MAX_IPADDR_STR_LEN];
         bool library_support_unreliability_;
 
-#ifdef ENABLE_UNIT_TEST
+#if ENABLE_UNIT_TEST
         /* unit test extra variables*/
-        bool branchtest_contains_chunk_abort_when_curr_channel_is_null_;
+        bool enable_mock_dispatcher_disassemle_curr_geco_packet_;
+        bool enable_mock_dispatch_send_geco_packet_;
+        bool enable_mock_dispatcher_process_init_chunk_;
 #endif
 
         dispatch_layer_t();

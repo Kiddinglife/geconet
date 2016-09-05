@@ -17,7 +17,8 @@
 //uncomment those macros after running unit tests
 //otherwise these functions will never be invoked
 #define _DEBUG //uncommnet this in release version
-#define enable_mock_dispatcher_disassemle_curr_geco_packet 1
+#define ENABLE_UNIT_TEST 1
+#define enable_mock_dispatcher_disassemle_curr_geco_packet 0//1
 #define enable_mock_dispatch_send_geco_packet 1
 #define enable_mock_dispatcher_process_init_chunk 0
 #define CURR_EVENT_LOG_LEVEL 10 // = VERBOSE
