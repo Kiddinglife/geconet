@@ -30,9 +30,9 @@ GTEST_API_ int main(int argc, char** argv)
    // ::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
 
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
-	::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_disassemble_packet";
+	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_disassemble_packet";
 	//::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_bundle_ctrl_chunk";
-   // ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
+   ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_read_peer_addreslist";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_first_chunk_of";

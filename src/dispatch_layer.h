@@ -1166,7 +1166,7 @@ class dispatch_layer_t
          */
         uchar alloc_simple_chunk(simple_chunk_t* chunk)
         {
-            chunk->chunk_header.chunk_length = ntohs(chunk->chunk_header.chunk_length);
+            //chunk->chunk_header.chunk_length = ntohs(chunk->chunk_header.chunk_length);
             add2chunklist(chunk, "created chunk from string %u ");
             return simple_chunk_index_;
         }
