@@ -859,10 +859,11 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
     init_addrlist(false, 0, addres6, 2, local_addres6);
     //////////////////////////////////////////////////////////////////////////////
     uint offset = 0;
-    offset += put_vlp_addrlist(init_chunk->variableParams, local_addres, 3);
+    offset+= put_vlp_supported_addr_types(init_chunk->variableParams, true, false, false);
+    offset += put_vlp_addrlist(init_chunk->variableParams+offset, local_addres, 3);
     offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres6, 2);
     //////////////////////////////////////////////////////////////////////////////
-    EXPECT_EQ(offset, 64);
+    EXPECT_EQ(offset, 72);
     init_chunk->chunk_header.chunk_length = htons(
     INIT_CHUNK_FIXED_SIZES + offset);
     //////////////////////////////////////////////////////////////////////////////
@@ -883,7 +884,8 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
             offset + INIT_CHUNK_FIXED_SIZES,
             SUPPORT_ADDRESS_TYPE_IPV4, &peersupportedtypes);
     EXPECT_EQ(ret, 3);  //3 ip4 addrs  but last src addr ths is ip6 not supported by us
-    EXPECT_EQ(peersupportedtypes, SUPPORT_ADDRESS_TYPE_IPV4);
+    //ip4 addrs  plus last src addr is ip6
+    EXPECT_EQ(peersupportedtypes, SUPPORT_ADDRESS_TYPE_IPV4|SUPPORT_ADDRESS_TYPE_IPV6);
     //////////////////////////////////////////////////////////////////////////////
     for (i = 0; i < 3; ++i)
     {
@@ -1103,8 +1105,8 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     bool enable_3_if_recv_ABORT_CHUNK = false;  //passed
     bool enable_4_if_recv_SHUTDOWN_ACK = false;  //passed
     bool enable_5_if_recv_SHUTDOWN_COMPLETE = false;  //passed
-    bool enable_6_test_branch_disassemble = false;  //passed
-    bool enable_7_test_branch_disassemble_branch_processinit_chunk = true;  //passed
+    bool enable_6_test_branch_disassemble = false; //passed
+    bool enable_7_test_branch_disassemble_branch_processinit_chunk = true;//passed
     /////////////////////////////////////////////////////////////////////////////////////
     EXPECT_EQ(sizeof(in_addr), 4);
     EXPECT_EQ(sizeof(in6_addr), 16);

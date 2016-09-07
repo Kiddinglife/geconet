@@ -439,7 +439,7 @@ struct channel_t
 struct transportaddr_hash_functor  //hash 函数
 {
         size_t operator()(transport_addr_t &addr) const
-        {
+                {
             return transportaddr2hashcode(&(addr.local_saddr), &(addr.peer_saddr));
         }
 };
@@ -447,7 +447,7 @@ struct transportaddr_hash_functor  //hash 函数
 struct transportaddr_cmp_functor  //比较函数 ==
 {
         bool operator()(transport_addr_t &addr1, transport_addr_t &addr2) const
-        {
+                {
             return saddr_equals(&(addr1.local_saddr), &(addr2.local_saddr))
                     && saddr_equals(&(addr1.peer_saddr), &(addr2.peer_saddr));
         }
@@ -455,7 +455,7 @@ struct transportaddr_cmp_functor  //比较函数 ==
 struct sockaddr_hash_functor  //hash 函数
 {
         size_t operator()(sockaddrunion &addr) const
-        {
+                {
             return sockaddr2hashcode(&addr);
         }
 };
@@ -463,7 +463,7 @@ struct sockaddr_hash_functor  //hash 函数
 struct sockaddr_cmp_functor  //比较函数 ==
 {
         bool operator()(sockaddrunion &a, sockaddrunion &b) const
-        {
+                {
             return saddr_equals(&a, &b);
         }
 };
@@ -486,7 +486,7 @@ class dispatch_layer_t
                 transportaddr_cmp_functor> channel_map_;
         std::tr1::unordered_map<sockaddrunion, geco_instance_t*, sockaddr_hash_functor,
                 sockaddr_cmp_functor> instance_map_;
-#endif
+        #endif
 
         /* many diferent channels belongs to a same geco instance*/
         std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
@@ -580,7 +580,7 @@ class dispatch_layer_t
         bool enable_mock_dispatcher_disassemle_curr_geco_packet_;
         bool enable_mock_dispatch_send_geco_packet_;
         bool enable_mock_dispatcher_process_init_chunk_;
-#endif
+        #endif
 
         dispatch_layer_t();
 
@@ -629,6 +629,7 @@ class dispatch_layer_t
 
     public:
         /**
+         * @todo use safe random generator
          * generates a random tag value for a new association, but not 0
          * @return   generates a random tag value for a new association, but not 0
          */
@@ -750,34 +751,34 @@ class dispatch_layer_t
 #ifdef _DEBUG
             switch (smctrl->channel_state)
             {
-            case ChannelState::Closed:
-                EVENTLOG(VERBOSE, "Current channel state : CLOSED");
-                break;
-            case ChannelState::CookieWait:
-                EVENTLOG(VERBOSE, "Current channel state :COOKIE_WAIT ");
-                break;
-            case ChannelState::CookieEchoed:
-                EVENTLOG(VERBOSE, "Current channel state : COOKIE_ECHOED");
-                break;
-            case ChannelState::Connected:
-                EVENTLOG(VERBOSE, "Current channel state : ESTABLISHED");
-                break;
-            case ChannelState::ShutdownPending:
-                EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNPENDING");
-                break;
-            case ChannelState::ShutdownReceived:
-                EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNRECEIVED");
-                break;
-            case ChannelState::ShutdownSent:
-                EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNSENT");
-                break;
-            case ChannelState::ShutdownAckSent:
-                EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNACKSENT");
-                break;
-            default:
-                EVENTLOG(VERBOSE, "Unknown channel state : return Closed");
-                return ChannelState::Closed;
-                break;
+                case ChannelState::Closed:
+                    EVENTLOG(VERBOSE, "Current channel state : CLOSED");
+                    break;
+                case ChannelState::CookieWait:
+                    EVENTLOG(VERBOSE, "Current channel state :COOKIE_WAIT ");
+                    break;
+                case ChannelState::CookieEchoed:
+                    EVENTLOG(VERBOSE, "Current channel state : COOKIE_ECHOED");
+                    break;
+                case ChannelState::Connected:
+                    EVENTLOG(VERBOSE, "Current channel state : ESTABLISHED");
+                    break;
+                case ChannelState::ShutdownPending:
+                    EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNPENDING");
+                    break;
+                case ChannelState::ShutdownReceived:
+                    EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNRECEIVED");
+                    break;
+                case ChannelState::ShutdownSent:
+                    EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNSENT");
+                    break;
+                case ChannelState::ShutdownAckSent:
+                    EVENTLOG(VERBOSE, "Current channel state : SHUTDOWNACKSENT");
+                    break;
+                default:
+                    EVENTLOG(VERBOSE, "Unknown channel state : return Closed");
+                    return ChannelState::Closed;
+                    break;
             }
 #endif
             return smctrl->channel_state;
@@ -892,13 +893,13 @@ class dispatch_layer_t
          * sctp common header header has been verified
          * tag (if association is established) and CRC is okay
          * get first chunk-id and length, pass pointers & len on to the relevant module in below :
-             - CHUNK_INIT, CHUNK_INIT_ACK,CHUNK_ABORT, CHUNK_SHUTDOWN,CHUNK_SHUTDOWN_ACK
-               CHUNK_COOKIE_ECHO,CHUNK_COOKIE_ACK go to SCTP_CONTROL
-               (change of association state)
-             - CHUNK_HBREQ, CHUNK_HBACK go to PATH_MAN instance
-             - CHUNK_SACK goes to RELIABLE_TRANSFER
-             - CHUNK_ERROR probably to SCTP_CONTROL as well  (at least there !)
-             - CHUNK_DATA goes to RX_CONTROL
+         - CHUNK_INIT, CHUNK_INIT_ACK,CHUNK_ABORT, CHUNK_SHUTDOWN,CHUNK_SHUTDOWN_ACK
+         CHUNK_COOKIE_ECHO,CHUNK_COOKIE_ACK go to SCTP_CONTROL
+         (change of association state)
+         - CHUNK_HBREQ, CHUNK_HBACK go to PATH_MAN instance
+         - CHUNK_SACK goes to RELIABLE_TRANSFER
+         - CHUNK_ERROR probably to SCTP_CONTROL as well  (at least there !)
+         - CHUNK_DATA goes to RX_CONTROL
          *
          * Those modules must get a pointer to the start of a chunk and
          * information about its size (without padding).
@@ -1113,7 +1114,7 @@ class dispatch_layer_t
             free_simple_chunk(simple_chunk_index_);
             return send_bundled_chunks();
         }
-        void enter_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata, uint errdatalen)
+        void enter_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata=0, uint errdatalen=0)
         {
             if (simple_chunks_[chunkID] == NULL)
             {
@@ -1131,9 +1132,9 @@ class dispatch_layer_t
                 ERRLOG(MAJOR_ERROR, " enter_supported_addr_types()::Wrong chunk type !\n");
                 return;
             }
-            error_cause_t* ecause =
-                    (error_cause_t*) &simple_chunks_[chunkID]->chunk_value[curr_write_pos_[chunkID]];
-            curr_write_pos_[chunkID] += put_error_cause(ecause, errcode, errdata, errdatalen);
+            curr_write_pos_[chunkID] += put_error_cause(
+                    (error_cause_t*) (simple_chunks_[chunkID]->chunk_value
+                            + curr_write_pos_[chunkID]), errcode, errdata, errdatalen);
         }
 
         void enter_supported_addr_types(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6,
@@ -1182,44 +1183,6 @@ class dispatch_layer_t
             return simple_chunks_[chunkID]->chunk_header.chunk_id;
         }
 
-        /** append ecc vlp into CHUNK_ERROR OR CHUNK_ABORT*/
-        void append_ecc(uint chunkID, uint code, uint length = 0, uchar* data =
-        NULL)
-        {
-            if (simple_chunks_[chunkID] == NULL)
-            {
-                ERRLOG(MAJOR_ERROR, "Invalid chunk ID\n");
-                return;
-            }
-            if (completed_chunks_[chunkID])
-            {
-                ERRLOG(MAJOR_ERROR, " append_ecc() : chunk already completed");
-                return;
-            }
-            if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ERROR
-                    && simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_ABORT)
-            {
-                ERRLOG(MAJOR_ERROR, " append_ecc() : Wrong chunk type");
-                return;
-            }
-
-            uint index = curr_write_pos_[chunkID];
-            error_cause_t* ecc = (error_cause_t*) (simple_chunks_[chunkID]->chunk_value + index);
-            ecc->error_reason_code = htons(code);
-            ecc->error_reason_length = htons((ushort) (length + VLPARAM_FIXED_SIZE));
-            if (length > 0)
-            {
-                memcpy(&ecc->error_reason, data, length);
-            }
-            curr_write_pos_[chunkID] += (length + VLPARAM_FIXED_SIZE);
-            index = 4 - curr_write_pos_[chunkID] % 4;
-            if (index < 4)  // padding
-            {
-                memset(simple_chunks_[chunkID]->chunk_value + curr_write_pos_[chunkID], 0, index);
-                curr_write_pos_[chunkID] += index;
-            }
-        }
-
         /*reads the number of output streams from an init or initAck */
         ushort read_outbound_stream(uchar init_chunk_id)
         {
@@ -1233,8 +1196,8 @@ class dispatch_layer_t
             uint chunkid = scptr->chunk_header.chunk_id;
             if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
             {
-                ushort osnum =  ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
-				return osnum;
+                ushort osnum = ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
+                return osnum;
             }
             else
             {
@@ -1256,8 +1219,8 @@ class dispatch_layer_t
             uint chunkid = scptr->chunk_header.chunk_id;
             if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
             {
-				ushort isnum = ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
-				return isnum;
+                ushort isnum = ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
+                return isnum;
             }
             else
             {
@@ -1279,7 +1242,7 @@ class dispatch_layer_t
             if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
             {
                 uint initag = ntohl(((init_chunk_t*) scptr)->init_fixed.init_tag);
-				return initag;
+                return initag;
             }
             else
             {
@@ -1348,7 +1311,7 @@ class dispatch_layer_t
         {
             if (simple_chunks_[chunkID] == NULL)
             {
-                ERRLOG(WARNNING_ERROR, "Invalid chunk ID\n");
+                ERRLOG(MAJOR_ERROR, "Invalid chunk ID\n");
                 return NULL;
             }
 
@@ -1495,7 +1458,8 @@ class dispatch_layer_t
         /**returns a value indicating which chunks are in the packet.*/
         uint find_chunk_types(uchar* packet_value, uint len, uint* total_chunk_count = NULL);
 
-        /**check if local addr is found eg. ip4or6 loopback and non-loopback addres*/
+        /**check if local addr is found eg. ip4or6 loopback
+         *  and the ones same to stored in inst localaddrlist*/
         bool contain_local_addr(sockaddrunion* addr_list, uint addr_list_num);
 
         /**

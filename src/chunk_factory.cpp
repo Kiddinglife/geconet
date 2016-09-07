@@ -34,7 +34,6 @@ uint put_ec_unrecognized_chunk(error_cause_t*ecause, uchar* errdata,
 uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata,
         ushort errdatalen)
 {
-    assert(ecause != 0 && errdata != 0 && errdatalen > 0);
     ecause->error_reason_code = htons(errcode);
     int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
     ecause->error_reason_length = htons(len);

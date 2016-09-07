@@ -1269,6 +1269,13 @@ int dispatch_layer_t::process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
     return 0;
 }
+
+/* 1) put init chunk into chunk  array */
+/* 2) validate init params */
+/* 3) validate source addr */
+/* 4) If INIT recv in cookie-wait or cookie-echoed */
+/* 5) else if  INIT recv in state other than cookie-wait or cookie-echoed */
+/* 6) remove NOT free INIT CHUNK */
 int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 {
 #if defined(_DEBUG)
@@ -1288,13 +1295,12 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     uchar init_cid = alloc_simple_chunk((simple_chunk_t*) init);
     if (get_simple_chunk_id(init_cid) != CHUNK_INIT)
     {
-        ERRLOG(MAJOR_ERROR, "process_init_chunk: wrong chunk type");
+        ERRLOG(MAJOR_ERROR, "1) put init chunk into chunk  array : [wrong chunk type]");
         remove_simple_chunk(init_cid);
         return -1;
     }
-
 #ifdef _DEBUG
-    EVENTLOG1(DEBUG, "process_init_chunk():alloc_simple_chunk():init_cid %d", init_cid);
+    ERRLOG1(DEBUG, "1) put init chunk into chunk  array : [good] : init_cid %d", init_cid);
 #endif
 
     /*2) validate init params*/
@@ -1304,11 +1310,11 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             || !read_init_tag(init_cid))
     {
         EVENTLOG(DEBUG,
-                "received init with zero number of streams, or zero init TAG -> send abort ");
+                "2) validate init params [zero streams  or zero init TAG] -> send abort ");
 
-        /*2.1) make and send ABORT with error cause setup*/
+        /*2.1) make and send ABORT with ecc*/
         abortcid = alloc_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
-        append_ecc(abortcid, ECC_INVALID_MANDATORY_PARAM);
+        enter_error_cause(abortcid, ECC_INVALID_MANDATORY_PARAM);
         bundle_ctrl_chunk(complete_simple_chunk(abortcid));
         send_bundled_chunks();
         free_simple_chunk(abortcid);
@@ -1318,8 +1324,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
         if (smctrl != NULL)
         {
             /* only when channel presents, unlock makes sense.
-             * as the data transfer is aloowed only
-             * when channel established*/
+             * as the data transfer only happenswhen channel established*/
             unlock_bundle_ctrl();
             delete_curr_channel();
             on_connection_lost(ConnectionLostReason::invalid_param);
@@ -1359,26 +1364,26 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
         memcpy(&tmp_addr_, last_source_addr_, sizeof(sockaddrunion));
     }
 
-    ushort inbound_stream = 0;
-    ushort outbound_stream = 0;
+    ushort inbound_stream;
+    ushort outbound_stream;
     uchar init_ack_cid;
     uint init_tag;
+
     /* 4) this branch handles the cases below:
      * 1) RFC 4960 - 5.2.1.INIT Received in COOKIE-WAIT or COOKIE-ECHOED State - (B)
-     * Both sides are trying to initialize the association at about the same time.
-     * (unexpected INIT sent to an endpoint without existing assciation)
+     * Both sides are trying to initialize the association at about the same time,
+     * which lead to unexpected INIT sent to an endpoint without existing assciation)
      * 2) RFC 4960 - 5.1.Normal Establishment of an Association - (B)
      * "Z" shall respond immediately with an INIT ACK chunk.*/
     if (smctrl == NULL)
     {
-        EVENTLOG(INTERNAL_TRACE, "come into branch at process_init_chunk() -> if(smctrl == NULL)!");
+        EVENTLOG(DEBUG, "come into branch at process_init_chunk() -> if(smctrl == NULL)!");
 
         /*4.1) get in out stream number*/
         inbound_stream = std::min(read_outbound_stream(init_cid), get_local_inbound_stream());
         outbound_stream = std::min(read_inbound_stream(init_cid), get_local_outbound_stream());
 
         /* 4.2) alloc init ack chunk, init tag used as init tsn */
-        // todo use safe generate_init_tag from libcat
         init_tag = generate_init_tag();
         init_ack_cid = alloc_init_ack_chunk(init_tag, curr_geco_instance_->default_myRwnd,
                 outbound_stream, inbound_stream, init_tag);
@@ -1443,9 +1448,10 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
     /* 4) this branch handles the cases below:
      * 1) RFC 4960 - 5.2.2.
-     * Unexpected INIT in States Other than CLOSED, COOKIE-ECHOED,
-     * COOKIE-WAIT, and SHUTDOWN-ACK-SENT
-     * 2) RFC 4960 - 5.2.4.  Handle a COOKIE ECHO when a TCB Exists */
+     *      Unexpected INIT in States Other than CLOSED, COOKIE-ECHOED,
+     *      COOKIE-WAIT, and SHUTDOWN-ACK-SENT
+     * 2) RFC 4960 - 5.2.4.
+     *      Handle a COOKIE ECHO when a TCB Exists */
     else
     {
         EVENTLOG(INTERNAL_TRACE, "come into branch at process_init_chunk() -> if(smctrl != NULL)!");
@@ -2278,7 +2284,7 @@ void dispatch_layer_t::delete_curr_channel(void)
         /* mark channel as deleted, it will be deleted
          when get_channel(..) encounters a "deleted" channel*/
         curr_channel_->deleted = true;
-        EVENTLOG1(INTERNAL_EVENT, "channel ID %u marked for deletion", curr_channel_->channel_id);
+        EVENTLOG1(DEBUG, "channel ID %u marked for deletion", curr_channel_->channel_id);
     }
 }
 void dispatch_layer_t::on_connection_lost(uint status)
@@ -2800,41 +2806,46 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
         // vlp length too short or patial vlp problem
         if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len) return -1;
 
+        ushort paratype = ntohs(vlp->param_type);
+
         /* determine the falgs from last source addr
          * then this falg will be used to validate other found addres*/
-        bool b1, b2, b3;
-        if (!(b1 = contain_local_addr(last_source_addr_, 1)))
+        if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
         {
-            /* this is from a normal address,
-             * furtherly filter out except loopbacks */
-            if ((b2 = transport_layer_->typeofaddr(last_source_addr_, LinkLocalAddrType)))  //
+            bool b1, b2, b3;
+            if (!(b1 = contain_local_addr(last_source_addr_, 1)))
             {
-                flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType);
-            }
-            else if ((b3 = transport_layer_->typeofaddr(last_source_addr_, SiteLocalAddrType)))  // filtered
-            {
-                flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType);
+                /* this is from a normal address,
+                 * furtherly filter out except loopbacks */
+                if ((b2 = transport_layer_->typeofaddr(last_source_addr_, LinkLocalAddrType)))  //
+                {
+                    flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType);
+                }
+                else if ((b3 = transport_layer_->typeofaddr(last_source_addr_, SiteLocalAddrType)))  // filtered
+                {
+                    flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType);
+                }
+                else
+                {
+                    flags = (IPAddrType) (AllCastAddrTypes | AllLocalAddrTypes);
+                }
             }
             else
             {
-                flags = (IPAddrType) (AllCastAddrTypes | AllLocalAddrTypes);
+                /* this is from a loopback, use default flag*/
+                flags = AllCastAddrTypes;
             }
+            EVENTLOG3(DEBUG, "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d", b1, b2,
+                    b3);
         }
-        else
-        {
-            /* this is from a loopback, use default flag*/
-            flags = AllCastAddrTypes;
-        }
-        EVENTLOG3(DEBUG, "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d", b1, b2, b3);
 
         /*4) validate received addresses in this chunk*/
         switch (ntohs(vlp->param_type))
         {
             case VLPARAM_IPV4_ADDRESS:
-                // validate addr type
                 if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4))
-                {
-                    // validate if exceed max num addres allowed
+                {  // use peer addrlist that we can support, ignoring unsupported addres
+                   // validate if exceed max num addres allowed
                     if (found_addr_number < MAX_NUM_ADDRESSES)
                     {
                         addres = (ip_address_t*) curr_pos;
@@ -2899,8 +2910,8 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                 }
                 break;
             case VLPARAM_IPV6_ADDRESS:
-                if ((my_supported_addr_types & VLPARAM_IPV6_ADDRESS))
-                {
+                if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV6))
+                {  // use peer addrlist that we can support, ignoring unsupported addres
                     /*6) pass by other validates*/
                     if (found_addr_number < MAX_NUM_ADDRESSES)
                     {
@@ -2973,6 +2984,22 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                     }
                 }
                 break;
+            case VLPARAM_SUPPORTED_ADDR_TYPES:
+                if (peer_supported_addr_types != NULL)
+                {
+                    supported_address_types_t* sat = (supported_address_types_t*) curr_pos;
+                    int size = ((vlp_len - VLPARAM_FIXED_SIZE) / sizeof(ushort)) - 1;
+                    while (size >= 0)
+                    {
+                        *peer_supported_addr_types |=
+                                ntohs(sat->address_type[idx]) == VLPARAM_IPV4_ADDRESS ?
+                                        SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
+                        size--;
+                    }
+                }
+                EVENTLOG1(VERBOSE,
+                        "Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)", *peer_supported_addr_types);
+                break;
         }
         read_len += vlp_len;
         while (read_len & 3)
@@ -2981,13 +3008,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
     }  // while
 
 // we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
-//
-//    if (!ignore_last_src_addr )
-    if (!ignore_last_src_addr
-            && (( saddr_family(last_source_addr_) == AF_INET ?
-            SUPPORT_ADDRESS_TYPE_IPV4 :
-                                                               SUPPORT_ADDRESS_TYPE_IPV6)
-                    & my_supported_addr_types))
+    if (!ignore_last_src_addr)
     {
         is_new_addr = true;
         for (idx = 0; idx < found_addr_number; idx++)
@@ -3008,7 +3029,6 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                 found_addr_number = MAX_NUM_ADDRESSES - 1;
 
             }
-            memcpy(&peer_addreslist[found_addr_number], last_source_addr_, sizeof(sockaddrunion));
             if (peer_supported_addr_types != NULL)
             {
                 switch (saddr_family(last_source_addr_))
@@ -3026,10 +3046,18 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                         break;
                 }
             }
-            EVENTLOG2(VERBOSE,
-                    "Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",
-                    found_addr_number, found_addr_number + 1);
-            found_addr_number++;
+            if ((last_source_addr_->sa.sa_family == AF_INET ?
+            SUPPORT_ADDRESS_TYPE_IPV4 :
+                                                              SUPPORT_ADDRESS_TYPE_IPV6)
+                    & my_supported_addr_types)
+            {
+                memcpy(&peer_addreslist[found_addr_number], last_source_addr_,
+                        sizeof(sockaddrunion));
+                EVENTLOG2(VERBOSE,
+                        "Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",
+                        found_addr_number, found_addr_number + 1);
+                found_addr_number++;
+            }
         }
     }
     return found_addr_number;
