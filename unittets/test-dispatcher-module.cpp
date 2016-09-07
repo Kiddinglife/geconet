@@ -1464,7 +1464,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
     }
 
 }
-// last run and passed on 21 Agu 2016 
+// last run and passed on 21 Agu 2016
 TEST(DISPATCHER_MODULE, test_contains_chunk)
 {
     /**

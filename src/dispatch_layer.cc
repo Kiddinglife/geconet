@@ -2840,7 +2840,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
         }
 
         /*4) validate received addresses in this chunk*/
-        switch (ntohs(vlp->param_type))
+		switch (paratype)
         {
             case VLPARAM_IPV4_ADDRESS:
                 if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4))
@@ -2996,9 +2996,10 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                                         SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
                         size--;
                     }
+				EVENTLOG1(VERBOSE,
+						"Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
+						*peer_supported_addr_types);
                 }
-                EVENTLOG1(VERBOSE,
-                        "Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)", *peer_supported_addr_types);
                 break;
         }
         read_len += vlp_len;
