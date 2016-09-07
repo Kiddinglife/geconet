@@ -2992,7 +2992,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                     while (size >= 0)
                     {
                         *peer_supported_addr_types |=
-                                ntohs(sat->address_type[idx]) == VLPARAM_IPV4_ADDRESS ?
+                                ntohs(sat->address_type[size]) == VLPARAM_IPV4_ADDRESS ?
                                         SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
                         size--;
                     }
