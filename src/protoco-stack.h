@@ -21,45 +21,45 @@
 #define __INCLUDE_PROTOCOL_STACK_H
 
 /* the possible 7 states of an association */
-enum ChannelState:uint
+enum ChannelState :int
 {
-    Closed,
-    CookieWait,
-    CookieEchoed,
-    Connected,
-    ShutdownPending,
-    ShutdownReceived,
-    ShutdownSent,
-    ShutdownAckSent,
-    ChannelStateSize
+	Closed,
+	CookieWait,
+	CookieEchoed,
+	Connected,
+	ShutdownPending,
+	ShutdownReceived,
+	ShutdownSent,
+	ShutdownAckSent,
+	ChannelStateSize
 };
 
 /* Return codes for a number of functions that treat incoming chunks */
 /* these are used in  bundle controller !                          */
-enum ChunkProcessResult:uint
+enum ChunkProcessResult : int
 {
-    Good,
-    Stop,
-    SkipProcessInitChunk_UnkownParamError,
-    StopProcessInitChunk_UnkownParamError,
-    StopProcessInitChunk_NewAddrAddedError,
-    StopAndDeleteChannel,
-    StopAndDeleteChannel_LastSrcPortNullError,
-    StopAndDeleteChannel_ValidateInitParamFailedError,
-    ChunkProcessResultSize
+	Good,
+	Stop,
+	SkipProcessInitChunk_UnkownParamError,
+	StopProcessInitChunk_UnkownParamError,
+	StopProcessInitChunk_NewAddrAddedError,
+	StopAndDeleteChannel,
+	StopAndDeleteChannel_LastSrcPortNullError,
+	StopAndDeleteChannel_ValidateInitParamFailedError,
+	ChunkProcessResultSize
 };
 
 /* for COMMUNICATION LOST or COMMUNICATION UP callbacks */
-enum ConnectionLostReason:uint
+enum ConnectionLostReason :int
 {
-    PeerAbortConnection,
-    PeerUnreachable,
-    exceed_max_retrans_count,
-    no_tcb,
-    invalid_param,
-    unknown_param,
-    /* maybe some others............. */
-    ConnectionLostReasonSize // number od reasons 
+	PeerAbortConnection,
+	PeerUnreachable,
+	exceed_max_retrans_count,
+	no_tcb,
+	invalid_param,
+	unknown_param,
+	/* maybe some others............. */
+	ConnectionLostReasonSize // number od reasons 
 };
 
 #define SCTP_COMM_UP_RECEIVED_VALID_COOKIE       1

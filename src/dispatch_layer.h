@@ -713,7 +713,7 @@ class dispatch_layer_t
          * number of addresses that local host/current channel has.
          * @pre either of current channel and current geco instance MUST present.
          */
-        uint get_local_addreslist(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
+        int get_local_addreslist(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
                 uint numPeerAddresses, uint addressTypes, bool receivedFromPeer);
 
         /**
