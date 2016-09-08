@@ -1377,7 +1377,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
      * "Z" shall respond immediately with an INIT ACK chunk.*/
     if (smctrl == NULL)
     {
-        EVENTLOG(DEBUG, "come into branch at process_init_chunk() -> if(smctrl == NULL)!");
+        EVENTLOG(DEBUG, "Process ootb INIT chunk");
 
         /*4.1) get in out stream number*/
         inbound_stream = std::min(read_outbound_stream(init_cid), get_local_inbound_stream());
@@ -1454,7 +1454,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
      *      Handle a COOKIE ECHO when a TCB Exists */
     else
     {
-        EVENTLOG(INTERNAL_TRACE, "come into branch at process_init_chunk() -> if(smctrl != NULL)!");
+        EVENTLOG(VERBOSE, "come into branch at process_init_chunk() -> if(smctrl != NULL)!");
 
         ChannelState channel_state = smctrl->channel_state;
         EVENTLOG1(EXTERNAL_TRACE, "received INIT chunk in state %02u", channel_state);
@@ -1514,7 +1514,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                 /*compare if there is new addr presenting*/
                 for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
                 {
-                    for (uint inner = 0; inner < tmp_peer_addreslist_size_; inner++)
+                    for (int inner = 0; inner < tmp_peer_addreslist_size_; inner++)
                     {
                         if (!saddr_equals(curr_channel_->remote_addres + idx,
                                 tmp_peer_addreslist_ + inner))
@@ -1718,7 +1718,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                 /*compare if there is new addr presenting*/
                 for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
                 {
-                    for (uint inner = 0; inner < tmp_peer_addreslist_size_; inner++)
+                    for (int inner = 0; inner < tmp_peer_addreslist_size_; inner++)
                     {
                         if (!saddr_equals(curr_channel_->remote_addres + idx,
                                 tmp_peer_addreslist_ + inner))
@@ -2175,7 +2175,7 @@ uint dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
                 "get_local_addreslist(): found %u local addresses from INADDR_ANY (from %u)", count,
                 defaultlocaladdrlistsize_);
     }
-    else if (curr_geco_instance_->is_in6addr_any)
+    if (curr_geco_instance_->is_in6addr_any)
     {
         /* 4.2) geco instance has any addr 6 setup,
          * we use @param defaultlocaladdrlist_*/
@@ -2195,7 +2195,7 @@ uint dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
                     }
                 }
             }
-            else if (af == AF_INET6)
+           if (af == AF_INET6)
             {
                 if (addressTypes & SUPPORT_ADDRESS_TYPE_IPV6)
                 {
@@ -2840,7 +2840,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
         }
 
         /*4) validate received addresses in this chunk*/
-		switch (paratype)
+        switch (paratype)
         {
             case VLPARAM_IPV4_ADDRESS:
                 if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4))
@@ -2996,9 +2996,9 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                                         SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
                         size--;
                     }
-				EVENTLOG1(VERBOSE,
-						"Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
-						*peer_supported_addr_types);
+                    EVENTLOG1(VERBOSE,
+                            "Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
+                            *peer_supported_addr_types);
                 }
                 break;
         }
