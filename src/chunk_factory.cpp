@@ -45,14 +45,14 @@ uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata,
 }
 init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
         unsigned short noOutStreams, unsigned short noInStreams,
-        unsigned int initialTSN)
+        unsigned int initialTSN, uchar id)
 {
     init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
     INIT_CHUNK_TOTAL_SIZE, __FILE__,
     __LINE__);
     if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
-    initChunk->chunk_header.chunk_id = CHUNK_INIT;
+    initChunk->chunk_header.chunk_id = id;
     initChunk->chunk_header.chunk_flags = 0x00;
     initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
     initChunk->init_fixed.init_tag = htonl(initTag);
@@ -139,29 +139,29 @@ uint put_vlp_addrlist(uchar* vlp_start,
         ip_addr = (ip_address_t*) (vlp_start + length);
         switch (saddr_family(&(local_addreslist[i])))
         {
-        case AF_INET:
-            ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
-            ip_addr->vlparam_header.param_length = htons(
-                    sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
-            ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
-            assert(sizeof(struct in_addr) + VLPARAM_FIXED_SIZE == 8);
-            length += 8;
-            break;
-        case AF_INET6:
-            ip_addr->vlparam_header.param_type = htons(
-            VLPARAM_IPV6_ADDRESS);
-            ip_addr->vlparam_header.param_length = htons(
-                    sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
-            memcpy(&ip_addr->dest_addr_un.ipv6_addr,
-                    &(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
-            assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE ==20);
-            length += 20;
-            break;
-        default:
-            ERRLOG1(MAJOR_ERROR,
-                    "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
-                    saddr_family(&(local_addreslist[i])));
-            break;
+            case AF_INET:
+                ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
+                ip_addr->vlparam_header.param_length = htons(
+                        sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
+                ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
+                assert(sizeof(struct in_addr) + VLPARAM_FIXED_SIZE == 8);
+                length += 8;
+                break;
+            case AF_INET6:
+                ip_addr->vlparam_header.param_type = htons(
+                VLPARAM_IPV6_ADDRESS);
+                ip_addr->vlparam_header.param_length = htons(
+                        sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
+                memcpy(&ip_addr->dest_addr_un.ipv6_addr,
+                        &(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
+                assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE ==20);
+                length += 20;
+                break;
+            default:
+                ERRLOG1(MAJOR_ERROR,
+                        "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
+                        saddr_family(&(local_addreslist[i])));
+                break;
         }
     }
     return length;  // no need to align because MUST be 4 bytes aliged
@@ -226,9 +226,10 @@ int put_hmac(cookie_param_t* cookieString)
     MD5_CTX ctx;
     MD5Init(&ctx);
     MD5Update(&ctx, (uchar*) cookieString, cookieLength);
-    MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
+    //MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
     MD5Final(digest, &ctx);
     memcpy(cookieString->ck.hmac, digest, sizeof(cookieString->ck.hmac));
+    EVENTLOG1(VERBOSE, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
     return 0;
 }
 
@@ -256,30 +257,30 @@ void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
     {
         switch (saddr_family(&(local_Addresses[count])))
         {
-        case AF_INET:
-            no_local_ipv4_addresses++;
-            break;
-        case AF_INET6:
-            no_local_ipv6_addresses++;
-            break;
-        default:
-            ERRLOG(FALTAL_ERROR_EXIT, "write_cookie: Address Type Error !");
-            break;
+            case AF_INET:
+                no_local_ipv4_addresses++;
+                break;
+            case AF_INET6:
+                no_local_ipv6_addresses++;
+                break;
+            default:
+                ERRLOG(FALTAL_ERROR_EXIT, "write_cookie: Address Type Error !");
+                break;
         }
     }
     for (count = 0; count < num_peer_Addresses; count++)
     {
         switch (saddr_family(&(peer_Addresses[count])))
         {
-        case AF_INET:
-            no_remote_ipv4_addresses++;
-            break;
-        case AF_INET6:
-            no_remote_ipv6_addresses++;
-            break;
-        default:
-            ERRLOG(FALTAL_ERROR_EXIT, "write_cookie: Address Type Error !");
-            break;
+            case AF_INET:
+                no_remote_ipv4_addresses++;
+                break;
+            case AF_INET6:
+                no_remote_ipv6_addresses++;
+                break;
+            default:
+                ERRLOG(FALTAL_ERROR_EXIT, "write_cookie: Address Type Error !");
+                break;
         }
     }
     cookie->ck.no_local_ipv4_addresses = htons(no_local_ipv4_addresses);
@@ -288,4 +289,13 @@ void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
     cookie->ck.no_remote_ipv6_addresses = htons(no_remote_ipv6_addresses);
     cookie->ck.cookieLifetime = htonl(cookieLifetime);
     cookie->ck.sendingTime = htonl((uint) get_safe_time_ms());
+}
+
+uint put_vlp_cookie_life_span(cookie_preservative_t* preserv, unsigned int lifespanIncrement)
+{
+    ushort len = VLPARAM_FIXED_SIZE + sizeof(unsigned int);
+    preserv->vlparam_header.param_type = htons(VLPARAM_COOKIE_PRESEREASONV);
+    preserv->vlparam_header.param_length = htons(len);
+    preserv->cookieLifetimeInc = htonl(lifespanIncrement);
+    return len;
 }

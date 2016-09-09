@@ -81,7 +81,7 @@ extern uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata
  refer to 3.3.2.  Initiation (INIT) (1)
  */
 extern init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
-        unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN);
+        unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN, uchar id =CHUNK_INIT);
 extern void put_init_chunk_fixed(init_chunk_t* init,unsigned int initTag, unsigned int arwnd,
         unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN);
 
@@ -159,4 +159,5 @@ extern void put_vlp_cookie_fixed(cookie_param_t* cookie,
         ushort last_dest_port, ushort last_src_port,
         sockaddrunion local_Addresses[], uint num_local_Addresses,
         sockaddrunion peer_Addresses[], uint num_peer_Addresses);
+extern uint put_vlp_cookie_life_span(cookie_preservative_t* vlp_start, unsigned int lifespanIncrement);
 #endif

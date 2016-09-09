@@ -27,6 +27,7 @@ dispatch_layer_t::dispatch_layer_t()
     //send_abort_for_oob_packet_ = true;
     send_abort_ = false;
     enable_test_ = false;
+    ignore_cookie_life_spn_from_init_chunk_ = false;
 
     curr_channel_ = NULL;
     curr_geco_instance_ = NULL;
@@ -65,9 +66,9 @@ dispatch_layer_t::dispatch_layer_t()
 
     channels_.reserve(DEFAULT_ENDPOINT_SIZE);
     memset(tmp_local_addreslist_, 0,
-        MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
+    MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
     memset(tmp_peer_addreslist_, 0,
-        MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
+    MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
 
     simple_chunk_index_ = 0;
     memset(simple_chunks_, 0, MAX_CHUNKS_SIZE);
@@ -82,16 +83,16 @@ dispatch_layer_t::dispatch_layer_t()
 }
 
 int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
-    sockaddrunion * source_addr, sockaddrunion * dest_addr)
+        sockaddrunion * source_addr, sockaddrunion * dest_addr)
 {
     EVENTLOG3(NOTICE,
-        "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
-        dctp_packet_len, dctp_packet, socket_fd);
+            "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
+            dctp_packet_len, dctp_packet, socket_fd);
 
     /* 1) validate packet hdr size, checksum and if aligned 4 bytes */
-    if( ( dctp_packet_len & 3 ) != 0 || dctp_packet_len < MIN_GECO_PACKET_SIZE
-        || dctp_packet_len > MAX_GECO_PACKET_SIZE
-        || !gvalidate_checksum(dctp_packet, dctp_packet_len) )
+    if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_GECO_PACKET_SIZE
+            || dctp_packet_len > MAX_GECO_PACKET_SIZE
+            || !gvalidate_checksum(dctp_packet, dctp_packet_len))
     {
         EVENTLOG(NOTICE, "received corrupted datagramm -> discard");
         EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
@@ -103,7 +104,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     curr_geco_packet_ = (geco_packet_t*) dctp_packet;
     last_src_port_ = ntohs(curr_geco_packet_fixed_->src_port);
     last_dest_port_ = ntohs(curr_geco_packet_fixed_->dest_port);
-    if( last_src_port_ == 0 || last_dest_port_ == 0 )
+    if (last_src_port_ == 0 || last_dest_port_ == 0)
     {
         /* refers to RFC 4960 Section 3.1 at line 867 and line 874*/
         ERRLOG(NOTICE, "dispatch_layer_t:: invalid ports number (0)");
@@ -134,29 +135,33 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
      */
     should_discard_curr_geco_packet_ = false;
     dest_addr_type_ = saddr_family(dest_addr);
-    if( dest_addr_type_ == AF_INET )
+    if (dest_addr_type_ == AF_INET)
     {
         dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV4;  // peer snd us an IP4-formate address
         dest_addr->sin.sin_port = curr_geco_packet_fixed_->dest_port;
         ip4_saddr_ = ntohl(dest_addr->sin.sin_addr.s_addr);
 
-        if( IN_CLASSD(ip4_saddr_) )
+        if (IN_CLASSD(ip4_saddr_))
         {
             EVENTLOG(VERBOSE, "IN_CLASSD(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN_EXPERIMENTAL(ip4_saddr_) )
+        }
+        else if (IN_EXPERIMENTAL(ip4_saddr_))
         {
             EVENTLOG(VERBOSE, "IN_EXPERIMENTAL(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN_BADCLASS(ip4_saddr_) )
+        }
+        else if (IN_BADCLASS(ip4_saddr_))
         {
             EVENTLOG(VERBOSE, "IN_BADCLASS(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( INADDR_ANY == ip4_saddr_ )
+        }
+        else if ( INADDR_ANY == ip4_saddr_)
         {
             EVENTLOG(VERBOSE, "INADDR_ANY(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( INADDR_BROADCAST == ip4_saddr_ )
+        }
+        else if ( INADDR_BROADCAST == ip4_saddr_)
         {
             EVENTLOG(VERBOSE, "INADDR_BROADCAST(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
@@ -171,29 +176,34 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          * if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr))
          *  &&(source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr))
          *  should_discard_curr_geco_packet_ = true;*/
-    } else if( dest_addr_type_ == AF_INET6 )
+    }
+    else if (dest_addr_type_ == AF_INET6)
     {
         dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV6;  // peer snd us an IP6-formate address
         dest_addr->sin6.sin6_port = curr_geco_packet_fixed_->dest_port;
-        ip6_saddr_ = &( dest_addr->sin6.sin6_addr );
+        ip6_saddr_ = &(dest_addr->sin6.sin6_addr);
 
-        if( IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) )
+        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_UNSPECIFIED(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_IS_ADDR_MULTICAST(ip6_saddr_) )
+        }
+        else if (IN6_IS_ADDR_MULTICAST(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_MULTICAST(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_IS_ADDR_V4COMPAT(ip6_saddr_) )
+        }
+        else if (IN6_IS_ADDR_V4COMPAT(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4COMPAT(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_IS_ADDR_V4MAPPED(ip6_saddr_) )
+        }
+        else if (IN6_IS_ADDR_V4MAPPED(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4MAPPED(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_) )
+        }
+        else if (IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6ADDR_ANY(dest_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
@@ -208,37 +218,42 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          * IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
          * &(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true;
          */
-         //EVENTLOG1(VERBOSE, "filter out dest IPV6 addresses, discard(%d)",
-         //    should_discard_curr_geco_packet_);
-    } else
+        //EVENTLOG1(VERBOSE, "filter out dest IPV6 addresses, discard(%d)",
+        //    should_discard_curr_geco_packet_);
+    }
+    else
     {
         // we only supports IP archetecture either ip4 or ip6 so discard it
         EVENTLOG(VERBOSE, "AddrFamily(dest_addr) -> discard!");
         should_discard_curr_geco_packet_ = true;
     }
 
-    if( saddr_family(source_addr) == AF_INET )
+    if ( saddr_family(source_addr) == AF_INET)
     {
         source_addr->sin.sin_port = curr_geco_packet_fixed_->src_port;
         ip4_saddr_ = ntohl(source_addr->sin.sin_addr.s_addr);
 
-        if( IN_CLASSD(ip4_saddr_) )
+        if (IN_CLASSD(ip4_saddr_))
         {
             EVENTLOG(VERBOSE, "IN_CLASSD(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN_EXPERIMENTAL(ip4_saddr_) )
+        }
+        else if (IN_EXPERIMENTAL(ip4_saddr_))
         {
             EVENTLOG(VERBOSE, "IN_EXPERIMENTAL(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN_BADCLASS(ip4_saddr_) )
+        }
+        else if (IN_BADCLASS(ip4_saddr_))
         {
             EVENTLOG(VERBOSE, "IN_BADCLASS(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( INADDR_ANY == ip4_saddr_ )
+        }
+        else if ( INADDR_ANY == ip4_saddr_)
         {
             EVENTLOG(VERBOSE, "INADDR_ANY(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( INADDR_BROADCAST == ip4_saddr_ )
+        }
+        else if ( INADDR_BROADCAST == ip4_saddr_)
         {
             EVENTLOG(VERBOSE, "INADDR_BROADCAST(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
@@ -250,28 +265,33 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         //}
         //EVENTLOG1(VERBOSE, "filter out src addr->discard(%d)",
         //    should_discard_curr_geco_packet_);
-    } else if( saddr_family(source_addr) == AF_INET6 )
+    }
+    else if ( saddr_family(source_addr) == AF_INET6)
     {
         source_addr->sin6.sin6_port = curr_geco_packet_fixed_->src_port;
-        ip6_saddr_ = &( source_addr->sin6.sin6_addr );
+        ip6_saddr_ = &(source_addr->sin6.sin6_addr);
 
-        if( IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) )
+        if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_UNSPECIFIED(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_IS_ADDR_MULTICAST(ip6_saddr_) )
+        }
+        else if (IN6_IS_ADDR_MULTICAST(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_MULTICAST(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_IS_ADDR_V4COMPAT(ip6_saddr_) )
+        }
+        else if (IN6_IS_ADDR_V4COMPAT(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4COMPAT(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_IS_ADDR_V4MAPPED(ip6_saddr_) )
+        }
+        else if (IN6_IS_ADDR_V4MAPPED(ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6_IS_ADDR_V4MAPPED(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
-        } else if( IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_) )
+        }
+        else if (IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
         {
             EVENTLOG(VERBOSE, "IN6ADDR_ANY(source_addr) -> discard !");
             should_discard_curr_geco_packet_ = true;
@@ -285,7 +305,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         //}
         //EVENTLOG1(VERBOSE, "filter out src addr6 -> discard(%d)",
         //    should_discard_curr_geco_packet_);
-    } else
+    }
+    else
     {
         // we only supports IP archetecture either ip4 or ip6 so discard it
         EVENTLOG(VERBOSE, "AddrFamily((source_addr)) -> discard!");
@@ -295,16 +316,17 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     saddr2str(source_addr, src_addr_str_, MAX_IPADDR_STR_LEN, NULL);
     saddr2str(dest_addr, dest_addr_str_, MAX_IPADDR_STR_LEN, NULL);
 
-    if( should_discard_curr_geco_packet_ )
+    if (should_discard_curr_geco_packet_)
     {
         last_src_port_ = 0;
         last_dest_port_ = 0;
         EVENTLOG4(VERBOSE,
-            "discarding packet for incorrect address src addr : %s:%d, dest addr%s:%d",
-            src_addr_str_, last_src_port_, dest_addr_str_, last_dest_port_);
+                "discarding packet for incorrect address src addr : %s:%d, dest addr%s:%d",
+                src_addr_str_, last_src_port_, dest_addr_str_, last_dest_port_);
         EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
         return recv_geco_packet_but_addrs_formate_check_failed;
-    } else
+    }
+    else
     {
         // we can assign addr as they are good to use now
         last_source_addr_ = source_addr;
@@ -316,18 +338,19 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     // index in channel's remote addr list
     last_src_path_ = 0;
     curr_channel_ = find_channel_by_transport_addr(last_source_addr_, last_src_port_,
-        last_dest_port_);
-    if( curr_channel_ != NULL )
+            last_dest_port_);
+    if (curr_channel_ != NULL)
     {
         EVENTLOG(INFO, "Found channel !");
         /*5) get the sctp instance for this packet from channel*/
         curr_geco_instance_ = curr_channel_->geco_inst;
-        if( curr_geco_instance_ == NULL )
+        if (curr_geco_instance_ == NULL)
         {
             ERRLOG(MAJOR_ERROR,
-                "Foundchannel, but no geo Instance -> abort app -> FIXME imple errors !");
+                    "Foundchannel, but no geo Instance -> abort app -> FIXME imple errors !");
             return recv_geco_packet_but_found_channel_has_no_instance;
-        } else
+        }
+        else
         {
             my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
         }
@@ -340,8 +363,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     else
     {
         curr_geco_instance_ = find_geco_instance_by_transport_addr(last_dest_addr_,
-            last_dest_port_);
-        if( curr_geco_instance_ == NULL )
+                last_dest_port_);
+        if (curr_geco_instance_ == NULL)
         {
             /* 7) actually this is special case see validate_dest_addr() for details
              *  basically, the only reason we cannot find inst at this context is
@@ -350,32 +373,34 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
              */
             my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
             EVENTLOG3(VERBOSE,
-                "Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !",
-                src_addr_str_, last_dest_port_, my_supported_addr_types_);
-        } else
+                    "Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !",
+                    src_addr_str_, last_dest_port_, my_supported_addr_types_);
+        }
+        else
         {
             // use user sepecified supported addr types
             my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
             EVENTLOG3(VERBOSE,
-                "Find an Instance with dest addr %s:%u, user sepecified support addr types:%u !",
-                src_addr_str_, last_dest_port_, my_supported_addr_types_);
+                    "Find an Instance with dest addr %s:%u, user sepecified support addr types:%u !",
+                    src_addr_str_, last_dest_port_, my_supported_addr_types_);
         }
     }
 
     /* 8)now we can validate if dest_addr is in localaddress send ABORT + ECC_UNRESOLVED_ADDR */
     send_abort_ = false;
-    if( !validate_dest_addr(dest_addr) )
+    if (!validate_dest_addr(dest_addr))
     {
-        if( send_abort_ )
+        if (send_abort_)
         {
             curr_ecc_code_ = ECC_UNRESOLVABLE_ADDRESS;
             ip_address_t ipaddr;
-            if( dest_addr_type_ == AF_INET )
+            if (dest_addr_type_ == AF_INET)
             {
                 ipaddr.vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
                 ipaddr.vlparam_header.param_length = htons(12);
                 memcpy(&ipaddr.dest_addr_un.ipv4_addr, &last_dest_addr_->sin, 8);
-            } else
+            }
+            else
             {
                 ipaddr.vlparam_header.param_type = htons(VLPARAM_IPV6_ADDRESS);
                 ipaddr.vlparam_header.param_length = htons(24);
@@ -384,9 +409,10 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             curr_ecc_reason_ = (const char*) &ipaddr;
             curr_ecc_len_ = ERR_CAUSE_FIXED_SIZE + ntohs(ipaddr.vlparam_header.param_length);
             ERRLOG(MINOR_ERROR, "validate_dest_addr() failed "
-                "for invalid dest addr or port-> send ABORT with ecc unresolved addr error!");
+                    "for invalid dest addr or port-> send ABORT with ecc unresolved addr error!");
             goto SEND_ABORT;
-        } else
+        }
+        else
         {
             EVENTLOG(VERBOSE, "validate_dest_addr() failed -> discard it!");
             clear();
@@ -398,7 +424,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     last_veri_tag_ = ntohl(curr_geco_packet_->pk_comm_hdr.verification_tag);
     curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
     chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
-        &total_chunks_count_);
+            &total_chunks_count_);
     tmp_peer_addreslist_size_ = 0;
     curr_uchar_init_chunk_ = NULL;
 
@@ -406,29 +432,29 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
      * (see section 3.1 of RFC 4960 at line 931 init chunk MUST be the only chunk
      * in the  packet carrying it)*/
     init_chunk_num_ = contains_chunk(CHUNK_INIT, chunk_types_arr_);
-    if( init_chunk_num_ > 1 || /*only one int ack with other type chunks*/
-        ( init_chunk_num_ == 1 && total_chunks_count_ > 1 )/*there are repeated init ack chunks*/ )
+    if (init_chunk_num_ > 1 || /*only one int ack with other type chunks*/
+    (init_chunk_num_ == 1 && total_chunks_count_ > 1)/*there are repeated init ack chunks*/)
     {
         ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (init is not only one !)");
+                "recv_geco_packet(): discarding illegal packet (init is not only one !)");
         clear();
         return recv_geco_packet_but_morethanone_init;
     }
 
     init_chunk_num_ = contains_chunk(CHUNK_INIT_ACK, chunk_types_arr_);
-    if( init_chunk_num_ > 1 || ( init_chunk_num_ == 1 && total_chunks_count_ > 1 ) )
+    if (init_chunk_num_ > 1 || (init_chunk_num_ == 1 && total_chunks_count_ > 1))
     {
         ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (init ack is not only chunk!)");
+                "recv_geco_packet(): discarding illegal packet (init ack is not only chunk!)");
         clear();
         return recv_geco_packet_but_morethanone_init_ack;
     }
 
     init_chunk_num_ = contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_);
-    if( init_chunk_num_ > 1 || ( init_chunk_num_ == 1 && total_chunks_count_ > 1 ) )
+    if (init_chunk_num_ > 1 || (init_chunk_num_ == 1 && total_chunks_count_ > 1))
     {
         ERRLOG(MINOR_ERROR,
-            "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)");
+                "recv_geco_packet(): discarding illegal packet (shutdown complete is not the only chunk !)");
         clear();
         return recv_geco_packet_but_morethanone_shutdown_complete;
     }
@@ -439,49 +465,50 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
 
     /* founda matching channel using the source addr*/
     /* 11) try to find an existed channel for this packet from setup chunks */
-    if( curr_channel_ == NULL )
+    if (curr_channel_ == NULL)
     {
-        if( curr_geco_instance_ != NULL || is_there_at_least_one_equal_dest_port_ )
+        if (curr_geco_instance_ != NULL || is_there_at_least_one_equal_dest_port_)
         {
 
             curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk,
-                curr_geco_packet_value_len_,
-                CHUNK_INIT_ACK);
-            if( curr_uchar_init_chunk_ != NULL )
+                    curr_geco_packet_value_len_,
+                    CHUNK_INIT_ACK);
+            if (curr_uchar_init_chunk_ != NULL)
             {
                 tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
-                    curr_uchar_init_chunk_, curr_geco_packet_value_len_,
-                    my_supported_addr_types_) - 1;
-                for( ; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_-- )
+                        curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+                        my_supported_addr_types_) - 1;
+                for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
                 {
-                    if( ( curr_channel_ = find_channel_by_transport_addr(
-                        &tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
-                        last_dest_port_) ) != NULL )
+                    if ((curr_channel_ = find_channel_by_transport_addr(
+                            &tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
+                            last_dest_port_)) != NULL)
                     {
                         EVENTLOG(VERBOSE,
-                            "Found an existing channel  in INIT ACK chunk's addrlist vlp !");
+                                "Found an existing channel  in INIT ACK chunk's addrlist vlp !");
                         break;
                     }
                 }
-            } else  // as there is only one init chunk in an packet, we use else for efficiency
+            }
+            else  // as there is only one init chunk in an packet, we use else for efficiency
             {
                 curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk,
-                    curr_geco_packet_value_len_,
-                    CHUNK_INIT);
-                if( curr_uchar_init_chunk_ != NULL )
+                        curr_geco_packet_value_len_,
+                        CHUNK_INIT);
+                if (curr_uchar_init_chunk_ != NULL)
                 {
                     EVENTLOG(VERBOSE, "Looking for source address in INIT CHUNK");
                     tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
-                        curr_uchar_init_chunk_, curr_geco_packet_value_len_,
-                        my_supported_addr_types_) - 1;
-                    for( ; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_-- )
+                            curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+                            my_supported_addr_types_) - 1;
+                    for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
                     {
-                        if( ( curr_channel_ = find_channel_by_transport_addr(
-                            &tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
-                            last_dest_port_) ) != NULL )
+                        if ((curr_channel_ = find_channel_by_transport_addr(
+                                &tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
+                                last_dest_port_)) != NULL)
                         {
                             EVENTLOG(VERBOSE,
-                                "Found an existing channel in INIT chunk's addrlist vlp !");
+                                    "Found an existing channel in INIT chunk's addrlist vlp !");
                             break;
                         }
                     }
@@ -495,10 +522,10 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
              * still alive (this is why curr_channel_ becomes NOT NULL ).
              * anyway, use the previous channel to handle this packet
              */
-            if( curr_channel_ != NULL )
+            if (curr_channel_ != NULL)
             {
                 EVENTLOG(VERBOSE,
-                    "recv_geco_packet(): Found an existing channel from INIT (ACK) addrlist vlp");
+                        "recv_geco_packet(): Found an existing channel from INIT (ACK) addrlist vlp");
                 curr_geco_instance_ = curr_channel_->geco_inst;
                 my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
             }
@@ -506,7 +533,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(VERBOSE,
-                    "recv_geco_packet(): Not found an existing channel from INIT (ACK) addrlist vlp");
+                        "recv_geco_packet(): Not found an existing channel from INIT (ACK) addrlist vlp");
             }
 #endif
         }
@@ -517,31 +544,33 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
     is_found_abort_chunk_ = false;
 
     /* 13) process non-OOTB chunks that belong to a found channel */
-    if( curr_channel_ != NULL )
+    if (curr_channel_ != NULL)
     {
         EVENTLOG(VERBOSE, "Process non-OOTB chunks");
         /*13.1 validate curr_geco_instance_*/
-        if( curr_geco_instance_ == NULL )
+        if (curr_geco_instance_ == NULL)
         {
             curr_geco_instance_ = curr_channel_->geco_inst;
-            if( curr_geco_instance_ == NULL )
+            if (curr_geco_instance_ == NULL)
             {
                 ERRLOG(MAJOR_ERROR, "We have an Association, but no Instance, FIXME !");
                 clear();
                 return recv_geco_packet_but_found_channel_has_no_instance;
-            } else
+            }
+            else
             {
                 my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
                 EVENTLOG(VERBOSE, "Assign inst with the one from found channel!");
             }
-        } else if( curr_channel_->geco_inst != curr_geco_instance_ )
+        }
+        else if (curr_channel_->geco_inst != curr_geco_instance_)
         {
             // we found a previously-connected channel in 12) from setup chunk
             //  the instance it holds MUST == curr_geco_instance_
             ERRLOG(WARNNING_ERROR,
-                "We have an curr_channel_, but its Instance != found instance -> reset it!");
+                    "We have an curr_channel_, but its Instance != found instance -> reset it!");
             curr_geco_instance_ = curr_channel_->geco_inst;
-            if( curr_geco_instance_ == NULL )
+            if (curr_geco_instance_ == NULL)
             {
                 ERRLOG(MAJOR_ERROR, "We have an Association, but no Instance, FIXME !");
                 clear();
@@ -557,13 +586,13 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          Tag set to 0, it should verify that the packet contains only an
          INIT chunk.  Otherwise, the receiver MUST silently should_discard_curr_geco_packet_ the
          packet.*/
-        if( curr_uchar_init_chunk_ == NULL )  // we MAY have found it from 11) at line 290
-            curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk,
+        if (curr_uchar_init_chunk_ == NULL)  // we MAY have found it from 11) at line 290
+        curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk,
                 curr_geco_packet_value_len_, CHUNK_INIT);
 
         /*process_init_chunk() will furtherly handle this INIT chunk in the follwing method
          here we just validate some fatal errors*/
-        if( curr_uchar_init_chunk_ != NULL )
+        if (curr_uchar_init_chunk_ != NULL)
         {
             EVENTLOG(VERBOSE, "Find an INIT CHUNK");
 
@@ -573,24 +602,24 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
 
             // make sure init chunk has zero ver tag
             // last_init_tag_ has be aisigned a value at above
-            if( last_veri_tag_ != 0 )
+            if (last_veri_tag_ != 0)
             {
                 ERRLOG(MINOR_ERROR,
-                    "Found INIT chunk  in non-ootb-packet, but its verifi tag != 0 ->discard !");
+                        "Found INIT chunk  in non-ootb-packet, but its verifi tag != 0 ->discard !");
                 clear();
                 return recv_geco_packet_but_init_chunk_has_zero_verifi_tag;
             }
 
-            init_chunk_fixed_ = &( ( (init_chunk_t*) curr_uchar_init_chunk_ )->init_fixed );
+            init_chunk_fixed_ = &(((init_chunk_t*) curr_uchar_init_chunk_)->init_fixed);
             // if you need send ABORT later on
             // (i.e.for peer requests 0 streams), this give you the right tag
             last_init_tag_ = ntohl(init_chunk_fixed_->init_tag);
             EVENTLOG1(VERBOSE, "Its initiation-tag is %u", last_init_tag_);
 
             vlparam_fixed_ = (vlparam_fixed_t*) find_vlparam_from_setup_chunk(
-                curr_uchar_init_chunk_, curr_geco_packet_value_len_,
-                VLPARAM_HOST_NAME_ADDR);
-            if( vlparam_fixed_ != NULL )
+                    curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+                    VLPARAM_HOST_NAME_ADDR);
+            if (vlparam_fixed_ != NULL)
             {
                 EVENTLOG(VERBOSE, "Found VLPARAM_HOST_NAME_ADDR  ->  do dns");
                 // @TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parameters DNS QUERY
@@ -600,7 +629,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(VERBOSE,
-                    "Not found VLPARAM_HOST_NAME_ADDR from INIT CHUNK -> Not do DNS!");
+                        "Not found VLPARAM_HOST_NAME_ADDR from INIT CHUNK -> Not do DNS!");
             }
 #endif
         }
@@ -630,27 +659,28 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          when recv the second shutdown ack, we still need to
 
          */
-        if( contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0)
         {
             uchar* abortchunk = find_first_chunk_of(curr_geco_packet_->chunk,
-                curr_geco_packet_value_len_, CHUNK_ABORT);
-            bool is_tbit_set = ( ( (chunk_fixed_t*) abortchunk )->chunk_flags & 0x01 );
-            if( ( is_tbit_set && last_veri_tag_ == curr_channel_->remote_tag )
-                || ( !is_tbit_set && last_veri_tag_ == curr_channel_->local_tag ) )
+                    curr_geco_packet_value_len_, CHUNK_ABORT);
+            bool is_tbit_set = (((chunk_fixed_t*) abortchunk)->chunk_flags & 0x01);
+            if ((is_tbit_set && last_veri_tag_ == curr_channel_->remote_tag)
+                    || (!is_tbit_set && last_veri_tag_ == curr_channel_->local_tag))
             {
 #ifdef _DEBUG
                 EVENTLOG2(VERBOSE,
-                    "Found ABORT  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!",
-                    is_tbit_set, last_init_tag_);
+                        "Found ABORT  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!",
+                        is_tbit_set, last_init_tag_);
 #endif
                 is_found_abort_chunk_ = true;
-            } else
+            }
+            else
             {
                 clear();
                 EVENTLOG(NOTICE,
-                    "Found ABORT  in non-ootb-packet, but verifi tag is illegal-> discard !");
+                        "Found ABORT  in non-ootb-packet, but verifi tag is illegal-> discard !");
                 EVENTLOG(NOTICE,
-                    "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
+                        "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
                 return recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag;
             }
         }
@@ -668,33 +698,34 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          silently discard the packet and take no further action.
          An endpoint MUST ignore the SHUTDOWN COMPLETE if it is not in the
          SHUTDOWN-ACK-SENT state.*/
-        if( contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_) > 0)
         {
-            if( get_curr_channel_state() != ChannelState::ShutdownAckSent )
+            if (get_curr_channel_state() != ChannelState::ShutdownAckSent)
             {
                 EVENTLOG(VERBOSE, "Found SHUTDOWN_COMPLETE  in non-ootb-packet,"
-                    "at state other than SHUTDOWNACK_SENT -> discard !");
+                        "at state other than SHUTDOWNACK_SENT -> discard !");
                 clear();
                 return recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate;
             }
             uchar* shutdowncomplete = find_first_chunk_of(curr_geco_packet_->chunk,
-                curr_geco_packet_value_len_,
-                CHUNK_SHUTDOWN_COMPLETE);
-            bool is_tbit_set = ( ( (chunk_fixed_t*) shutdowncomplete )->chunk_flags & FLAG_TBIT_SET );
-            if( ( is_tbit_set && last_veri_tag_ == curr_channel_->remote_tag )
-                || ( !is_tbit_set && last_veri_tag_ == curr_channel_->local_tag ) )
+                    curr_geco_packet_value_len_,
+                    CHUNK_SHUTDOWN_COMPLETE);
+            bool is_tbit_set = (((chunk_fixed_t*) shutdowncomplete)->chunk_flags & FLAG_TBIT_SET);
+            if ((is_tbit_set && last_veri_tag_ == curr_channel_->remote_tag)
+                    || (!is_tbit_set && last_veri_tag_ == curr_channel_->local_tag))
             {
 #ifdef _DEBUG
                 EVENTLOG2(VERBOSE,
-                    "Found SHUTDOWN_COMPLETE  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!",
-                    is_tbit_set, last_init_tag_);
+                        "Found SHUTDOWN_COMPLETE  in non-ootb-packet, is_tbit_set(%u), last_init_tag_(%u)-> processing!",
+                        is_tbit_set, last_init_tag_);
 #endif
                 is_found_abort_chunk_ = true;
                 //reuse this variable to avoid veritag check at the end of this block codes
-            } else
+            }
+            else
             {
                 EVENTLOG(NOTICE,
-                    "Found SHUTDOWN_COMPLETE  in non-ootb-packet, but verifi tag is illegal-> discard !");
+                        "Found SHUTDOWN_COMPLETE  in non-ootb-packet, but verifi tag is illegal-> discard !");
                 clear();
                 return recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal;
             }
@@ -712,17 +743,17 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          SHUTDOWN ACK and set the T bit in the Chunk Flags to indicate
          that the Verification Tag is reflected.
          */
-        if( contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0)
         {
             uint state = get_curr_channel_state();
-            if( state == ChannelState::CookieEchoed || state == ChannelState::CookieWait )
+            if (state == ChannelState::CookieEchoed || state == ChannelState::CookieWait)
             {
                 EVENTLOG(NOTICE, "Found SHUTDOWN_ACK "
-                    " in non-ootb-packet  at state cookie echoed or cookie wait state, "
-                    "-> send SHUTDOWN_COMPLETE to the peer!");
+                        " in non-ootb-packet  at state cookie echoed or cookie wait state, "
+                        "-> send SHUTDOWN_COMPLETE to the peer!");
                 // should be treated as an Out Of The Blue packet. so use FLAG_TBIT_SET
                 uint shutdown_complete_cid = alloc_simple_chunk(
-                    CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
+                CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
                 simple_chunk_t_ptr_ = complete_simple_chunk(shutdown_complete_cid);
                 // this method will internally send all bundled chunks if exceeding packet max
                 lock_bundle_ctrl();
@@ -737,7 +768,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             else
             {
                 EVENTLOG(NOTICE, "Found SHUTDOWN_ACK in non-ootb-packet at state other than "
-                    "cookie echoed or cookie wait state -> processing!");
+                        "cookie echoed or cookie wait state -> processing!");
             }
 #endif
         }
@@ -750,7 +781,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          there are many deails in this case where we have to validate cookie jar,
          here we just print it out and process further in another dedicated method*/
 #ifdef _DEBUG
-        if( contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0)
         {
             EVENTLOG(VERBOSE, "Found CHUNK_COOKIE_ECHO in non-ootb-packet -> process further!");
         }
@@ -761,20 +792,20 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          If an INIT ACK is received by an endpoint in any state other than the
          COOKIE-WAIT state, the endpoint should discard it. An unexpected
          INIT ACK usually indicates the processing of an old or duplicated INIT chunk.*/
-        if( contains_chunk(CHUNK_INIT_ACK, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_INIT_ACK, chunk_types_arr_) > 0)
         {
-            if( get_curr_channel_state() != ChannelState::CookieWait )
+            if (get_curr_channel_state() != ChannelState::CookieWait)
             {
                 EVENTLOG(NOTICE,
-                    "Found INIT_ACK in non-ootb-packet at state other than COOKIE-WAIT -> should_discard_curr_geco_packet_!");
+                        "Found INIT_ACK in non-ootb-packet at state other than COOKIE-WAIT -> should_discard_curr_geco_packet_!");
                 clear();
                 return recv_geco_packet_but_nootb_initack_otherthan_cookiew_state;
             }
 
             vlparam_fixed_ = (vlparam_fixed_t*) find_vlparam_from_setup_chunk(
-                curr_uchar_init_chunk_, curr_geco_packet_value_len_,
-                VLPARAM_HOST_NAME_ADDR);
-            if( vlparam_fixed_ != NULL )
+                    curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+                    VLPARAM_HOST_NAME_ADDR);
+            if (vlparam_fixed_ != NULL)
             {
                 EVENTLOG(VERBOSE, "found VLPARAM_HOST_NAME_ADDR  -> DNS QUERY");
                 // @TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parameters
@@ -787,11 +818,11 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          // finally verify verifi tag in this packet
          // init chunj must has zero verifi tag value except of it
          // abort chunk has T bit set cannot that has its own filtering conditions */
-        if( !is_found_init_chunk_ && !is_found_abort_chunk_
-            && last_veri_tag_ != curr_channel_->local_tag )
+        if (!is_found_init_chunk_ && !is_found_abort_chunk_
+                && last_veri_tag_ != curr_channel_->local_tag)
         {
             ERRLOG(MINOR_ERROR, "found channel:non-ootb-packet:check verifi-tag:"
-                "this packet's verifi-tag != channel's local-tag -> discard !!");
+                    "this packet's verifi-tag != channel's local-tag -> discard !!");
             clear();
             return recv_geco_packet_but_nootb_packet_verifitag_illegal;
         }
@@ -799,10 +830,11 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         else
         {
             EVENTLOG(NOTICE, "found channel:non-ootb-packet:check verifi-tag:"
-                "this packet's verifi-tag == channel's local-tag -> start disassemble it!");
+                    "this packet's verifi-tag == channel's local-tag -> start disassemble it!");
         }
 #endif
-    } else  // (curr_channel_ == NULL)
+    }
+    else  // (curr_channel_ == NULL)
     {
         /* 14)
          * filtering and pre-process OOB chunks that have no channel found
@@ -814,7 +846,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          * If the OOTB packet contains an ABORT chunk, the receiver MUST
          * silently the OOTB packet and take no further action
          * no need to fetch ecc from it as at this moment we have not connected*/
-        if( contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0)
         {
             clear();
             EVENTLOG(NOTICE, "Found ABORT in ootb-packet, discarding it !");
@@ -830,13 +862,13 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          outbound packet with the Verification Tag received in the
          SHUTDOWN ACK and set the T bit in the Chunk Flags to indicate
          that the Verification Tag is reflected*/
-        if( contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0)
         {
             EVENTLOG(NOTICE, "Found SHUTDOWN_ACK in ootb-packet "
-                "-> send SHUTDOWN_COMPLETE and return!");
+                    "-> send SHUTDOWN_COMPLETE and return!");
 
             uint shutdown_complete_cid = alloc_simple_chunk(
-                CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
+            CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
             simple_chunk_t_ptr_ = complete_simple_chunk(shutdown_complete_cid);
             lock_bundle_ctrl();
             bundle_ctrl_chunk(simple_chunk_t_ptr_);
@@ -857,7 +889,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          this is good because when receiving st-cp chunk, the peer has finished
          shutdown pharse withdeleting TCB and all related data, channek is NULL
          is actually what we want*/
-        if( contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types_arr_) > 0)
         {
             EVENTLOG(NOTICE, "Found SHUTDOWN_COMPLETE in OOB packet, discard !");
             clear();
@@ -867,7 +899,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         /* 18)
          * Refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (7)
          * If th packet contains  a COOKIE ACK, the SCTP packet should be silently discarded*/
-        if( contains_chunk(CHUNK_COOKIE_ACK, chunk_types_arr_) > 0 )
+        if (contains_chunk(CHUNK_COOKIE_ACK, chunk_types_arr_) > 0)
         {
             EVENTLOG(NOTICE, "Found CHUNK_COOKIE_ACK  in OOB packet, discarding it!");
             clear();
@@ -877,8 +909,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         /* 19)
          * Refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (7)
          * If th packet contains a "Stale Cookie" ERROR, the SCTP packet should be silently discarded*/
-        if( contains_error_chunk(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
-            ECC_STALE_COOKIE_ERROR) )
+        if (contains_error_chunk(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+        ECC_STALE_COOKIE_ERROR))
         {
             EVENTLOG(NOTICE, "Found ECC_STALE_COOKIE_ERROR  in OOB packet,discarding it!");
             clear();
@@ -895,33 +927,33 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
          received INIT chunk, and the T bit of the ABORT chunk has to be
          set to 0, indicating that the Verification Tag is NOT reflected.*/
 
-         // if this packet has channel, codes in 11 if (curr_channel_ == NULL)
-         // at line 260 will not actually run, that is why we find it again here
-        if( curr_uchar_init_chunk_ == NULL ) curr_uchar_init_chunk_ = find_first_chunk_of(
-            curr_geco_packet_->chunk, curr_geco_packet_value_len_,
-            CHUNK_INIT);
-        if( curr_uchar_init_chunk_ != NULL )
+        // if this packet has channel, codes in 11 if (curr_channel_ == NULL)
+        // at line 260 will not actually run, that is why we find it again here
+        if (curr_uchar_init_chunk_ == NULL) curr_uchar_init_chunk_ = find_first_chunk_of(
+                curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+                CHUNK_INIT);
+        if (curr_uchar_init_chunk_ != NULL)
         {
             EVENTLOG(VERBOSE, "Found INIT CHUNK in OOB packet -> processing it");
-            if( last_veri_tag_ != 0 )
+            if (last_veri_tag_ != 0)
             {
                 EVENTLOG(NOTICE, " but verification_tag in INIT != 0 -> DISCARD! ");
                 return recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag;
             }
 
             // update last_init_tag_ with value of init tag carried in this chunk
-            init_chunk_fixed_ = &( ( (init_chunk_t*) curr_uchar_init_chunk_ )->init_fixed );
+            init_chunk_fixed_ = &(((init_chunk_t*) curr_uchar_init_chunk_)->init_fixed);
             last_init_tag_ = ntohl(init_chunk_fixed_->init_tag);
             EVENTLOG1(VERBOSE, "Found init_tag (%u) from INIT CHUNK", last_init_tag_);
 
             // we have an instance up listenning on that port just validate params
             // this is normal connection pharse
-            if( curr_geco_instance_ != NULL )
+            if (curr_geco_instance_ != NULL)
             {
-                if( curr_geco_instance_->local_port == 0 )
+                if (curr_geco_instance_->local_port == 0)
                 {
                     EVENTLOG(MAJOR_ERROR,
-                        "an instance found, but curr_geco_instance's local port is 0 -> discard !");
+                            "an instance found, but curr_geco_instance's local port is 0 -> discard !");
                     return recv_geco_packet_but_local_instance_has_zero_portnum;
                 }
 
@@ -930,20 +962,20 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
 #endif
 
                 vlparam_fixed_ = (vlparam_fixed_t*) find_vlparam_from_setup_chunk(
-                    curr_uchar_init_chunk_, curr_geco_packet_value_len_,
-                    VLPARAM_HOST_NAME_ADDR);
-                if( vlparam_fixed_ != NULL )
+                        curr_uchar_init_chunk_, curr_geco_packet_value_len_,
+                        VLPARAM_HOST_NAME_ADDR);
+                if (vlparam_fixed_ != NULL)
                 {
                     EVENTLOG(VERBOSE,
-                        "found VLPARAM_HOST_NAME_ADDR from INIT CHUNK --->  TODO DNS QUERY");
+                            "found VLPARAM_HOST_NAME_ADDR from INIT CHUNK --->  TODO DNS QUERY");
                     // TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parametersd.
                     do_dns_query_for_host_name_ = true;
                 }
 #ifdef _DEBUG
                 else
-                    EVENTLOG(VERBOSE, "Not VLPARAM_HOST_NAME_ADDR from INIT CHUNK ---> NOT DO DNS!");
+                EVENTLOG(VERBOSE, "Not VLPARAM_HOST_NAME_ADDR from INIT CHUNK ---> NOT DO DNS!");
                 EVENTLOG(VERBOSE,
-                    "---> Start to pass this INIT CHUNK to disassembl() for further processing!");
+                        "---> Start to pass this INIT CHUNK to disassembl() for further processing!");
 #endif
             }  // if (curr_geco_instance_ != NULL) at line 460
             else
@@ -960,26 +992,27 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                 curr_ecc_code_ = ECC_UNRESOLVABLE_ADDRESS;
                 send_abort_ = true;
                 ip_address_t ipaddr;
-                if( dest_addr_type_ == AF_INET )
+                if (dest_addr_type_ == AF_INET)
                 {
                     ipaddr.vlparam_header.param_type = htons(
-                        VLPARAM_IPV4_ADDRESS);
+                    VLPARAM_IPV4_ADDRESS);
                     ipaddr.vlparam_header.param_length = htons(12);
                     memcpy(&ipaddr.dest_addr_un.ipv4_addr, &last_dest_addr_->sin, 8);
-                } else
+                }
+                else
                 {
                     ipaddr.vlparam_header.param_type = htons(
-                        VLPARAM_IPV6_ADDRESS);
+                    VLPARAM_IPV6_ADDRESS);
                     ipaddr.vlparam_header.param_length = htons(24);
                     memcpy(&ipaddr.dest_addr_un.ipv6_addr, &last_dest_addr_->sin6, 20);
                 }
                 curr_ecc_reason_ = (const char*) &ipaddr;
                 curr_ecc_len_ = ERR_CAUSE_FIXED_SIZE + ntohs(ipaddr.vlparam_header.param_length);
                 ERRLOG2(MINOR_ERROR, "Not found an instance -> send ABORT with ECC_UNRESOLVED_ADDR",
-                    last_dest_port_, curr_geco_instance_->local_port);
+                        last_dest_port_, curr_geco_instance_->local_port);
             }
         }  // if (init_chunk != NULL) at line 458
-        else if( contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0 )
+        else if (contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0)
         {
             /* 21)
              * Refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (4)
@@ -988,13 +1021,13 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
             EVENTLOG(INTERNAL_TRACE, "Found CHUNK_COOKIE_ECHO in ootb packet -> processing it");
 
             // validate that cookie echo chunk must be the first chunk
-            if( ( (chunk_fixed_t*) ( curr_geco_packet_->chunk ) )->chunk_id != CHUNK_COOKIE_ECHO )
+            if (((chunk_fixed_t*) (curr_geco_packet_->chunk))->chunk_id != CHUNK_COOKIE_ECHO)
             {
                 EVENTLOG(VERBOSE, "but it is not the first chunk in the packet ---> discarding");
                 clear();
                 return recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk;
             }
-            if( curr_geco_instance_ == NULL )
+            if (curr_geco_instance_ == NULL)
             {  // cannot find inst for this packet, it does not belong to us. discard it!
                 EVENTLOG(VERBOSE, "but cannot found inst for it ---> discard");
                 clear();
@@ -1025,7 +1058,8 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
                  curr_ecc_reason_ = (const char*) &ipaddr;
                  */
             }
-        } else  //Found unecpected chunks in ootb packet
+        }
+        else  //Found unecpected chunks in ootb packet
         {
             /* 22)
              Refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (8)
@@ -1051,7 +1085,7 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
 
     SEND_ABORT:
     /*23) may send ABORT to the peer */
-    if( send_abort_ && curr_channel_ != NULL )
+    if (send_abort_ && curr_channel_ != NULL)
     {
         /*
          if (send_abort_)
@@ -1075,15 +1109,15 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
         EVENTLOG1(NOTICE, "Send ABORT for on-ootb packet with ecc code %u", curr_ecc_code_);
         uchar abort_cid = alloc_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
         simple_chunk_t_ptr_ = simple_chunks_[abort_cid];
-        if( curr_ecc_code_ != 0 )
+        if (curr_ecc_code_ != 0)
         {
-            error_cause_t* curr_ecc_ptr_ = (error_cause_t*) ( simple_chunk_t_ptr_->chunk_value );
+            error_cause_t* curr_ecc_ptr_ = (error_cause_t*) (simple_chunk_t_ptr_->chunk_value);
             curr_ecc_ptr_->error_reason_code = htons(curr_ecc_code_);
             curr_ecc_ptr_->error_reason_length = curr_ecc_len_;
             curr_write_pos_[abort_cid] += curr_ecc_ptr_->error_reason_length;
             curr_ecc_ptr_->error_reason_length = htons(curr_ecc_ptr_->error_reason_length);
-            if( curr_ecc_reason_ != 0 ) memcpy((char*) curr_ecc_ptr_->error_reason, curr_ecc_reason_,
-                curr_ecc_len_ - 4);
+            if (curr_ecc_reason_ != 0) memcpy((char*) curr_ecc_ptr_->error_reason, curr_ecc_reason_,
+                    curr_ecc_len_ - 4);
         }
         simple_chunk_t_ptr_ = complete_simple_chunk(abort_cid);
         lock_bundle_ctrl();
@@ -1110,15 +1144,15 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
 {
 #if defined(_DEBUG)
 #if ENABLE_UNIT_TEST
-    if( enable_mock_dispatcher_disassemle_curr_geco_packet_ )
+    if (enable_mock_dispatcher_disassemle_curr_geco_packet_)
     {
         EVENTLOG(DEBUG, "Mock::dispatch_layer_t::disassemle_curr_geco_packet() is called");
         return 0;
     }
 #else
     EVENTLOG2(DEBUG,
-        "- - - ENTER dispatch_layer_t::disassemle_curr_geco_packet():last_src_path_ %u,packetvallen %u",
-        last_src_path_, curr_geco_packet_value_len_);
+            "- - - ENTER dispatch_layer_t::disassemle_curr_geco_packet():last_src_path_ %u,packetvallen %u",
+            last_src_path_, curr_geco_packet_value_len_);
 #endif
 #endif
 
@@ -1127,12 +1161,12 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
     simple_chunk_t* chunk;
 
     lock_bundle_ctrl();
-    while( read_len < curr_geco_packet_value_len_ )
+    while (read_len < curr_geco_packet_value_len_)
     {
-        if( curr_geco_packet_value_len_ - read_len < CHUNK_FIXED_SIZE )
+        if (curr_geco_packet_value_len_ - read_len < CHUNK_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
+                    "dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
             unlock_bundle_ctrl(&last_src_path_);
             return -1;
         }
@@ -1140,12 +1174,12 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
         chunk = (simple_chunk_t *) curr_pos;
         chunk_len = ntohs(chunk->chunk_header.chunk_length);
         EVENTLOG2(VERBOSE, "starts process chunk with read_len %u,chunk_len %u", read_len,
-            chunk_len);
+                chunk_len);
 
-        if( chunk_len < CHUNK_FIXED_SIZE || chunk_len + read_len > curr_geco_packet_value_len_ )
+        if (chunk_len < CHUNK_FIXED_SIZE || chunk_len + read_len > curr_geco_packet_value_len_)
         {
             EVENTLOG(WARNNING_ERROR,
-                "dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
+                    "dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
             unlock_bundle_ctrl(&last_src_path_);
             return -1;
         }
@@ -1158,7 +1192,7 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
          */
         bool data_chunk_received = false;
         int handle_ret = ChunkProcessResult::Good;
-        switch( chunk->chunk_header.chunk_id )
+        switch (chunk->chunk_header.chunk_id)
         {
             case CHUNK_DATA:
                 EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_DATA");
@@ -1189,7 +1223,7 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
                  11 - Skip this chunk and continue processing,
                  but report in an ERROR Chunk using the 'Unrecognized Chunk Type' cause of error.
                  0XC0 = 11000000 */
-                switch( (uchar) ( chunk->chunk_header.chunk_id & 0xC0 ) )
+                switch ((uchar) (chunk->chunk_header.chunk_id & 0xC0))
                 {
                     case 0x0:  //00
                         read_len = curr_geco_packet_value_len_;
@@ -1201,18 +1235,21 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
                         read_len = curr_geco_packet_value_len_;
                         //todo
                         handle_ret = send_error_chunk_unrecognized_chunk_type((uchar*) chunk,
-                            chunk_len);
+                                chunk_len);
 #ifdef _DEBUG
-                        EVENTLOG(DEBUG, "Unknown chunktype ->  01 - Stop processing, discard it and eport");
+                        EVENTLOG(DEBUG,
+                                "Unknown chunktype ->  01 - Stop processing, discard it and eport");
 #endif
                         break;
                     case 0x80:  //10
-                        EVENTLOG(DEBUG, "Unknown chunktype ->  10 - Skip this chunk and continue processing.");
+                        EVENTLOG(DEBUG,
+                                "Unknown chunktype ->  10 - Skip this chunk and continue processing.");
                         break;
                     case 0xC0:  //11
-                        EVENTLOG(DEBUG, " Unknown chunktype -> 11 Skip this chunk and continue processing");
+                        EVENTLOG(DEBUG,
+                                " Unknown chunktype -> 11 Skip this chunk and continue processing");
                         handle_ret = send_error_chunk_unrecognized_chunk_type((uchar*) chunk,
-                            chunk_len);
+                                chunk_len);
                         break;
                     default:  // never reach here
                         ERRLOG(MINOR_ERROR, "unfound chuntype flag !");
@@ -1222,11 +1259,11 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
         }
         //unlock_bundle_ctrl();
         read_len += chunk_len;
-        while( read_len & 3 )
+        while (read_len & 3)
             ++read_len;
         curr_pos = curr_geco_packet_->chunk + read_len;
-        if( handle_ret != ChunkProcessResult::Good )  // to break whileloop
-            read_len = curr_geco_packet_value_len_;
+        if (handle_ret != ChunkProcessResult::Good)  // to break whileloop
+        read_len = curr_geco_packet_value_len_;
         EVENTLOG2(VERBOSE, "end process chunk with read_len %u,chunk_len %u", read_len, chunk_len);
         //TODO
     }
@@ -1248,7 +1285,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 {
 #if defined(_DEBUG)
 #if ENABLE_UNIT_TEST
-    if( enable_mock_dispatcher_process_init_chunk_ )
+    if (enable_mock_dispatcher_process_init_chunk_)
     {
         EVENTLOG(DEBUG, "Mock::dispatch_layer_t::disassemle_curr_geco_packet() is called");
         return 0;
@@ -1261,7 +1298,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     /*1) put init chunk into chunk  array */
     uint ret = ChunkProcessResult::Good;
     uchar init_cid = alloc_simple_chunk((simple_chunk_t*) init);
-    if( get_simple_chunk_id(init_cid) != CHUNK_INIT )
+    if (get_simple_chunk_id(init_cid) != CHUNK_INIT)
     {
         ERRLOG(MAJOR_ERROR, "1) put init chunk into chunk  array : [wrong chunk type]");
         remove_simple_chunk(init_cid);
@@ -1274,11 +1311,11 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     /*2) validate init params*/
     uchar abortcid;
     state_machine_controller_t* smctrl = get_state_machine_controller();
-    if( !read_outbound_stream(init_cid) || !read_inbound_stream(init_cid)
-        || !read_init_tag(init_cid) )
+    if (!read_outbound_stream(init_cid) || !read_inbound_stream(init_cid)
+            || !read_init_tag(init_cid))
     {
         EVENTLOG(DEBUG,
-            "2) validate init params [zero streams  or zero init TAG] -> send abort ");
+                "2) validate init params [zero streams  or zero init TAG] -> send abort ");
 
         /*2.1) make and send ABORT with ecc*/
         abortcid = alloc_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
@@ -1289,7 +1326,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
         /*2.2) delete all data of this channel,
          * smctrl != NULL means current channel MUST exist at this moment */
-        if( smctrl != NULL )
+        if (smctrl != NULL)
         {
             /* only when channel presents, unlock makes sense.
              * as the data transfer only happenswhen channel established*/
@@ -1303,18 +1340,19 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     }
 
     /*3) validate source addr */
-    if( last_source_addr_ == NULL )
+    if (last_source_addr_ == NULL)
     {
         /* 3.1) delete all data of this channel,
          * smctrl != NULL means current channel MUST exist at this moment */
-        if( smctrl == NULL )
+        if (smctrl == NULL)
         {
             clear_current_channel();
             ret = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
             return ret;
-        } else
+        }
+        else
         {
-            if( smctrl->init_timer_id->timer_id != 0 )
+            if (smctrl->init_timer_id->timer_id != 0)
             {
                 timer_mgr_.delete_timer(smctrl->init_timer_id);
             }
@@ -1325,7 +1363,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
             ret = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
             return ret;
         }
-    } else
+    }
+    else
     {
         memcpy(&tmp_addr_, last_source_addr_, sizeof(sockaddrunion));
     }
@@ -1341,7 +1380,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
      * which lead to unexpected INIT sent to an endpoint without existing assciation)
      * 2) RFC 4960 - 5.1.Normal Establishment of an Association - (B)
      * "Z" shall respond immediately with an INIT ACK chunk.*/
-    if( smctrl == NULL )
+    if (smctrl == NULL)
     {
         EVENTLOG(DEBUG, "Process ootb INIT chunk");
 
@@ -1352,38 +1391,44 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
         /* 4.2) alloc init ack chunk, init tag used as init tsn */
         init_tag = generate_init_tag();
         init_ack_cid = alloc_init_ack_chunk(init_tag, curr_geco_instance_->default_myRwnd,
-            outbound_stream, inbound_stream, init_tag);
+                outbound_stream, inbound_stream, init_tag);
 
         /*4.3) read and validate peer addrlist carried in the received init chunk*/
         assert(my_supported_addr_types_ != 0);
         tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_, (uchar*) init,
-            curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_);
-        if( ( my_supported_addr_types_ & tmp_peer_supported_types_ ) == 0 )
-            ERRLOG(FALTAL_ERROR_EXIT,
+                curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_);
+        if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
+        ERRLOG(FALTAL_ERROR_EXIT,
                 "BAKEOFF: Program error, no common address types in process_init_chunk()");
 
         /*4.4) get local addr list and append them to INIT ACK*/
         tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_, last_source_addr_,
-            1, tmp_peer_supported_types_, true);
-        enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
+                1, tmp_peer_supported_types_, true);
+        if (tmp_local_addreslist_size_ > 1)
+        {
+            // if ==1 mus be last dest addr, as we will put it as src addr in outgoing ip header
+            // so do not copy it to avoid repeated addr
+            enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
+        }
 
         /*4.5) generate and append cookie to INIT ACK*/
         write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid), get_init_fixed(init_ack_cid),
-            get_cookie_lifespan(init_cid), 0, 0, /* normal case: no existing channel, set both zero*/
-            last_dest_port_, last_src_port_, tmp_local_addreslist_, tmp_local_addreslist_size_,
-            tmp_peer_addreslist_, tmp_peer_addreslist_size_);
+                get_cookie_lifespan(init_cid), 0, 0, /* normal case: no existing channel, set both zero*/
+                last_dest_port_, last_src_port_, tmp_local_addreslist_, tmp_local_addreslist_size_,
+                tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
         /* 4.6) check unrecognized params*/
         int rett = process_unknown_params_from_init_chunk(init_cid, init_ack_cid,
-            my_supported_addr_types_);
-        if( rett < 0 )
+                my_supported_addr_types_);
+        if (rett < 0)
         {
             /* peer's init has chunk length error ververy bad error!,
              * we should discard peer's connection by not bunding init ack*/
             ret = ChunkProcessResult::Stop;
-        } else
+        }
+        else
         {
-            if( rett != 0 )
+            if (rett != 0)
             {
                 /* as specified in rfc 4960, when the init from peer hasunkown params,
                  * we should discard peer's connection by not bunding init ack*/
@@ -1391,7 +1436,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                 free_simple_chunk(init_ack_cid);
                 remove_simple_chunk(init_cid);
                 return ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
-            } else
+            }
+            else
             {
                 /* param type has  skip prcessing set, so we just skip it*/
                 ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
@@ -1426,7 +1472,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
         //my_supported_addr_types_;
         uint init_i_sent_cid;
         int rett;
-        switch( channel_state )
+        switch (channel_state)
         {
             /* 5)
              RFC 4960-5.2.1.INIT Received in COOKIE-WAIT or COOKIE-ECHOED State
@@ -1456,35 +1502,35 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                  its Tie-Tags within both the association TCB and inside the State
                  Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
 
-                 /* 5.2) validate tie tags NOT zeros */
-                if( smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0 )
+                /* 5.2) validate tie tags NOT zeros */
+                if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
                 {
                     ERRLOG2(FALTAL_ERROR_EXIT,
-                        "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
-                        smctrl->local_tie_tag, smctrl->peer_tie_tag);
+                            "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
+                            smctrl->local_tie_tag, smctrl->peer_tie_tag);
                 }
 
                 /*5.2) validate no new addr aaded from the newly received INIT */
                 /* read and validate peer addrlist carried in the received init chunk*/
                 assert(my_supported_addr_types_ != 0);
                 tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
-                    (uchar*) init,
-                    curr_geco_packet_value_len_, my_supported_addr_types_,
-                    &tmp_peer_supported_types_);
-                if( ( my_supported_addr_types_ & tmp_peer_supported_types_ ) == 0 )
-                    ERRLOG(FALTAL_ERROR_EXIT,
+                        (uchar*) init,
+                        curr_geco_packet_value_len_, my_supported_addr_types_,
+                        &tmp_peer_supported_types_);
+                if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
+                ERRLOG(FALTAL_ERROR_EXIT,
                         "BAKEOFF: Program error, no common address types in process_init_chunk()");
 
                 /*compare if there is new addr presenting*/
-                for( uint idx = 0; idx < curr_channel_->remote_addres_size; idx++ )
+                for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
                 {
-                    for( int inner = 0; inner < tmp_peer_addreslist_size_; inner++ )
+                    for (int inner = 0; inner < tmp_peer_addreslist_size_; inner++)
                     {
-                        if( !saddr_equals(curr_channel_->remote_addres + idx,
-                            tmp_peer_addreslist_ + inner) )
+                        if (!saddr_equals(curr_channel_->remote_addres + idx,
+                                tmp_peer_addreslist_ + inner))
                         {
                             EVENTLOG(VERBOSE,
-                                "new addr found in received INIT at CookieEchoed state -> discard !");
+                                    "new addr found in received INIT at CookieEchoed state -> discard !");
                             /* remove NOT free INIT CHUNK before return */
                             remove_simple_chunk(init_cid);
                             return ChunkProcessResult::StopProcessInitChunk_NewAddrAddedError;
@@ -1501,58 +1547,60 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
                 /*5.4) get in out stream number*/
                 inbound_stream = std::min(read_outbound_stream(init_cid),
-                    get_local_inbound_stream());
+                        get_local_inbound_stream());
                 outbound_stream = std::min(read_inbound_stream(init_cid),
-                    get_local_outbound_stream());
+                        get_local_outbound_stream());
 
                 /*5.5) an INIT ACK using the same parameters it sent in its
                  original INIT chunk (including its Initiate Tag, unchanged) */
-                if( smctrl->my_init_chunk == NULL )
-                    ERRLOG(FALTAL_ERROR_EXIT, "smctrl->my_init_chunk == NULL !");
+                if (smctrl->my_init_chunk == NULL)
+                ERRLOG(FALTAL_ERROR_EXIT, "smctrl->my_init_chunk == NULL !");
 
                 /* make and fills init ack*/
                 init_ack_cid = alloc_init_ack_chunk(smctrl->my_init_chunk->init_fixed.init_tag,
-                    smctrl->my_init_chunk->init_fixed.rwnd,
-                    smctrl->my_init_chunk->init_fixed.outbound_streams,
-                    smctrl->my_init_chunk->init_fixed.inbound_streams,
-                    smctrl->my_init_chunk->init_fixed.initial_tsn);
+                        smctrl->my_init_chunk->init_fixed.rwnd,
+                        smctrl->my_init_chunk->init_fixed.outbound_streams,
+                        smctrl->my_init_chunk->init_fixed.inbound_streams,
+                        smctrl->my_init_chunk->init_fixed.initial_tsn);
 
                 /*5.6) get local addr list and append them to INIT ACK*/
                 tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_,
-                    last_source_addr_, 1, tmp_peer_supported_types_, true);
+                        last_source_addr_, 1, tmp_peer_supported_types_, true);
                 enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
                 /*5.7) generate and append cookie to INIT ACK*/
                 write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid),
-                    get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
-                    /* unexpected case: existing channel found, set both NOT zero*/
-                    smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_,
-                    last_src_port_,
-                    tmp_local_addreslist_, tmp_local_addreslist_size_, tmp_peer_addreslist_,
-                    tmp_peer_addreslist_size_);
+                        get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
+                        /* unexpected case: existing channel found, set both NOT zero*/
+                        smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_,
+                        last_src_port_,
+                        tmp_local_addreslist_, tmp_local_addreslist_size_, tmp_peer_addreslist_,
+                        tmp_peer_addreslist_size_);
 
                 /* 5.8) check unrecognized params */
                 rett = process_unknown_params_from_init_chunk(init_cid, init_ack_cid,
-                    my_supported_addr_types_);
-                if( rett < 0 )
+                        my_supported_addr_types_);
+                if (rett < 0)
                 {
                     /* 5.9) peer's init chunk has icorrect chunk length,
                      * discard peer's connection by not bunding init ack*/
                     free_simple_chunk(init_ack_cid);
                     ret = ChunkProcessResult::Stop;
-                } else
+                }
+                else
                 {
                     /* 5.10) MUST send INIT ACK caried unknown params to the peer
                      * if he has unknown params in its init chunk
                      * as we SHOULD let peer's imple to finish the
                      * unnormal connection handling precedures*/
 
-                    if( rett != 0 )
+                    if (rett != 0)
                     {
                         free_simple_chunk(init_ack_cid);
                         remove_simple_chunk(init_cid);
                         return ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
-                    } else
+                    }
+                    else
                     {
                         ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                     }
@@ -1577,10 +1625,10 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                  responding, the endpoint MUST send the INIT ACK back to the same
                  address that the original INIT (sent by this endpoint) was sent.*/
 
-                if( smctrl->local_tie_tag != 0 || smctrl->peer_tie_tag != 0 )
+                if (smctrl->local_tie_tag != 0 || smctrl->peer_tie_tag != 0)
                 {
                     ERRLOG2(FALTAL_ERROR_EXIT, "Tie tags NOT zero in COOKIE_WAIT, but %u and %u",
-                        smctrl->local_tie_tag, smctrl->peer_tie_tag);
+                            smctrl->local_tie_tag, smctrl->peer_tie_tag);
                 }
 
                 /* reassign to zeros means no existing channel founs in this state */
@@ -1589,45 +1637,47 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
                 /* make and fills init ack*/
                 init_ack_cid = alloc_init_ack_chunk(smctrl->my_init_chunk->init_fixed.init_tag,
-                    smctrl->my_init_chunk->init_fixed.rwnd,
-                    smctrl->my_init_chunk->init_fixed.outbound_streams,
-                    smctrl->my_init_chunk->init_fixed.inbound_streams,
-                    smctrl->my_init_chunk->init_fixed.initial_tsn);
+                        smctrl->my_init_chunk->init_fixed.rwnd,
+                        smctrl->my_init_chunk->init_fixed.outbound_streams,
+                        smctrl->my_init_chunk->init_fixed.inbound_streams,
+                        smctrl->my_init_chunk->init_fixed.initial_tsn);
 
                 /*6.6) get local addr list and append them to INIT ACK*/
                 tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_,
-                    last_source_addr_, 1, tmp_peer_supported_types_, true);
+                        last_source_addr_, 1, tmp_peer_supported_types_, true);
                 enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
                 /*6.7) generate and append cookie to INIT ACK*/
                 write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid),
-                    get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
-                    /* unexpected case: existing channel found, set both NOT zero*/
-                    smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_,
-                    last_src_port_,
-                    tmp_local_addreslist_, tmp_local_addreslist_size_, tmp_peer_addreslist_,
-                    tmp_peer_addreslist_size_);
+                        get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
+                        /* unexpected case: existing channel found, set both NOT zero*/
+                        smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_,
+                        last_src_port_,
+                        tmp_local_addreslist_, tmp_local_addreslist_size_, tmp_peer_addreslist_,
+                        tmp_peer_addreslist_size_);
 
                 /* 6.8) check unrecognized params*/
                 rett = process_unknown_params_from_init_chunk(init_cid, init_ack_cid,
-                    my_supported_addr_types_);
-                if( rett < 0 )
+                        my_supported_addr_types_);
+                if (rett < 0)
                 {
                     /* 6.9) peer's init chunk has icorrect chunk length,
                      * discard peer's connection by not bunding init ack*/
                     free_simple_chunk(init_ack_cid);
                     remove_simple_chunk(init_cid);
                     return ChunkProcessResult::Stop;
-                } else
+                }
+                else
                 {
                     /* 6.10) MUST send INIT ACK caried unknown params to the peer
                      * if he has unknown params in its init chunk
                      * as we SHOULD let peer's imple to finish the
                      * unnormal connection handling precedures*/
-                    if( rett != 0 )
+                    if (rett != 0)
                     {
                         ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
-                    } else
+                    }
+                    else
                     {
                         ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                     }
@@ -1635,7 +1685,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                     /* send all bundled chunks to ensure init ack is the only chunk sent
                      * in the whole geco packet*/
                     EVENTLOG1(VERBOSE, "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)",
-                        get_bundle_total_size(get_bundle_controller()));
+                            get_bundle_total_size(get_bundle_controller()));
                     unlock_bundle_ctrl();
                     send_bundled_chunks();
 
@@ -1654,37 +1704,37 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                  Cookie.  Before responding, the endpoint MUST check to see if the
                  unexpected INIT adds new addresses to the association.*/
             case ChannelState::Connected:
-            case ChannelState::ShutdownPending:
-            case ChannelState::ShutdownSent:
+                case ChannelState::ShutdownPending:
+                case ChannelState::ShutdownSent:
                 /* 7.1) validate tie tags NOT zeros */
-                if( smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0 )
+                if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
                 {
                     ERRLOG2(FALTAL_ERROR_EXIT,
-                        "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
-                        smctrl->local_tie_tag, smctrl->peer_tie_tag);
+                            "a zero Tie tag in Cookie Echoed state, local %u and peer %u",
+                            smctrl->local_tie_tag, smctrl->peer_tie_tag);
                 }
 
                 /*7.2) validate no new addr aaded from the newly received INIT */
                 /* read and validate peer addrlist carried in the received init chunk*/
                 assert(my_supported_addr_types_ != 0);
                 tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
-                    (uchar*) init,
-                    curr_geco_packet_value_len_, my_supported_addr_types_,
-                    &tmp_peer_supported_types_);
-                if( ( my_supported_addr_types_ & tmp_peer_supported_types_ ) == 0 )
-                    ERRLOG(FALTAL_ERROR_EXIT,
+                        (uchar*) init,
+                        curr_geco_packet_value_len_, my_supported_addr_types_,
+                        &tmp_peer_supported_types_);
+                if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
+                ERRLOG(FALTAL_ERROR_EXIT,
                         "BAKEOFF: Program error, no common address types in process_init_chunk()");
 
                 /*compare if there is new addr presenting*/
-                for( uint idx = 0; idx < curr_channel_->remote_addres_size; idx++ )
+                for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
                 {
-                    for( int inner = 0; inner < tmp_peer_addreslist_size_; inner++ )
+                    for (int inner = 0; inner < tmp_peer_addreslist_size_; inner++)
                     {
-                        if( !saddr_equals(curr_channel_->remote_addres + idx,
-                            tmp_peer_addreslist_ + inner) )
+                        if (!saddr_equals(curr_channel_->remote_addres + idx,
+                                tmp_peer_addreslist_ + inner))
                         {
                             EVENTLOG(VERBOSE,
-                                "new addr found in received INIT at CookieEchoed state -> discard !");
+                                    "new addr found in received INIT at CookieEchoed state -> discard !");
                             /* remove NOT free INIT CHUNK before return */
                             remove_simple_chunk(init_cid);
                             return ChunkProcessResult::StopProcessInitChunk_NewAddrAddedError;
@@ -1694,9 +1744,9 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
                 /*7.2) get in out stream number*/
                 inbound_stream = std::min(read_outbound_stream(init_cid),
-                    get_local_inbound_stream());
+                        get_local_inbound_stream());
                 outbound_stream = std::min(read_inbound_stream(init_cid),
-                    get_local_outbound_stream());
+                        get_local_outbound_stream());
 
                 /* 7.3) prepare init ack
                  -the INIT ACK MUST contain a new Initiate Tag(randomly generated;
@@ -1706,53 +1756,55 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                  the INIT ACK and cookie.*/
                 init_tag = generate_init_tag();  // todo use safe generate_init_tag
                 init_ack_cid = alloc_init_ack_chunk(init_tag,
-                    curr_channel_->receive_control->curr_rwnd,
-                    curr_channel_->deliverman_control->numSendStreams,
-                    curr_channel_->deliverman_control->numReceiveStreams,
-                    smctrl->my_init_chunk->init_fixed.initial_tsn);
+                        curr_channel_->receive_control->curr_rwnd,
+                        curr_channel_->deliverman_control->numSendStreams,
+                        curr_channel_->deliverman_control->numReceiveStreams,
+                        smctrl->my_init_chunk->init_fixed.initial_tsn);
 
                 /*7.4) get local addr list and append them to INIT ACK*/
                 tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_,
-                    last_source_addr_, 1, tmp_peer_supported_types_, true);
+                        last_source_addr_, 1, tmp_peer_supported_types_, true);
                 enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
                 /*6.7) generate and append cookie to INIT ACK*/
                 write_cookie(init_cid, init_ack_cid, get_init_fixed(init_cid),
-                    get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
-                    /* unexpected case:  channel existing, set both NOT zero*/
-                    smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_,
-                    last_src_port_,
-                    tmp_local_addreslist_, tmp_local_addreslist_size_, tmp_peer_addreslist_,
-                    tmp_peer_addreslist_size_);
+                        get_init_fixed(init_ack_cid), get_cookie_lifespan(init_cid),
+                        /* unexpected case:  channel existing, set both NOT zero*/
+                        smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_,
+                        last_src_port_,
+                        tmp_local_addreslist_, tmp_local_addreslist_size_, tmp_peer_addreslist_,
+                        tmp_peer_addreslist_size_);
 
                 /* 6.8) check unrecognized params*/
                 rett = process_unknown_params_from_init_chunk(init_cid, init_ack_cid,
-                    my_supported_addr_types_);
-                if( rett < 0 )
+                        my_supported_addr_types_);
+                if (rett < 0)
                 {
                     /* 6.9) peer's init chunk has icorrect chunk length,
                      * discard peer's connection by not bunding init ack*/
                     free_simple_chunk(init_ack_cid);
                     ret = ChunkProcessResult::Stop;
-                } else
+                }
+                else
                 {
                     /* 6.10) MUST send INIT ACK caried unknown params to the peer
                      * if he has unknown params in its init chunk
                      * as we SHOULD let peer's imple to finish the
                      * unnormal connection handling precedures*/
 
-                    if( rett != 0 )
+                    if (rett != 0)
                     {
                         ret = ChunkProcessResult::StopProcessInitChunk_UnkownParamError;
-                    } else
+                    }
+                    else
                     {
                         ret = ChunkProcessResult::SkipProcessInitChunk_UnkownParamError;
                     }
                     /*send all bundled chunks to ensure init ack is the only chunk sent*/
                     EVENTLOG1(VERBOSE, "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)",
-                        get_bundle_total_size(get_bundle_controller()));
+                            get_bundle_total_size(get_bundle_controller()));
                     assert(
-                        get_bundle_total_size(get_bundle_controller()) == UDP_GECO_PACKET_FIXED_SIZES);
+                            get_bundle_total_size(get_bundle_controller()) == UDP_GECO_PACKET_FIXED_SIZES);
                     unlock_bundle_ctrl();
                     send_bundled_chunks();
                     // bundle INIT ACK if full will send and empty bundle then copy init ack
@@ -1779,10 +1831,10 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
                  with a different port number indicates the initialization of a
                  separate association.*/
                 uint shutdownackcid = alloc_simple_chunk(CHUNK_SHUTDOWN_ACK,
-                    FLAG_TBIT_UNSET);
+                FLAG_TBIT_UNSET);
                 /*send all bundled chunks to ensure init ack is the only chunk sent*/
                 EVENTLOG1(VERBOSE, "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)",
-                    get_bundle_total_size(get_bundle_controller()));
+                        get_bundle_total_size(get_bundle_controller()));
                 unlock_bundle_ctrl();
                 send_bundled_chunks();
                 bundle_ctrl_chunk(complete_simple_chunk(shutdownackcid));
@@ -1797,9 +1849,9 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
     return ret;
 }
 int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID, uint AckCID,
-    uint supportedAddressTypes)
+        uint supportedAddressTypes)
 {
-    if( simple_chunks_[initCID] == NULL || simple_chunks_[AckCID] == NULL )
+    if (simple_chunks_[initCID] == NULL || simple_chunks_[AckCID] == NULL)
     {
         ERRLOG(FALTAL_ERROR_EXIT, "write_cookie()::Invalid chunk ID");
         return -1;
@@ -1815,10 +1867,10 @@ int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID, uint 
     //            supportedAddressTypes, with_ipv4 ? "TRUE" : "FALSE",
     //            with_ipv6 ? "TRUE" : "FALSE");
 
-    init_chunk_t* chunk = ( (init_chunk_t*) simple_chunks_[initCID] );
+    init_chunk_t* chunk = ((init_chunk_t*) simple_chunks_[initCID]);
     uchar* curr_vlp_start = chunk->variableParams;
     uint total_len_vlps = chunk->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES;
-    chunk = ( (init_chunk_t*) simple_chunks_[AckCID] );
+    chunk = ((init_chunk_t*) simple_chunks_[AckCID]);
 
     uint read_len = 0;
     ushort pType;
@@ -1827,12 +1879,12 @@ int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID, uint 
     vlparam_fixed_t* vlparam_fixed;
     uchar* init_ack_str;
 
-    while( read_len < total_len_vlps )
+    while (read_len < total_len_vlps)
     {
-        if( total_len_vlps - read_len < VLPARAM_FIXED_SIZE )
+        if (total_len_vlps - read_len < VLPARAM_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
             return -1;
         }
         init_ack_str = chunk->variableParams + curr_write_pos_[AckCID];
@@ -1840,28 +1892,28 @@ int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID, uint 
         pType = ntohs(vlparam_fixed->param_type);
         pLen = ntohs(vlparam_fixed->param_length);
         // vlp length too short or patial vlp problem
-        if( pLen < VLPARAM_FIXED_SIZE || pLen + read_len > total_len_vlps ) return -1;
+        if (pLen < VLPARAM_FIXED_SIZE || pLen + read_len > total_len_vlps) return -1;
 
         EVENTLOG3(VERBOSE, "Scan variable parameters: type %u, len: %u, position %u", pType, pLen,
-            curr_vlp_start);
+                curr_vlp_start);
 
         /* handle unrecognized params */
-        if( pType != VLPARAM_COOKIE_PRESEREASONV && pType != VLPARAM_SUPPORTED_ADDR_TYPES
-            && pType != VLPARAM_IPV4_ADDRESS && pType != VLPARAM_IPV6_ADDRESS
-            && pType != VLPARAM_UNRELIABILITY )
+        if (pType != VLPARAM_COOKIE_PRESEREASONV && pType != VLPARAM_SUPPORTED_ADDR_TYPES
+                && pType != VLPARAM_IPV4_ADDRESS && pType != VLPARAM_IPV6_ADDRESS
+                && pType != VLPARAM_UNRELIABILITY)
         {
             EVENTLOG2(VERBOSE, "found unknown parameter type %u len %u in message", pType, pLen);
-            if( STOP_PROCESS_PARAM(pType) )
+            if (STOP_PROCESS_PARAM(pType))
             {
                 write_unknown_param_error(init_ack_str, AckCID, pLen, curr_vlp_start);
                 return STOP_PROCESS_PARAM;
             }
-            if( STOP_PROCES_PARAM_REPORT_EREASON(pType) )
+            if (STOP_PROCES_PARAM_REPORT_EREASON(pType))
             {
                 write_unknown_param_error(init_ack_str, AckCID, pLen, curr_vlp_start);
                 return STOP_PROCES_PARAM_REPORT_EREASON;
             }
-            if( SKIP_PARAM_REPORT_EREASON(pType) )
+            if (SKIP_PARAM_REPORT_EREASON(pType))
             {
                 write_unknown_param_error(init_ack_str, AckCID, pLen, curr_vlp_start);
             }
@@ -1869,61 +1921,61 @@ int dispatch_layer_t::process_unknown_params_from_init_chunk(uint initCID, uint 
         }
 
         read_len += pLen;
-        padding_len = ( ( read_len % 4 ) == 0 ) ? 0 : ( 4 - read_len % 4 );
+        padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
         read_len += padding_len;
         curr_vlp_start += read_len;
     }
     return 0;
 }
 int dispatch_layer_t::write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_init,
-    init_chunk_fixed_t* local_initack, uint cookieLifetime, uint local_tie_tag,
-    uint peer_tie_tag, ushort last_dest_port, ushort last_src_port,
-    sockaddrunion local_Addresses[ ], uint num_local_Addresses, sockaddrunion peer_Addresses[ ],
-    uint num_peer_Addresses)
+        init_chunk_fixed_t* local_initack, uint cookieLifetime, uint local_tie_tag,
+        uint peer_tie_tag, ushort last_dest_port, ushort last_src_port,
+        sockaddrunion local_Addresses[], uint num_local_Addresses, sockaddrunion peer_Addresses[],
+        uint num_peer_Addresses)
 {
-    init_chunk_t* initack = (init_chunk_t*) ( simple_chunks_[initAckID] );
-    if( initack == NULL )
+    init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckID]);
+    if (initack == NULL)
     {
         ERRLOG(FALTAL_ERROR_EXIT, "write_cookie()::Invalid chunk ID");
         return -1;
     }
-    if( initack->chunk_header.chunk_id != CHUNK_INIT_ACK )
+    if (initack->chunk_header.chunk_id != CHUNK_INIT_ACK)
     {
         ERRLOG(FALTAL_ERROR_EXIT, "write_cookie()::chunk type not initAck");
         return -1;
     }
-    if( completed_chunks_[initAckID] )
+    if (completed_chunks_[initAckID])
     {
         ERRLOG(FALTAL_ERROR_EXIT, "write_cookie()::Invalid chunk ID");
         return -1;
     }
 
     cookie_param_t* cookie =
-        (cookie_param_t*) ( initack->variableParams + curr_write_pos_[initAckID] );
+            (cookie_param_t*) (initack->variableParams + curr_write_pos_[initAckID]);
     put_vlp_cookie_fixed(cookie, peer_init, local_initack, cookieLifetime, local_tie_tag,
-        peer_tie_tag, last_dest_port, last_src_port, local_Addresses, num_local_Addresses,
-        peer_Addresses, num_peer_Addresses);
+            peer_tie_tag, last_dest_port, last_src_port, local_Addresses, num_local_Addresses,
+            peer_Addresses, num_peer_Addresses);
 
     uint wr = curr_write_pos_[initAckID];
     curr_write_pos_[initAckID] += COOKIE_PARAM_SIZE;
 
     EVENTLOG2(VERBOSE, "Building Cookie with %u local, %u peer addresses", num_local_Addresses,
-        num_peer_Addresses);
+            num_peer_Addresses);
     enter_vlp_addrlist(initAckID, local_Addresses, num_local_Addresses);
     enter_vlp_addrlist(initAckID, peer_Addresses, num_peer_Addresses);
 
     /* append peer unre to init ack will align internally */
     int peer_support_unre = write_vlp_unreliability(initCID, initAckID);
     /* if both support PRSCTP, enter our PRSCTP parameter to INIT ACK chunk */
-    if( ( peer_support_unre >= 0 ) && support_unreliability() )
+    if ((peer_support_unre >= 0) && support_unreliability())
     {
         /* this is variable-length-data, this fuction will internally do alignment */
         curr_write_pos_[initAckID] += put_init_vlp(
-            &initack->variableParams[curr_write_pos_[initAckID]],
-            VLPARAM_UNRELIABILITY, 0, NULL);
+                &initack->variableParams[curr_write_pos_[initAckID]],
+                VLPARAM_UNRELIABILITY, 0, NULL);
     }
     /* check if endpoint is ADD-IP capable, store result, and put HIS chunk in cookie */
-    if( write_add_ip_chunk(initAckID, initCID) > 0 )
+    if (write_add_ip_chunk(initAckID, initCID) > 0)
     {  //todo impl these two enpty fucntions
         /* check for set primary chunk ? Maybe add this only after Cookie Chunk ! */
         write_set_primary_chunk(initAckID, initCID);
@@ -1934,7 +1986,7 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID, init_chunk_fixe
     cookie->vlparam_header.param_length = htons(curr_write_pos_[initAckID] - wr);
 
     /* calculate and write hmac when other fields are all filled*/
-    if( put_hmac(cookie) < 0 )
+    if (put_hmac(cookie) < 0)
     {
         ERRLOG(FALTAL_ERROR_EXIT, "put_hmac() failed!");
     }
@@ -1944,7 +1996,7 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID, init_chunk_fixe
      * 4 bytes aligned, here we just double check that
      * the rest of ecn and unre will have a aligned start writing pos
      * they may need do align internally */
-    while( curr_write_pos_[initAckID] & 3 )
+    while (curr_write_pos_[initAckID] & 3)
         curr_write_pos_[initAckID]++;
 
     return 0;
@@ -1952,18 +2004,20 @@ int dispatch_layer_t::write_cookie(uint initCID, uint initAckID, init_chunk_fixe
 
 ushort dispatch_layer_t::get_local_inbound_stream(uint * geco_inst_id)
 {
-    if( curr_channel_ != NULL )
+    if (curr_channel_ != NULL)
     {
         return curr_channel_->geco_inst->noOfInStreams;
-    } else if( curr_geco_instance_ != NULL )
+    }
+    else if (curr_geco_instance_ != NULL)
     {
         return curr_geco_instance_->noOfInStreams;
-    } else
+    }
+    else
     {
-        if( geco_inst_id != NULL )
+        if (geco_inst_id != NULL)
         {
             curr_geco_instance_ = find_geco_instance_by_id(*geco_inst_id);
-            if( curr_geco_instance_ != NULL )
+            if (curr_geco_instance_ != NULL)
             {
                 uint ins = curr_geco_instance_->noOfInStreams;
                 curr_geco_instance_ = NULL;
@@ -1976,18 +2030,20 @@ ushort dispatch_layer_t::get_local_inbound_stream(uint * geco_inst_id)
 }
 ushort dispatch_layer_t::get_local_outbound_stream(uint * geco_inst_id)
 {
-    if( curr_channel_ != NULL )
+    if (curr_channel_ != NULL)
     {
         return curr_channel_->geco_inst->noOfOutStreams;
-    } else if( curr_geco_instance_ != NULL )
+    }
+    else if (curr_geco_instance_ != NULL)
     {
         return curr_geco_instance_->noOfOutStreams;
-    } else
+    }
+    else
     {
-        if( geco_inst_id != NULL )
+        if (geco_inst_id != NULL)
         {
             curr_geco_instance_ = find_geco_instance_by_id(*geco_inst_id);
-            if( curr_geco_instance_ != NULL )
+            if (curr_geco_instance_ != NULL)
             {
                 uint ins = curr_geco_instance_->noOfOutStreams;
                 curr_geco_instance_ = NULL;
@@ -2000,16 +2056,17 @@ ushort dispatch_layer_t::get_local_outbound_stream(uint * geco_inst_id)
 }
 
 int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
-    sockaddrunion *peerAddress, uint numPeerAddresses, uint peer_supported_types, bool receivedFromPeer)
+        sockaddrunion *peerAddress, uint numPeerAddresses, uint peer_supported_types,
+        bool receivedFromPeer)
 {
     /*1) make sure either curr channel or curr geco instance presents */
-    if( curr_channel_ == NULL && curr_geco_instance_ == NULL )
+    if (curr_channel_ == NULL && curr_geco_instance_ == NULL)
     {
         ERRLOG(FALTAL_ERROR_EXIT,
-            "dispatch_layer_t::get_local_addreslist()::neither assoc nor instance set - error !");
+                "dispatch_layer_t::get_local_addreslist()::neither assoc nor instance set - error !");
         return -1;
     }
-    if( curr_geco_instance_ == NULL )
+    if (curr_geco_instance_ == NULL)
     {
         ERRLOG(MAJOR_ERROR, "get_local_addreslist():: curr_geco_instance_ not set - program error");
         return -1;
@@ -2026,7 +2083,7 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
     uint count, tmp;
     IPAddrType filterFlags = (IPAddrType) 0;
     bool localHostFound = false, linkLocalFound = false, siteLocalFound = false;
-    for( count = 0; count < numPeerAddresses; count++ )
+    for (count = 0; count < numPeerAddresses; count++)
     {
         localHostFound = contain_local_addr(peerAddress + count, 1);
         linkLocalFound = transport_layer_->typeofaddr(peerAddress + count, LinkLocalAddrType);
@@ -2036,7 +2093,7 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
     /* 3) Should we add @param peerAddress to @param local_addrlist ?
      * receivedFromPeer == FALSE: I send an INIT with my addresses to the peer
      * receivedFromPeer == TRUE: I got an INIT with addresses from the peer */
-    if( receivedFromPeer == false && localHostFound == true )
+    if (receivedFromPeer == false && localHostFound == true)
     {
         /* 3.1) this means:
          * I sent an INIT with my addresses to myself
@@ -2045,31 +2102,36 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
          * as i am sending to myself i should use all my local addres
          */
         filterFlags = AllCastAddrTypes;
-    } else if( receivedFromPeer == false && localHostFound == false )
+    }
+    else if (receivedFromPeer == false && localHostFound == false)
     {
         /* 3.2) this means:
          * I sent an INIT with my addresses to peer hosts other than myself
          * so I should filter out all illegal-formate addres and loopback addres from my localaddrlist
          * and only use the rest ones (only refers to addres like lan ip 192.168.1.168 or wan ip 220.123.22.21)
          */
-        filterFlags = (IPAddrType) ( AllCastAddrTypes | LoopBackAddrType );
-    } else if( receivedFromPeer == true && localHostFound == false )
+        filterFlags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType);
+    }
+    else if (receivedFromPeer == true && localHostFound == false)
     {
         /* 3.3) this means:
          * I received an INIT with addresses from others which is a normal case.
          * should filter out all illegal-formate addres and loopback addres from my  local addr list
          * and only use the rest ones (only refers to addres like lan ip 192.168.1.168 or wan ip 220.123.22.21) */
-        if( linkLocalFound )
+        if (linkLocalFound)
         {
-            filterFlags = (IPAddrType) ( AllCastAddrTypes | LoopBackAddrType );
-        } else if( siteLocalFound )
-        {
-            filterFlags = (IPAddrType) ( AllCastAddrTypes | LinkLocalAddrType | LoopBackAddrType );
-        } else
-        {
-            filterFlags = (IPAddrType) ( AllCastAddrTypes | AllLocalAddrTypes );
+            filterFlags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType);
         }
-    } else  // (receivedFromPeer == true && localHostFound == true)
+        else if (siteLocalFound)
+        {
+            filterFlags = (IPAddrType) (AllCastAddrTypes | LinkLocalAddrType | LoopBackAddrType);
+        }
+        else
+        {
+            filterFlags = (IPAddrType) (AllCastAddrTypes | AllLocalAddrTypes);
+        }
+    }
+    else  // (receivedFromPeer == true && localHostFound == true)
     {
         /* 3.4) this means:
          * I received an INIT with addresses from myself
@@ -2084,20 +2146,21 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
     count = 0;
     bool anyaddr = false;
     /* 4.1) if geco instance has any addr 4 setup, we use default local addr list_*/
-    if( curr_geco_instance_->is_inaddr_any )
+    if (curr_geco_instance_->is_inaddr_any)
     {
         anyaddr = true;
-        for( tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++ )
+        for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
         {
-            if( saddr_family(&( defaultlocaladdrlist_[tmp] )) == AF_INET )
+            if ( saddr_family(&( defaultlocaladdrlist_[tmp] )) == AF_INET)
             {
-                if( peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV4 )
+                if (peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV4)
                 {
                     // filter out unwanted local addres and copy the rest ones
-                    if( !transport_layer_->typeofaddr(&( defaultlocaladdrlist_[tmp] ), filterFlags) )
+                    if (!transport_layer_->typeofaddr(&(defaultlocaladdrlist_[tmp]), filterFlags))
                     {
                         // addr looks good, copy it
-                        memcpy(&( local_addrlist[count] ), &( defaultlocaladdrlist_[tmp] ), sizeof(sockaddrunion));
+                        memcpy(&(local_addrlist[count]), &(defaultlocaladdrlist_[tmp]),
+                                sizeof(sockaddrunion));
                         count++;
                     }
                 }
@@ -2106,27 +2169,28 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
 #ifdef _DEBUG
         ip4count = count;
         EVENTLOG2(DEBUG,
-            "get_local_addreslist(): picked up and copied %u local ip4 addresses from INADDR_ANY (defaultlocaladdrlistsize_ %u)", ip4count,
-            defaultlocaladdrlistsize_);
+                "get_local_addreslist(): picked up and copied %u local ip4 addresses from INADDR_ANY (defaultlocaladdrlistsize_ %u)",
+                ip4count,
+                defaultlocaladdrlistsize_);
 #endif
     }
 
     /* 4.2) if geco instance has any addr 6 setup, we use @param defaultlocaladdrlist_*/
-    if( curr_geco_instance_->is_in6addr_any )
+    if (curr_geco_instance_->is_in6addr_any)
     {
         anyaddr = true;
-        for( tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++ )
+        for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
         {
-            if( saddr_family(&( defaultlocaladdrlist_[tmp] )) == AF_INET6 )
+            if ( saddr_family(&( defaultlocaladdrlist_[tmp] )) == AF_INET6)
             {
-                if( peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV6 )
+                if (peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV6)
                 {
                     // filter out unwanted local addres and copy the rest ones
-                    if( !transport_layer_->typeofaddr(&( defaultlocaladdrlist_[tmp] ), filterFlags) )
+                    if (!transport_layer_->typeofaddr(&(defaultlocaladdrlist_[tmp]), filterFlags))
                     {
                         // addr looks good copy it
-                        memcpy(&( local_addrlist[count] ), &( defaultlocaladdrlist_[tmp] ),
-                            sizeof(sockaddrunion));
+                        memcpy(&(local_addrlist[count]), &(defaultlocaladdrlist_[tmp]),
+                                sizeof(sockaddrunion));
                         count++;
                     }
                 }
@@ -2134,59 +2198,63 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
         }
 #ifdef _DEBUG
         EVENTLOG2(DEBUG,
-            "get_local_addreslist(): picked up and copied %u local ip6 addresses from INADDR6_ANY (defaultlocaladdrlistsize_ %u)", count - ip4count,
-            defaultlocaladdrlistsize_);
+                "get_local_addreslist(): picked up and copied %u local ip6 addresses from INADDR6_ANY (defaultlocaladdrlistsize_ %u)",
+                count - ip4count,
+                defaultlocaladdrlistsize_);
 #endif
     }
 
-    if( anyaddr == false )
+    if (anyaddr == false)
     {
         /* 4.3) geco instance has NO any addr (6) setup,
          * search from local addr list of geco instance*/
-        for( tmp = 0; tmp < curr_geco_instance_->local_addres_size; tmp++ )
+        for (tmp = 0; tmp < curr_geco_instance_->local_addres_size; tmp++)
         {
-            ushort af = saddr_family(&( curr_geco_instance_->local_addres_list[tmp] ));
-            if( af == AF_INET )
+            ushort af = saddr_family(&(curr_geco_instance_->local_addres_list[tmp]));
+            if (af == AF_INET)
             {
-                if( peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV4 )
+                if (peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV4)
                 {
-                    if( !transport_layer_->typeofaddr(&( defaultlocaladdrlist_[tmp] ), filterFlags) )
+                    if (!transport_layer_->typeofaddr(
+                            &(curr_geco_instance_->local_addres_list[tmp]), filterFlags))
                     {
                         // addr looks good copy it
-                        memcpy(&( local_addrlist[count] ),
-                            &( curr_geco_instance_->local_addres_list[tmp] ),
-                            sizeof(sockaddrunion));
+                        memcpy(&(local_addrlist[count]),
+                                &(curr_geco_instance_->local_addres_list[tmp]),
+                                sizeof(sockaddrunion));
                         count++;
                     }
                 }
-            } else if( af == AF_INET6 )
+            }
+            else if (af == AF_INET6)
             {
-                if( peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV6 )
+                if (peer_supported_types & SUPPORT_ADDRESS_TYPE_IPV6)
                 {
-                    if( !transport_layer_->typeofaddr(
-                        &( curr_geco_instance_->local_addres_list[tmp] ), filterFlags) )
+                    if (!transport_layer_->typeofaddr(
+                            &(curr_geco_instance_->local_addres_list[tmp]), filterFlags))
                     {
                         // addr looks good copy it
-                        memcpy(&( local_addrlist[count] ),
-                            &( curr_geco_instance_->local_addres_list[tmp] ),
-                            sizeof(sockaddrunion));
+                        memcpy(&(local_addrlist[count]),
+                                &(curr_geco_instance_->local_addres_list[tmp]),
+                                sizeof(sockaddrunion));
                         count++;
                     }
                 }
-            } else
+            }
+            else
             {
                 ERRLOG(FALTAL_ERROR_EXIT, "get_local_addreslist(): no such af !");
             }
         }
 #ifdef _DEBUG
         EVENTLOG2(DEBUG,
-            "get_local_addreslist(): found %u local addresses from INADDR_6ANY (from %u)",
-            count, defaultlocaladdrlistsize_);
+                "get_local_addreslist(): found %u local addresses from inst local addr list (from %u)",
+                count, curr_geco_instance_->local_addres_size);
 #endif
     }
 
-    if( count == 0 )
-        ERRLOG(FALTAL_ERROR_EXIT, "get_local_addreslist(): found no addres!");
+    if (count == 0)
+    ERRLOG(FALTAL_ERROR_EXIT, "get_local_addreslist(): found no addres!");
     EVENTLOG1(DEBUG, "get_local_addreslist() : returning totally %u addresses !", count);
     return count;
 }
@@ -2194,9 +2262,9 @@ int dispatch_layer_t::get_local_addreslist(sockaddrunion* local_addrlist,
 void dispatch_layer_t::delete_curr_channel(void)
 {
     uint path_id;
-    if( curr_channel_ != NULL )
+    if (curr_channel_ != NULL)
     {
-        for( path_id = 0; path_id < curr_channel_->remote_addres_size; path_id++ )
+        for (path_id = 0; path_id < curr_channel_->remote_addres_size; path_id++)
         {
             stop_heart_beat_timer(path_id);
         }
@@ -2213,15 +2281,15 @@ void dispatch_layer_t::on_connection_lost(uint status)
 {
     geco_instance_t* old_ginst = curr_geco_instance_;
     channel_t* old_channel = curr_channel_;
-    if( curr_channel_ != NULL )
+    if (curr_channel_ != NULL)
     {
         EVENTLOG2(INTERNAL_TRACE, "on_connection_lost(assoc %u, status %u)",
-            curr_channel_->channel_id, status);
-        if( curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif != NULL )
+                curr_channel_->channel_id, status);
+        if (curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif != NULL)
         {
             //ENTER_CALLBACK("communicationLostNotif");
             curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif(
-                curr_channel_->channel_id, status, curr_channel_->application_layer_dataptr);
+                    curr_channel_->channel_id, status, curr_channel_->application_layer_dataptr);
             //LEAVE_CALLBACK("communicationLostNotif");
         }
     }
@@ -2237,19 +2305,19 @@ int dispatch_layer_t::process_sack_chunk(uint adr_index, void *sack_chunk, uint 
     return 0;
 }
 uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len,
-    ushort param_type)
+        ushort param_type)
 {
     /*1) validate packet length*/
     uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
-    if( setup_chunk == NULL || chunk_len < read_len )
+    if (setup_chunk == NULL || chunk_len < read_len)
     {
         return NULL;
     }
 
     /*2) validate chunk id inside this chunk*/
     init_chunk_t* init_chunk = (init_chunk_t*) setup_chunk;
-    if( init_chunk->chunk_header.chunk_id != CHUNK_INIT
-        && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK )
+    if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
+            && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
     {
         return NULL;
     }
@@ -2262,33 +2330,33 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk, uint
     vlparam_fixed_t* vlp;
 
     /*3) parse all vlparams in this chunk*/
-    while( read_len < len )
+    while (read_len < len)
     {
         EVENTLOG2(VVERBOSE, "find_params_from_setup_chunk() : len==%u, processed_len == %u", len,
-            read_len);
+                read_len);
 
-        if( len - read_len < VLPARAM_FIXED_SIZE )
+        if (len - read_len < VLPARAM_FIXED_SIZE)
         {
             return NULL;
         }
 
-        vlp = (vlparam_fixed_t*) ( curr_pos );
+        vlp = (vlparam_fixed_t*) (curr_pos);
         vlp_len = ntohs(vlp->param_length);
-        if( vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len )
+        if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
         {
             return NULL;
         }
 
         /*4) find param in this chunk*/
-        if( ntohs(vlp->param_type) == param_type )
+        if (ntohs(vlp->param_type) == param_type)
         {
             EVENTLOG1(VERBOSE, "find_params_from_setup_chunk() : Founf chunk type %d-> return",
-                param_type);
+                    param_type);
             return curr_pos;
         }
 
         read_len += vlp_len;
-        padding_len = ( ( read_len & 3 ) == 0 ) ? 0 : ( 4 - ( read_len & 3 ) );
+        padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
         read_len += padding_len;
         curr_pos = setup_chunk + read_len;
     }  // while
@@ -2303,14 +2371,14 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short des
     return 0;
 #endif
 
-    if( geco_packet == NULL || length == 0 )
+    if (geco_packet == NULL || length == 0)
     {
         ERRLOG(MINOR_ERROR, "dispatch_layer::send_geco_packet(): no message to send !!!");
         return 1;
     }
 
-    geco_packet_t* geco_packet_ptr = (geco_packet_t*) ( geco_packet + UDP_PACKET_FIXED_SIZE );
-    simple_chunk_t* chunk = ( (simple_chunk_t*) ( geco_packet_ptr->chunk ) );
+    geco_packet_t* geco_packet_ptr = (geco_packet_t*) (geco_packet + UDP_PACKET_FIXED_SIZE);
+    simple_chunk_t* chunk = ((simple_chunk_t*) (geco_packet_ptr->chunk));
 
     /*1)
      * when sending OOB chunk without channel found, we use last_source_addr_
@@ -2322,10 +2390,10 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short des
     int primary_path;
     int len = 0;
 
-    if( curr_channel_ == NULL )
+    if (curr_channel_ == NULL)
     {
-        if( last_source_addr_ == NULL || last_init_tag_ == 0 || last_dest_port_ == 0
-            || last_src_port_ == 0 )
+        if (last_source_addr_ == NULL || last_init_tag_ == 0 || last_dest_port_ == 0
+                || last_src_port_ == 0)
         {
             ERRLOG(MAJOR_ERROR, "dispatch_layer_t::send_geco_packet(): invalid params !");
             return 1;
@@ -2339,46 +2407,48 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short des
         geco_packet_ptr->pk_comm_hdr.src_port = htons(last_dest_port_);
         geco_packet_ptr->pk_comm_hdr.dest_port = htons(last_src_port_);
         curr_geco_instance_ == NULL ?
-            tos = (uchar) IPTOS_DEFAULT :
-            tos = curr_geco_instance_->default_ipTos;
+                                      tos = (uchar) IPTOS_DEFAULT :
+                                      tos = curr_geco_instance_->default_ipTos;
         EVENTLOG4(VERBOSE,
-            "send_geco_packet() : currchannel is null, use last src addr as dest addr, tos = %u, tag = %x, src_port = %u , dest_port = %u",
-            tos, last_init_tag_, last_dest_port_, last_src_port_);
+                "send_geco_packet() : currchannel is null, use last src addr as dest addr, tos = %u, tag = %x, src_port = %u , dest_port = %u",
+                tos, last_init_tag_, last_dest_port_, last_src_port_);
     }  // curr_channel_ == NULL
     else  // curr_channel_ != NULL
     {
         /*2) normal send with channel found*/
-        if( destAddressIndex < -1 || destAddressIndex >= (int) curr_channel_->remote_addres_size )
+        if (destAddressIndex < -1 || destAddressIndex >= (int) curr_channel_->remote_addres_size)
         {
             ERRLOG(MINOR_ERROR, "dispatch_layer::send_geco_packet(): invalid destAddressIndex!!!");
             return 1;
         }
 
-        if( destAddressIndex != -1 )  // 0<=destAddressIndex<remote_addres_size
+        if (destAddressIndex != -1)  // 0<=destAddressIndex<remote_addres_size
         {
             /* 3) Use given destination address from current association */
             dest_addr_ptr = curr_channel_->remote_addres + destAddressIndex;
-        } else
+        }
+        else
         {
-            if( last_source_addr_ == NULL )
+            if (last_source_addr_ == NULL)
             {
                 /*5) last src addr is NUll, we use primary path*/
                 primary_path = get_primary_path();
                 EVENTLOG2(VERBOSE,
-                    "dispatch_layer::send_geco_packet():sending to primary with index %u (with %u paths)",
-                    primary_path, curr_channel_->remote_addres_size);
-                if( primary_path < 0 || primary_path >= (int) ( curr_channel_->remote_addres_size ) )
+                        "dispatch_layer::send_geco_packet():sending to primary with index %u (with %u paths)",
+                        primary_path, curr_channel_->remote_addres_size);
+                if (primary_path < 0 || primary_path >= (int) (curr_channel_->remote_addres_size))
                 {
                     ERRLOG(MAJOR_ERROR,
-                        "dispatch_layer::send_geco_packet(): could not get primary address");
+                            "dispatch_layer::send_geco_packet(): could not get primary address");
                     return 1;
                 }
                 dest_addr_ptr = curr_channel_->remote_addres + primary_path;
-            } else
+            }
+            else
             {
                 /*6) use last src addr*/
                 EVENTLOG(VERBOSE,
-                    "dispatch_layer::send_geco_packet(): : last_source_addr_ was not NULL");
+                        "dispatch_layer::send_geco_packet(): : last_source_addr_ was not NULL");
                 memcpy(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
                 dest_addr_ptr = &dest_addr;
 
@@ -2387,12 +2457,12 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short des
 
         /*7) for INIT received when channel presents,
          * we need send INIT-ACK with init tag from INIT of peer*/
-        if( is_init_ack_chunk(chunk) )
+        if (is_init_ack_chunk(chunk))
         {
-            if( last_init_tag_ == 0 )
+            if (last_init_tag_ == 0)
             {
                 ERRLOG(MAJOR_ERROR,
-                    "dispatch_layer_t::send_geco_packet(): invalid last_init_tag_ 0 !");
+                        "dispatch_layer_t::send_geco_packet(): invalid last_init_tag_ 0 !");
                 return 1;
             }
             geco_packet_ptr->pk_comm_hdr.verification_tag = htonl(last_init_tag_);
@@ -2407,23 +2477,23 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short des
         geco_packet_ptr->pk_comm_hdr.dest_port = htons(curr_channel_->remote_port);
         tos = curr_channel_->ipTos;
         EVENTLOG4(VERBOSE,
-            "dispatch_layer_t::send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
-            tos, curr_channel_->remote_tag, curr_channel_->local_port,
-            curr_channel_->remote_port);
+                "dispatch_layer_t::send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
+                tos, curr_channel_->remote_tag, curr_channel_->local_port,
+                curr_channel_->remote_port);
     }  // curr_channel_ != NULL
 
     /*9) calc checksum and insert it MD5*/
-    gset_checksum(( geco_packet + UDP_PACKET_FIXED_SIZE ), length - UDP_PACKET_FIXED_SIZE);
+    gset_checksum((geco_packet + UDP_PACKET_FIXED_SIZE), length - UDP_PACKET_FIXED_SIZE);
 
-    switch( saddr_family(dest_addr_ptr) )
+    switch (saddr_family(dest_addr_ptr))
     {
         case AF_INET:
             len = transport_layer_->send_ip_packet(transport_layer_->ip4_socket_despt_, geco_packet,
-                length, dest_addr_ptr, tos);
+                    length, dest_addr_ptr, tos);
             break;
         case AF_INET6:
             len = transport_layer_->send_ip_packet(transport_layer_->ip6_socket_despt_, geco_packet,
-                length, dest_addr_ptr, tos);
+                    length, dest_addr_ptr, tos);
             break;
         default:
             ERRLOG(MAJOR_ERROR, "dispatch_layer_t::send_geco_packet() : Unsupported AF_TYPE");
@@ -2434,10 +2504,10 @@ int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short des
     ushort port;
     saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, &port);
     EVENTLOG4(VERBOSE, "send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d",
-        length, hoststr_, ntohs(geco_packet_ptr->pk_comm_hdr.dest_port), len);
+            length, hoststr_, ntohs(geco_packet_ptr->pk_comm_hdr.dest_port), len);
 #endif
 
-    return ( len == (int) length ) ? 0 : -1;
+    return (len == (int) length) ? 0 : -1;
 }
 
 int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
@@ -2445,16 +2515,16 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
     bundle_controller_t* bundle_ctrl = (bundle_controller_t*) get_bundle_controller(curr_channel_);
 
     // no channel exists, so we take the global bundling buffer
-    if( bundle_ctrl == NULL )
+    if (bundle_ctrl == NULL)
     {
         EVENTLOG(VERBOSE, "use global bundling buffer");
         bundle_ctrl = &default_bundle_ctrl_;
     }
 
-    if( bundle_ctrl->locked )
+    if (bundle_ctrl->locked)
     {
         bundle_ctrl->got_send_request = true;
-        if( ad_idx != NULL )
+        if (ad_idx != NULL)
         {
             bundle_ctrl->got_send_address = true;
             bundle_ctrl->requested_destination = *ad_idx;
@@ -2467,22 +2537,25 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
      * TODO - more intelligent path selection strategy
      * should take into account  eg. check path inactive or active */
     int path_param_id;
-    if( ad_idx != NULL )
+    if (ad_idx != NULL)
     {
-        if( *ad_idx > 0xFFFF )
+        if (*ad_idx > 0xFFFF)
         {
             ERRLOG(FALTAL_ERROR_EXIT, "address_index too big !");
             return -1;
-        } else
+        }
+        else
         {
             path_param_id = *ad_idx;
         }
-    } else
+    }
+    else
     {
-        if( bundle_ctrl->got_send_address )
+        if (bundle_ctrl->got_send_address)
         {
             path_param_id = bundle_ctrl->requested_destination;
-        } else
+        }
+        else
         {
             path_param_id = -1;  // use last src path OR primary path
         }
@@ -2493,7 +2566,7 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
     char* send_buffer = NULL;
     int ret = 0;
     int send_len = 0;
-    if( bundle_ctrl->sack_in_buffer )
+    if (bundle_ctrl->sack_in_buffer)
     {
         stop_sack_timer();
 
@@ -2507,44 +2580,47 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
         send_len = bundle_ctrl->sack_position;
         EVENTLOG1(VERBOSE, "send_bundled_chunks(sack) : send_len == %d ", send_len);
 
-        if( bundle_ctrl->ctrl_chunk_in_buffer )
+        if (bundle_ctrl->ctrl_chunk_in_buffer)
         {
             ret = bundle_ctrl->ctrl_position - UDP_GECO_PACKET_FIXED_SIZES;
-            memcpy(&( send_buffer[send_len] ), &( bundle_ctrl->ctrl_buf[UDP_GECO_PACKET_FIXED_SIZES] ),
-                ret);
+            memcpy(&(send_buffer[send_len]), &(bundle_ctrl->ctrl_buf[UDP_GECO_PACKET_FIXED_SIZES]),
+                    ret);
             send_len += ret;
             EVENTLOG1(VERBOSE, "send_bundled_chunks(sack+ctrl) : send_len == %d ", send_len);
         }
-        if( bundle_ctrl->data_in_buffer )
+        if (bundle_ctrl->data_in_buffer)
         {
             ret = bundle_ctrl->data_position - UDP_GECO_PACKET_FIXED_SIZES;
-            memcpy(&( send_buffer[send_len] ), &( bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES] ),
-                ret);
+            memcpy(&(send_buffer[send_len]), &(bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES]),
+                    ret);
             send_len += ret;
             EVENTLOG1(VERBOSE,
-                ret == 0 ?
-                "send_bundled_chunks(sack+data) : send_len == %d " :
-                "send_bundled_chunks(sack+ctrl+data) : send_len == %d ", send_len);
+                    ret == 0 ?
+                               "send_bundled_chunks(sack+data) : send_len == %d " :
+                               "send_bundled_chunks(sack+ctrl+data) : send_len == %d ", send_len);
         }
-    } else if( bundle_ctrl->ctrl_chunk_in_buffer )
+    }
+    else if (bundle_ctrl->ctrl_chunk_in_buffer)
     {
         send_buffer = bundle_ctrl->ctrl_buf;
         send_len = bundle_ctrl->ctrl_position;
         EVENTLOG1(VERBOSE, "send_bundled_chunks(ctrl) : send_len == %d ", send_len);
-        if( bundle_ctrl->data_in_buffer )
+        if (bundle_ctrl->data_in_buffer)
         {
             ret = bundle_ctrl->data_position - UDP_GECO_PACKET_FIXED_SIZES;
-            memcpy(&send_buffer[send_len], &( bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES] ),
-                ret);
+            memcpy(&send_buffer[send_len], &(bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES]),
+                    ret);
             send_len += ret;
             EVENTLOG1(VERBOSE, "send_bundled_chunks(ctrl+data) : send_len == %d ", send_len);
         }
-    } else if( bundle_ctrl->data_in_buffer )
+    }
+    else if (bundle_ctrl->data_in_buffer)
     {
         send_buffer = bundle_ctrl->data_buf;
         send_len = bundle_ctrl->data_position;
         EVENTLOG1(VERBOSE, "send_bundled_chunks(data) : send_len == %d ", send_len);
-    } else
+    }
+    else
     {
         ERRLOG(MINOR_ERROR, "Nothing to send, but send_bundled_chunks() was called !");
         return 1;
@@ -2553,22 +2629,22 @@ int dispatch_layer_t::send_bundled_chunks(int * ad_idx /*= NULL*/)
 
     /*this should not happen as bundle_xxx_chunk() internally detects
      * if exceeds MAX_GECO_PACKET_SIZE, if so, it will call */
-    if( send_len > MAX_GECO_PACKET_SIZE )
+    if (send_len > MAX_GECO_PACKET_SIZE)
     {
         EVENTLOG5(FALTAL_ERROR_EXIT,
-            "send len (%u)  exceeded (%u) - aborting\nsack_position: %u, ctrl_position: %u, data_position: %u",
-            send_len, MAX_GECO_PACKET_SIZE, bundle_ctrl->sack_position,
-            bundle_ctrl->ctrl_position, bundle_ctrl->data_position);
+                "send len (%u)  exceeded (%u) - aborting\nsack_position: %u, ctrl_position: %u, data_position: %u",
+                send_len, MAX_GECO_PACKET_SIZE, bundle_ctrl->sack_position,
+                bundle_ctrl->ctrl_position, bundle_ctrl->data_position);
         return -1;
     }
 
-    if( bundle_ctrl->data_in_buffer && path_param_id > 0 )
+    if (bundle_ctrl->data_in_buffer && path_param_id > 0)
     {
         set_data_chunk_sent_flag(path_param_id);
     }
 
     EVENTLOG2(VERBOSE, "send_bundled_chunks() : sending message len==%u to adress idx=%d", send_len,
-        path_param_id);
+            path_param_id);
 
     // send_len = udp hdr (if presents) + geco hdr + chunks
     ret = this->send_geco_packet(send_buffer, send_len, path_param_id);
@@ -2591,34 +2667,36 @@ void dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_inde
     bundle_controller_t* bundle_ctrl = (bundle_controller_t*) get_bundle_controller(curr_channel_);
 
     /*1) no channel exists, so we take the global bundling buffer */
-    if( bundle_ctrl == NULL )
+    if (bundle_ctrl == NULL)
     {
         EVENTLOG(VERBOSE, "bundle_ctrl_chunk()::use global bundle_ctrl");
         bundle_ctrl = &default_bundle_ctrl_;
     }
 
-    ushort chunk_len = get_chunk_length((chunk_fixed_t*) chunk);
+    ushort chunk_len = get_chunk_length((chunk_fixed_t* ) chunk);
     uint bundle_size = get_bundle_total_size(bundle_ctrl);
 
-    if( ( bundle_size + chunk_len ) > MAX_GECO_PACKET_SIZE )
+    if ((bundle_size + chunk_len) > MAX_GECO_PACKET_SIZE)
     {
         /*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
         EVENTLOG5(VERBOSE, "bundle_ctrl_chunk()::Chunk Length(bundlesize %u+chunk_len %u = %u),"
-            "exceeded MAX_NETWORK_PACKET_VALUE_SIZE(%u) : sending chunk to address %u !",
-            bundle_size, chunk_len, bundle_size + chunk_len, MAX_GECO_PACKET_SIZE,
-            ( dest_index == NULL ) ? 0 : *dest_index);
+                "exceeded MAX_NETWORK_PACKET_VALUE_SIZE(%u) : sending chunk to address %u !",
+                bundle_size, chunk_len, bundle_size + chunk_len, MAX_GECO_PACKET_SIZE,
+                ( dest_index == NULL ) ? 0 : *dest_index);
 
         bundle_ctrl->locked = false;/* unlock to allow send bundle*/
         send_bundled_chunks(dest_index);
         bundle_ctrl->locked = true; /* lock it again to disable the next send*/
-    } else
+    }
+    else
     {
         /*3) an packet CAN hold all data*/
-        if( dest_index != NULL )
+        if (dest_index != NULL)
         {
             bundle_ctrl->got_send_address = true;
             bundle_ctrl->requested_destination = *dest_index;
-        } else
+        }
+        else
         {
             bundle_ctrl->got_send_address = false;
             bundle_ctrl->requested_destination = 0;
@@ -2629,62 +2707,67 @@ void dispatch_layer_t::bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_inde
     memcpy(&bundle_ctrl->ctrl_buf[bundle_ctrl->ctrl_position], chunk, chunk_len);
     bundle_ctrl->ctrl_position += chunk_len;
     bundle_ctrl->ctrl_chunk_in_buffer = true;
-    while( bundle_ctrl->ctrl_position & 3 )
+    while (bundle_ctrl->ctrl_position & 3)
         bundle_ctrl->ctrl_position++;
 
     EVENTLOG3(VERBOSE,
-        "bundle_ctrl_chunk():chunklen %u + UDP_GECO_PACKET_FIXED_SIZES(%u) = Total buffer size now (includes pad): %u",
-        get_chunk_length((chunk_fixed_t *) chunk), UDP_GECO_PACKET_FIXED_SIZES,
-        get_bundle_total_size(bundle_ctrl));
+            "bundle_ctrl_chunk():chunklen %u + UDP_GECO_PACKET_FIXED_SIZES(%u) = Total buffer size now (includes pad): %u",
+            get_chunk_length((chunk_fixed_t *) chunk), UDP_GECO_PACKET_FIXED_SIZES,
+            get_bundle_total_size(bundle_ctrl));
 }
 
 int dispatch_layer_t::enter_vlp_addrlist(uint chunkid,
-    sockaddrunion local_addreslist[MAX_NUM_ADDRESSES], uint local_addreslist_size)
+        sockaddrunion local_addreslist[MAX_NUM_ADDRESSES], uint local_addreslist_size)
 {
-    if( local_addreslist_size <= 0 )
+    EVENTLOG(DEBUG, "- - - Enter enter_vlp_addrlist()");
+
+    if (local_addreslist_size <= 0)
     {
         ERRLOG(MAJOR_ERROR, "enter_vlp_addrlist()::Invalid local_addreslist_size !");
         return -1;
     }
-    if( simple_chunks_[chunkid] == NULL )
+    if (simple_chunks_[chunkid] == NULL)
     {
         ERRLOG(MAJOR_ERROR, "enter_vlp_addrlist()::Invalid chunk ID!");
         return -1;
     }
-    if( completed_chunks_[chunkid] )
+    if (completed_chunks_[chunkid])
     {
         ERRLOG(MAJOR_ERROR, "enter_vlp_addrlist()::chunk already completed !");
         return -1;
     }
 
     uchar* vlp;
-    if( simple_chunks_[chunkid]->chunk_header.chunk_id != CHUNK_ASCONF )
+    if (simple_chunks_[chunkid]->chunk_header.chunk_id != CHUNK_ASCONF)
     {
-        vlp = &( (init_chunk_t *) simple_chunks_[chunkid] )->variableParams[curr_write_pos_[chunkid]];
-    } else
+        vlp = &((init_chunk_t *) simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+    }
+    else
     {
         vlp =
-            &( (asconfig_chunk_t*) simple_chunks_[chunkid] )->variableParams[curr_write_pos_[chunkid]];
+                &((asconfig_chunk_t*) simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
     }
     curr_write_pos_[chunkid] += put_vlp_addrlist(vlp, local_addreslist, local_addreslist_size);
+
+    EVENTLOG(DEBUG, "- - - Leave enter_vlp_addrlist()");
     return 0;
 }
 
 int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
-    uchar * chunk, uint chunk_len, uint my_supported_addr_types,
-    uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr)
+        uchar * chunk, uint chunk_len, uint my_supported_addr_types,
+        uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr)
 {
     /*1) validate method input params*/
     uint read_len = INIT_CHUNK_FIXED_SIZES;
-    if( chunk == NULL || peer_addreslist == NULL || chunk_len < read_len )
+    if (chunk == NULL || peer_addreslist == NULL || chunk_len < read_len)
     {
         return -1;
     }
 
     /*2) validate chunk id inside this chunk*/
     init_chunk_t* init_chunk = (init_chunk_t*) chunk;
-    if( init_chunk->chunk_header.chunk_id != CHUNK_INIT
-        && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK )
+    if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
+            && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
     {
         return -1;
     }
@@ -2701,113 +2784,118 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
     IPAddrType flags;
 
     /*3) parse all vlparams in this chunk*/
-    while( read_len < len )
+    while (read_len < len)
     {
         EVENTLOG2(VVERBOSE, "read_peer_addreslist() : len==%u, processed_len == %u", len, read_len);
 
-        if( len - read_len < VLPARAM_FIXED_SIZE )
+        if (len - read_len < VLPARAM_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
             return -1;
         }
 
         vlp = (vlparam_fixed_t*) curr_pos;
         vlp_len = ntohs(vlp->param_length);
         // vlp length too short or patial vlp problem
-        if( vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len ) return -1;
+        if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len) return -1;
 
         ushort paratype = ntohs(vlp->param_type);
 
         /* determine the falgs from last source addr
          * then this falg will be used to validate other found addres*/
-        if( paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS )
+        if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
         {
             bool b1, b2, b3;
-            if( !( b1 = contain_local_addr(last_source_addr_, 1) ) )
+            if (!(b1 = contain_local_addr(last_source_addr_, 1)))
             {
                 /* this is from a normal address,
                  * furtherly filter out except loopbacks */
-                if( ( b2 = transport_layer_->typeofaddr(last_source_addr_, LinkLocalAddrType) ) )  //
+                if ((b2 = transport_layer_->typeofaddr(last_source_addr_, LinkLocalAddrType)))  //
                 {
-                    flags = (IPAddrType) ( AllCastAddrTypes | LoopBackAddrType );
-                } else if( ( b3 = transport_layer_->typeofaddr(last_source_addr_, SiteLocalAddrType) ) )  // filtered
-                {
-                    flags = (IPAddrType) ( AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType );
-                } else
-                {
-                    flags = (IPAddrType) ( AllCastAddrTypes | AllLocalAddrTypes );
+                    flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType);
                 }
-            } else
+                else if ((b3 = transport_layer_->typeofaddr(last_source_addr_, SiteLocalAddrType)))  // filtered
+                {
+                    flags = (IPAddrType) (AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType);
+                }
+                else
+                {
+                    flags = (IPAddrType) (AllCastAddrTypes | AllLocalAddrTypes);
+                }
+            }
+            else
             {
                 /* this is from a loopback, use default flag*/
                 flags = AllCastAddrTypes;
             }
             EVENTLOG3(DEBUG, "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d", b1, b2,
-                b3);
+                    b3);
         }
 
         /*4) validate received addresses in this chunk*/
-        switch( paratype )
+        switch (paratype)
         {
             case VLPARAM_IPV4_ADDRESS:
-                if( ( my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4 ) )
+                if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4))
                 {  // use peer addrlist that we can support, ignoring unsupported addres
                    // validate if exceed max num addres allowed
-                    if( found_addr_number < MAX_NUM_ADDRESSES )
+                    if (found_addr_number < MAX_NUM_ADDRESSES)
                     {
                         addres = (ip_address_t*) curr_pos;
                         // validate vlp type and length
-                        if( IS_IPV4_ADDRESS_PTR_NBO(addres) )
+                        if (IS_IPV4_ADDRESS_PTR_NBO(addres))
                         {
                             uint ip4_saddr = ntohl(addres->dest_addr_un.ipv4_addr);
                             // validate addr itself
-                            if( !IN_CLASSD(ip4_saddr) && !IN_EXPERIMENTAL(ip4_saddr)
-                                && !IN_BADCLASS(ip4_saddr) && INADDR_ANY != ip4_saddr
-                                && INADDR_BROADCAST != ip4_saddr )
+                            if (!IN_CLASSD(ip4_saddr) && !IN_EXPERIMENTAL(ip4_saddr)
+                                    && !IN_BADCLASS(ip4_saddr) && INADDR_ANY != ip4_saddr
+                                    && INADDR_BROADCAST != ip4_saddr)
                             {
                                 peer_addreslist[found_addr_number].sa.sa_family =
-                                    AF_INET;
+                                AF_INET;
                                 peer_addreslist[found_addr_number].sin.sin_port = 0;
                                 peer_addreslist[found_addr_number].sin.sin_addr.s_addr =
-                                    addres->dest_addr_un.ipv4_addr;
+                                        addres->dest_addr_un.ipv4_addr;
 
-                                if( !transport_layer_->typeofaddr(
-                                    &peer_addreslist[found_addr_number],
-                                    flags) )  // NOT contains the addr type of [flags]
+                                if (!transport_layer_->typeofaddr(
+                                        &peer_addreslist[found_addr_number],
+                                        flags))  // NOT contains the addr type of [flags]
                                 {
                                     //current addr duplicated with a previous found addr?
                                     is_new_addr = true;  // default as new addr
-                                    if( ignore_dups )
+                                    if (ignore_dups)
                                     {
-                                        for( idx = 0; idx < found_addr_number; idx++ )
+                                        for (idx = 0; idx < found_addr_number; idx++)
                                         {
-                                            if( saddr_equals(&peer_addreslist[found_addr_number],
-                                                &peer_addreslist[idx]) )
+                                            if (saddr_equals(&peer_addreslist[found_addr_number],
+                                                    &peer_addreslist[idx]))
                                             {
                                                 is_new_addr = false;
                                             }
                                         }
                                     }
 
-                                    if( is_new_addr )
+                                    if (is_new_addr)
                                     {
                                         found_addr_number++;
-                                        if( peer_supported_addr_types != NULL ) ( *peer_supported_addr_types ) |=
-                                            SUPPORT_ADDRESS_TYPE_IPV4;
+                                        if (peer_supported_addr_types != NULL) (*peer_supported_addr_types) |=
+                                        SUPPORT_ADDRESS_TYPE_IPV4;
 #ifdef _DEBUG
                                         saddr2str(&peer_addreslist[found_addr_number - 1], hoststr_,
-                                            sizeof(hoststr_), 0);
+                                                sizeof(hoststr_), 0);
                                         EVENTLOG1(VERBOSE, "Found NEW IPv4 Address = %s", hoststr_);
 #endif
-                                    } else
+                                    }
+                                    else
                                     {
                                         EVENTLOG(VERBOSE,
-                                            "IPv4 was in the INIT or INIT ACK chunk more than once");
+                                                "IPv4 was in the INIT or INIT ACK chunk more than once");
                                     }
                                 }
                             }
-                        } else  // IS_IPV4_ADDRESS_PTR_HBO(addres) == false
+                        }
+                        else  // IS_IPV4_ADDRESS_PTR_HBO(addres) == false
                         {
                             ERRLOG(MAJOR_ERROR, "ip4 vlp has problem, stop read addresses");
                             break;
@@ -2816,151 +2904,153 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
                 }
                 break;
             case VLPARAM_IPV6_ADDRESS:
-                if( ( my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV6 ) )
+                if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV6))
                 {  // use peer addrlist that we can support, ignoring unsupported addres
                     /*6) pass by other validates*/
-                    if( found_addr_number < MAX_NUM_ADDRESSES )
+                    if (found_addr_number < MAX_NUM_ADDRESSES)
                     {
                         addres = (ip_address_t*) curr_pos;
-                        if( IS_IPV6_ADDRESS_PTR_NBO(addres) )
+                        if (IS_IPV6_ADDRESS_PTR_NBO(addres))
                         {
 #ifdef WIN32
                             if( !IN6_IS_ADDR_UNSPECIFIED(
-                                &addres->dest_addr_un.ipv6_addr) && !IN6_IS_ADDR_MULTICAST(&addres->dest_addr_un.ipv6_addr)
-                                && !IN6_IS_ADDR_V4COMPAT(&addres->dest_addr_un.ipv6_addr) )
+                                            &addres->dest_addr_un.ipv6_addr) && !IN6_IS_ADDR_MULTICAST(&addres->dest_addr_un.ipv6_addr)
+                                    && !IN6_IS_ADDR_V4COMPAT(&addres->dest_addr_un.ipv6_addr) )
 #else
-                            if( !IN6_IS_ADDR_UNSPECIFIED(
-                                addres->dest_addr_un.ipv6_addr.s6_addr) && !IN6_IS_ADDR_MULTICAST(addres->dest_addr_un.ipv6_addr.s6_addr)
-                                && !IN6_IS_ADDR_V4COMPAT(addres->dest_addr_un.ipv6_addr.s6_addr) )
-#endif
+                            if (!IN6_IS_ADDR_UNSPECIFIED(
+                                    addres->dest_addr_un.ipv6_addr.s6_addr) && !IN6_IS_ADDR_MULTICAST(addres->dest_addr_un.ipv6_addr.s6_addr)
+                                    && !IN6_IS_ADDR_V4COMPAT(addres->dest_addr_un.ipv6_addr.s6_addr))
+                            #endif
                             {
 
                                 // fillup addrr
                                 peer_addreslist[found_addr_number].sa.sa_family =
-                                    AF_INET6;
+                                AF_INET6;
                                 peer_addreslist[found_addr_number].sin6.sin6_port = 0;
                                 peer_addreslist[found_addr_number].sin6.sin6_flowinfo = 0;
 #ifdef HAVE_SIN6_SCOPE_ID
                                 foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
 #endif
                                 memcpy(peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr,
-                                    &( addres->dest_addr_un.ipv6_addr ), sizeof(struct in6_addr));
+                                        &(addres->dest_addr_un.ipv6_addr), sizeof(struct in6_addr));
 
-                                if( !transport_layer_->typeofaddr(
-                                    &peer_addreslist[found_addr_number],
-                                    flags) )  // NOT contains the addr type of [flags]
+                                if (!transport_layer_->typeofaddr(
+                                        &peer_addreslist[found_addr_number],
+                                        flags))  // NOT contains the addr type of [flags]
                                 {
                                     // current addr duplicated with a previous found addr?
                                     is_new_addr = true;  // default as new addr
-                                    if( ignore_dups )
+                                    if (ignore_dups)
                                     {
-                                        for( idx = 0; idx < found_addr_number; idx++ )
+                                        for (idx = 0; idx < found_addr_number; idx++)
                                         {
-                                            if( saddr_equals(&peer_addreslist[found_addr_number],
-                                                &peer_addreslist[idx]) )
+                                            if (saddr_equals(&peer_addreslist[found_addr_number],
+                                                    &peer_addreslist[idx]))
                                             {
                                                 is_new_addr = false;
                                             }
                                         }
                                     }
 
-                                    if( is_new_addr )
+                                    if (is_new_addr)
                                     {
                                         found_addr_number++;
-                                        if( peer_supported_addr_types != NULL ) ( *peer_supported_addr_types ) |=
-                                            SUPPORT_ADDRESS_TYPE_IPV6;
+                                        if (peer_supported_addr_types != NULL) (*peer_supported_addr_types) |=
+                                        SUPPORT_ADDRESS_TYPE_IPV6;
 #ifdef _DEBUG
                                         saddr2str(&peer_addreslist[found_addr_number - 1], hoststr_,
-                                            sizeof(hoststr_), 0);
+                                                sizeof(hoststr_), 0);
                                         EVENTLOG1(VERBOSE, "Found NEW IPv6 Address = %s", hoststr_);
 #endif
-                                    } else
+                                    }
+                                    else
                                     {
                                         EVENTLOG(VERBOSE,
-                                            "IPv6 was in the INIT or INIT ACK chunk more than once");
+                                                "IPv6 was in the INIT or INIT ACK chunk more than once");
                                     }
                                 }
                             }
                         }
-                    } else
+                    }
+                    else
                     {
                         ERRLOG(WARNNING_ERROR, "Too many addresses found during IPv4 reading");
                     }
                 }
                 break;
             case VLPARAM_SUPPORTED_ADDR_TYPES:
-                if( peer_supported_addr_types != NULL )
+                if (peer_supported_addr_types != NULL)
                 {
                     supported_address_types_t* sat = (supported_address_types_t*) curr_pos;
-                    int size = ( ( vlp_len - VLPARAM_FIXED_SIZE ) / sizeof(ushort) ) - 1;
-                    while( size >= 0 )
+                    int size = ((vlp_len - VLPARAM_FIXED_SIZE) / sizeof(ushort)) - 1;
+                    while (size >= 0)
                     {
                         *peer_supported_addr_types |=
-                            ntohs(sat->address_type[size]) == VLPARAM_IPV4_ADDRESS ?
-                            SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
+                                ntohs(sat->address_type[size]) == VLPARAM_IPV4_ADDRESS ?
+                                        SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
                         size--;
                     }
                     EVENTLOG1(VERBOSE,
-                        "Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
-                        *peer_supported_addr_types);
+                            "Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
+                            *peer_supported_addr_types);
                 }
                 break;
         }
         read_len += vlp_len;
-        while( read_len & 3 )
+        while (read_len & 3)
             ++read_len;
         curr_pos = chunk + read_len;
     }  // while
 
     // we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
-    if( !ignore_last_src_addr )
+    if (!ignore_last_src_addr)
     {
         is_new_addr = true;
-        for( idx = 0; idx < found_addr_number; idx++ )
+        for (idx = 0; idx < found_addr_number; idx++)
         {
-            if( saddr_equals(last_source_addr_, &peer_addreslist[idx], true) )
+            if (saddr_equals(last_source_addr_, &peer_addreslist[idx], true))
             {
                 is_new_addr = false;
             }
         }
 
-        if( is_new_addr )
+        if (is_new_addr)
         {
             // always add last_source_addr as it is from received packet
             // which means the path is active on that address
             // if exceed MAX_NUM_ADDRESSES, we rewrite the last addr by last_source_addr
-            if( found_addr_number >= MAX_NUM_ADDRESSES )
+            if (found_addr_number >= MAX_NUM_ADDRESSES)
             {
                 found_addr_number = MAX_NUM_ADDRESSES - 1;
 
             }
-            if( peer_supported_addr_types != NULL )
+            if (peer_supported_addr_types != NULL)
             {
-                switch( saddr_family(last_source_addr_) )
+                switch (saddr_family(last_source_addr_))
                 {
                     case AF_INET:
-                        ( *peer_supported_addr_types ) |=
-                            SUPPORT_ADDRESS_TYPE_IPV4;
+                        (*peer_supported_addr_types) |=
+                        SUPPORT_ADDRESS_TYPE_IPV4;
                         break;
                     case AF_INET6:
-                        ( *peer_supported_addr_types ) |=
-                            SUPPORT_ADDRESS_TYPE_IPV6;
+                        (*peer_supported_addr_types) |=
+                        SUPPORT_ADDRESS_TYPE_IPV6;
                         break;
                     default:
                         ERRLOG(FALTAL_ERROR_EXIT, "no such addr family!");
                         break;
                 }
             }
-            if( ( last_source_addr_->sa.sa_family == AF_INET ?
-                SUPPORT_ADDRESS_TYPE_IPV4 :
-                SUPPORT_ADDRESS_TYPE_IPV6 )
-                & my_supported_addr_types )
+            if ((last_source_addr_->sa.sa_family == AF_INET ?
+            SUPPORT_ADDRESS_TYPE_IPV4 :
+                                                              SUPPORT_ADDRESS_TYPE_IPV6)
+                    & my_supported_addr_types)
             {
                 memcpy(&peer_addreslist[found_addr_number], last_source_addr_,
-                    sizeof(sockaddrunion));
+                        sizeof(sockaddrunion));
                 EVENTLOG2(VERBOSE,
-                    "Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",
-                    found_addr_number, found_addr_number + 1);
+                        "Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",
+                        found_addr_number, found_addr_number + 1);
                 found_addr_number++;
             }
         }
@@ -2973,31 +3063,31 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
     bool ret = false;
     uint ii;
     uint idx;
-    for( ii = 0; ii < addr_list_num; ii++ )
+    for (ii = 0; ii < addr_list_num; ii++)
     {
         /*1) check loopback addr first*/
-        switch( saddr_family(addr_list + ii) )
+        switch (saddr_family(addr_list + ii))
         {
             case AF_INET:
-                if( ntohl(s4addr(&( addr_list[ii] ))) == INADDR_LOOPBACK )
+                if (ntohl(s4addr(&(addr_list[ii]))) == INADDR_LOOPBACK)
                 {
                     EVENTLOG1(VERBOSE,
-                        "contains_local_host_addr():Found IPv4 loopback address ! Num: %u",
-                        addr_list_num);
+                            "contains_local_host_addr():Found IPv4 loopback address ! Num: %u",
+                            addr_list_num);
                     ret = true;
                 }
                 break;
             case AF_INET6:
-#ifdef __linux__
-                if( IN6_IS_ADDR_LOOPBACK(s6addr(&( addr_list[ii] ))) )
+                #ifdef __linux__
+                if (IN6_IS_ADDR_LOOPBACK(s6addr(&( addr_list[ii] ))))
                 {
 #else
-                if( IN6_IS_ADDR_LOOPBACK(&sin6addr(&( addr_list[ii] ))) )
-                {
+                    if( IN6_IS_ADDR_LOOPBACK(&sin6addr(&( addr_list[ii] ))) )
+                    {
 #endif
                     EVENTLOG1(VERBOSE,
-                        "contains_local_host_addr():Found IPv6 loopback address ! Num: %u",
-                        addr_list_num);
+                            "contains_local_host_addr():Found IPv6 loopback address ! Num: %u",
+                            addr_list_num);
                     ret = true;
                 }
                 break;
@@ -3008,33 +3098,34 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
     }
 
     /*2) otherwise try to find from local addr list stored in curr geco instance*/
-    if( curr_geco_instance_ != NULL )
+    if (curr_geco_instance_ != NULL)
     {
-        if( curr_geco_instance_->local_addres_size > 0 )
+        if (curr_geco_instance_->local_addres_size > 0)
         {
-            for( idx = 0; idx < curr_geco_instance_->local_addres_size; ++idx )
+            for (idx = 0; idx < curr_geco_instance_->local_addres_size; ++idx)
             {
-                for( ii = 0; ii < addr_list_num; ++ii )
+                for (ii = 0; ii < addr_list_num; ++ii)
                 {
-                    if( saddr_equals(addr_list + ii, curr_geco_instance_->local_addres_list + idx) )
+                    if (saddr_equals(addr_list + ii, curr_geco_instance_->local_addres_list + idx))
                     {
                         ret = true;
                         EVENTLOG(VERBOSE,
-                            "contains_local_host_addr():Found same address from curr_geco_instance_");
+                                "contains_local_host_addr():Found same address from curr_geco_instance_");
                     }
                 }
             }
-        } else
+        }
+        else
         { /*3 otherwise try to find from global local host addres list if geco instace local_addres_size is 0*/
-            for( idx = 0; idx < defaultlocaladdrlistsize_; idx++ )
+            for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
             {
-                for( ii = 0; ii < addr_list_num; ++ii )
+                for (ii = 0; ii < addr_list_num; ++ii)
                 {
-                    if( saddr_equals(addr_list + ii, defaultlocaladdrlist_ + idx) )
+                    if (saddr_equals(addr_list + ii, defaultlocaladdrlist_ + idx))
                     {
                         ret = true;
                         EVENTLOG(VERBOSE,
-                            "contains_local_host_addr():Found same address from defaultlocaladdrlist_");
+                                "contains_local_host_addr():Found same address from defaultlocaladdrlist_");
                     }
                 }
             }
@@ -3043,15 +3134,15 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
     /*4 find from global local host addres list if geco instance NULL*/
     else
     {
-        for( idx = 0; idx < defaultlocaladdrlistsize_; idx++ )
+        for (idx = 0; idx < defaultlocaladdrlistsize_; idx++)
         {
-            for( ii = 0; ii < addr_list_num; ++ii )
+            for (ii = 0; ii < addr_list_num; ++ii)
             {
-                if( saddr_equals(addr_list + ii, defaultlocaladdrlist_ + idx) )
+                if (saddr_equals(addr_list + ii, defaultlocaladdrlist_ + idx))
                 {
                     ret = true;
                     EVENTLOG(VERBOSE,
-                        "contains_local_host_addr():Found same address from defaultlocaladdrlist_");
+                            "contains_local_host_addr():Found same address from defaultlocaladdrlist_");
                 }
             }
         }
@@ -3060,28 +3151,28 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
 }
 
 int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
-    sockaddrunion* foundAddress, int supportedAddressTypes)
+        sockaddrunion* foundAddress, int supportedAddressTypes)
 {
     /*1) validate method input params*/
     uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
-    if( chunk_len < read_len )
+    if (chunk_len < read_len)
     {
         EVENTLOG(WARNNING_ERROR,
-            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
+                "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
         return -1;
     }
 
-    if( foundAddress == NULL || n < 1 || n > MAX_NUM_ADDRESSES )
+    if (foundAddress == NULL || n < 1 || n > MAX_NUM_ADDRESSES)
     {
         EVENTLOG(FALTAL_ERROR_EXIT,
-            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
+                "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
         return -1;
     }
 
     /*2) validate chunk id inside this chunk*/
     init_chunk_t* init_chunk = (init_chunk_t*) chunk;
-    if( init_chunk->chunk_header.chunk_id != CHUNK_INIT
-        && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK )
+    if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
+            && init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
     {
         return -1;
     }
@@ -3096,29 +3187,29 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
     uint found_addr_number = 0;
 
     /*3) parse all vlparams in this chunk*/
-    while( read_len < len )
+    while (read_len < len)
     {
         EVENTLOG2(VERBOSE, "read_peer_addreslist() : len==%u, processed_len == %u", len, read_len);
 
-        if( len - read_len < VLPARAM_FIXED_SIZE )
+        if (len - read_len < VLPARAM_FIXED_SIZE)
         {
             EVENTLOG(WARNNING_ERROR,
-                "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
+                    "remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
             return -1;
         }
 
         vlp = (vlparam_fixed_t*) curr_pos;
         vlp_len = ntohs(vlp->param_length);
-        if( vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len ) return -1;
+        if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len) return -1;
 
         /*4) validate received addresses in this chunk*/
-        switch( ntohs(vlp->param_type) )
+        switch (ntohs(vlp->param_type))
         {
             case VLPARAM_IPV4_ADDRESS:
-                if( ( supportedAddressTypes & SUPPORT_ADDRESS_TYPE_IPV4 ) )
+                if ((supportedAddressTypes & SUPPORT_ADDRESS_TYPE_IPV4))
                 {
                     found_addr_number++;
-                    if( found_addr_number == n )
+                    if (found_addr_number == n)
                     {
                         addres = (ip_address_t*) curr_pos;
                         foundAddress->sa.sa_family = AF_INET;
@@ -3129,10 +3220,10 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
                 }
                 break;
             case VLPARAM_IPV6_ADDRESS:
-                if( ( supportedAddressTypes & VLPARAM_IPV6_ADDRESS ) )
+                if ((supportedAddressTypes & VLPARAM_IPV6_ADDRESS))
                 {
                     found_addr_number++;
-                    if( found_addr_number == n )
+                    if (found_addr_number == n)
                     {
                         addres = (ip_address_t*) curr_pos;
                         foundAddress->sa.sa_family = AF_INET6;
@@ -3142,22 +3233,22 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
                         foundAddress->sin6.sin6_scope_id = 0;
 #endif
                         memcpy(foundAddress->sin6.sin6_addr.s6_addr,
-                            &( addres->dest_addr_un.ipv6_addr ),
-                            sizeof(struct in6_addr));
+                                &(addres->dest_addr_un.ipv6_addr),
+                                sizeof(struct in6_addr));
                         return 0;
                     }
                 }
                 break;
         }
         read_len += chunk_len;
-        while( read_len & 3 )
+        while (read_len & 3)
             ++read_len;
         curr_pos = init_chunk->variableParams + read_len;
     }  // while
     return 1;
 }
 uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value, uint packet_val_len,
-    uint chunk_type)
+        uint chunk_type)
 {
     uint chunk_len = 0;
     uint read_len = 0;
@@ -3165,39 +3256,39 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value, uint packet_v
     chunk_fixed_t* chunk;
     uchar* curr_pos = packet_value;
 
-    while( read_len < packet_val_len )
+    while (read_len < packet_val_len)
     {
         EVENTLOG3(VVERBOSE, "find_first_chunk_of(%u)::packet_val_len=%d, read_len=%d", chunk_type,
-            packet_val_len, read_len);
+                packet_val_len, read_len);
 
-        if( packet_val_len - read_len < CHUNK_FIXED_SIZE )
+        if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG(MINOR_ERROR,
-                "find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
+                    "find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
             return NULL;
         }
 
         chunk = (chunk_fixed_t*) curr_pos;
         chunk_len = get_chunk_length(chunk);
 
-        if( chunk_len < CHUNK_FIXED_SIZE )
+        if (chunk_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG1(MINOR_ERROR,
-                "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!", chunk_len);
+                    "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!", chunk_len);
             return NULL;
         }
-        if( chunk_len + read_len > packet_val_len )
+        if (chunk_len + read_len > packet_val_len)
         {
             ERRLOG3(MINOR_ERROR,
-                "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!",
-                chunk_len, read_len, packet_val_len);
+                    "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!",
+                    chunk_len, read_len, packet_val_len);
             return NULL;
         }
 
-        if( chunk->chunk_id == chunk_type ) return curr_pos;
+        if (chunk->chunk_id == chunk_type) return curr_pos;
 
         read_len += chunk_len;
-        while( read_len & 3 )
+        while (read_len & 3)
             ++read_len;
         curr_pos = packet_value + read_len;
     }
@@ -3205,7 +3296,7 @@ uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value, uint packet_v
 }
 
 bool dispatch_layer_t::contains_error_chunk(uchar * packet_value, uint packet_val_len,
-    ushort error_cause)
+        ushort error_cause)
 {
     uint chunk_len = 0;
     uint read_len = 0;
@@ -3214,56 +3305,56 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value, uint packet_va
     uchar* curr_pos = packet_value;
     vlparam_fixed_t* err_chunk;
 
-    while( read_len < packet_val_len )
+    while (read_len < packet_val_len)
     {
         EVENTLOG3(VVERBOSE, "contains_error_chunk(error_cause %u)::packet_val_len=%d, read_len=%d",
-            error_cause, packet_val_len, read_len);
+                error_cause, packet_val_len, read_len);
 
-        if( packet_val_len - read_len < CHUNK_FIXED_SIZE )
+        if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
             EVENTLOG(MINOR_ERROR,
-                "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
+                    "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
             return false;
         }
 
         chunk = (chunk_fixed_t*) curr_pos;
         chunk_len = get_chunk_length(chunk);
-        if( chunk_len < CHUNK_FIXED_SIZE || chunk_len + read_len > packet_val_len ) return false;
+        if (chunk_len < CHUNK_FIXED_SIZE || chunk_len + read_len > packet_val_len) return false;
 
-        if( chunk->chunk_id == CHUNK_ERROR )
+        if (chunk->chunk_id == CHUNK_ERROR)
         {
             EVENTLOG(VERBOSE, "contains_error_chunk()::Error Chunk Found");
             uint err_param_len = 0;
             uchar* simple_chunk;
             uint param_len = 0;
             // search for target error param
-            while( err_param_len < chunk_len - CHUNK_FIXED_SIZE )
+            while (err_param_len < chunk_len - CHUNK_FIXED_SIZE)
             {
-                if( chunk_len - CHUNK_FIXED_SIZE - err_param_len < VLPARAM_FIXED_SIZE )
+                if (chunk_len - CHUNK_FIXED_SIZE - err_param_len < VLPARAM_FIXED_SIZE)
                 {
                     EVENTLOG(MINOR_ERROR,
-                        "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
+                            "remainning bytes not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
                     return false;
                 }
 
-                simple_chunk = &( (simple_chunk_t*) chunk )->chunk_value[err_param_len];
+                simple_chunk = &((simple_chunk_t*) chunk)->chunk_value[err_param_len];
                 err_chunk = (vlparam_fixed_t*) simple_chunk;
-                if( ntohs(err_chunk->param_type) == error_cause )
+                if (ntohs(err_chunk->param_type) == error_cause)
                 {
                     EVENTLOG1(VERBOSE,
-                        "contains_error_chunk()::Error Cause %u found -> Returning true",
-                        error_cause);
+                            "contains_error_chunk()::Error Cause %u found -> Returning true",
+                            error_cause);
                     return true;
                 }
                 param_len = ntohs(err_chunk->param_length);
                 err_param_len += param_len;
-                param_len = ( ( param_len % 4 ) == 0 ) ? 0 : ( 4 - param_len % 4 );
+                param_len = ((param_len % 4) == 0) ? 0 : (4 - param_len % 4);
                 err_param_len += param_len;
             }
         }
 
         read_len += chunk_len;
-        while( read_len & 3 )
+        while (read_len & 3)
             ++read_len;
         curr_pos = packet_value + read_len;
     }
@@ -3271,7 +3362,7 @@ bool dispatch_layer_t::contains_error_chunk(uchar * packet_value, uint packet_va
 }
 
 uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len,
-    uint* total_chunk_count)
+        uint* total_chunk_count)
 {
     // 0000 0000 ret = 0 at beginning
     // 0000 0001 1
@@ -3284,7 +3375,7 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len
     // 192            chunktype shutdown
     // 1000 0000-byte0-byte0-1000 0110 ret
 
-    if( total_chunk_count != NULL )
+    if (total_chunk_count != NULL)
     {
         *total_chunk_count = 0;
     }
@@ -3296,54 +3387,55 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len
     chunk_fixed_t* chunk;
     uchar* curr_pos = packet_value;
 
-    while( read_len < packet_val_len )
+    while (read_len < packet_val_len)
     {
         EVENTLOG2(VVERBOSE, "find_chunk_types()::packet_val_len=%d, read_len=%d", packet_val_len,
-            read_len);
+                read_len);
 
-        if( packet_val_len - read_len < CHUNK_FIXED_SIZE )
+        if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG(MINOR_ERROR,
-                "find_chunk_types()::INCOMPLETE CHUNK_FIXED_SIZE(4 bytes) invalid !");
+                    "find_chunk_types()::INCOMPLETE CHUNK_FIXED_SIZE(4 bytes) invalid !");
             return result;
         }
 
         chunk = (chunk_fixed_t*) curr_pos;
         chunk_len = get_chunk_length(chunk);
 
-        if( chunk_len < CHUNK_FIXED_SIZE )
+        if (chunk_len < CHUNK_FIXED_SIZE)
         {
             ERRLOG1(MINOR_ERROR, "find_chunk_types():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!",
-                chunk_len);
+                    chunk_len);
             return result;
         }
-        if( chunk_len + read_len > packet_val_len )
+        if (chunk_len + read_len > packet_val_len)
         {
             ERRLOG3(MINOR_ERROR,
-                "find_chunk_types():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!",
-                chunk_len, read_len, packet_val_len);
+                    "find_chunk_types():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!",
+                    chunk_len, read_len, packet_val_len);
             return result;
         }
 
-        if( chunk->chunk_id <= 30 )
+        if (chunk->chunk_id <= 30)
         {
-            result |= ( 1 << chunk->chunk_id );
+            result |= (1 << chunk->chunk_id);
             EVENTLOG2(VERBOSE, "find_chunk_types()::Chunktype %u,result:%s", chunk->chunk_id,
-                Bitify(sizeof(result) * 8, (char*) &result));
-        } else
+                    Bitify(sizeof(result) * 8, (char* ) &result));
+        }
+        else
         {
-            result |= ( 1 << 31 );
+            result |= (1 << 31);
             EVENTLOG2(VERBOSE, "find_chunk_types()::Chunktype %u,setting bit 31,result %s",
-                chunk->chunk_id, Bitify(sizeof(result) * 8, (char*) &result));
+                    chunk->chunk_id, Bitify(sizeof(result) * 8, (char* ) &result));
         }
 
-        if( total_chunk_count != NULL )
+        if (total_chunk_count != NULL)
         {
-            ( *total_chunk_count )++;
+            (*total_chunk_count)++;
         }
 
         read_len += chunk_len;
-        padding_len = ( ( read_len & 3 ) == 0 ) ? 0 : ( 4 - ( read_len & 3 ) );
+        padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
         read_len += padding_len;
         curr_pos = packet_value + read_len;
     }
@@ -3353,30 +3445,32 @@ uint dispatch_layer_t::find_chunk_types(uchar* packet_value, uint packet_val_len
 bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b)
 {
     /* compare local port*/
-    if( a.local_port != b.local_port )
+    if (a.local_port != b.local_port)
     {
         return false;
-    } else
+    }
+    else
     {
         is_there_at_least_one_equal_dest_port_ = true;
     }
 
-    if( !a.is_in6addr_any && !b.is_in6addr_any && !a.is_inaddr_any && !b.is_inaddr_any )
+    if (!a.is_in6addr_any && !b.is_in6addr_any && !a.is_inaddr_any && !b.is_inaddr_any)
     {
         int i, j;
         /*find if at least there is an ip addr thate quals*/
-        for( i = 0; i < a.local_addres_size; i++ )
+        for (i = 0; i < a.local_addres_size; i++)
         {
-            for( j = 0; j < b.local_addres_size; j++ )
+            for (j = 0; j < b.local_addres_size; j++)
             {
-                if( saddr_equals(&( a.local_addres_list[i] ), &( b.local_addres_list[j] ), true) )
+                if (saddr_equals(&(a.local_addres_list[i]), &(b.local_addres_list[j]), true))
                 {
                     return true;
                 }
             }
         }
         return false;
-    } else
+    }
+    else
     {
         /* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
 
@@ -3385,12 +3479,12 @@ bool dispatch_layer_t::cmp_geco_instance(const geco_instance_t& a, const geco_in
 }
 
 geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
-    ushort dest_port)
+        ushort dest_port)
 {
-    if( geco_instances_.size() == 0 )
+    if (geco_instances_.size() == 0)
     {
         ERRLOG(MAJOR_ERROR,
-            "dispatch_layer_t::find_geco_instance_by_transport_addr()::geco_instances_.size() == 0");
+                "dispatch_layer_t::find_geco_instance_by_transport_addr()::geco_instances_.size() == 0");
         return NULL;
     }
 
@@ -3406,9 +3500,9 @@ geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(sockaddr
 
     is_there_at_least_one_equal_dest_port_ = false;
     geco_instance_t* result = NULL;
-    for( auto& i : geco_instances_ )
+    for (auto& i : geco_instances_)
     {
-        if( cmp_geco_instance(tmp_geco_instance_, *i) )
+        if (cmp_geco_instance(tmp_geco_instance_, *i))
         {
             result = i;
             break;
@@ -3419,12 +3513,12 @@ geco_instance_t* dispatch_layer_t::find_geco_instance_by_transport_addr(sockaddr
 }
 
 channel_t* dispatch_layer_t::find_channel_by_transport_addr(sockaddrunion * src_addr,
-    ushort src_port, ushort dest_port)
+        ushort src_port, ushort dest_port)
 {
     tmp_channel_.remote_addres_size = 1;
     tmp_channel_.remote_addres = &tmp_addr_;
 
-    switch( saddr_family(src_addr) )
+    switch (saddr_family(src_addr))
     {
         case AF_INET:
             tmp_channel_.remote_addres[0].sa.sa_family = AF_INET;
@@ -3436,8 +3530,8 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(sockaddrunion * src_
             break;
         case AF_INET6:
             tmp_channel_.remote_addres[0].sa.sa_family = AF_INET6;
-            memcpy(&( tmp_channel_.remote_addres[0].sin6.sin6_addr.s6_addr ), ( s6addr(src_addr) ),
-                sizeof(struct in6_addr));
+            memcpy(&(tmp_channel_.remote_addres[0].sin6.sin6_addr.s6_addr), (s6addr(src_addr)),
+                    sizeof(struct in6_addr));
             tmp_channel_.remote_addres[0].sin6.sin6_port = src_addr->sin6.sin6_port;
             tmp_channel_.remote_port = src_port;
             tmp_channel_.local_port = dest_port;
@@ -3445,39 +3539,41 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(sockaddrunion * src_
             break;
         default:
             EVENTLOG1(FALTAL_ERROR_EXIT,
-                "find_channel_by_transport_addr():Unsupported Address Family %d in find_channel_by_transport_addr()",
-                saddr_family(src_addr));
+                    "find_channel_by_transport_addr():Unsupported Address Family %d in find_channel_by_transport_addr()",
+                    saddr_family(src_addr));
             break;
     }
 
     /* search for this endpoint from list*/
     channel_t* result = NULL;
-    for( auto i = channels_.begin(); i != channels_.end(); i++ )
+    for (auto i = channels_.begin(); i != channels_.end(); i++)
     {
-        if( cmp_channel(tmp_channel_, *( *i )) )
+        if (cmp_channel(tmp_channel_, *(*i)))
         {
             result = *i;
             break;
         }
     }
 
-    if( result != NULL )
+    if (result != NULL)
     {
-        if( result->deleted )
+        if (result->deleted)
         {
             EVENTLOG1(VERBOSE,
-                "find_channel_by_transport_addr():Found channel that should be deleted, with id %u",
-                result->channel_id);
+                    "find_channel_by_transport_addr():Found channel that should be deleted, with id %u",
+                    result->channel_id);
             result = NULL;
-        } else
+        }
+        else
         {
             EVENTLOG1(VERBOSE, "find_channel_by_transport_addr():Found valid channel with id %u",
-                result->channel_id);
+                    result->channel_id);
         }
-    } else
+    }
+    else
     {
         EVENTLOG(VERBOSE,
-            "find_channel_by_transport_addr()::channel indexed by transport address not in list");
+                "find_channel_by_transport_addr()::channel indexed by transport address not in list");
     }
 
     return result;
@@ -3486,34 +3582,34 @@ channel_t* dispatch_layer_t::find_channel_by_transport_addr(sockaddrunion * src_
 bool dispatch_layer_t::cmp_channel(const channel_t& tmp_channel, const channel_t& b)
 {
     EVENTLOG2(VERBOSE, "cmp_endpoint_by_addr_port(): checking ep A[id=%d] and ep B[id=%d]",
-        tmp_channel.channel_id, b.channel_id);
-    if( tmp_channel.remote_port == b.remote_port && tmp_channel.local_port == b.local_port )
+            tmp_channel.channel_id, b.channel_id);
+    if (tmp_channel.remote_port == b.remote_port && tmp_channel.local_port == b.local_port)
     {
         uint i, j;
         /*find if at least there is an ip addr thate quals*/
-        for( i = 0; i < tmp_channel.remote_addres_size; i++ )
+        for (i = 0; i < tmp_channel.remote_addres_size; i++)
         {
 #ifdef _DEBUG
             char buf[MAX_IPADDR_STR_LEN];
             saddr2str(&tmp_channel.remote_addres[i], buf, MAX_IPADDR_STR_LEN,
-                NULL);
+            NULL);
             EVENTLOG2(VERBOSE, "temp.remote_addres[%d]::%s", i, buf);
 #endif
-            for( j = 0; j < b.remote_addres_size; j++ )
+            for (j = 0; j < b.remote_addres_size; j++)
             {
 #ifdef _DEBUG
-                saddr2str(&( b.remote_addres[j] ), buf, MAX_IPADDR_STR_LEN, NULL);
+                saddr2str(&(b.remote_addres[j]), buf, MAX_IPADDR_STR_LEN, NULL);
                 EVENTLOG2(VERBOSE, "b.remote_addres[%d]::%s", j, buf);
 #endif
-                if( saddr_equals(&( tmp_channel.remote_addres[i] ), &( b.remote_addres[j] ), true) )
+                if (saddr_equals(&(tmp_channel.remote_addres[i]), &(b.remote_addres[j]), true))
                 {
-                    if( !tmp_channel.deleted && !b.deleted )
+                    if (!tmp_channel.deleted && !b.deleted)
                     {
 #ifdef _DEBUG
-                        saddr2str(&( b.remote_addres[j] ), buf,
-                            MAX_IPADDR_STR_LEN, NULL);
+                        saddr2str(&(b.remote_addres[j]), buf,
+                        MAX_IPADDR_STR_LEN, NULL);
                         EVENTLOG2(VERBOSE, "cmp_endpoint_by_addr_port():found equal channel"
-                            "set last_src_path_ to index %u, addr %s", j, buf);
+                                "set last_src_path_ to index %u, addr %s", j, buf);
 #endif
                         last_src_path_ = j;
                         return true;
@@ -3523,7 +3619,8 @@ bool dispatch_layer_t::cmp_channel(const channel_t& tmp_channel, const channel_t
         }
         EVENTLOG(VERBOSE, "cmp_endpoint_by_addr_port(): addres NOT Equals !");
         return false;
-    } else
+    }
+    else
     {
         EVENTLOG(VERBOSE, "cmp_endpoint_by_addr_port(): port NOT Equals !");
         return false;
@@ -3544,7 +3641,7 @@ bool dispatch_layer_t::validate_dest_addr(sockaddrunion * dest_addr)
      * old src port and old dest port, and this precious channel must have a non-null inst;
      * so here we return true to let the follwoing codes to handle this case.
      */
-    if( curr_geco_instance_ == NULL && curr_channel_ == NULL ) return true;
+    if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return true;
 
     // either channel or inst is NULL
     // or both are not null
@@ -3552,16 +3649,16 @@ bool dispatch_layer_t::validate_dest_addr(sockaddrunion * dest_addr)
     // here we have checked src addr in find channel mtd now
     // we need make sure dst src is also presenting in channel's
     // local_addr_list. if not, just discard it.
-    if( curr_channel_ != NULL )
+    if (curr_channel_ != NULL)
     {
         /* 2) check if dest saadr and type in curr_channel_'s local addresses list*/
-        for( uint j = 0; j < curr_channel_->local_addres_size; j++ )
+        for (uint j = 0; j < curr_channel_->local_addres_size; j++)
         {
             // all channels' addr unions MUST have the port setup same to the individual one
             // channel->remote port = all remote ports in remote addr list
             // channel->local port = all local port pports in local addt list = geco instance locla port
             // so dest port  must be equal to the one found in local addres list
-            if( saddr_equals(&curr_channel_->local_addres[j], dest_addr) )
+            if (saddr_equals(&curr_channel_->local_addres[j], dest_addr))
             {
                 EVENTLOG(VVERBOSE, "dispatch_layer_t::validate_dest_addr()::found equal dest addr");
                 return true;
@@ -3570,18 +3667,21 @@ bool dispatch_layer_t::validate_dest_addr(sockaddrunion * dest_addr)
     }
 
     ushort af = saddr_family(dest_addr);
-    if( curr_geco_instance_ != NULL )
+    if (curr_geco_instance_ != NULL)
     {
-        if( curr_geco_instance_->is_inaddr_any && curr_geco_instance_->is_in6addr_any )
+        if (curr_geco_instance_->is_inaddr_any && curr_geco_instance_->is_in6addr_any)
         {            //we supports both of ip4and6
-            if( af == AF_INET || af == AF_INET6 ) return true;
-        } else if( curr_geco_instance_->is_in6addr_any && !curr_geco_instance_->is_inaddr_any )
+            if (af == AF_INET || af == AF_INET6) return true;
+        }
+        else if (curr_geco_instance_->is_in6addr_any && !curr_geco_instance_->is_inaddr_any)
         {            //we only supports ip6
-            if( af == AF_INET6 ) return true;
-        } else if( !curr_geco_instance_->is_in6addr_any && curr_geco_instance_->is_inaddr_any )
+            if (af == AF_INET6) return true;
+        }
+        else if (!curr_geco_instance_->is_in6addr_any && curr_geco_instance_->is_inaddr_any)
         {            //we only supports ip4
-            if( af == AF_INET ) return true;
-        } else  //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
+            if (af == AF_INET) return true;
+        }
+        else  //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
         {  // we found inst in compare_geco_instance(), here return true
             return true;
         }

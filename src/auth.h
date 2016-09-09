@@ -122,7 +122,5 @@ extern void MD5Init(MD5_CTX *);
 extern void MD5Update(MD5_CTX *, unsigned char * src, unsigned int len);
 extern void MD5Final(unsigned char dest_digest[16], MD5_CTX * ctx);
 extern unsigned int generate_md5_checksum(const void *data, int length);
-#define MD5_memcpy(output,input,len) 	memcpy(output,input,len)
-#define MD5_memset(output,input,len) 	memset(output,input,len)
 #endif
 

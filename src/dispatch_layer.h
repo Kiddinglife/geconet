@@ -473,6 +473,7 @@ class dispatch_layer_t
     public:
         bool enable_test_;
         bool dispatch_layer_initialized;
+        bool ignore_cookie_life_spn_from_init_chunk_;
 
 #ifdef _WIN32
         std::unordered_map<transport_addr_t, channel_t*,
@@ -1086,7 +1087,7 @@ class dispatch_layer_t
             assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
             add2chunklist(
                     (simple_chunk_t*) build_init_chunk(initTag, rwnd, noOutStreams, noInStreams,
-                            initialTSN), "create init ack chunk %u");
+                            initialTSN,CHUNK_INIT_ACK), "create init ack chunk %u");
             return simple_chunk_index_;
         }
         void enter_error_cause_unrecognized_chunk(chunk_id_t cid, error_cause_t*ecause,
@@ -1114,7 +1115,8 @@ class dispatch_layer_t
             free_simple_chunk(simple_chunk_index_);
             return send_bundled_chunks();
         }
-        void enter_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata=0, uint errdatalen=0)
+        void enter_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata = 0,
+                uint errdatalen = 0)
         {
             if (simple_chunks_[chunkID] == NULL)
             {
@@ -1161,6 +1163,45 @@ class dispatch_layer_t
             curr_write_pos_[chunkID] += put_vlp_supported_addr_types(param, with_ipv4, with_ipv6,
                     with_dns);
         }
+
+        void enter_vlp_cookie_life_span(chunk_id_t chunkID, uint lifespan)
+        {
+            if (simple_chunks_[chunkID] == NULL)
+            {
+                ERRLOG(MAJOR_ERROR, "enter_suppeorted_addr_types()::Invalid chunk ID\n");
+                return;
+            }
+            if (completed_chunks_[chunkID])
+            {
+                ERRLOG(MAJOR_ERROR, " enter_supported_addr_types()::chunk already completed!\n");
+                return;
+            }
+            if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_INIT)
+            {
+                ERRLOG(MAJOR_ERROR, " enter_supported_addr_types()::chunk type not init !\n");
+                return;
+            }
+
+            cookie_preservative_t* preserv;
+            init_chunk_t* init = ((init_chunk_t*) simple_chunks_[chunkID]);
+
+            /* check if init chunk already contains a cookie preserv. */
+            uchar* start = find_first_vlparam_of(VLPARAM_COOKIE_PRESEREASONV, init->variableParams,
+                    init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+            if (start != 0)
+            {
+                /* simply overwrite this cookie preserv. */
+                preserv = (cookie_preservative_t*) start;
+                put_vlp_cookie_life_span(preserv, lifespan);
+            }
+            else
+            {
+                /* append the new parameter */
+                preserv = (cookie_preservative_t*) &init->variableParams[curr_write_pos_[chunkID]];
+                curr_write_pos_[chunkID] += put_vlp_cookie_life_span(preserv, lifespan);
+            }
+        }
+
         /*
          * swaps length INSIDE the packet and enters chunk into the current list
          * DO NOT need call  free_simple_chunk() !
@@ -1458,8 +1499,8 @@ class dispatch_layer_t
         /**returns a value indicating which chunks are in the packet.*/
         uint find_chunk_types(uchar* packet_value, uint len, uint* total_chunk_count = NULL);
 
-        /**check if local addr is found eg. ip4or6 loopback
-         *  and the ones same to stored in inst localaddrlist*/
+        /**check if local addr is found, return  ip4or6 loopback if found,
+         *  otherwise return  the ones same to stored in inst localaddrlist*/
         bool contain_local_addr(sockaddrunion* addr_list, uint addr_list_num);
 
         /**
@@ -1822,11 +1863,10 @@ class dispatch_layer_t
             }
 
             init_chunk_t* init = ((init_chunk_t*) simple_chunks_[chunkID]);
-            uint vlparams_len = init->chunk_header.chunk_length - CHUNK_FIXED_SIZE -
-            INIT_CHUNK_FIXED_SIZE;
+            uint vlparams_len = ntohs(init->chunk_header.chunk_length) - INIT_CHUNK_FIXED_SIZES;
             uchar* curr_pos = find_first_vlparam_of(VLPARAM_COOKIE_PRESEREASONV,
                     init->variableParams, vlparams_len);
-            if (curr_pos != NULL)
+            if (curr_pos != NULL && !ignore_cookie_life_spn_from_init_chunk_)
             {
                 /* found cookie preservative */
                 return ntohl(((cookie_preservative_t*) curr_pos)->cookieLifetimeInc)
@@ -1849,9 +1889,9 @@ class dispatch_layer_t
             state_machine_controller_t* old_data = get_state_machine_controller();
             if (old_data == NULL)
             {
-                ERRLOG(MINOR_ERROR,
-                        "get_cookielifespan_from_statectrl():  get state machine ctrl failed");
-                return -1;
+                EVENTLOG(DEBUG,
+                        "get_cookielifespan_from_statectrl():  get state machine ctrl is NULL -> use default timespan 10000ms !");
+                return DEFAULT_COOKIE_LIFE_SPAN;
             }
             return old_data->cookie_lifetime;
         }

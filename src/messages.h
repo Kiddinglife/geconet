@@ -18,6 +18,8 @@
 #include "config.h"
 #include "basic-type.h"
 
+#define DEFAULT_COOKIE_LIFE_SPAN 10000 //ms
+
 typedef short chunk_id_t;
 #define MAX_CHUNKS_SIZE 32
 #define MAX_CHUNKS_SIZE_MASK 31

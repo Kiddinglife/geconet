@@ -103,8 +103,8 @@ static int signCookie(unsigned char *cookieString, unsigned short cookieLength,
     MD5Update(&ctx, cookieString, cookieLength);
     MD5Update(&ctx, key, SECRET_KEYSIZE);
     MD5Final(start_of_signature, &ctx);
+    event_log(DEBUG, "Computed MD5 signature : ");
 
-    event_log(INTERNAL_EVENT_0, "Computed MD5 signature : ");
     for (i = 0; i < 4; i++)
     {
         event_logiiii(VERBOSE, "%2.2x %2.2x %2.2x %2.2x",
