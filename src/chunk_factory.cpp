@@ -5,9 +5,9 @@
 error_chunk_t* build_error_chunk()
 {
     error_chunk_t* errorChunk = (error_chunk_t*) geco_malloc_ext(
-    INIT_CHUNK_TOTAL_SIZE, __FILE__,
-    __LINE__);
-    if (errorChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+        INIT_CHUNK_TOTAL_SIZE, __FILE__,
+        __LINE__);
+    if( errorChunk == NULL ) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(errorChunk, 0, ERROR_CHUNK_TOTAL_SIZE);
     errorChunk->chunk_header.chunk_id = CHUNK_ERROR;
     errorChunk->chunk_header.chunk_flags = 0x00;
@@ -16,41 +16,41 @@ error_chunk_t* build_error_chunk()
 }
 
 uint put_ec_unrecognized_chunk(error_cause_t*ecause, uchar* errdata,
-        uint errdatalen)
+    uint errdatalen)
 {
     assert(ecause != 0 && errdata != 0 && errdatalen > 0);
 
     ecause->error_reason_code = htons(VLPARAM_UNRECOGNIZED_PARAM);
     int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
     ecause->error_reason_length = htons(len);
-    if (errdatalen > 0 && errdata != NULL)
+    if( errdatalen > 0 && errdata != NULL )
     {
         memcpy(ecause->error_reason, errdata, errdatalen);
     }
-    while (len & 3)
+    while( len & 3 )
         len++;
     return len;
 }
 uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata,
-        ushort errdatalen)
+    ushort errdatalen)
 {
     ecause->error_reason_code = htons(errcode);
     int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
     ecause->error_reason_length = htons(len);
-    if (errdatalen > 0 && errdata != NULL) memcpy(ecause->error_reason, errdata,
-            errdatalen);
-    while (len & 3)
+    if( errdatalen > 0 && errdata != NULL ) memcpy(ecause->error_reason, errdata,
+        errdatalen);
+    while( len & 3 )
         len++;
     return len;
 }
 init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
-        unsigned short noOutStreams, unsigned short noInStreams,
-        unsigned int initialTSN, uchar id)
+    unsigned short noOutStreams, unsigned short noInStreams,
+    unsigned int initialTSN, uchar id)
 {
     init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
-    INIT_CHUNK_TOTAL_SIZE, __FILE__,
-    __LINE__);
-    if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+        INIT_CHUNK_TOTAL_SIZE, __FILE__,
+        __LINE__);
+    if( initChunk == NULL ) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
     initChunk->chunk_header.chunk_id = id;
     initChunk->chunk_header.chunk_flags = 0x00;
@@ -62,23 +62,23 @@ init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
     initChunk->init_fixed.initial_tsn = htonl(initialTSN);
     return initChunk;
 }
-int put_init_vlp(uchar *vlPtr, uint pCode, uint len, uchar* data)
+int put_init_vlp(uchar *vlPtr, uint pCode, uchar* data, uint len)
 {
-    *((ushort*) vlPtr) = htons(pCode);
+    *( (ushort*) vlPtr ) = htons(pCode);
     vlPtr += sizeof(ushort);  // pass by param type
-    *((ushort*) vlPtr) = htons(len + VLPARAM_FIXED_SIZE);
+    *( (ushort*) vlPtr ) = htons(len + VLPARAM_FIXED_SIZE);
     vlPtr += sizeof(ushort);  // pass by param length field
-    if (len > 0 && data != NULL) memcpy(vlPtr, data, len);
+    if( len > 0 && data != NULL ) memcpy(vlPtr, data, len);
     len += VLPARAM_FIXED_SIZE;
-    while (len & 3)
+    while( len & 3 )
         len++;
     return len;
 }
 void put_init_chunk_fixed(init_chunk_t* initChunk, unsigned int initTag,
-        unsigned int arwnd, unsigned short noOutStreams,
-        unsigned short noInStreams, unsigned int initialTSN)
+    unsigned int arwnd, unsigned short noOutStreams,
+    unsigned short noInStreams, unsigned int initialTSN)
 {
-    if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+    if( initChunk == NULL ) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
     memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
     initChunk->chunk_header.chunk_id = CHUNK_INIT;
     initChunk->chunk_header.chunk_flags = 0x00;
@@ -90,77 +90,77 @@ void put_init_chunk_fixed(init_chunk_t* initChunk, unsigned int initTag,
     initChunk->init_fixed.initial_tsn = htonl(initialTSN);
 }
 uint put_vlp_supported_addr_types(uchar* vlp_start, bool with_ipv4,
-        bool with_ipv6, bool with_dns)
+    bool with_ipv6, bool with_dns)
 {
     ushort num_of_types = 0, position = 0;
-    if (with_ipv4) num_of_types++;
-    if (with_ipv6) num_of_types++;
-    if (with_dns) num_of_types++;
-    if (num_of_types == 0)
-    ERRLOG(FALTAL_ERROR_EXIT,
+    if( with_ipv4 ) num_of_types++;
+    if( with_ipv6 ) num_of_types++;
+    if( with_dns ) num_of_types++;
+    if( num_of_types == 0 )
+        ERRLOG(FALTAL_ERROR_EXIT,
             "put_supported_addr_types()::No Supported Address Types -- Program Error\n");
     ushort total_length = VLPARAM_FIXED_SIZE + num_of_types * sizeof(ushort);
     supported_address_types_t* param = (supported_address_types_t*) vlp_start;
     param->vlparam_header.param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
     param->vlparam_header.param_length = htons(total_length);
-    if (with_ipv4)
+    if( with_ipv4 )
     {
         param->address_type[position] = htons(VLPARAM_IPV4_ADDRESS);
         position++;
     }
-    if (with_ipv6)
+    if( with_ipv6 )
     {
         param->address_type[position] = htons(VLPARAM_IPV6_ADDRESS);
         position++;
     }
-    if (with_dns)
+    if( with_dns )
     {
         param->address_type[position] = htons(VLPARAM_HOST_NAME_ADDR);
         position++;
     }
     /* take care of padding */
-    if (total_length & 3) total_length += 2;
+    if( total_length & 3 ) total_length += 2;
     return total_length;
 }
 
 uint put_vlp_addrlist(uchar* vlp_start,
-        sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
-        uint local_addreslist_size)
+    sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
+    uint local_addreslist_size)
 {
     assert(
-            vlp_start != 0 && local_addreslist != 0
-                    && local_addreslist_size > 0);
+        vlp_start != 0 && local_addreslist != 0
+        && local_addreslist_size > 0);
 
     uint i, length = 0;
     ip_address_t* ip_addr;
-    for (i = 0; i < local_addreslist_size; i++)
+    for( i = 0; i < local_addreslist_size; i++ )
     {
 
-        ip_addr = (ip_address_t*) (vlp_start + length);
-        switch (saddr_family(&(local_addreslist[i])))
+        ip_addr = (ip_address_t*) ( vlp_start + length );
+        switch( saddr_family(&( local_addreslist[i] )) )
         {
             case AF_INET:
                 ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
                 ip_addr->vlparam_header.param_length = htons(
-                        sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
-                ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
+                    sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
+                ip_addr->dest_addr_un.ipv4_addr = s4addr(&( local_addreslist[i] ));
                 assert(sizeof(struct in_addr) + VLPARAM_FIXED_SIZE == 8);
                 length += 8;
                 break;
             case AF_INET6:
                 ip_addr->vlparam_header.param_type = htons(
-                VLPARAM_IPV6_ADDRESS);
+                    VLPARAM_IPV6_ADDRESS);
                 ip_addr->vlparam_header.param_length = htons(
-                        sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
+                    sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
                 memcpy(&ip_addr->dest_addr_un.ipv6_addr,
-                        &(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
-                assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE ==20);
+                    &( s6addr(&( local_addreslist[i] )) ), sizeof(struct in6_addr));
+                assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE == 20);
                 length += 20;
                 break;
             default:
                 ERRLOG1(MAJOR_ERROR,
-                        "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
-                        saddr_family(&(local_addreslist[i])));
+                    "dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
+                    saddr_family(&( local_addreslist[i] )));
                 break;
         }
     }
@@ -205,10 +205,10 @@ uint put_vlp_addrlist(uchar* vlp_start,
  4)  Generate the State Cookie by combining this subset of information
  and the resultant MAC.
  */
-/** computes a cookie signature.*/
+ /** computes a cookie signature.*/
 int put_hmac(cookie_param_t* cookieString)
 {
-    if (cookieString == NULL) return -1;
+    if( cookieString == NULL ) return -1;
 
     cookieString->ck.hmac[0] = 0;
     cookieString->ck.hmac[1] = 0;
@@ -216,29 +216,36 @@ int put_hmac(cookie_param_t* cookieString)
     cookieString->ck.hmac[3] = 0;
 
     uint cookieLength = ntohs(
-            cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
-    if (cookieLength == 0) return -1;
+        cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
+    if( cookieLength == 0 ) return -1;
 
     uchar* key = get_secre_key(KEY_READ);
-    if (key == NULL) return -1;
+    if( key == NULL )
+    {
+        ERRLOG(MAJOR_ERROR, "put_hmac()::get_secre_key() FAILED!");
+        return -1;
+    }
 
-    unsigned char digest[HMAC_LEN];
-    MD5_CTX ctx;
+    static MD5_CTX ctx;
     MD5Init(&ctx);
     MD5Update(&ctx, (uchar*) cookieString, cookieLength);
-    //MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
+    MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
+    unsigned char digest[HMAC_LEN];
     MD5Final(digest, &ctx);
     memcpy(cookieString->ck.hmac, digest, sizeof(cookieString->ck.hmac));
-    EVENTLOG1(VERBOSE, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
+
+#ifdef _DEBUG
+    EVENTLOG1(DEBUG, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
+#endif
     return 0;
 }
 
 void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
-        init_chunk_fixed_t* local_initack, uint cookieLifetime,
-        uint local_tie_tag, uint peer_tie_tag, ushort last_dest_port,
-        ushort last_src_port, sockaddrunion local_Addresses[],
-        uint num_local_Addresses, sockaddrunion peer_Addresses[],
-        uint num_peer_Addresses)
+    init_chunk_fixed_t* local_initack, uint cookieLifetime,
+    uint local_tie_tag, uint peer_tie_tag, ushort last_dest_port,
+    ushort last_src_port, sockaddrunion local_Addresses[ ],
+    uint num_local_Addresses, sockaddrunion peer_Addresses[ ],
+    uint num_peer_Addresses)
 {
     cookie->vlparam_header.param_type = htons(VLPARAM_COOKIE);
     cookie->ck.local_initack = *local_initack;
@@ -253,9 +260,9 @@ void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
     uint no_remote_ipv4_addresses = 0;
     uint no_local_ipv6_addresses = 0;
     uint no_remote_ipv6_addresses = 0;
-    for (count = 0; count < num_local_Addresses; count++)
+    for( count = 0; count < num_local_Addresses; count++ )
     {
-        switch (saddr_family(&(local_Addresses[count])))
+        switch( saddr_family(&( local_Addresses[count] )) )
         {
             case AF_INET:
                 no_local_ipv4_addresses++;
@@ -268,9 +275,9 @@ void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
                 break;
         }
     }
-    for (count = 0; count < num_peer_Addresses; count++)
+    for( count = 0; count < num_peer_Addresses; count++ )
     {
-        switch (saddr_family(&(peer_Addresses[count])))
+        switch( saddr_family(&( peer_Addresses[count] )) )
         {
             case AF_INET:
                 no_remote_ipv4_addresses++;
