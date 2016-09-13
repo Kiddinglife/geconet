@@ -1088,11 +1088,9 @@ gboolean sctlr_initAck(SCTP_init * initAck)
             supportedTypes = mdi_getSupportedAddressTypes();
             /* retrieve addresses from initAck */
             ndAddresses = ch_IPaddresses(initAckCID, supportedTypes, dAddresses, &peerSupportedTypes, &destAddress);
-
             mdi_writeDestinationAddresses(dAddresses, ndAddresses);
 
             /* initialize rest of association with data received from peer */
-
             inbound_streams = min(ch_noOutStreams(initAckCID), localData->NumberOfInStreams);
             outbound_streams = min(ch_noInStreams(initAckCID), localData->NumberOfOutStreams);
 
