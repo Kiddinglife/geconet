@@ -2406,12 +2406,23 @@ ChunkProcessResult dispatch_layer_t::process_init_ack_chunk(init_chunk_t * initA
         ERRLOG(FALTAL_ERROR_EXIT,
                 "BAKEOFF: Program error, no common address types in process_init_chunk()");
         set_channel_remote_addrlist(tmp_peer_addreslist_, tmp_peer_addreslist_size_);
+
+        /* initialize channel with infos in init ack*/
         bool peerSupportsPRSCTP = peer_supports_particial_reliability(initAck);
         bool assocSupportsADDIP = false; // todo
         set_channel( get_rwnd(initAckCID), inbound_stream, outbound_stream, get_init_tsn(initAckCID),
                 read_init_tag(initAckCID), ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn), peerSupportsPRSCTP,
                 assocSupportsADDIP);
 
+        EVENTLOG2(VERBOSE, "process_init_ack_chunk()::called set_channel(in-streams=%u, out-streams=%u)",
+                inbound_stream, outbound_stream);
+
+        chunk_id_t cookieecho_cid= alloc_cookie_echo(get_state_cookie_from_init_ack(initAck));
+        if(cookieecho_cid < 0)
+        {
+            EVENTLOG(INFO, "received a initAck without cookie");
+
+        }
     }
     /*if( channel_state == ChannelState::CookieEchoed )
      {// Duplicated initAck, ignore }

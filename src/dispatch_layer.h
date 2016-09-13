@@ -730,7 +730,125 @@ class dispatch_layer_t
                 unsigned short noOfInStreams, unsigned short noOfOutStreams,
                 unsigned int remoteInitialTSN, unsigned int tagRemote,
                 unsigned int localInitialTSN, bool assocSupportsPRSCTP,
-                bool assocSupportsADDIP);
+                bool assocSupportsADDIP)
+        {
+            EVENTLOG(DEBUG, "- - - Enter set_channel()");
+
+            assert(curr_channel_ == NULL);
+            if (curr_channel_->remote_tag != 0)
+            {
+                /* channel init was already completed */
+                EVENTLOG(INFO, "set_channel()::reset channel members!");
+                free_flow_control(curr_channel_->flow_control);
+                free_reliable_transfer(curr_channel_->reliable_transfer_control);
+                free_recvctrl(curr_channel_->receive_control);
+                free_deliverman(curr_channel_->deliverman_control);
+            }
+            curr_channel_->remote_tag = tagRemote;
+
+            bool with_pr = assocSupportsPRSCTP && curr_channel_->locally_supported_PRDCTP;
+            curr_channel_->locally_supported_PRDCTP = curr_channel_->remotely_supported_PRSCTP =
+                    with_pr;
+
+            curr_channel_->flow_control = alloc_flowcontrol(remoteSideReceiverWindow,
+                    localInitialTSN, curr_channel_->remote_addres_size,
+                    curr_channel_->maxSendQueue);
+            curr_channel_->reliable_transfer_control = alloc_reltransfer(
+                    curr_channel_->remote_addres_size, localInitialTSN);
+            curr_channel_->receive_control = alloc_recvctrl(remoteInitialTSN,
+                    curr_channel_->remote_addres_size, curr_channel_->geco_inst);
+            curr_channel_->deliverman_control = alloc_deliverman(
+                    noOfInStreams, noOfOutStreams, with_pr);
+
+#ifdef _DEBUG
+            EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id,
+                    curr_channel_->local_tag);
+#endif
+            return 0;
+        }
+
+        /**
+         * function creates and allocs new rtx_buffer structure.
+         * There is one such structure per established association
+         * @param   number_of_destination_addresses     number of paths to the peer of the association
+         * @return pointer to the newly created structure
+         */
+        void* alloc_reltransfer(uint numofdestaddrlist, uint iTSN)
+        {
+            EVENTLOG(DEBUG, "- - - Enter alloc_reltransfer()");
+            return 0;
+        }
+        /**
+         * Creates new instance of flowcontrol module and returns pointer to it
+         * TODO : should parameter be unsigned short ?
+         * TODO : get and update MTU (guessed values ?) per destination address
+         * @param  peer_rwnd receiver window that peer allowed us when setting up the association
+         * @param  my_iTSN my initial TSN value
+         * @param  number_of_destination_addresses the number of paths to the association peer
+         * @return  pointer to the new fc_data instance
+         */
+        void* alloc_flowcontrol(uint peer_rwnd,
+                uint my_iTSN,
+                uint number_of_destination_addresses,
+                uint maxQueueLen)
+        {
+            EVENTLOG(DEBUG, "- - - Enter alloc_flowcontrol()");
+            return 0;
+        }
+        /**
+         * function creates and allocs new rxc_buffer structure.
+         * There is one such structure per established association
+         * @param  remote_initial_TSN initial tsn of the peer
+         * @return pointer to the newly created structure
+         */
+        void* alloc_recvctrl(unsigned int remote_initial_TSN,
+                unsigned int number_of_destination_addresses, void* sctpInstance)
+        {
+            EVENTLOG(DEBUG, "- - - Enter alloc_recvctrl()");
+            return 0;
+        }
+        /**
+         This function is called to instanciate one Stream Engine for an association.
+         It creates and initializes the Lists for Sending and Receiving Data.
+         It is called by Message Distribution.
+         returns: the pointer to the Stream Engine
+         */
+        void* alloc_deliverman(unsigned int numberReceiveStreams, /* max of streams to receive */
+        unsigned int numberSendStreams, /* max of streams to send */
+        bool assocSupportsPRSCTP)
+        {
+            return 0;
+        }
+        /**
+         * Deletes data occupied by a flow_control data structure
+         * @param fc_instance pointer to the flow_control data structure
+         */
+        void free_flow_control(void* fctrl_inst)
+        {
+
+        }
+        /**
+         * function deletes a rtx_buffer structure (when it is not needed anymore)
+         * @param rtx_instance pointer to a rtx_buffer, that was previously created
+         with rtx_new_reltransfer()
+         */
+        void free_reliable_transfer(void* rtx_inst)
+        {
+
+        }
+        /**
+         * function deletes a rxc_buffer structure (when it is not needed anymore)
+         * @param rxc_instance pointer to a rxc_buffer, that was previously created
+         */
+        void free_recvctrl(void* rxc_inst)
+        {
+
+        }
+        /** Deletes the instance pointed to by streamengine.*/
+        void free_deliverman(void* se_inst)
+        {
+
+        }
 
         /**
          * @brief Copies local addresses of this instance into the array passed as parameter.
@@ -1057,7 +1175,40 @@ class dispatch_layer_t
             }
             return false;
         }
+        cookie_param_t* get_state_cookie_from_init_ack(init_chunk_t* initack)
+        {
+            assert(initack != 0);
+            if (initack->chunk_header.chunk_id == CHUNK_INIT_ACK)
+            {
+                return (cookie_param_t*) find_first_vlparam_of(VLPARAM_UNRELIABILITY,
+                        &initack->variableParams[0],
+                        initack->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        chunk_id_t alloc_cookie_echo(cookie_param_t * cookieParam)
+        {
+            if(cookieParam == 0) return -1;
 
+            cookie_echo_chunk_t* cookieChunk = geco_malloc_ext(sizeof(cookie_echo_chunk_t),
+            __FILE__,
+            __LINE__);
+            memset(cookieChunk, 0, sizeof(cookie_echo_chunk_t));
+            cookieChunk->chunk_header.chunk_id = CHUNK_COOKIE_ECHO;
+            cookieChunk->chunk_header.chunk_flags = 0x00;
+            cookieChunk->chunk_header.chunk_length = ntohs(
+                    cookieParam->vlparam_header.param_length);
+            add2chunklist((simple_chunk_t*) cookieChunk, "created cookie echo chunk %u ");
+            /*  copy cookie parameter EXcluding param-header into chunk            */
+            memcpy(&(cookieChunk->cookie), cookieParam,
+                    ntohs(cookieParam->vlparam_header.param_length) - VLPARAM_FIXED_SIZE);
+            while (curr_write_pos_[simple_chunk_index_] & 3)
+                curr_write_pos_[simple_chunk_index_]++;
+            return simple_chunk_index_;
+        }
         /**
          * this is called by bundling, when a SACK needs to be processed.This is a LONG function !
          * FIXME : check correct update of rtx->lowest_tsn !
