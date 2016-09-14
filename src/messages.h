@@ -113,6 +113,7 @@ struct chunk_fixed_t
 #define FLAG_DELETED_CHANNEL  0x00
 #define FLAG_TBIT_SET         0x01
 #define FLAG_UNFOUND_CHANNEL  0x01
+#define FLAG_FOUND_CHANNEL  0x01
 
 /**************** chunk_value chunk *******************/
 #define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10
@@ -508,6 +509,8 @@ const static char* ECCSTRS[32] =
 #define ECC_DELETE_LAST_IP_FAILED       16
 #define ECC_OP_REFUSED_NO_RESOURCES     17
 #define ECC_DELETE_SOURCE_ADDRESS       18
+#define ECC_UNMATCHED_DEST_ADDR_FAMILY       19
+#define ECC_PEER_NOT_LISTENNING_ADDR        15
 
 // Error REASON param defs
 struct stale_cookie_err_t
