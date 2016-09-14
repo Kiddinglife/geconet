@@ -510,7 +510,8 @@ const static char* ECCSTRS[32] =
 #define ECC_OP_REFUSED_NO_RESOURCES     17
 #define ECC_DELETE_SOURCE_ADDRESS       18
 #define ECC_UNMATCHED_DEST_ADDR_FAMILY       19
-#define ECC_PEER_NOT_LISTENNING_ADDR        15
+#define ECC_PEER_NOT_LISTENNING_ADDR        20
+#define ECC_PEER_NOT_SUPPORT_ADDR_TYPES        21
 
 // Error REASON param defs
 struct stale_cookie_err_t
