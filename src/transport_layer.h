@@ -93,7 +93,6 @@ struct socket_despt_t
 #include "gecotimer.h"
 #include "dispatch_layer.h"
 struct network_interface_t;
-
 struct selector
 {
 #ifdef _WIN32
@@ -253,6 +252,20 @@ struct selector
 	}
 };
 
+struct network_interface_t;
+class dispatch_layer_t;
+union sockaddrunion;
+struct test_dummy_t
+{
+        network_interface_t* nit;
+        dispatch_layer_t* dlt;
+
+        bool setsocket_return_error_in_tspt_sendippacket_;
+        bool sendto_in_tspt_sendippacket_; // transport_layer::send_ip_packet()::sendto()
+        int sendto(int sfd, char *buf, int len,
+                sockaddrunion *dest, uchar tos);
+};
+
 struct network_interface_t
 {
 	int ip4_socket_despt_; /* socket fd for standard SCTP port....      */
@@ -276,6 +289,10 @@ struct network_interface_t
 	selector poller_;
 	cbunion_t cbunion_;
 
+#ifdef ENABLE_UNIT_TEST
+	test_dummy_t test_dummy_;
+#endif
+
 	network_interface_t()
 	{
 		ip4_socket_despt_ = -1;
@@ -296,6 +313,11 @@ struct network_interface_t
 		stat_send_bytes_ = 0;
 		poller_.nit_ptr_ = this;
 		poller_.dispatch_layer_.transport_layer_ = this;
+
+#ifdef ENABLE_UNIT_TEST
+		test_dummy_.sendto_in_tspt_sendippacket_ = true;
+		test_dummy_.setsocket_return_error_in_tspt_sendippacket_ = false;
+#endif
 	}
 
 	~network_interface_t()
