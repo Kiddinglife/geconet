@@ -879,7 +879,6 @@ class dispatch_layer_t
 	{
 		if( curr_channel_ == NULL )
 		{
-			ERRLOG(MINOR_ERROR, "get_path_controller: curr_channel_ is NULL");
 			return NULL;
 		} else
 		{
@@ -1502,15 +1501,14 @@ class dispatch_layer_t
 	 */
 	void free_simple_chunk(uint chunkID)
 	{
-		printf("sinple chunk id %u\n", chunkID);
 		if( simple_chunks_[chunkID] != NULL )
 		{
-			EVENTLOG1(INFO, "freed simple chunk %u", chunkID);
+			EVENTLOG1(INFO, "free_simple_chunk():: free simple chunk %u", chunkID);
 			geco_free_ext(simple_chunks_[chunkID], __FILE__, __LINE__);
 			simple_chunks_[chunkID] = NULL;
 		} else
 		{
-			ERRLOG(MAJOR_ERROR, "chunk already freed\n");
+			ERRLOG(FALTAL_ERROR_EXIT, "chunk already freed\n");
 		}
 	}
 
@@ -1529,7 +1527,7 @@ class dispatch_layer_t
 		if( simple_chunks_[chunkID] != NULL )
 		{
 			simple_chunks_[chunkID] = NULL;
-			EVENTLOG1(INTERNAL_TRACE, "forgot chunk %u", cid);
+			EVENTLOG1(DEBUG, "remove_simple_chunk():: REMOVE chunk %u", cid);
 		} else
 		{
 			ERRLOG(WARNNING_ERROR, "chunk already forgotten");

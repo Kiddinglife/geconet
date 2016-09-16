@@ -257,13 +257,17 @@ class dispatch_layer_t;
 union sockaddrunion;
 struct test_dummy_t
 {
-        network_interface_t* nit;
-        dispatch_layer_t* dlt;
+	bool enable_stub_error_;
 
-        bool setsocket_return_error_in_tspt_sendippacket_;
-        bool sendto_in_tspt_sendippacket_; // transport_layer::send_ip_packet()::sendto()
-        int sendto(int sfd, char *buf, int len,
-                sockaddrunion *dest, uchar tos);
+	// transport_layer::send_ip_packet()::sendto()
+	bool enable_stub_sendto_in_tspt_sendippacket_; 
+	char* out_geco_packet_;
+	int out_geco_packet_len_;
+	int out_sfd_;
+	sockaddrunion *out_dest;
+	uchar out_tos_;
+	int sendto(int sfd, char *buf, int len,
+		sockaddrunion *dest, uchar tos);
 };
 
 struct network_interface_t
@@ -315,8 +319,8 @@ struct network_interface_t
 		poller_.dispatch_layer_.transport_layer_ = this;
 
 #ifdef ENABLE_UNIT_TEST
-		test_dummy_.sendto_in_tspt_sendippacket_ = true;
-		test_dummy_.setsocket_return_error_in_tspt_sendippacket_ = false;
+		test_dummy_.enable_stub_sendto_in_tspt_sendippacket_ = true;
+		test_dummy_.enable_stub_error_ = true;
 #endif
 	}
 
