@@ -295,7 +295,7 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
 {
     StreamEngine* se=NULL;
     guint32 state;
-    chunk_data*  cdata=NULL;
+    internal_data_chunk_t*  cdata=NULL;
     SCTP_data_chunk* dchunk=NULL;
     unsigned char* bufPosition = buffer;
 
@@ -344,7 +344,7 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
          if ((1 + fc_readNumberOfQueuedChunks()) > maxQueueLen) return SCTP_QUEUE_EXCEEDED;
        }
 
-        cdata = (chunk_data*)malloc(sizeof(chunk_data));
+        cdata = (internal_data_chunk_t*)malloc(sizeof(internal_data_chunk_t));
         if (cdata == NULL) {
             return SCTP_OUT_OF_RESOURCES;
         }
@@ -399,7 +399,7 @@ se_ulpsend (unsigned short streamId, unsigned char *buffer,
 
       for (i = 1; i <= numberOfSegments; i++)
       {
-            cdata = (chunk_data*)malloc(sizeof(chunk_data));
+            cdata = (internal_data_chunk_t*)malloc(sizeof(internal_data_chunk_t));
             if (cdata == NULL) {
                 /* FIXME: this is unclean, as we have already assigned some TSNs etc, and
                  * maybe queued parts of this message in the queue, this should be cleaned

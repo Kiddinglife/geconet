@@ -146,6 +146,7 @@ struct bundle_controller_t
 	}
 };
 
+
 /**
  * this struct contains all necessary data for
  * creating SACKs from received data chunks
@@ -296,6 +297,8 @@ struct state_machine_controller_t
  */
 struct retransmit_controller_t
 {
+	//rtx_buffer_struct
+
 	uint lowest_tsn; /*storing the lowest tsn that is in the list */
 	uint highest_tsn;/*storing the highest tsn that is in the list */
 	uint num_of_chunks;
@@ -322,9 +325,42 @@ struct retransmit_controller_t
 	std::vector<data_chunk_t*> prChunks;  //fixme what is the type used ?
 };
 
+/**
+* this struct contains all relevant congestion control parameters for
+* one PATH to the destination/association peer endpoint
+*/
+struct congestion_parameters_t
+{
+	unsigned int cwnd;
+	unsigned int cwnd2;
+	unsigned int partial_bytes_acked;
+	unsigned int ssthresh;
+	unsigned int mtu;
+	struct timeval time_of_cwnd_adjustment;
+	struct timeval last_send_time;
+};
+
 struct flow_controller_t
 {
-
+	uint outstanding_bytes;
+	uint peerarwnd;
+	uint numofdestaddrlist;
+	congestion_parameters_t* cparams;
+	uint current_tsn;
+	std::list<internal_data_chunk_t*> chunk_list; //todo not really sure GList *chunk_list;
+	uint list_length;
+	/** one timer may be running per destination address */
+	timer_id_t* T3_timer;
+	/** for passing as parameter in callback functions */
+	uint *addresses;
+	uint channel_id;
+	/** */
+	bool shutdown_received;
+	bool waiting_for_sack;
+	bool t3_retransmission_sent;
+	bool one_packet_inflight;
+	bool doing_retransmission;
+	uint maxQueueLen;
 };
 
 struct reltransfer_controller_t
@@ -778,7 +814,7 @@ class dispatch_layer_t
 	}
 
 	/**
-	 * function creates and allocs new rtx_buffer structure.
+	 * function creates and allocs new retransmit_controller_t structure.
 	 * There is one such structure per established association
 	 * @param   number_of_destination_addresses     number of paths to the peer of the association
 	 * @return pointer to the newly created structure
@@ -788,23 +824,125 @@ class dispatch_layer_t
 		EVENTLOG(DEBUG, "- - - Enter alloc_reltransfer()");
 		return 0;
 	}
+
 	/**
 	 * Creates new instance of flowcontrol module and returns pointer to it
-	 * TODO : should parameter be unsigned short ?
-	 * TODO : get and update MTU (guessed values ?) per destination address
+	 * @TODO : get and update MTU (guessed values ?) per destination address
 	 * @param  peer_rwnd receiver window that peer allowed us when setting up the association
 	 * @param  my_iTSN my initial TSN value
-	 * @param  number_of_destination_addresses the number of paths to the association peer
+	 * @param  numofdestaddres the number of paths to the association peer
 	 * @return  pointer to the new fc_data instance
 	 */
 	flow_controller_t* alloc_flowcontrol(uint peer_rwnd,
 		uint my_iTSN,
-		uint number_of_destination_addresses,
+		uint numofdestaddres,
 		uint maxQueueLen)
 	{
-		EVENTLOG(DEBUG, "- - - Enter alloc_flowcontrol()");
+		EVENTLOG4(VERBOSE,
+			"- - - Enter alloc_flowcontrol(peer_rwnd=%d,numofdestaddres=%d,my_iTSN=%d,maxQueueLen=%d)",
+			peer_rwnd, numofdestaddres, my_iTSN, maxQueueLen);
+
+		flow_controller_t* tmp = (flow_controller_t*) geco_malloc_ext(sizeof(flow_controller_t), __FILE__, __LINE__);
+		if( tmp == NULL )
+			ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+
+		tmp->current_tsn = my_iTSN;
+		if( ( tmp->cparams =
+			(congestion_parameters_t*) geco_malloc_ext(numofdestaddres * sizeof(congestion_parameters_t), __FILE__, __LINE__) ) == NULL )
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+		}
+		if( ( tmp->T3_timer =
+			(timer_id_t*) geco_malloc_ext(numofdestaddres * sizeof(timer_id_t), __FILE__, __LINE__) ) == NULL )
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+		}
+		if( ( tmp->addresses =
+			(uint*) geco_malloc_ext(numofdestaddres * sizeof(uint), __FILE__, __LINE__) ) == NULL )
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+		}
+
+		for( uint count = 0; count < numofdestaddres; count++ )
+		{
+			tmp->T3_timer[count] = timer_mgr_.timers.end(); /* i.e. timer not running */
+			tmp->addresses[count] = count;
+			( tmp->cparams[count] ).cwnd = 2 * MAX_MTU_SIZE;
+			( tmp->cparams[count] ).cwnd2 = 0L;
+			( tmp->cparams[count] ).partial_bytes_acked = 0L;
+			( tmp->cparams[count] ).ssthresh = peer_rwnd;
+			( tmp->cparams[count] ).mtu = MAX_NETWORK_PACKET_VALUE_SIZE;
+			gettimenow(&( tmp->cparams[count].time_of_cwnd_adjustment ));
+			timerclear(&( tmp->cparams[count].last_send_time ));
+		}
+
+		tmp->outstanding_bytes = 0;
+		tmp->peerarwnd = peer_rwnd;
+		tmp->numofdestaddrlist = numofdestaddres;
+		tmp->waiting_for_sack = false;
+		tmp->shutdown_received = false;
+		tmp->t3_retransmission_sent = false;
+		tmp->one_packet_inflight = false;
+		tmp->doing_retransmission = false;
+		tmp->maxQueueLen = maxQueueLen;
+		tmp->list_length = 0;
+		if( ( tmp->channel_id = get_curr_channel_id() ) == 0 )
+			ERRLOG(FALTAL_ERROR_EXIT, "channel_id is zero !");
+		rtx_set_peer_arwnd(peer_rwnd);
+
+		EVENTLOG1(VERBOSE, "- - - Leave alloc_flowcontrol(channel id=%d)", tmp->channel_id);
 		return 0;
 	}
+	/**
+	* Deletes data occupied by a flow_control data structure
+	* @param fc_instance pointer to the flow_control data structure
+	*/
+	void free_flow_control(flow_controller_t* fctrl_inst)
+	{
+		EVENTLOG(VERBOSE, "- - - Enter free_flow_control()");
+		fc_stop_timers();
+		geco_free_ext(fctrl_inst->cparams, __FILE__, __LINE__);
+		geco_free_ext(fctrl_inst->T3_timer, __FILE__, __LINE__);
+		geco_free_ext(fctrl_inst->addresses, __FILE__, __LINE__);
+		if( fctrl_inst->chunk_list.size() > 0 )
+		{
+			EVENTLOG(NOTICE, "free_flow_control() : fctrl_inst is deleted but chunk_list has size > 0 ...");
+			for( auto it = fctrl_inst->chunk_list.begin(); it != fctrl_inst->chunk_list.end();)
+			{
+				free_flowctrl_data_chunk(( *it ));
+				fctrl_inst->chunk_list.erase(it++);
+			}
+		}
+		EVENTLOG(VERBOSE, "- - - Leave free_flow_control()");
+	}
+	/**
+	* this function stops all currently running timers of the flowcontrol module
+	* and may be called when the shutdown is imminent
+	*/
+	void fc_stop_timers(void)
+	{
+		EVENTLOG(VERBOSE, "- - - Enter fc_stop_timers()");
+		flow_controller_t* fc;
+		if( ( fc = get_flowctrl() ) == NULL )
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "flow controller is NULL !");
+			return;
+		}
+		timer_id_t& nulltimer = timer_mgr_.timers.end();
+		for( uint count = 0; count < fc->numofdestaddrlist; count++ )
+		{
+			if( fc->T3_timer[count] != nulltimer )
+			{
+				timer_mgr_.delete_timer(fc->T3_timer[count]);
+				fc->T3_timer[count] = nulltimer;
+#ifdef _DEBUG
+				EVENTLOG1(VERBOSE, "Stopping T3-Timer(id=%d, timer_type=%d) ", fc->T3_timer[count]->timer_id, fc->T3_timer[count]->timer_type);
+#endif
+			}
+		}
+		EVENTLOG(VERBOSE, "- - - Leave fc_stop_timers()");
+	}
+
 	/**
 	 * function creates and allocs new rxc_buffer structure.
 	 * There is one such structure per established association
@@ -830,16 +968,8 @@ class dispatch_layer_t
 		return 0;
 	}
 	/**
-	 * Deletes data occupied by a flow_control data structure
-	 * @param fc_instance pointer to the flow_control data structure
-	 */
-	void free_flow_control(flow_controller_t* fctrl_inst)
-	{
-
-	}
-	/**
-	 * function deletes a rtx_buffer structure (when it is not needed anymore)
-	 * @param rtx_instance pointer to a rtx_buffer, that was previously created
+	 * function deletes a retransmit_controller_t structure (when it is not needed anymore)
+	 * @param rtx_instance pointer to a retransmit_controller_t, that was previously created
 	 with rtx_new_reltransfer()
 	 */
 	void free_reliable_transfer(reltransfer_controller_t* rtx_inst)
@@ -860,6 +990,39 @@ class dispatch_layer_t
 
 	}
 
+	reltransfer_controller_t* get_reltranferctrl(void)
+	{
+		return curr_channel_ == NULL ? NULL : curr_channel_->reliable_transfer_control;
+	}
+	flow_controller_t* get_flowctrl(void)
+	{
+		return curr_channel_ == NULL ? NULL : curr_channel_->flow_control;
+	}
+
+	/**
+	* function to set the a_rwnd value when we got it from our peer
+	* @param  new_arwnd      peers newly advertised receiver window
+	* @return  0 for success, -1 for error
+	*/
+	int rtx_set_peer_arwnd(unsigned int new_arwnd)
+	{
+		EVENTLOG(VERBOSE, "- - - Enter rtx_set_his_receiver_window(%u)", new_arwnd);
+
+		int ret = 0;
+		retransmit_controller_t *rtx;
+		if( ( rtx = (retransmit_controller_t *) get_reltranferctrl() ) == NULL )
+		{
+			ERRLOG(MAJOR_ERROR, "retransmit_controller_t instance not set !");
+			ret = -1;
+			goto leave;
+		} else
+			rtx->peer_arwnd = new_arwnd;
+
+		leave:
+		EVENTLOG(VERBOSE, "Leave rtx_set_peer_rwnd(%u)", new_arwnd);
+		return ret;
+	}
+
 	/**
 	 * @brief Copies local addresses of this instance into the array passed as parameter.
 	 * @param [out] local_addrlist
@@ -872,18 +1035,22 @@ class dispatch_layer_t
 		uint numPeerAddresses, uint addressTypes, bool receivedFromPeer);
 
 	/**
+	* function to read the association id of the current association
+	* @return   association-ID of the current association;
+	* 0 means the association is not set (an error).
+	*/
+	uint get_curr_channel_id(void)
+	{
+		return  curr_channel_ == NULL ? 0 : curr_channel_->channel_id;
+	}
+
+	/**
 	 * function to return a pointer to the state machine controller of this association
 	 * @return pointer to the SCTP-control data structure, null in case of error.
 	 */
 	state_machine_controller_t* get_state_machine_controller()
 	{
-		if( curr_channel_ == NULL )
-		{
-			return NULL;
-		} else
-		{
-			return curr_channel_->state_machine_control;
-		}
+		return  curr_channel_ == NULL ? NULL : curr_channel_->state_machine_control;
 	}
 
 	/**

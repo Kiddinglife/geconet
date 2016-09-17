@@ -1279,7 +1279,7 @@ void *pm_newPathman(short numberOfPaths, short primaryPath, void* sctpInstance)
 
     pmData->primaryPath = primaryPath;
     pmData->numberOfPaths = numberOfPaths;
-    pmData->associationID = mdi_readAssociationID();
+    pmData->associationID = get_curr_channel_id();
     pmData->maxPathRetransmissions = mdi_getDefaultPathMaxRetransmits(sctpInstance);
     pmData->rto_initial = mdi_getDefaultRtoInitial(sctpInstance);
     pmData->rto_min = mdi_getDefaultRtoMin(sctpInstance);

@@ -55,7 +55,7 @@
 
 #define MAX_NUM_OF_CHUNKS   500
 
-static chunk_data *rtx_chunks[MAX_NUM_OF_CHUNKS];
+static internal_data_chunk_t *rtx_chunks[MAX_NUM_OF_CHUNKS];
 
 /* #define Current_event_log_ 6 */
 
@@ -105,15 +105,15 @@ typedef struct rtx_buffer_struct
 
     GArray *prChunks;
 /*@} */
-} rtx_buffer;
+} retransmit_controller_t;
 
 
 /**
  * after submitting results from a SACK to flowcontrol, the counters in
  * reliable transfer must be reset
- * @param rtx   pointer to a rtx_buffer, where acked bytes per address will be reset to 0
+ * @param rtx   pointer to a retransmit_controller_t, where acked bytes per address will be reset to 0
  */
-void rtx_reset_bytecounters(rtx_buffer * rtx)
+void rtx_reset_bytecounters(retransmit_controller_t * rtx)
 {
     rtx->newly_acked_bytes = 0L;
     return;
@@ -121,16 +121,16 @@ void rtx_reset_bytecounters(rtx_buffer * rtx)
 
 
 /**
- * function creates and allocs new rtx_buffer structure.
+ * function creates and allocs new retransmit_controller_t structure.
  * There is one such structure per established association
  * @param   number_of_destination_addresses     number of paths to the peer of the association
  * @return pointer to the newly created structure
  */
 void *rtx_new_reltransfer(unsigned int number_of_destination_addresses, unsigned int iTSN)
 {
-    rtx_buffer *tmp;
+    retransmit_controller_t *tmp;
 
-    tmp = (rtx_buffer*)malloc(sizeof(rtx_buffer));
+    tmp = (retransmit_controller_t*)malloc(sizeof(retransmit_controller_t));
     if (!tmp)
         error_log(ERROR_FATAL, "Malloc failed");
 
@@ -156,7 +156,7 @@ void *rtx_new_reltransfer(unsigned int number_of_destination_addresses, unsigned
     tmp->num_of_addresses = number_of_destination_addresses;
     tmp->advancedPeerAckPoint = iTSN - 1;   /* a save bet */
     tmp->prChunks = g_array_new(FALSE, TRUE, sizeof(pr_stream_data));
-    tmp->my_association = mdi_readAssociationID();
+    tmp->my_association = get_curr_channel_id();
     event_logi(VVERBOSE, "RTX : Association-ID== %d ", tmp->my_association);
     if (tmp->my_association == 0)
         error_log(ERROR_FATAL, "Association was not set, should be......");
@@ -165,14 +165,14 @@ void *rtx_new_reltransfer(unsigned int number_of_destination_addresses, unsigned
 }
 
 /**
- * function deletes a rtx_buffer structure (when it is not needed anymore)
- * @param rtx_instance pointer to a rtx_buffer, that was previously created
+ * function deletes a retransmit_controller_t structure (when it is not needed anymore)
+ * @param rtx_instance pointer to a retransmit_controller_t, that was previously created
             with rtx_new_reltransfer()
  */
 void rtx_delete_reltransfer(void *rtx_instance)
 {
-    rtx_buffer *rtx;
-    rtx = (rtx_buffer *) rtx_instance;
+    retransmit_controller_t *rtx;
+    rtx = (retransmit_controller_t *) rtx_instance;
     event_log(INTERNAL_EVENT_0, "deleting reliable transfer");
     if (rtx->chunk_list != NULL)
         error_log(ERROR_MINOR, "List is being deleted, but chunks are still queued...");
@@ -192,7 +192,7 @@ void rtx_delete_reltransfer(void *rtx_instance)
             may we take src address of the SACK, or must we take destination address of our data ?
  * @param    rtx    pointer to the currently active rtx structure
  */
-void rtx_rtt_update(unsigned int adr_idx, rtx_buffer * rtx)
+void rtx_rtt_update(unsigned int adr_idx, retransmit_controller_t * rtx)
 {
     /* FIXME : check this routine !!!!!!!!!!! */
     int rtt;
@@ -218,10 +218,10 @@ void rtx_rtt_update(unsigned int adr_idx, rtx_buffer * rtx)
  */
 int rtx_enter_fast_recovery(void)
 {
-    rtx_buffer *rtx = NULL;
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    retransmit_controller_t *rtx = NULL;
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return (SCTP_MODULE_NOT_FOUND);
     }
 
@@ -238,7 +238,7 @@ int rtx_enter_fast_recovery(void)
  * this function leaves fast recovery if it was activated, and all chunks up to
  * fast recovery exit point were acknowledged.
  */
-static inline int rtx_check_fast_recovery(rtx_buffer* rtx, unsigned int ctsna)
+static inline int rtx_check_fast_recovery(retransmit_controller_t* rtx, unsigned int ctsna)
 {
     if (rtx->fast_recovery_active == TRUE) {
         if (after (ctsna, rtx->fr_exit_point) || ctsna == rtx->fr_exit_point) {
@@ -256,10 +256,10 @@ static inline int rtx_check_fast_recovery(rtx_buffer* rtx, unsigned int ctsna)
  */
 gboolean rtx_is_in_fast_recovery(void)
 {
-    rtx_buffer *rtx = NULL;
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    retransmit_controller_t *rtx = NULL;
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return (FALSE);
     }
     return rtx->fast_recovery_active;
@@ -273,8 +273,8 @@ gboolean rtx_is_in_fast_recovery(void)
  */
 int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
 {
-    rtx_buffer *rtx;
-    chunk_data *dat, *old_dat;
+    retransmit_controller_t *rtx;
+    internal_data_chunk_t *dat, *old_dat;
 /*
     boolean deleted_chunk = FALSE;
     guint i=0, list_length = 0;
@@ -284,9 +284,9 @@ int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
 
     event_logi(INTERNAL_EVENT_0, "rtx_dequeue_up_to...%u ", ctsna);
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return (-1);
     }
     if (rtx->chunk_list == NULL) {
@@ -301,7 +301,7 @@ int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
     tmp = g_list_first(rtx->chunk_list);
 
     while (tmp) {
-        dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, 0);
         if (!dat) return -1;
 
         chunk_tsn = dat->chunk_tsn;
@@ -344,7 +344,7 @@ int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
 }
 
 
-static int rtx_update_fwtsn_list(rtx_buffer *rtx, chunk_data* dat)
+static int rtx_update_fwtsn_list(retransmit_controller_t *rtx, internal_data_chunk_t* dat)
 {
     int count = 0, result = 0, arrayLen = 0;
     pr_stream_data prChunk, *prPtr=NULL;
@@ -390,9 +390,9 @@ static int rtx_update_fwtsn_list(rtx_buffer *rtx, chunk_data* dat)
 }
 
 
-static int rtx_advancePeerAckPoint(rtx_buffer *rtx)
+static int rtx_advancePeerAckPoint(retransmit_controller_t *rtx)
 {
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList* tmp = NULL;
 
     /* restart with a fresh array */
@@ -402,7 +402,7 @@ static int rtx_advancePeerAckPoint(rtx_buffer *rtx)
     tmp = g_list_first(rtx->chunk_list);
 
     while (tmp) {
-        dat = (chunk_data*)g_list_nth_data(tmp, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(tmp, 0);
         if (!dat) return -1;
         if (!dat->hasBeenDropped) return 0;
         event_logi(VVERBOSE, "rtx_advancePeerAckPoint: Set advancedPeerAckPoint to %u", dat->chunk_tsn);
@@ -414,7 +414,7 @@ static int rtx_advancePeerAckPoint(rtx_buffer *rtx)
 }
 
 
-int rtx_send_forward_tsn(rtx_buffer *rtx, unsigned int forward_tsn, unsigned int idx, gboolean sendAtOnce){
+int rtx_send_forward_tsn(retransmit_controller_t *rtx, unsigned int forward_tsn, unsigned int idx, gboolean sendAtOnce){
 
     int result;
     unsigned int count;
@@ -449,13 +449,13 @@ int rtx_send_forward_tsn(rtx_buffer *rtx, unsigned int forward_tsn, unsigned int
 
 int rtx_get_obpa(unsigned int adIndex, unsigned int *totalInFlight)
 {
-    rtx_buffer *rtx=NULL;
-    chunk_data *dat=NULL;
+    retransmit_controller_t *rtx=NULL;
+    internal_data_chunk_t *dat=NULL;
     int count, len, numBytesPerAddress = 0, numTotalBytes = 0;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_FATAL, "rtx_buffer instance not set !");
+        error_log(ERROR_FATAL, "retransmit_controller_t instance not set !");
         return SCTP_MODULE_NOT_FOUND;
     }
     len = g_list_length(rtx->chunk_list);
@@ -464,7 +464,7 @@ int rtx_get_obpa(unsigned int adIndex, unsigned int *totalInFlight)
         return 0;
     }
     for (count = 0; count < len; count++) {
-        dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, count);
+        dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, count);
         if (dat == NULL) break;
         /* do not count chunks that were retransmitted by T3 timer              */
         /* dat->hasBeenRequeued will be set to FALSE when these are sent again  */
@@ -490,10 +490,10 @@ int rtx_get_obpa(unsigned int adIndex, unsigned int *totalInFlight)
  */
 int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int totalLen)
 {
-    rtx_buffer *rtx=NULL;
+    retransmit_controller_t *rtx=NULL;
     SCTP_sack_chunk *sack=NULL;
     fragment *frag=NULL;
-    chunk_data *dat=NULL;
+    internal_data_chunk_t *dat=NULL;
     GList* tmp_list = NULL;
     int result;
     unsigned int advertised_rwnd, old_own_ctsna;
@@ -508,9 +508,9 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
 
     event_logi(INTERNAL_EVENT_0, "rtx_process_sack(address==%u)", adr_index);
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return (-1);
     }
 
@@ -582,7 +582,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
         } else {
             /* this may become expensive !!!!!!!!!!!!!!!! */
             pos = 0;
-            dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, i);
+            dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, i);
             if (rtx->chunk_list != NULL && dat != NULL) {
                 do {
                 frag = (fragment *) & (sack->fragments_and_dups[pos]);
@@ -627,7 +627,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
                         }     /*  if (dat->gap_reports == 4) */
                         /* read next chunk */
                         i++;
-                        dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, i);
+                        dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, i);
                         if (dat == NULL)
                             break; /* was the last chunk in the list */
                         if (chunks_to_rtx == MAX_NUM_OF_CHUNKS)
@@ -659,7 +659,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
                         dat->gap_reports = 0;
 
                         i++;
-                        dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, i);
+                        dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, i);
                         if (dat == NULL)
                             break; /* was the last chunk in the list or chunk is empty*/
                         else continue;
@@ -687,7 +687,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
             event_log(VVERBOSE, "rtx_process_sack: resetting all *hasBeenAcked* attributes");
             tmp_list = g_list_first(rtx->chunk_list);
             while (tmp_list) {
-                dat = (chunk_data*)g_list_nth_data(tmp_list, 0);
+                dat = (internal_data_chunk_t*)g_list_nth_data(tmp_list, 0);
                 if (!dat) break;
                 if (dat->hasBeenAcked == TRUE && dat->hasBeenDropped == FALSE) {
                     dat->hasBeenAcked = FALSE;
@@ -734,7 +734,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
     } else {
         /* there are still chunks in that queue */
         if (rtx->chunk_list != NULL)
-            dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, 0);
+            dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, 0);
         if (dat == NULL) {
             error_log(ERROR_FATAL, "Problem with RTX-chunklist, CHECK Program and List Handling");
             return -1;
@@ -798,19 +798,19 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
                         be retransmitted after this function returns. Provide space !
  * @return  -1 on error, 0 for empty list, else number of chunks that can be retransmitted
  */
-int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, chunk_data ** chunks)
+int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, internal_data_chunk_t ** chunks)
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
     /* assume a SACK with 5 fragments and 5 duplicates :-) */
     /* it's size == 20+5*4+5*4 == 60        */
     unsigned int size = 60;
     int chunks_to_rtx = 0, result=0;
     struct timeval now;
     GList *tmp;
-    chunk_data *dat=NULL;
+    internal_data_chunk_t *dat=NULL;
     event_logi(INTERNAL_EVENT_0, "========================= rtx_t3_timeout (address==%u) =====================", address);
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
 
     if (rtx->chunk_list == NULL) return 0;
 
@@ -819,19 +819,19 @@ int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, chunk
     tmp = g_list_first(rtx->chunk_list);
 
     while (tmp) {
-        if (((chunk_data *)(tmp->data))->num_of_transmissions < 1) {
+        if (((internal_data_chunk_t *)(tmp->data))->num_of_transmissions < 1) {
             error_log(ERROR_FATAL, "Somehow chunk->num_of_transmissions is less than 1 !");
             break;
         }
         /* only take chunks that were transmitted to *address* */
-        if (((chunk_data *)(tmp->data))->last_destination == address) {
-            if (((chunk_data *)(tmp->data))->hasBeenDropped == FALSE) {
-                if (timerisset( &((chunk_data *)(tmp->data))->expiry_time)) {
-                    if (timercmp(&now, &((chunk_data *)(tmp->data))->expiry_time, > )) {
+        if (((internal_data_chunk_t *)(tmp->data))->last_destination == address) {
+            if (((internal_data_chunk_t *)(tmp->data))->hasBeenDropped == FALSE) {
+                if (timerisset( &((internal_data_chunk_t *)(tmp->data))->expiry_time)) {
+                    if (timercmp(&now, &((internal_data_chunk_t *)(tmp->data))->expiry_time, > )) {
                         /* chunk has expired, maybe send FORWARD_TSN */
-                        ((chunk_data *)(tmp->data))->hasBeenDropped = TRUE;
+                        ((internal_data_chunk_t *)(tmp->data))->hasBeenDropped = TRUE;
                     } else { /* chunk has not yet expired */
-                        chunks[chunks_to_rtx] = (chunk_data*)tmp->data;
+                        chunks[chunks_to_rtx] = (internal_data_chunk_t*)tmp->data;
                         size += chunks[chunks_to_rtx]->chunk_len;
                         event_logii(VVERBOSE, "Scheduling chunk (tsn==%u), len==%u for rtx",
                                     chunks[chunks_to_rtx]->chunk_tsn, chunks[chunks_to_rtx]->chunk_len);
@@ -840,7 +840,7 @@ int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, chunk
                         chunks_to_rtx++;
                     }
                 } else {
-                    chunks[chunks_to_rtx] = (chunk_data*)tmp->data;
+                    chunks[chunks_to_rtx] = (internal_data_chunk_t*)tmp->data;
                     size += chunks[chunks_to_rtx]->chunk_len;
                     event_logii(VVERBOSE, "Scheduling chunk (tsn==%u), len==%u for rtx",
                             chunks[chunks_to_rtx]->chunk_tsn, chunks[chunks_to_rtx]->chunk_len);
@@ -856,7 +856,7 @@ int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, chunk
     event_logi(VVERBOSE, "Scheduled %d chunks for rtx", chunks_to_rtx);
 
     if (rtx->chunk_list != NULL) {
-        dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, 0);
         if (dat == NULL) {
            error_log(ERROR_FATAL, "Problem with RTX-chunklist, CHECK Program and List Handling");
            return chunks_to_rtx;
@@ -887,20 +887,20 @@ int rtx_t3_timeout(void *assoc_id, unsigned int address, unsigned int mtu, chunk
  */
 int rtx_save_retrans_chunks(void *data_chunk)
 {
-    chunk_data *dat;
-    rtx_buffer *rtx;
+    internal_data_chunk_t *dat;
+    retransmit_controller_t *rtx;
 
     event_log(INTERNAL_EVENT_0, "rtx_save_retrans_chunks");
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return (-1);
     }
 
     /*      chunk_list_debug(rtx->chunk_list); */
 
-    dat = (chunk_data *) data_chunk;
+    dat = (internal_data_chunk_t *) data_chunk;
 
     /* TODO : check, if all values are set correctly */
     dat->gap_reports = 0L;
@@ -924,7 +924,7 @@ int rtx_save_retrans_chunks(void *data_chunk)
  */
 void chunk_list_debug(short event_log_level, GList * chunk_list)
 {
-    chunk_data *dat;
+    internal_data_chunk_t *dat;
     unsigned int size, counter;
     unsigned int last_tsn;
     guint i=0;
@@ -937,12 +937,12 @@ void chunk_list_debug(short event_log_level, GList * chunk_list)
             event_log(event_log_level, " Size of List == 0 ! ");
         } else if (size <= 200) {
             event_logi(event_log_level, " Size of List == %u ! Printing first 10 chunks....", size);
-            dat = (chunk_data*)g_list_nth_data(chunk_list, 0);
+            dat = (internal_data_chunk_t*)g_list_nth_data(chunk_list, 0);
             last_tsn = dat->chunk_tsn - 1;
             if (size > 10) counter = 10;
             else counter = size;
             for (i=0; i<counter; i++) {
-                dat = (chunk_data*)g_list_nth_data(chunk_list, i);
+                dat = (internal_data_chunk_t*)g_list_nth_data(chunk_list, i);
                 event_logii(event_log_level,
                             "________________ Chunk _________________\nChunk Size %u  -- TSN : %u  ",
                             dat->chunk_len, dat->chunk_tsn);
@@ -960,7 +960,7 @@ void chunk_list_debug(short event_log_level, GList * chunk_list)
                 last_tsn = dat->chunk_tsn;
             }
             for (i=counter; i<size; i++) {
-                dat = (chunk_data*)g_list_nth_data(chunk_list, i);
+                dat = (internal_data_chunk_t*)g_list_nth_data(chunk_list, i);
                 if (! after(dat->chunk_tsn, last_tsn))
                     error_log(ERROR_FATAL, "Higher TSNs not in sequence ! Terminate");
                 if (dat->chunk_tsn - last_tsn > 10000)
@@ -984,11 +984,11 @@ void chunk_list_debug(short event_log_level, GList * chunk_list)
  */
 unsigned int rtx_readLocalTSNacked()
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        event_log(INTERNAL_EVENT_0, "rtx_buffer instance not set !");
+        event_log(INTERNAL_EVENT_0, "retransmit_controller_t instance not set !");
         return (0);
     }
     return rtx->lowest_tsn;
@@ -996,11 +996,11 @@ unsigned int rtx_readLocalTSNacked()
 
 gboolean rtx_is_lowest_tsn(unsigned int atsn)
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        event_log(INTERNAL_EVENT_0, "rtx_buffer instance not set !");
+        event_log(INTERNAL_EVENT_0, "retransmit_controller_t instance not set !");
         return (0);
     }
     return rtx->lowest_tsn == atsn;
@@ -1026,7 +1026,7 @@ void* rtx_restart_reliable_transfer(void* rtx_instance, unsigned int numOfPaths,
        (this is implementation specific)
        ******************************************************************** */
     if (!rtx_instance) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return NULL;
     }
     event_logi(INTERNAL_EVENT_0, "Restarting Reliable Transfer with %u Paths", numOfPaths);
@@ -1044,19 +1044,19 @@ int rtx_dequeueOldestUnackedChunk(unsigned char *buf, unsigned int *len, unsigne
                                   unsigned char* flags, gpointer* ctx)
 {
     int listlen, result;
-    rtx_buffer *rtx;
-    chunk_data *dat = NULL;
+    retransmit_controller_t *rtx;
+    internal_data_chunk_t *dat = NULL;
     SCTP_data_chunk* dchunk;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return SCTP_MODULE_NOT_FOUND;
     }
     if (rtx->chunk_list == NULL) return  SCTP_UNSPECIFIED_ERROR;
     listlen = g_list_length(rtx->chunk_list);
     if (listlen <= 0) return SCTP_UNSPECIFIED_ERROR;
-    dat = (chunk_data*)g_list_nth_data(rtx->chunk_list, 0);
+    dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list, 0);
     if (dat->num_of_transmissions == 0) return SCTP_UNSPECIFIED_ERROR;
     if ((*len) <  (dat->chunk_len - FIXED_DATA_CHUNK_SIZE)) return SCTP_BUFFER_TOO_SMALL;
 
@@ -1090,11 +1090,11 @@ int rtx_dequeueOldestUnackedChunk(unsigned char *buf, unsigned int *len, unsigne
 unsigned int rtx_readNumberOfUnackedChunks()
 {
     unsigned int queue_len;
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return 0;
     }
     queue_len = g_list_length(rtx->chunk_list);
@@ -1109,11 +1109,11 @@ unsigned int rtx_readNumberOfUnackedChunks()
  */
 unsigned int rtx_read_remote_receiver_window()
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return 0;
     }
     event_logi(VERBOSE, "rtx_read_remote_receiver_window returns %u", rtx->peer_arwnd);
@@ -1126,13 +1126,13 @@ unsigned int rtx_read_remote_receiver_window()
  * @param  new_arwnd      peers newly advertised receiver window
  * @return  0 for success, -1 for error
  */
-int rtx_set_remote_receiver_window(unsigned int new_arwnd)
+int rtx_set_peer_arwnd(unsigned int new_arwnd)
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return -1;
     }
     event_logi(VERBOSE, "rtx_set_his_receiver_window(%u)", new_arwnd);
@@ -1147,11 +1147,11 @@ int rtx_set_remote_receiver_window(unsigned int new_arwnd)
  */
 int rtx_shutdown()
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return -1;
     }
     event_log(VERBOSE, "rtx_shutdown() activated");
@@ -1176,16 +1176,16 @@ int rtx_shutdown()
  */
 unsigned int rtx_rcv_shutdown_ctsna(unsigned int ctsna)
 {
-    rtx_buffer *rtx;
+    retransmit_controller_t *rtx;
     int result;
     int rtx_queue_len = 0;
     gboolean all_acked = FALSE, new_acked = FALSE;
 
     event_logi(INTERNAL_EVENT_0, "rtx_rcv_shutdown_ctsna(ctsna==%u)", ctsna);
 
-    rtx = (rtx_buffer *) mdi_readReliableTransfer();
+    rtx = (retransmit_controller_t *) mdi_readReliableTransfer();
     if (!rtx) {
-        error_log(ERROR_MAJOR, "rtx_buffer instance not set !");
+        error_log(ERROR_MAJOR, "retransmit_controller_t instance not set !");
         return (0);
     }
     rxc_send_sack_everytime();

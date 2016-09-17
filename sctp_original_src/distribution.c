@@ -4426,11 +4426,11 @@ void mdi_queueStatusChangeNotif(int queueType, int queueId, int queueLen)
  * function to return a pointer to the flow control module of this association
  * @return pointer to the flow control data structure,  null in case of error.
  */
-void *mdi_readFlowControl(void)
+void* get_flowctrl(void)
 {
     if (currentAssociation == NULL)
     {
-        event_log(VVERBOSE, "mdi_readFlowControl: association not set");
+        event_log(VVERBOSE, "get_flowctrl: association not set");
         return NULL;
     }
     else
@@ -4550,11 +4550,11 @@ void *mdi_readSCTP_control(void)
  * @return   association-ID of the current association;
  *           0 means the association is not set (an error).
  */
-unsigned int mdi_readAssociationID(void)
+unsigned int get_curr_channel_id(void)
 {
     if (currentAssociation == NULL)
     {
-        error_log(ERROR_MINOR, "mdi_readAssociationID: association not set");
+        error_log(ERROR_MINOR, "get_curr_channel_id: association not set");
         return 0;
     }
     else
@@ -4591,7 +4591,7 @@ unsigned int mdi_readTagRemote(void)
 {
     if (currentAssociation == NULL)
     {
-        error_log(ERROR_MINOR, "mdi_readAssociationID: association not set");
+        error_log(ERROR_MINOR, "get_curr_channel_id: association not set");
         return 0;
     }
     else

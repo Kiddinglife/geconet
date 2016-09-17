@@ -176,7 +176,7 @@ typedef struct chunk_data_struct
     gboolean hasBeenFastRetransmitted;
     gboolean hasBeenRequeued;
     gpointer context;
-} chunk_data;
+} internal_data_chunk_t;
 
 #ifndef max
 #define max(x,y)            ((x)>(y))?(x):(y)
@@ -295,7 +295,7 @@ int sort_prChunk(pr_stream_data* one, pr_stream_data* two);
  * function that correctly sorts TSN values, minding the
  * wrapround
  */
-int sort_tsn(chunk_data * one, chunk_data * two);
+int sort_tsn(internal_data_chunk_t * one, internal_data_chunk_t * two);
 
 void free_list_element(gpointer list_element, gpointer user_data);
 

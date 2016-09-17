@@ -196,7 +196,7 @@ int mdi_updateMyAddressList(void);
  * returns: pointer to the flow control data structure.
  *          null in case of error.
  */
-void *mdi_readFlowControl(void);
+void *get_flowctrl(void);
 
 /*
  * returns: pointer to the reliable transfer data structure.
@@ -238,7 +238,7 @@ void *mdi_readSCTP_control(void);
  * returns: association-ID of the curent association
  *          0 means the association is not set (an error).
  */
-unsigned int mdi_readAssociationID(void);
+unsigned int get_curr_channel_id(void);
 
 /* returns: a ID  for new association */
 unsigned int mdi_generateTag(void);

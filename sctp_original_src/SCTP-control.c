@@ -1132,7 +1132,7 @@ gboolean sctlr_initAck(SCTP_init * initAck)
 			peerSupportsPRSCTP = ch_getPRSCTPfromInitAck(initAckCID);
 
 
-			mdi_initAssociation(ch_receiverWindow(initAckCID), /* remotes side initial rwnd */
+			mdi_initssociation(ch_receiverWindow(initAckCID), /* remotes side initial rwnd */
 				inbound_streams, /* # of remote output/local input streams */
 				outbound_streams, /* # of remote input/local output streams */
 				ch_initialTSN(initAckCID), /* remote initial TSN */
@@ -2462,7 +2462,7 @@ void *sci_newSCTP_control(void* sctpInstance)
 	tmp->initRetransCounter = 0;
 	tmp->initChunk = NULL;
 	tmp->cookieChunk = NULL;
-	tmp->associationID = mdi_readAssociationID();
+	tmp->associationID = get_curr_channel_id();
 	tmp->NumberOfOutStreams = mdi_readLocalOutStreams();
 	tmp->NumberOfInStreams = mdi_readLocalInStreams();
 	tmp->local_tie_tag = 0;

@@ -124,7 +124,7 @@ void *rxc_new_recvctrl(unsigned int remote_initial_TSN, unsigned int number_of_d
     tmp->last_address = 0;
     tmp->my_rwnd =  mdi_getDefaultMyRwnd();
     tmp->delay =    mdi_getDefaultDelay(sctpInstance);
-    tmp->my_association = mdi_readAssociationID();
+    tmp->my_association = get_curr_channel_id();
     event_logi(VVERBOSE, "RecvControl : Association-ID== %d ", tmp->my_association);
     if (tmp->my_association == 0)
         error_log(ERROR_FATAL, "Association was not set, should be......");
@@ -953,7 +953,7 @@ void rxc_restart_receivecontrol(unsigned int my_rwnd, unsigned int new_remote_TS
     rxc->sack_flag = 2;
     rxc->last_address = 0;
     rxc->my_rwnd = my_rwnd;
-    rxc->my_association = mdi_readAssociationID();
+    rxc->my_association = get_curr_channel_id();
     return;
 }
 

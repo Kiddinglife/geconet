@@ -446,7 +446,6 @@ extern void error_log_sys1(short error_loglvl, const char *module_name, int line
         short errnumber);
 
 //<---------------- time-------------------->
-typedef uint TimerID;
 #define   TIMER_TYPE_INIT       0
 #define   TIMER_TYPE_SHUTDOWN   1
 #define   TIMER_TYPE_RTXM       3
@@ -504,6 +503,8 @@ struct internal_stream_data_t
         ushort stream_id;
         ushort stream_sn;
 };
+
+//chunk_data_struct
 struct internal_data_chunk_t
 {
         uint chunk_len;
@@ -709,8 +710,22 @@ extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
  that an endpoint may have */
 #define MAX_NUM_ADDRESSES      32
 
-/*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
+#define free_flowctrl_data_chunk(list_element)\
+if((list_element) == NULL ) return; \
+if((list_element)->num_of_transmissions == 0 )\
+geco_free_ext((list_element), __FILE__, __LINE__)
 
+#define free_reltransfer_data_chunk(list_element) \
+if( (list_element) == NULL ) return; \
+if( (list_element)->num_of_transmissions > 0 )\
+geco_free_ext((list_element), __FILE__, __LINE__)
+
+#define free_data_chunk(list_element)\
+if( (list_element) == NULL ) return; \
+geco_free_ext((list_element), __FILE__, __LINE__)
+
+
+/*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
 /**
  This struct containes the pointers to ULP callback functions.
  Each SCTP-instance can have its own set of callback functions.
