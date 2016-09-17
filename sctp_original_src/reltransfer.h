@@ -52,7 +52,7 @@
 
 
 
-void *rtx_new_reltransfer(unsigned int number_of_destination_addresses, unsigned int iTSN);
+void *alloc_reliable_transfer(unsigned int number_of_destination_addresses, unsigned int iTSN);
 
 void rtx_delete_reltransfer(void *rtx_instance);
 

@@ -724,6 +724,17 @@ geco_free_ext((list_element), __FILE__, __LINE__)
 if( (list_element) == NULL ) return; \
 geco_free_ext((list_element), __FILE__, __LINE__)
 
+#define free_delivery_pdu(d_pdu)\
+if (d_pdu->ddata != NULL)\
+{\
+	for (int i = 0; i < (int)d_pdu->number_of_chunks; i++)\
+	{\
+		geco_free_ext(d_pdu->ddata[i], __FILE__, __LINE__);\
+		d_pdu->ddata[i] = NULL;\
+	}\
+	geco_free_ext(d_pdu->ddata, __FILE__, __LINE__);\
+	geco_free_ext(d_pdu, __FILE__, __LINE__);\
+}
 
 /*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
 /**

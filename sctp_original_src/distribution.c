@@ -208,7 +208,7 @@ static GList* AssociationList = NULL;
  * contain the addressed sctp instance.
  * This pointer must be reset to null after the event  has been handled.
  */
-static SCTP_instance *sctpInstance;
+static SCTP_instance *curr_geco_instance_;
 
 /**
  * Keyed list of SCTP instances with the instance name as key
@@ -224,7 +224,7 @@ static unsigned int ipv6_users = 0;
  * Read functions for 'global data' read data from the association pointed to by this pointer.
  * This pointer must be reset to null after the event  has been handled.
  */
-static Association *currentAssociation;
+static Association *curr_channel_;
 static Association tmpAssoc;
 static union sockunion tmpAddress;
 
@@ -762,7 +762,7 @@ static void mdi_removeAssociationData(Association * assoc)
 } /* end: mdi_deleteAssociation */
 
 /*
- * after   sctpInstance and  currentAssociation have been set for an
+ * after   curr_geco_instance_ and  curr_channel_ have been set for an
  * incoming packet, this function will return, if a packet may be processed
  * or if it is not destined for this instance
  */
@@ -773,23 +773,23 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
     gboolean any_set = FALSE;
 
     /* this case will be specially treated after the call to mdi_destination_address_okay() */
-    if (sctpInstance == NULL && currentAssociation == NULL) return TRUE;
+    if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return TRUE;
 
     /*
-     if (sctpInstance == NULL && currentAssociation == NULL) return FALSE;
+     if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return FALSE;
      */
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
         /* search through the _association_ list */
         /* and accept or decline */
-        for (i = 0; i < currentAssociation->noOfLocalAddresses; i++)
+        for (i = 0; i < curr_channel_->noOfLocalAddresses; i++)
         {
             event_logii(VVERBOSE,
                     "mdi_destination_address_okay: Checking addresses Dest %x, local %x",
                     sock2ip(dest_addr),
-                    sock2ip(&(currentAssociation->localAddresses[i])));
+                    sock2ip(&(curr_channel_->localAddresses[i])));
             if (adl_equal_address(dest_addr,
-                    &(currentAssociation->localAddresses[i])) == TRUE)
+                    &(curr_channel_->localAddresses[i])) == TRUE)
             {
                 found = TRUE;
                 break;
@@ -800,7 +800,7 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
     else
     {
         /* check whether _instance_ has INADDR_ANY */
-        if (sctpInstance->has_INADDR_ANY_set == TRUE)
+        if (curr_geco_instance_->has_INADDR_ANY_set == TRUE)
         {
             any_set = TRUE;
             /* if so, accept */
@@ -819,7 +819,7 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
 
             }
         }
-        if (sctpInstance->has_IN6ADDR_ANY_set == TRUE)
+        if (curr_geco_instance_->has_IN6ADDR_ANY_set == TRUE)
         {
             any_set = TRUE;
             /* if so, accept */
@@ -840,10 +840,10 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
         }
         if (any_set == TRUE) return FALSE;
         /* if not, search through the list */
-        for (i = 0; i < sctpInstance->noOfLocalAddresses; i++)
+        for (i = 0; i < curr_geco_instance_->noOfLocalAddresses; i++)
         {
             if (adl_equal_address(dest_addr,
-                    &(sctpInstance->localAddressList[i])) == TRUE)
+                    &(curr_geco_instance_->localAddressList[i])) == TRUE)
             {
                 found = TRUE;
                 break;
@@ -1017,21 +1017,21 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         lastDestAddress = NULL;
         lastFromPort = 0;
         lastDestPort = 0;
-        sctpInstance = NULL;
-        currentAssociation = NULL;
+        curr_geco_instance_ = NULL;
+        curr_channel_ = NULL;
         event_log(INTERNAL_EVENT_0,
                 "mdi_receiveMessage: discarding packet for incorrect addresses");
         return;
     }
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociationByTransportAddress(lastFromAddress,
+    curr_channel_ = retrieveAssociationByTransportAddress(lastFromAddress,
             lastFromPort, lastDestPort);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
         /* meaning we MUST have an instance with no fixed port */
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         supportedAddressTypes = 0;
     }
     else
@@ -1055,7 +1055,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                     "Couldn't find SCTP Instance for Port %u and Address in List !",
                     lastDestPort);
             /* may be an an association that is a client (with instance port 0) */
-            sctpInstance = NULL;
+            curr_geco_instance_ = NULL;
 #ifdef HAVE_IPV6
             supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV6 | SUPPORT_ADDRESS_TYPE_IPV4;
 #else
@@ -1064,8 +1064,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         }
         else
         {
-            sctpInstance = (SCTP_instance*) result->data;
-            supportedAddressTypes = sctpInstance->supportedAddressTypes;
+            curr_geco_instance_ = (SCTP_instance*) result->data;
+            supportedAddressTypes = curr_geco_instance_->supportedAddressTypes;
             event_logii(VERBOSE,
                     "Found an SCTP Instance for Port %u and Address in the list, types: %d !",
                     lastDestPort, supportedAddressTypes);
@@ -1080,8 +1080,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         lastDestAddress = NULL;
         lastFromPort = 0;
         lastDestPort = 0;
-        sctpInstance = NULL;
-        currentAssociation = NULL;
+        curr_geco_instance_ = NULL;
+        curr_channel_ = NULL;
         return;
     }
 
@@ -1091,7 +1091,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
 
     chunkArray = rbu_scanPDU(message->sctp_pdu, len);
 
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         if ((initPtr = rbu_findChunk(message->sctp_pdu, len, CHUNK_INIT))
                 != NULL)
@@ -1106,11 +1106,11 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                         supportedAddressTypes);
                 if (retval == 0)
                 {
-                    currentAssociation = retrieveAssociationByTransportAddress(
+                    curr_channel_ = retrieveAssociationByTransportAddress(
                             &alternateFromAddress, lastFromPort, lastDestPort);
                 }
                 i++;
-            } while (currentAssociation == NULL && retval == 0);
+            } while (curr_channel_ == NULL && retval == 0);
         }
         if ((initPtr = rbu_findChunk(message->sctp_pdu, len, CHUNK_INIT_ACK))
                 != NULL)
@@ -1125,13 +1125,13 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                         supportedAddressTypes);
                 if (retval == 0)
                 {
-                    currentAssociation = retrieveAssociationByTransportAddress(
+                    curr_channel_ = retrieveAssociationByTransportAddress(
                             &alternateFromAddress, lastFromPort, lastDestPort);
                 }
                 i++;
-            } while (currentAssociation == NULL && retval == 0);
+            } while (curr_channel_ == NULL && retval == 0);
         }
-        if (currentAssociation != NULL)
+        if (curr_channel_ != NULL)
         {
             event_log(VERBOSE,
                     "mdi_receiveMsg: found association from INIT (ACK) CHUNK");
@@ -1161,16 +1161,16 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         lastDestAddress = NULL;
         lastFromPort = 0;
         lastDestPort = 0;
-        sctpInstance = NULL;
-        currentAssociation = NULL;
+        curr_geco_instance_ = NULL;
+        curr_channel_ = NULL;
         return;
     }
 
     /* check if sctp-message belongs to an existing association */
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         event_log(VVERBOSE,
-                "mdi_receiveMsg: currentAssociation==NULL, start scanning !");
+                "mdi_receiveMsg: curr_channel_==NULL, start scanning !");
         /* This is not very elegant, but....only used when assoc is being build up, so :-D */
         if (rbu_datagramContains(CHUNK_ABORT, chunkArray) == TRUE)
         {
@@ -1180,8 +1180,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastDestAddress = NULL;
             lastFromPort = 0;
             lastDestPort = 0;
-            sctpInstance = NULL;
-            currentAssociation = NULL;
+            curr_geco_instance_ = NULL;
+            curr_channel_ = NULL;
             return;
         }
         if (rbu_datagramContains(CHUNK_SHUTDOWN_ACK, chunkArray) == TRUE)
@@ -1205,8 +1205,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastDestPort = 0;
             lastDestAddress = NULL;
             lastFromAddress = NULL;
-            sctpInstance = NULL;
-            currentAssociation = NULL;
+            curr_geco_instance_ = NULL;
+            curr_channel_ = NULL;
             return;
         }
         if (rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray) == TRUE)
@@ -1217,8 +1217,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastDestPort = 0;
             lastDestAddress = NULL;
             lastFromAddress = NULL;
-            sctpInstance = NULL;
-            currentAssociation = NULL;
+            curr_geco_instance_ = NULL;
+            curr_channel_ = NULL;
             return;
         }
         if (rbu_datagramContains(CHUNK_COOKIE_ACK, chunkArray) == TRUE)
@@ -1229,8 +1229,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastDestPort = 0;
             lastDestAddress = NULL;
             lastFromAddress = NULL;
-            sctpInstance = NULL;
-            currentAssociation = NULL;
+            curr_geco_instance_ = NULL;
+            curr_channel_ = NULL;
             return;
         }
 
@@ -1244,18 +1244,18 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastDestPort = 0;
             lastDestAddress = NULL;
             lastFromAddress = NULL;
-            sctpInstance = NULL;
-            currentAssociation = NULL;
+            curr_geco_instance_ = NULL;
+            curr_channel_ = NULL;
             return;
         }
 
         if ((initPtr = rbu_findChunk(message->sctp_pdu, len, CHUNK_INIT))
                 != NULL)
         {
-            if (sctpInstance != NULL)
+            if (curr_geco_instance_ != NULL)
             {
-                if (lastDestPort != sctpInstance->localPort
-                        || sctpInstance->localPort == 0)
+                if (lastDestPort != curr_geco_instance_->localPort
+                        || curr_geco_instance_->localPort == 0)
                 {
                     /* destination port is not the listening port of this this SCTP-instance. */
                     event_log(INTERNAL_EVENT_0,
@@ -1302,10 +1302,10 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         }
         else if (rbu_datagramContains(CHUNK_COOKIE_ECHO, chunkArray) == TRUE)
         {
-            if (sctpInstance != NULL)
+            if (curr_geco_instance_ != NULL)
             {
-                if (lastDestPort != sctpInstance->localPort
-                        || sctpInstance->localPort == 0)
+                if (lastDestPort != curr_geco_instance_->localPort
+                        || curr_geco_instance_->localPort == 0)
                 {
                     /* destination port is not the listening port of this this SCTP-instance. */
                     event_log(INTERNAL_EVENT_0,
@@ -1319,15 +1319,15 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 }
             }
             else
-            { /* sctpInstance == NULL */
+            { /* curr_geco_instance_ == NULL */
                 event_log(INTERNAL_EVENT_0,
                         "mdi_receiveMsg: got COOKIE ECHO Message, but no instance found -> IGNORE");
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
                 lastFromAddress = NULL;
-                sctpInstance = NULL;
-                currentAssociation = NULL;
+                curr_geco_instance_ = NULL;
+                curr_channel_ = NULL;
                 return;
             }
         }
@@ -1341,21 +1341,21 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
 
     }
     else
-    { /* i.e. if(currentAssociation != NULL) */
+    { /* i.e. if(curr_channel_ != NULL) */
 
         /* If the association exists, both ports of the message must be equal to the ports
          of the association and the source address must be in the addresslist of the peer
          of this association */
         /* check src- and dest-port and source address */
-        if (lastFromPort != currentAssociation->remotePort
-                || lastDestPort != currentAssociation->localPort)
+        if (lastFromPort != curr_channel_->remotePort
+                || lastDestPort != curr_channel_->localPort)
         {
             error_logiiii(ERROR_FATAL,
                     "port mismatch in received DG (lastFromPort=%u, assoc->remotePort=%u, lastDestPort=%u, assoc->localPort=%u ",
-                    lastFromPort, currentAssociation->remotePort, lastDestPort,
-                    currentAssociation->localPort);
-            currentAssociation = NULL;
-            sctpInstance = NULL;
+                    lastFromPort, curr_channel_->remotePort, lastDestPort,
+                    curr_channel_->localPort);
+            curr_channel_ = NULL;
+            curr_geco_instance_ = NULL;
             lastFromAddress = NULL;
             lastDestAddress = NULL;
             lastFromPort = 0;
@@ -1363,10 +1363,10 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             return;
         }
 
-        if (sctpInstance == NULL)
+        if (curr_geco_instance_ == NULL)
         {
-            sctpInstance = currentAssociation->sctpInstance;
-            if (sctpInstance == NULL)
+            curr_geco_instance_ = curr_channel_->sctpInstance;
+            if (curr_geco_instance_ == NULL)
             {
                 error_log(ERROR_FATAL,
                         "We have an Association, but no Instance, FIXME !");
@@ -1379,10 +1379,10 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
          */
         if (sourceAddressExists == FALSE)
         {
-            for (i = 0; i < currentAssociation->noOfNetworks; i++)
+            for (i = 0; i < curr_channel_->noOfNetworks; i++)
             {
                 if (adl_equal_address(
-                        &(currentAssociation->destinationAddresses[i]),
+                        &(curr_channel_->destinationAddresses[i]),
                         lastFromAddress) == TRUE)
                 {
                     sourceAddressExists = TRUE;
@@ -1395,8 +1395,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         {
             error_log(ERROR_MINOR,
                     "source address of received DG is not in the destination addresslist");
-            currentAssociation = NULL;
-            sctpInstance = NULL;
+            curr_channel_ = NULL;
+            curr_geco_instance_ = NULL;
             lastFromPort = 0;
             lastDestPort = 0;
             lastDestAddress = NULL;
@@ -1414,8 +1414,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             initFound = TRUE;
             if (lastInitiateTag != 0)
             {
-                currentAssociation = NULL;
-                sctpInstance = NULL;
+                curr_channel_ = NULL;
+                curr_geco_instance_ = NULL;
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
@@ -1441,12 +1441,12 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         if (rbu_datagramContains(CHUNK_ABORT, chunkArray) == TRUE)
         {
             /* accept my-tag or peers tag, else drop packet */
-            if ((lastInitiateTag != currentAssociation->tagLocal
-                    && lastInitiateTag != currentAssociation->tagRemote)
+            if ((lastInitiateTag != curr_channel_->tagLocal
+                    && lastInitiateTag != curr_channel_->tagRemote)
                     || initFound == TRUE)
             {
-                currentAssociation = NULL;
-                sctpInstance = NULL;
+                curr_channel_ = NULL;
+                curr_geco_instance_ = NULL;
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
@@ -1459,12 +1459,12 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         {
             /* accept my-tag or peers tag, else drop packet */
             /* TODO : make sure that if it is the peer's tag also T-Bit is set */
-            if ((lastInitiateTag != currentAssociation->tagLocal
-                    && lastInitiateTag != currentAssociation->tagRemote)
+            if ((lastInitiateTag != curr_channel_->tagLocal
+                    && lastInitiateTag != curr_channel_->tagRemote)
                     || initFound == TRUE)
             {
-                currentAssociation = NULL;
-                sctpInstance = NULL;
+                curr_channel_ = NULL;
+                curr_geco_instance_ = NULL;
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
@@ -1476,8 +1476,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         {
             if (initFound == TRUE)
             {
-                currentAssociation = NULL;
-                sctpInstance = NULL;
+                curr_channel_ = NULL;
+                curr_geco_instance_ = NULL;
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
@@ -1496,8 +1496,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 bu_put_Ctrl_Chunk(ch_chunkString(shutdownCompleteCID), NULL);
                 bu_sendAllChunks(NULL);
                 ch_deleteChunk(shutdownCompleteCID);
-                currentAssociation = NULL;
-                sctpInstance = NULL;
+                curr_channel_ = NULL;
+                curr_geco_instance_ = NULL;
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
@@ -1520,8 +1520,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 /* actually, this does not make sense...anyway: kill assoc, and notify user */
                 scu_abort(ECC_UNRECOGNIZED_PARAMS, ntohs(vlptr->param_length),
                         (guchar*) vlptr);
-                currentAssociation = NULL;
-                sctpInstance = NULL;
+                curr_channel_ = NULL;
+                curr_geco_instance_ = NULL;
                 lastFromPort = 0;
                 lastDestPort = 0;
                 lastDestAddress = NULL;
@@ -1531,13 +1531,13 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         }
 
         if (!cookieEchoFound && !initFound && !abortFound
-                && lastInitiateTag != currentAssociation->tagLocal)
+                && lastInitiateTag != curr_channel_->tagLocal)
         {
             event_logii(EXTERNAL_EVENT,
                     "Tag mismatch in receive DG, received Tag = %u, local Tag = %u -> discarding",
-                    lastInitiateTag, currentAssociation->tagLocal);
-            currentAssociation = NULL;
-            sctpInstance = NULL;
+                    lastInitiateTag, curr_channel_->tagLocal);
+            curr_channel_ = NULL;
+            curr_geco_instance_ = NULL;
             lastFromPort = 0;
             lastDestPort = 0;
             lastDestAddress = NULL;
@@ -1558,13 +1558,13 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             lastDestAddress = NULL;
             lastFromPort = 0;
             lastDestPort = 0;
-            currentAssociation = NULL;
-            sctpInstance = NULL;
+            curr_channel_ = NULL;
+            curr_geco_instance_ = NULL;
             /* and discard that packet */
             return;
         }
         /* make and send abort message */
-        if (currentAssociation == NULL)
+        if (curr_channel_ == NULL)
         {
             abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NO_TCB);
         }
@@ -1584,8 +1584,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         lastDestAddress = NULL;
         lastFromPort = 0;
         lastDestPort = 0;
-        currentAssociation = NULL;
-        sctpInstance = NULL;
+        curr_channel_ = NULL;
+        curr_geco_instance_ = NULL;
         /* and discard that packet */
         return;
     }
@@ -1595,8 +1595,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             bufferLength - sizeof(SCTP_common_header));
 
     lastInitiateTag = 0;
-    currentAssociation = NULL;
-    sctpInstance = NULL;
+    curr_channel_ = NULL;
+    curr_geco_instance_ = NULL;
     lastDestAddress = NULL;
     lastFromAddress = NULL;
     lastFromPath = -1; /* only valid for functions called via mdi_receiveMessage */
@@ -1736,21 +1736,21 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
         default:
             break;
         }
-        if (sctpInstance)
+        if (curr_geco_instance_)
         {
-            if (sctpInstance->noOfLocalAddresses > 0)
+            if (curr_geco_instance_->noOfLocalAddresses > 0)
             {
-                for (counter = 0; counter < sctpInstance->noOfLocalAddresses;
+                for (counter = 0; counter < curr_geco_instance_->noOfLocalAddresses;
                         counter++)
                 {
                     if (adl_equal_address(&(addressList[ii]),
-                            &(sctpInstance->localAddressList[counter])) == TRUE) result =
+                            &(curr_geco_instance_->localAddressList[counter])) == TRUE) result =
                             TRUE;
                 }
             }
             else
             {
-                if (sctpInstance->has_INADDR_ANY_set)
+                if (curr_geco_instance_->has_INADDR_ANY_set)
                 {
                     for (counter = 0; counter < myNumberOfAddresses; counter++)
                     {
@@ -1762,7 +1762,7 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                         }
                     }
                 }
-                if (sctpInstance->has_IN6ADDR_ANY_set)
+                if (curr_geco_instance_->has_IN6ADDR_ANY_set)
                 {
                     for (counter = 0; counter < myNumberOfAddresses; counter++)
                     {
@@ -1822,7 +1822,7 @@ gboolean mdi_checkForCorrectAddress(union sockunion* su)
  puts("AssocList:");
  while(iterator) {
  assoc = (Association *)iterator->data;
- printf("   #%d: I=%u, deleted=%d\n", assoc->assocId, assoc->sctpInstance->sctpInstanceName, assoc->deleted);
+ printf("   #%d: I=%u, deleted=%d\n", assoc->assocId, assoc->curr_geco_instance_->sctpInstanceName, assoc->deleted);
  iterator = g_list_next(iterator);
  }
  }
@@ -1859,8 +1859,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 #ifdef HAVE_IPV6
     gboolean with_ipv6 = FALSE;
 #endif
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_registerInstance");
     ZERO_CHECK_LIBRARY;
@@ -1872,8 +1872,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     {
         error_log(ERROR_MAJOR,
                 "Parameter Problem in sctp_registerInstance - Error !");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_PARAMETER_PROBLEM;
     }
@@ -1888,8 +1888,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     }
     if (port == 0)
     {
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         error_log(ERROR_MAJOR, "User gave incorrect address !");LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_WRONG_ADDRESS;
     }
@@ -1902,8 +1902,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
                     "Address Error in sctp_registerInstance(%s)",
                     (localAddressList[i]));
             releasePort(port);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_registerInstance");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -1932,8 +1932,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     {
         error_log(ERROR_MAJOR, "No valid address in sctp_registerInstance()");
         releasePort(port);
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_PARAMETER_PROBLEM;
     }
@@ -1943,32 +1943,32 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     {
         error_log(ERROR_MAJOR, "Could not update my local addresses...");
         releasePort(port);
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_UNSPECIFIED_ERROR;
     }
 
-    sctpInstance = (SCTP_instance *) malloc(sizeof(SCTP_instance));
-    if (!sctpInstance)
+    curr_geco_instance_ = (SCTP_instance *) malloc(sizeof(SCTP_instance));
+    if (!curr_geco_instance_)
     {
         error_log_sys(ERROR_MAJOR, (short)errno);
         releasePort(port);
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_OUT_OF_RESOURCES;
     }
 
-    sctpInstance->localPort = port;
-    sctpInstance->noOfInStreams = noOfInStreams;
-    sctpInstance->noOfOutStreams = noOfOutStreams;
-    sctpInstance->has_INADDR_ANY_set = FALSE;
-    sctpInstance->has_IN6ADDR_ANY_set = FALSE;
-    sctpInstance->uses_IPv4 = FALSE;
-    sctpInstance->uses_IPv6 = TRUE;
-    sctpInstance->supportsPRSCTP = librarySupportsPRSCTP;
-    sctpInstance->supportsADDIP = supportADDIP;
+    curr_geco_instance_->localPort = port;
+    curr_geco_instance_->noOfInStreams = noOfInStreams;
+    curr_geco_instance_->noOfOutStreams = noOfOutStreams;
+    curr_geco_instance_->has_INADDR_ANY_set = FALSE;
+    curr_geco_instance_->has_IN6ADDR_ANY_set = FALSE;
+    curr_geco_instance_->uses_IPv4 = FALSE;
+    curr_geco_instance_->uses_IPv6 = TRUE;
+    curr_geco_instance_->supportsPRSCTP = librarySupportsPRSCTP;
+    curr_geco_instance_->supportsADDIP = supportADDIP;
 
     if (noOfLocalAddresses == 1)
     {
@@ -1978,7 +1978,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         case AF_INET:
             if (sock2ip(&su) == INADDR_ANY)
             {
-                sctpInstance->has_INADDR_ANY_set = TRUE;
+                curr_geco_instance_->has_INADDR_ANY_set = TRUE;
                 with_ipv4 = TRUE;
             }
             break;
@@ -1993,15 +1993,15 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 #endif
                     with_ipv4 = TRUE;
                     with_ipv6 = TRUE;
-                    sctpInstance->has_IN6ADDR_ANY_set = TRUE;
+                    curr_geco_instance_->has_IN6ADDR_ANY_set = TRUE;
                 }
                 break;
 #endif
         default:
             releasePort(port);
-            free(sctpInstance);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            free(curr_geco_instance_);
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             error_log(ERROR_MAJOR, "Program Error -> Returning error !");
             LEAVE_LIBRARY("sctp_registerInstance");
             return SCTP_PARAMETER_PROBLEM;
@@ -2009,54 +2009,54 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         }
     }
 
-    sctpInstance->supportedAddressTypes = 0;
-    if (with_ipv4) sctpInstance->supportedAddressTypes |=
+    curr_geco_instance_->supportedAddressTypes = 0;
+    if (with_ipv4) curr_geco_instance_->supportedAddressTypes |=
             SUPPORT_ADDRESS_TYPE_IPV4;
 #ifdef HAVE_IPV6
-    if (with_ipv6) sctpInstance->supportedAddressTypes |= SUPPORT_ADDRESS_TYPE_IPV6;
+    if (with_ipv6) curr_geco_instance_->supportedAddressTypes |= SUPPORT_ADDRESS_TYPE_IPV6;
 #endif
 
-    if (sctpInstance->has_INADDR_ANY_set == FALSE
-            && sctpInstance->has_IN6ADDR_ANY_set == FALSE)
+    if (curr_geco_instance_->has_INADDR_ANY_set == FALSE
+            && curr_geco_instance_->has_IN6ADDR_ANY_set == FALSE)
     {
 
-        sctpInstance->localAddressList = (union sockunion *) malloc(
+        curr_geco_instance_->localAddressList = (union sockunion *) malloc(
                 noOfLocalAddresses * sizeof(union sockunion));
         for (i = 0; i < noOfLocalAddresses; i++)
         {
             adl_str2sockunion(localAddressList[i],
-                    &(sctpInstance->localAddressList[i]));
-            if (mdi_checkForCorrectAddress(&(sctpInstance->localAddressList[i]))
+                    &(curr_geco_instance_->localAddressList[i]));
+            if (mdi_checkForCorrectAddress(&(curr_geco_instance_->localAddressList[i]))
                     == FALSE)
             {
                 releasePort(port);
-                free(sctpInstance->localAddressList);
-                free(sctpInstance);
-                sctpInstance = old_Instance;
-                currentAssociation = old_assoc;
+                free(curr_geco_instance_->localAddressList);
+                free(curr_geco_instance_);
+                curr_geco_instance_ = old_Instance;
+                curr_channel_ = old_assoc;
                 error_log(ERROR_MAJOR, "User gave incorrect address !");LEAVE_LIBRARY("sctp_registerInstance");
                 return SCTP_WRONG_ADDRESS;
             }
         }
 
-        sctpInstance->noOfLocalAddresses = noOfLocalAddresses;
+        curr_geco_instance_->noOfLocalAddresses = noOfLocalAddresses;
     }
     else
     {
-        sctpInstance->localAddressList = NULL;
-        sctpInstance->noOfLocalAddresses = 0;
+        curr_geco_instance_->localAddressList = NULL;
+        curr_geco_instance_->noOfLocalAddresses = 0;
     }
 
-    list_result = g_list_find_custom(InstanceList, sctpInstance,
+    list_result = g_list_find_custom(InstanceList, curr_geco_instance_,
             &CheckForAddressInInstance);
 
     if (list_result)
     {
         releasePort(port);
-        free(sctpInstance->localAddressList);
-        free(sctpInstance);
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        free(curr_geco_instance_->localAddressList);
+        free(curr_geco_instance_);
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         error_log(ERROR_MAJOR, "Instance already existed ! Returning error !");LEAVE_LIBRARY("sctp_registerInstance");
         return 0;
     }
@@ -2078,11 +2078,11 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     if (with_ipv6 == TRUE)
     {
         ipv6_users++;
-        sctpInstance->uses_IPv6 = TRUE;
+        curr_geco_instance_->uses_IPv6 = TRUE;
     }
     else
     {
-        sctpInstance->uses_IPv6 = FALSE;
+        curr_geco_instance_->uses_IPv6 = FALSE;
     }
 #endif
     if (with_ipv4 && sctp_socket == 0)
@@ -2100,47 +2100,47 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     if (with_ipv4 == TRUE)
     {
         ipv4_users++;
-        sctpInstance->uses_IPv4 = TRUE;
+        curr_geco_instance_->uses_IPv4 = TRUE;
     }
     else
     {
-        sctpInstance->uses_IPv4 = FALSE;
+        curr_geco_instance_->uses_IPv4 = FALSE;
     }
 
-    sctpInstance->sctpInstanceName = mdi_getUnusedInstanceName();
-    if (sctpInstance->sctpInstanceName == 0)
+    curr_geco_instance_->sctpInstanceName = mdi_getUnusedInstanceName();
+    if (curr_geco_instance_->sctpInstanceName == 0)
     {
         releasePort(port);
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_registerInstance");
         return SCTP_OUT_OF_RESOURCES;
     }
 
-    sctpInstance->ULPcallbackFunctions = ULPcallbackFunctions;
+    curr_geco_instance_->ULPcallbackFunctions = ULPcallbackFunctions;
 
-    sctpInstance->default_rtoInitial = RTO_INITIAL;
-    sctpInstance->default_validCookieLife = VALID_COOKIE_LIFE_TIME;
-    sctpInstance->default_assocMaxRetransmits = ASSOCIATION_MAX_RETRANS;
-    sctpInstance->default_pathMaxRetransmits = MAX_PATH_RETRANSMITS;
-    sctpInstance->default_maxInitRetransmits = MAX_INIT_RETRANSMITS;
+    curr_geco_instance_->default_rtoInitial = RTO_INITIAL;
+    curr_geco_instance_->default_validCookieLife = VALID_COOKIE_LIFE_TIME;
+    curr_geco_instance_->default_assocMaxRetransmits = ASSOCIATION_MAX_RETRANS;
+    curr_geco_instance_->default_pathMaxRetransmits = MAX_PATH_RETRANSMITS;
+    curr_geco_instance_->default_maxInitRetransmits = MAX_INIT_RETRANSMITS;
     /* using the static variable defined after initialization of the adaptation layer */
-    sctpInstance->default_myRwnd = myRWND / 2;
-    sctpInstance->default_delay = SACK_DELAY;
-    sctpInstance->default_ipTos = IPTOS_DEFAULT;
-    sctpInstance->default_rtoMin = RTO_MIN;
-    sctpInstance->default_rtoMax = RTO_MAX;
-    sctpInstance->default_maxSendQueue = DEFAULT_MAX_SENDQUEUE;
-    sctpInstance->default_maxRecvQueue = DEFAULT_MAX_RECVQUEUE;
-    sctpInstance->default_maxBurst = DEFAULT_MAX_BURST;
+    curr_geco_instance_->default_myRwnd = myRWND / 2;
+    curr_geco_instance_->default_delay = SACK_DELAY;
+    curr_geco_instance_->default_ipTos = IPTOS_DEFAULT;
+    curr_geco_instance_->default_rtoMin = RTO_MIN;
+    curr_geco_instance_->default_rtoMax = RTO_MAX;
+    curr_geco_instance_->default_maxSendQueue = DEFAULT_MAX_SENDQUEUE;
+    curr_geco_instance_->default_maxRecvQueue = DEFAULT_MAX_RECVQUEUE;
+    curr_geco_instance_->default_maxBurst = DEFAULT_MAX_BURST;
 
-    InstanceList = g_list_insert_sorted(InstanceList, sctpInstance,
+    InstanceList = g_list_insert_sorted(InstanceList, curr_geco_instance_,
             &CompareInstanceNames);
 
-    result = sctpInstance->sctpInstanceName;
+    result = curr_geco_instance_->sctpInstanceName;
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_registerInstance");
     return (int) result;
 
@@ -2286,27 +2286,27 @@ int sctp_deleteAssociation(unsigned int associationID)
     tmpAssoc.assocId = associationID;
     tmpAssoc.deleted = FALSE;
     assocFindP = &tmpAssoc;
-    currentAssociation = NULL;
+    curr_channel_ = NULL;
 
     result = g_list_find_custom(AssociationList, assocFindP,
             &compareAssociationIDs);
     if (result != NULL)
     {
-        currentAssociation = (Association *) result->data;
-        if (!currentAssociation->deleted)
+        curr_channel_ = (Association *) result->data;
+        if (!curr_channel_->deleted)
         {
-            currentAssociation = NULL;
+            curr_channel_ = NULL;
             error_log(ERROR_MAJOR,
                     "Deleted-Flag not set, returning from sctp_deleteAssociation !");LEAVE_LIBRARY("sctp_deleteAssociation");
             return SCTP_SPECIFIC_FUNCTION_ERROR;
         }
         /* remove the association from the list */
-        AssociationList = g_list_remove(AssociationList, currentAssociation);
+        AssociationList = g_list_remove(AssociationList, curr_channel_);
         event_log(INTERNAL_EVENT_0,
                 "sctp_deleteAssociation: Deleted Association from list");
         /* free all association data */
-        mdi_removeAssociationData(currentAssociation);
-        currentAssociation = NULL;
+        mdi_removeAssociationData(curr_channel_);
+        curr_channel_ = NULL;
         LEAVE_LIBRARY("sctp_deleteAssociation");
         return SCTP_SUCCESS;
     }
@@ -2349,8 +2349,8 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     SCTP_instance temporary;
     GList* result = NULL;
 
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_associatex");
 
@@ -2360,8 +2360,8 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     {
         error_log(ERROR_MAJOR,
                 "sctp_associate: destination port is zero....this is not allowed");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_associate");
         return 0;
     }
@@ -2372,8 +2372,8 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
         {
             error_log(ERROR_MAJOR,
                     "sctp_associate: destination adress not good !");
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_associate");
             return 0;
         }
@@ -2381,8 +2381,8 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
         {
             error_log(ERROR_MAJOR,
                     "sctp_associate: destination adress not good !");
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_associate");
             return 0;
         }
@@ -2399,12 +2399,12 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     {
         error_log(ERROR_MAJOR,
                 "sctp_associate: SCTP instance not in the list !!!");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_associate");
         return 0;
     }
-    sctpInstance = (SCTP_instance*) result->data;
+    curr_geco_instance_ = (SCTP_instance*) result->data;
 
     if (((SCTP_instance*) result->data)->localPort == 0) zlocalPort =
             seizePort();
@@ -2415,27 +2415,27 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     withPRSCTP = librarySupportsPRSCTP;
 
     /* Create new association */
-    if (mdi_newAssociation(sctpInstance, zlocalPort, /* local client port */
+    if (mdi_newAssociation(curr_geco_instance_, zlocalPort, /* local client port */
     destinationPort, /* remote server port */
     mdi_generateTag(), 0, (short) noOfDestinationAddresses, dest_su))
     {
         error_log(ERROR_MAJOR, "Creation of association failed");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_associate");
         return 0;
     }
-    currentAssociation->ulp_dataptr = ulp_data;
+    curr_channel_->ulp_dataptr = ulp_data;
 
     /* call associate at SCTP-control */
     scu_associate(noOfOutStreams,
             ((SCTP_instance*) result->data)->noOfInStreams, dest_su,
             noOfDestinationAddresses, withPRSCTP);
 
-    assocID = currentAssociation->assocId;
+    assocID = curr_channel_->assocId;
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_associate");
     return assocID;
 
@@ -2463,19 +2463,19 @@ unsigned int sctp_associate(unsigned int SCTP_InstanceName,
  */
 int sctp_shutdown(unsigned int associationID)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_shutdown");
 
     CHECK_LIBRARY;
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         /* Forward shutdown to the addressed association */
         scu_shutdown();
     }
@@ -2483,14 +2483,14 @@ int sctp_shutdown(unsigned int associationID)
     {
         event_log(VERBOSE,
                 "sctp_shutdown: addressed association does not exist");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_shutdown");
         return SCTP_ASSOC_NOT_FOUND;
     }
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_shutdown");
     return SCTP_SUCCESS;
 
@@ -2503,18 +2503,18 @@ int sctp_shutdown(unsigned int associationID)
  */
 int sctp_abort(unsigned int associationID)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
     /* Retrieve association from list  */
     ENTER_LIBRARY("sctp_abort");
 
     CHECK_LIBRARY;
 
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         /* Forward shutdown to the addressed association */
         scu_abort(ECC_USER_INITIATED_ABORT, 0, NULL);
     }
@@ -2522,14 +2522,14 @@ int sctp_abort(unsigned int associationID)
     {
         error_log(ERROR_MAJOR,
                 "sctp_abort: addressed association does not exist");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_abort");
         return SCTP_ASSOC_NOT_FOUND;
     }
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_abort");
     return SCTP_SUCCESS;
 
@@ -2560,20 +2560,20 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
         int dontBundle) /* boolean, 0==normal bundling, 1==do not bundle message */
 {
     int result = SCTP_SUCCESS;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
     ENTER_LIBRARY("sctp_send");
 
     CHECK_LIBRARY;
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
 
-        if ((path_id >= -1) && (path_id < currentAssociation->noOfNetworks))
+        if ((path_id >= -1) && (path_id < curr_channel_->noOfNetworks))
         {
             event_log(INTERNAL_EVENT_1, "sctp_send: sending chunk");
             /* Forward chunk to the addressed association */
@@ -2584,8 +2584,8 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
         {
             error_logi(ERROR_MAJOR, "sctp_send: invalid destination address %d",
                     path_id);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_send");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -2597,8 +2597,8 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
         result = SCTP_ASSOC_NOT_FOUND;
     }
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_send");
     return result;
 } /* end: sctp_send */
@@ -2612,23 +2612,23 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
 short sctp_setPrimary(unsigned int associationID, short path_id)
 {
     short rv;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_setPrimary");
 
     CHECK_LIBRARY;
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
         if (sci_getState() != SCTP_ESTABLISHED)
         {
             LEAVE_LIBRARY("sctp_setPrimary");
             return SCTP_SPECIFIC_FUNCTION_ERROR;
         }
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         /* Forward shutdown to the addressed association */
         rv = pm_setPrimaryPath(path_id);
     }
@@ -2639,8 +2639,8 @@ short sctp_setPrimary(unsigned int associationID, short path_id)
         rv = SCTP_ASSOC_NOT_FOUND;
     }
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_setPrimary");
     return rv;
 
@@ -2687,8 +2687,8 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID,
         unsigned int * tsn, unsigned int *addressIndex, unsigned int flags)
 {
     int result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_receive");
 
@@ -2705,11 +2705,11 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID,
         return SCTP_PARAMETER_PROBLEM;
     }
     /* Retrieve association from list, as long as the data is not actually gone ! */
-    currentAssociation = retrieveAssociationForced(associationID);
+    curr_channel_ = retrieveAssociationForced(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
 
         /* retrieve data from streamengine instance */
         result = se_ulpreceivefrom(buffer, length, streamID, streamSN, tsn,
@@ -2719,13 +2719,13 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID,
     {
         error_log(ERROR_MAJOR,
                 "sctp_receive: addressed association does not exist");
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         LEAVE_LIBRARY("sctp_receive");
         return SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     if (result == 0)
     {
         LEAVE_LIBRARY("sctp_receive");
@@ -2760,18 +2760,18 @@ int sctp_changeHeartBeat(unsigned int associationID, short path_id,
         gboolean heartbeatON, unsigned int timeIntervall)
 {
     int result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
     ENTER_LIBRARY("sctp_changeHeartbeat");
 
     CHECK_LIBRARY;
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         /* Forward change HB to the addressed association */
         if (heartbeatON)
         {
@@ -2790,8 +2790,8 @@ int sctp_changeHeartBeat(unsigned int associationID, short path_id,
                 "sctp_changeHeartBeat: addressed association does not exist");
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_changeHeartbeat");
     return result;
 } /* end: sctp_changeHeartBeat */
@@ -2806,19 +2806,19 @@ int sctp_changeHeartBeat(unsigned int associationID, short path_id,
 int sctp_requestHeartbeat(unsigned int associationID, short path_id)
 {
     int result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_requestHeartbeat");
 
     CHECK_LIBRARY;
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         result = pm_doHB(path_id);
         event_logi(VERBOSE, "Sending HB on user request to path ID: %u !",
                 path_id);
@@ -2829,8 +2829,8 @@ int sctp_requestHeartbeat(unsigned int associationID, short path_id)
                 "sctp_requestHeartbeat: addressed association does not exist");
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_requestHeartbeat");
     return result;
 } /* sctp_requestHeartbeat */
@@ -2844,25 +2844,25 @@ int sctp_requestHeartbeat(unsigned int associationID, short path_id)
 int sctp_getSrttReport(unsigned int associationID, short path_id)
 {
     unsigned int srtt;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_getSrttReport");
 
     CHECK_LIBRARY;
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         srtt = pm_readSRTT(path_id);
         event_logiii(VERBOSE,
                 "sctp_getSrttReport(asoc=%u, address=%d) result: %u !",
                 associationID, path_id, srtt);
-        sctpInstance = old_Instance;
-        currentAssociation = old_assoc;
+        curr_geco_instance_ = old_Instance;
+        curr_channel_ = old_assoc;
         if (srtt == 0xffffffff)
         {
             LEAVE_LIBRARY("sctp_getSrttReport");
@@ -2879,8 +2879,8 @@ int sctp_getSrttReport(unsigned int associationID, short path_id)
         error_log(ERROR_MAJOR,
                 "sctp_getSrttReport: addressed association does not exist");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_getSrttReport");
     return SCTP_ASSOC_NOT_FOUND;
 
@@ -2899,8 +2899,8 @@ int sctp_setFailureThreshold(unsigned int associationID,
         unsigned short pathMaxRetransmissions)
 {
     guint16 result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_setFailureThreshold");
 
@@ -2909,11 +2909,11 @@ int sctp_setFailureThreshold(unsigned int associationID,
     event_logii(VERBOSE,
             "sctp_setFailureThreshold: Association %u, pathMaxRetr. %u",
             associationID, pathMaxRetransmissions);
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         pm_setMaxPathRetransmisions(pathMaxRetransmissions);
         result = SCTP_SUCCESS;
     }
@@ -2924,8 +2924,8 @@ int sctp_setFailureThreshold(unsigned int associationID,
                 associationID);
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_setFailureThreshold");
     return result;
 
@@ -2946,8 +2946,8 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
     guint16 result;
     guint32 assocState;
     unsigned int totalBytesInFlight;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_getPathStatus");
 
@@ -2961,11 +2961,11 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
         LEAVE_LIBRARY("sctp_getPathStatus");
         return SCTP_PARAMETER_PROBLEM;
     }
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
     /* TODO: error handling for these two events should be separated - return two different errors */
-    if (currentAssociation != NULL && path_id >= 0
-            && path_id < currentAssociation->noOfNetworks)
+    if (curr_channel_ != NULL && path_id >= 0
+            && path_id < curr_channel_->noOfNetworks)
     {
         assocState = sci_getState();
         if (assocState < ESTABLISHED)
@@ -2974,9 +2974,9 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
         }
         else
         {
-            sctpInstance = currentAssociation->sctpInstance;
+            curr_geco_instance_ = curr_channel_->sctpInstance;
             adl_sockunion2str(
-                    &(currentAssociation->destinationAddresses[path_id]),
+                    &(curr_channel_->destinationAddresses[path_id]),
                     &(status->destinationAddress[0]), SCTP_MAX_IP_LEN);
             status->state = pm_readState(path_id);
             status->srtt = pm_readSRTT(path_id);
@@ -2990,7 +2990,7 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
             status->outstandingBytesPerAddress = rtx_get_obpa(
                     (unsigned int) path_id, &totalBytesInFlight);
             status->mtu = fc_readMTU(path_id);
-            status->ipTos = currentAssociation->ipTos;
+            status->ipTos = curr_channel_->ipTos;
             result = SCTP_SUCCESS;
         }
     }
@@ -3001,8 +3001,8 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
                 associationID);
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_getPathStatus");
     return result;
 }
@@ -3041,8 +3041,8 @@ int sctp_setAssocStatus(unsigned int associationID,
         SCTP_AssociationStatus* new_status)
 {
     guint16 result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_setAssocStatus");
 
@@ -3053,19 +3053,19 @@ int sctp_setAssocStatus(unsigned int associationID,
         LEAVE_LIBRARY("sctp_setAssocStatus");
         return SCTP_PARAMETER_PROBLEM;
     }
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         event_logi(VERBOSE, "sctp_setAssocStatus: Association %u",
                 associationID);
         if (pm_setPrimaryPath(new_status->primaryAddressIndex))
         {
             error_logi(ERROR_MINOR, "pm_setPrimary(%u) returned error",
                     new_status->primaryAddressIndex);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_setAssocStatus");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -3073,8 +3073,8 @@ int sctp_setAssocStatus(unsigned int associationID,
         {
             error_logi(ERROR_MINOR, "pm_setRtoInitial(%u) returned error",
                     new_status->rtoInitial);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_setAssocStatus");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -3082,8 +3082,8 @@ int sctp_setAssocStatus(unsigned int associationID,
         {
             error_logi(ERROR_MINOR, "pm_setRtoMin(%u) returned error",
                     new_status->rtoMin);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_setAssocStatus");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -3091,8 +3091,8 @@ int sctp_setAssocStatus(unsigned int associationID,
         {
             error_logi(ERROR_MINOR, "pm_setRtoMax(%u) returned error",
                     new_status->rtoMax);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_setAssocStatus");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -3101,8 +3101,8 @@ int sctp_setAssocStatus(unsigned int associationID,
             error_logi(ERROR_MINOR,
                     "pm_getMaxPathRetransmisions(%u) returned error",
                     new_status->pathMaxRetransmits);
-            sctpInstance = old_Instance;
-            currentAssociation = old_assoc;
+            curr_geco_instance_ = old_Instance;
+            curr_channel_ = old_assoc;
             LEAVE_LIBRARY("sctp_setAssocStatus");
             return SCTP_PARAMETER_PROBLEM;
         }
@@ -3113,7 +3113,7 @@ int sctp_setAssocStatus(unsigned int associationID,
 
         rxc_set_local_receiver_window(new_status->myRwnd);
         rxc_set_sack_delay(new_status->delay);
-        currentAssociation->ipTos = new_status->ipTos;
+        curr_channel_->ipTos = new_status->ipTos;
         result = fc_set_maxSendQueue(new_status->maxSendQueue);
 
         result = SCTP_SUCCESS;
@@ -3126,8 +3126,8 @@ int sctp_setAssocStatus(unsigned int associationID,
                 associationID);
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_setAssocStatus");
     return result;
 } /* end: sctp_setAssocStatus */
@@ -3142,8 +3142,8 @@ int sctp_getAssocStatus(unsigned int associationID,
         SCTP_AssociationStatus* status)
 {
     guint16 result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_getAssocStatus");
 
@@ -3154,21 +3154,21 @@ int sctp_getAssocStatus(unsigned int associationID,
         LEAVE_LIBRARY("sctp_getAssocStatus");
         return SCTP_PARAMETER_PROBLEM;
     }
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         event_logi(VERBOSE, "sctp_getAssocStatus: Association %u",
                 associationID);
         status->state = sci_getState();
-        status->numberOfAddresses = currentAssociation->noOfNetworks;
-        status->sourcePort = currentAssociation->localPort;
-        status->destPort = currentAssociation->remotePort;
+        status->numberOfAddresses = curr_channel_->noOfNetworks;
+        status->sourcePort = curr_channel_->localPort;
+        status->destPort = curr_channel_->remotePort;
         status->primaryAddressIndex = pm_readPrimaryPath();
 
         adl_sockunion2str(
-                &(currentAssociation->destinationAddresses[status->primaryAddressIndex]),
+                &(curr_channel_->destinationAddresses[status->primaryAddressIndex]),
                 &(status->primaryDestinationAddress[0]), SCTP_MAX_IP_LEN);
 
         se_readNumberOfStreams(&(status->inStreams), &(status->outStreams));
@@ -3200,8 +3200,8 @@ int sctp_getAssocStatus(unsigned int associationID,
                 associationID);
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_getAssocStatus");
     return result;
 } /* end: sctp_getAssocStatus */
@@ -3483,8 +3483,8 @@ int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer,
         unsigned char* flags, void** context)
 {
     int result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_receiveUnsent");
 
@@ -3496,11 +3496,11 @@ int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer,
         LEAVE_LIBRARY("sctp_receiveUnsent");
         return SCTP_PARAMETER_PROBLEM;
     }
-    currentAssociation = retrieveAssociationForced(associationID);
+    curr_channel_ = retrieveAssociationForced(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        if (currentAssociation->deleted == FALSE)
+        if (curr_channel_->deleted == FALSE)
         {
             result = SCTP_WRONG_STATE;
         }
@@ -3521,8 +3521,8 @@ int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer,
                 associationID);
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_receiveUnsent");
     return result;
 
@@ -3548,8 +3548,8 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
         unsigned char* flags, void** context)
 {
     int result;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_receiveUnacked");
 
@@ -3561,11 +3561,11 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
         LEAVE_LIBRARY("sctp_receiveUnacked");
         return SCTP_PARAMETER_PROBLEM;
     }
-    currentAssociation = retrieveAssociationForced(associationID);
+    curr_channel_ = retrieveAssociationForced(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        if (currentAssociation->deleted == FALSE)
+        if (curr_channel_->deleted == FALSE)
         {
             result = SCTP_WRONG_STATE;
         }
@@ -3586,8 +3586,8 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
                 associationID);
         result = SCTP_ASSOC_NOT_FOUND;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_receiveUnacked");
     return result;
 
@@ -3601,18 +3601,18 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
 short sctp_getPrimary(unsigned int associationID)
 {
     short primary;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     ENTER_LIBRARY("sctp_getPrimary");
 
     CHECK_LIBRARY;
 
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         event_logi(VERBOSE, "sctp_getPrimary: Association %u", associationID);
         primary = pm_readPrimaryPath();
     }
@@ -3624,16 +3624,16 @@ short sctp_getPrimary(unsigned int associationID)
         primary = SCTP_ASSOC_NOT_FOUND;
     }
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_getPrimary");
     return primary;
 }
 
 int sctp_getInstanceID(unsigned int associationID, unsigned short* instanceID)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
     int result = 0;
 
     ENTER_LIBRARY("sctp_getInstanceID");
@@ -3644,14 +3644,14 @@ int sctp_getInstanceID(unsigned int associationID, unsigned short* instanceID)
         LEAVE_LIBRARY("sctp_getInstanceID");
         return -1;
     }
-    currentAssociation = retrieveAssociationForced(associationID);
+    curr_channel_ = retrieveAssociationForced(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         event_logii(VERBOSE, "sctp_getInstanceID: Association %u, Instance %u",
-                associationID, sctpInstance->sctpInstanceName);
-        (*instanceID) = sctpInstance->sctpInstanceName;
+                associationID, curr_geco_instance_->sctpInstanceName);
+        (*instanceID) = curr_geco_instance_->sctpInstanceName;
     }
     else
     {
@@ -3660,8 +3660,8 @@ int sctp_getInstanceID(unsigned int associationID, unsigned short* instanceID)
                 associationID);
         result = 1;
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     LEAVE_LIBRARY("sctp_getInstanceID");
     return result;
 }
@@ -3833,24 +3833,24 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
         unsigned char *buffer, unsigned int length)
 {
     int result = 0;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
     if (sctpLibraryInitialized == FALSE) return -1;
 
     /* Retrieve association from list  */
-    currentAssociation = retrieveAssociation(associationID);
+    curr_channel_ = retrieveAssociation(associationID);
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
         if (path_id >= 0)
         {
-            if (path_id >= currentAssociation->noOfNetworks)
+            if (path_id >= curr_channel_->noOfNetworks)
             {
                 error_log(ERROR_MAJOR, "sctp_sendRawData: invalid destination address");
-                sctpInstance = old_Instance;
-                currentAssociation = old_assoc;
+                curr_geco_instance_ = old_Instance;
+                curr_channel_ = old_assoc;
                 return 1;
             }
         }
@@ -3866,8 +3866,8 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
         result = 1;
     }
 
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
     return result;
 } /* end: sctp_send */
 #endif
@@ -3911,7 +3911,7 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
 
     chunk = (SCTP_simple_chunk *) &message->sctp_pdu[0];
 
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         /* possible cases : initAck, no association exists yet, and OOTB packets
          use last from address as destination address */
@@ -3938,14 +3938,14 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
                     lastInitiateTag, mdi_readLastDestPort(),
                     mdi_readLastFromPort());
 
-            if (sctpInstance != NULL) tos = sctpInstance->default_ipTos;
+            if (curr_geco_instance_ != NULL) tos = curr_geco_instance_->default_ipTos;
             else tos = IPTOS_DEFAULT;
         }
     }
     else
     {
         if (destAddressIndex < -1
-                || destAddressIndex >= currentAssociation->noOfNetworks)
+                || destAddressIndex >= curr_channel_->noOfNetworks)
         {
             error_log(ERROR_MAJOR,
                     "mdi_send_message: invalid destination address");
@@ -3956,7 +3956,7 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
         {
             /* Use given destination address from current association */
             dest_ptr =
-                    &(currentAssociation->destinationAddresses[destAddressIndex]);
+                    &(curr_channel_->destinationAddresses[destAddressIndex]);
         }
         else
         { /* use last from address */
@@ -3965,16 +3965,16 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
                 dIdx = pm_readPrimaryPath();
                 event_logii(VVERBOSE,
                         "mdi_send_message : sending to primary with index %u (with %u paths)",
-                        dIdx, currentAssociation->noOfNetworks);
+                        dIdx, curr_channel_->noOfNetworks);
 
                 if ((dIdx == 0xFFFF)
-                        || (dIdx >= currentAssociation->noOfNetworks))
+                        || (dIdx >= curr_channel_->noOfNetworks))
                 {
                     error_log(ERROR_MAJOR,
                             "mdi_send_message: could not get primary address");
                     return 1;
                 }
-                dest_ptr = &(currentAssociation->destinationAddresses[dIdx]);
+                dest_ptr = &(curr_channel_->destinationAddresses[dIdx]);
             }
             else
             {
@@ -4003,18 +4003,18 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
         else
         {
             message->common_header.verification_tag = htonl(
-                    currentAssociation->tagRemote);
+                    curr_channel_->tagRemote);
         }
 
-        message->common_header.src_port = htons(currentAssociation->localPort);
+        message->common_header.src_port = htons(curr_channel_->localPort);
         message->common_header.dest_port = htons(
-                currentAssociation->remotePort);
+                curr_channel_->remotePort);
 
         event_logiii(VVERBOSE,
                 "mdi_send_message (II): tag = %x, src_port = %u , dest_port = %u",
                 ntohl(message->common_header.verification_tag),
-                currentAssociation->localPort, currentAssociation->remotePort);
-        tos = currentAssociation->ipTos;
+                curr_channel_->localPort, curr_channel_->remotePort);
+        tos = curr_channel_->ipTos;
     }
 
     /* calculate and insert checksum */
@@ -4060,22 +4060,22 @@ void mdi_dataArriveNotif(unsigned short streamID, unsigned int length,
         unsigned int unordered)
 {
 
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
 
         event_logiiii(INTERNAL_EVENT_0,
                 "mdi_dataArriveNotif(assoc %u, streamID %u, length %u, tsn %u)",
-                currentAssociation->assocId, streamID, length, tsn);
+                curr_channel_->assocId, streamID, length, tsn);
         /* Forward dataArriveNotif to the ULP */
-        if (sctpInstance->ULPcallbackFunctions.dataArriveNotif)
+        if (curr_geco_instance_->ULPcallbackFunctions.dataArriveNotif)
         {
             ENTER_CALLBACK("dataArriveNotif");
-            sctpInstance->ULPcallbackFunctions.dataArriveNotif(
-                    currentAssociation->assocId, streamID, length, streamSN,
-                    tsn, protoID, unordered, currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.dataArriveNotif(
+                    curr_channel_->assocId, streamID, length, streamSN,
+                    tsn, protoID, unordered, curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("dataArriveNotif");
         }
     }
@@ -4083,8 +4083,8 @@ void mdi_dataArriveNotif(unsigned short streamID, unsigned int length,
     {
         error_log(ERROR_MAJOR, "mdi_dataArriveNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 } /* end: mdi_dataArriveNotif */
 
 /**
@@ -4095,20 +4095,20 @@ void mdi_dataArriveNotif(unsigned short streamID, unsigned int length,
 void mdi_networkStatusChangeNotif(short destinationAddress,
         unsigned short newState)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
-    if (currentAssociation != NULL)
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
+    if (curr_channel_ != NULL)
     {
 
         event_logiii(INTERNAL_EVENT_0,
                 "mdi_networkStatusChangeNotif(assoc %u, path-id %d, state %u)",
-                currentAssociation->assocId, destinationAddress, newState);
-        if (sctpInstance->ULPcallbackFunctions.networkStatusChangeNotif)
+                curr_channel_->assocId, destinationAddress, newState);
+        if (curr_geco_instance_->ULPcallbackFunctions.networkStatusChangeNotif)
         {
             ENTER_CALLBACK("networkStatusChangeNotif");
-            sctpInstance->ULPcallbackFunctions.networkStatusChangeNotif(
-                    currentAssociation->assocId, destinationAddress, newState,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.networkStatusChangeNotif(
+                    curr_channel_->assocId, destinationAddress, newState,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("networkStatusChangeNotif");
         }
     }
@@ -4117,8 +4117,8 @@ void mdi_networkStatusChangeNotif(short destinationAddress,
         error_log(ERROR_MAJOR,
                 "mdi_networkStatusChangeNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 } /* end: mdi_networkStatusChangeNotif */
 
 /**
@@ -4130,16 +4130,16 @@ void mdi_networkStatusChangeNotif(short destinationAddress,
 void mdi_sendFailureNotif(unsigned char *data, unsigned int dataLength,
         unsigned int *context)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
-    if (currentAssociation != NULL)
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
+    if (curr_channel_ != NULL)
     {
-        if (sctpInstance->ULPcallbackFunctions.sendFailureNotif)
+        if (curr_geco_instance_->ULPcallbackFunctions.sendFailureNotif)
         {
             ENTER_CALLBACK("sendFailureNotif");
-            sctpInstance->ULPcallbackFunctions.sendFailureNotif(
-                    currentAssociation->assocId, data, dataLength, context,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.sendFailureNotif(
+                    curr_channel_->assocId, data, dataLength, context,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("sendFailureNotif");
         }
     }
@@ -4147,8 +4147,8 @@ void mdi_sendFailureNotif(unsigned char *data, unsigned int dataLength,
     {
         error_log(ERROR_MAJOR, "mdi_sendFailureNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 } /* end: mdi_sendFailureNotif */
 
 /**
@@ -4157,19 +4157,19 @@ void mdi_sendFailureNotif(unsigned char *data, unsigned int dataLength,
  */
 void mdi_peerShutdownReceivedNotif(void)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
-    if (currentAssociation != NULL)
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
+    if (curr_channel_ != NULL)
     {
 
         event_logi(INTERNAL_EVENT_0, "mdi_peerShutdownReceivedNotif(assoc %u)",
-                currentAssociation->assocId);
-        if (sctpInstance->ULPcallbackFunctions.peerShutdownReceivedNotif)
+                curr_channel_->assocId);
+        if (curr_geco_instance_->ULPcallbackFunctions.peerShutdownReceivedNotif)
         {
             ENTER_CALLBACK("shutdownCompleteNotif");
-            sctpInstance->ULPcallbackFunctions.peerShutdownReceivedNotif(
-                    currentAssociation->assocId,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.peerShutdownReceivedNotif(
+                    curr_channel_->assocId,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("peerShutdownReceivedNotif");
         }
     }
@@ -4178,8 +4178,8 @@ void mdi_peerShutdownReceivedNotif(void)
         error_log(ERROR_MAJOR,
                 "mdi_peerShutdownReceivedNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 }
 
 /**
@@ -4188,19 +4188,19 @@ void mdi_peerShutdownReceivedNotif(void)
  */
 void mdi_shutdownCompleteNotif(void)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
-    if (currentAssociation != NULL)
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
+    if (curr_channel_ != NULL)
     {
 
         event_logi(INTERNAL_EVENT_0, "mdi_shutdownCompleteNotif(assoc %u)",
-                currentAssociation->assocId);
-        if (sctpInstance->ULPcallbackFunctions.shutdownCompleteNotif)
+                curr_channel_->assocId);
+        if (curr_geco_instance_->ULPcallbackFunctions.shutdownCompleteNotif)
         {
             ENTER_CALLBACK("shutdownCompleteNotif");
-            sctpInstance->ULPcallbackFunctions.shutdownCompleteNotif(
-                    currentAssociation->assocId,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.shutdownCompleteNotif(
+                    curr_channel_->assocId,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("shutdownCompleteNotif");
         }
     }
@@ -4209,8 +4209,8 @@ void mdi_shutdownCompleteNotif(void)
         error_log(ERROR_MAJOR,
                 "mdi_shutdownCompleteNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 }
 
 /**
@@ -4219,20 +4219,20 @@ void mdi_shutdownCompleteNotif(void)
  */
 void mdi_restartNotif(void)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
-    if (currentAssociation != NULL)
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
+    if (curr_channel_ != NULL)
     {
 
         event_logi(INTERNAL_EVENT_0, "mdi_restartNotif(assoc %u)",
-                currentAssociation->assocId);
+                curr_channel_->assocId);
 
-        if (sctpInstance->ULPcallbackFunctions.restartNotif)
+        if (curr_geco_instance_->ULPcallbackFunctions.restartNotif)
         {
             ENTER_CALLBACK("restartNotif");
-            sctpInstance->ULPcallbackFunctions.restartNotif(
-                    currentAssociation->assocId,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.restartNotif(
+                    curr_channel_->assocId,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("restartNotif");
         }
     }
@@ -4240,8 +4240,8 @@ void mdi_restartNotif(void)
     {
         error_log(ERROR_MAJOR, "mdi_restartNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 }
 
 /**
@@ -4251,21 +4251,21 @@ void mdi_restartNotif(void)
  */
 void mdi_communicationLostNotif(unsigned short status)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
 
         event_logii(INTERNAL_EVENT_0,
                 "mdi_communicationLostNotif(assoc %u, status %u)",
-                currentAssociation->assocId, status);
-        if (sctpInstance->ULPcallbackFunctions.communicationLostNotif)
+                curr_channel_->assocId, status);
+        if (curr_geco_instance_->ULPcallbackFunctions.communicationLostNotif)
         {
             ENTER_CALLBACK("communicationLostNotif");
-            sctpInstance->ULPcallbackFunctions.communicationLostNotif(
-                    currentAssociation->assocId, status,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.communicationLostNotif(
+                    curr_channel_->assocId, status,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("communicationLostNotif");
         }
     }
@@ -4274,8 +4274,8 @@ void mdi_communicationLostNotif(unsigned short status)
         error_log(ERROR_MAJOR,
                 "mdi_communicationLostNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 } /* end: mdi_communicationLostNotif */
 
 /**
@@ -4292,10 +4292,10 @@ void mdi_communicationUpNotif(unsigned short status)
     short primaryPath;
     unsigned short noOfInStreams;
     unsigned short noOfOutStreams;
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
         /* Find primary path */
         result = mdi_readLastFromAddress(&lastAddress);
@@ -4304,11 +4304,11 @@ void mdi_communicationUpNotif(unsigned short status)
         {
 
             for (primaryPath = 0;
-                    primaryPath < currentAssociation->noOfNetworks;
+                    primaryPath < curr_channel_->noOfNetworks;
                     primaryPath++)
             {
                 if (adl_equal_address(
-                        &(currentAssociation->destinationAddresses[primaryPath]),
+                        &(curr_channel_->destinationAddresses[primaryPath]),
                         &lastAddress))
                 {
                     break;
@@ -4319,35 +4319,35 @@ void mdi_communicationUpNotif(unsigned short status)
         {
             primaryPath = 0;
         }
-        if (primaryPath >= currentAssociation->noOfNetworks) primaryPath = 0;
+        if (primaryPath >= curr_channel_->noOfNetworks) primaryPath = 0;
 
         /* set number of paths and primary path at pathmanegement and start heartbeat */
-        pm_setPaths(currentAssociation->noOfNetworks, primaryPath);
+        pm_setPaths(curr_channel_->noOfNetworks, primaryPath);
 
         se_readNumberOfStreams(&noOfInStreams, &noOfOutStreams);
 
         event_logiii(VERBOSE,
                 "Distribution: COMM-UP, assocId: %u, status: %u, noOfNetworks: %u",
-                currentAssociation->assocId, status,
-                currentAssociation->noOfNetworks);
+                curr_channel_->assocId, status,
+                curr_channel_->noOfNetworks);
         event_logii(VERBOSE, "noOfInStreams: %u,noOfOutStreams  %u",
                 noOfInStreams, noOfOutStreams);
         /* FIXME (???) : retreive sctp-instance from list */
 
         /* Forward mdi_communicationup Notification to the ULP */
-        if (sctpInstance->ULPcallbackFunctions.communicationUpNotif)
+        if (curr_geco_instance_->ULPcallbackFunctions.communicationUpNotif)
         {
             ENTER_CALLBACK("communicationUpNotif");
-            currentAssociation->ulp_dataptr =
-                    sctpInstance->ULPcallbackFunctions.communicationUpNotif(
-                            currentAssociation->assocId, status,
-                            currentAssociation->noOfNetworks, noOfInStreams,
-                            noOfOutStreams, currentAssociation->supportsPRSCTP,
-                            currentAssociation->ulp_dataptr);
+            curr_channel_->ulp_dataptr =
+                    curr_geco_instance_->ULPcallbackFunctions.communicationUpNotif(
+                            curr_channel_->assocId, status,
+                            curr_channel_->noOfNetworks, noOfInStreams,
+                            noOfOutStreams, curr_channel_->supportsPRSCTP,
+                            curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("communicationUpNotif");
-            if (currentAssociation != NULL)
+            if (curr_channel_ != NULL)
             {
-                for (pathNum = 0; pathNum < currentAssociation->noOfNetworks;
+                for (pathNum = 0; pathNum < curr_channel_->noOfNetworks;
                         pathNum++)
                 {
                     if (pm_readState((short) pathNum) == PM_ACTIVE)
@@ -4360,15 +4360,15 @@ void mdi_communicationUpNotif(unsigned short status)
         }
         else
         {
-            currentAssociation->ulp_dataptr = NULL;
+            curr_channel_->ulp_dataptr = NULL;
         }
     }
     else
     {
         error_log(ERROR_MAJOR, "mdi_communicationUpNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 } /* end: mdi_communicationLostNotif */
 
 /**
@@ -4382,21 +4382,21 @@ void mdi_communicationUpNotif(unsigned short status)
  */
 void mdi_queueStatusChangeNotif(int queueType, int queueId, int queueLen)
 {
-    SCTP_instance *old_Instance = sctpInstance;
-    Association *old_assoc = currentAssociation;
+    SCTP_instance *old_Instance = curr_geco_instance_;
+    Association *old_assoc = curr_channel_;
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
 
         event_logiiii(INTERNAL_EVENT_0,
                 "mdi_queueStatusChangeNotif(assoc %u, queueType %d, queueId %d, len: %d)",
-                currentAssociation->assocId, queueType, queueId, queueLen);
-        if (sctpInstance->ULPcallbackFunctions.queueStatusChangeNotif)
+                curr_channel_->assocId, queueType, queueId, queueLen);
+        if (curr_geco_instance_->ULPcallbackFunctions.queueStatusChangeNotif)
         {
             ENTER_CALLBACK("queueStatusChangeNotif");
-            sctpInstance->ULPcallbackFunctions.queueStatusChangeNotif(
-                    currentAssociation->assocId, queueType, queueId, queueLen,
-                    currentAssociation->ulp_dataptr);
+            curr_geco_instance_->ULPcallbackFunctions.queueStatusChangeNotif(
+                    curr_channel_->assocId, queueType, queueId, queueLen,
+                    curr_channel_->ulp_dataptr);
             LEAVE_CALLBACK("queueStatusChangeNotif");
         }
     }
@@ -4405,8 +4405,8 @@ void mdi_queueStatusChangeNotif(int queueType, int queueId, int queueLen)
         error_log(ERROR_MAJOR,
                 "mdi_queueuStatusChangeNotif: association not set");
     }
-    sctpInstance = old_Instance;
-    currentAssociation = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    curr_channel_ = old_assoc;
 } /* end: mdi_queueStatusChangeNotif */
 
 /*------------------- Functions called by the SCTP to get current association data----------------*/
@@ -4428,14 +4428,14 @@ void mdi_queueStatusChangeNotif(int queueType, int queueId, int queueLen)
  */
 void* get_flowctrl(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         event_log(VVERBOSE, "get_flowctrl: association not set");
         return NULL;
     }
     else
     {
-        return currentAssociation->flowControl;
+        return curr_channel_->flowControl;
     }
 }
 
@@ -4445,7 +4445,7 @@ void* get_flowctrl(void)
  */
 void *mdi_readReliableTransfer(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_readReliableTransfer: association not set");
         return NULL;
@@ -4453,8 +4453,8 @@ void *mdi_readReliableTransfer(void)
     else
     {
         /*        event_logii(VVERBOSE, "setting RelTransfer MemoryAddress %x, for association %u",
-         currentAssociation->reliableTransfer, currentAssociation->assocId); */
-        return currentAssociation->reliableTransfer;
+         curr_channel_->reliableTransfer, curr_channel_->assocId); */
+        return curr_channel_->reliableTransfer;
     }
 }
 
@@ -4464,14 +4464,14 @@ void *mdi_readReliableTransfer(void)
  */
 void *mdi_readRX_control(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_readRX_control: association not set");
         return NULL;
     }
     else
     {
-        return currentAssociation->rx_control;
+        return curr_channel_->rx_control;
     }
 }
 
@@ -4481,7 +4481,7 @@ void *mdi_readRX_control(void)
  */
 void *mdi_readStreamEngine(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_readStreamEngine: association not set");
         return NULL;
@@ -4490,8 +4490,8 @@ void *mdi_readStreamEngine(void)
     {
         event_logii(VVERBOSE,
                 "setting StreamEngine MemoryAddress %x, for association %u",
-                currentAssociation->streamengine, currentAssociation->assocId);
-        return currentAssociation->streamengine;
+                curr_channel_->streamengine, curr_channel_->assocId);
+        return curr_channel_->streamengine;
     }
 }
 
@@ -4501,14 +4501,14 @@ void *mdi_readStreamEngine(void)
  */
 void *mdi_readPathMan(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_readPathMan: association not set");
         return NULL;
     }
     else
     {
-        return currentAssociation->pathMan;
+        return curr_channel_->pathMan;
     }
 }
 
@@ -4518,7 +4518,7 @@ void *mdi_readPathMan(void)
  */
 void *mdi_readBundling(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         /*
          error_log(ERROR_MINOR, "mdi_readBundling: association not set");
@@ -4527,7 +4527,7 @@ void *mdi_readBundling(void)
     }
     else
     {
-        return currentAssociation->bundling;
+        return curr_channel_->bundling;
     }
 }
 
@@ -4537,12 +4537,12 @@ void *mdi_readBundling(void)
  */
 void *mdi_readSCTP_control(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_readSCTP_control: association not set");
         return NULL;
     }
-    return currentAssociation->sctp_control;
+    return curr_channel_->sctp_control;
 }
 
 /**
@@ -4552,14 +4552,14 @@ void *mdi_readSCTP_control(void)
  */
 unsigned int get_curr_channel_id(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "get_curr_channel_id: association not set");
         return 0;
     }
     else
     {
-        return currentAssociation->assocId;
+        return curr_channel_->assocId;
     }
 }
 
@@ -4570,14 +4570,14 @@ unsigned int get_curr_channel_id(void)
  */
 unsigned int mdi_readLocalTag(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_readLocalTag: association not set");
         return 0;
     }
     else
     {
-        return currentAssociation->tagLocal;
+        return curr_channel_->tagLocal;
     }
 }
 
@@ -4589,14 +4589,14 @@ unsigned int mdi_readLocalTag(void)
  */
 unsigned int mdi_readTagRemote(void)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "get_curr_channel_id: association not set");
         return 0;
     }
     else
     {
-        return currentAssociation->tagRemote;
+        return curr_channel_->tagRemote;
     }
 }
 
@@ -4763,26 +4763,26 @@ unsigned int mdi_readLastInitiateTag(void)
 /* rewrite the initiate tag of peer in case of a peer reset. */
 void mdi_rewriteTagRemote(unsigned int newInitiateTag)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_rewriteRemoteTag: association not set");
     }
     else
     {
-        currentAssociation->tagRemote = newInitiateTag;
+        curr_channel_->tagRemote = newInitiateTag;
     }
 }
 
 /* rewrite the initiate tag of peer in case of a peer reset. */
 void mdi_rewriteLocalTag(unsigned int newTag)
 {
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_rewriteLocalTag: association not set");
     }
     else
     {
-        currentAssociation->tagLocal = newTag;
+        curr_channel_->tagLocal = newTag;
     }
 }
 
@@ -4792,24 +4792,24 @@ short mdi_getIndexForAddress(union sockunion* address)
 {
     short index = 0;
 
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR, "mdi_getIndexForAddress: association not set");
         return -1;
     }
     else
     {
-        if (currentAssociation->destinationAddresses == NULL)
+        if (curr_channel_->destinationAddresses == NULL)
         {
             error_log(ERROR_MINOR, "mdi_getIndexForAddress: addresses not set");
             return -1;
         }
         /* send cookie back to the address where we got it from     */
-        for (index = 0; index < currentAssociation->noOfNetworks; index++)
+        for (index = 0; index < curr_channel_->noOfNetworks; index++)
             if (adl_equal_address(
-                    &(currentAssociation->destinationAddresses[index]),
+                    &(curr_channel_->destinationAddresses[index]),
                     address)) break;
-        if (index == currentAssociation->noOfNetworks) /* not found */
+        if (index == curr_channel_->noOfNetworks) /* not found */
         return -1;
 
     }
@@ -4826,7 +4826,7 @@ void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES],
         int noOfAddresses)
 {
 
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR,
                 "mdi_writeDestinationAddresses: association not set");
@@ -4834,21 +4834,21 @@ void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES],
     }
     else
     {
-        if (currentAssociation->destinationAddresses != NULL)
+        if (curr_channel_->destinationAddresses != NULL)
         {
-            free(currentAssociation->destinationAddresses);
+            free(curr_channel_->destinationAddresses);
         }
 
-        currentAssociation->destinationAddresses = (union sockunion *) malloc(
+        curr_channel_->destinationAddresses = (union sockunion *) malloc(
                 noOfAddresses * sizeof(union sockunion));
 
-        if (currentAssociation->destinationAddresses == NULL)
+        if (curr_channel_->destinationAddresses == NULL)
         error_log(ERROR_FATAL, "mdi_writeDestinationAddresses: out of memory");
 
-        memcpy(currentAssociation->destinationAddresses, addresses,
+        memcpy(curr_channel_->destinationAddresses, addresses,
                 noOfAddresses * sizeof(union sockunion));
 
-        currentAssociation->noOfNetworks = noOfAddresses;
+        curr_channel_->noOfNetworks = noOfAddresses;
 
         return;
     }
@@ -4864,7 +4864,7 @@ unsigned short mdi_readLocalInStreams(void)
     SCTP_instance temporary;
     GList* result = NULL;
 
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         /* retrieve SCTP-instance with last destination port */
         lastDestPort = mdi_readLastDestPort();
@@ -4889,26 +4889,26 @@ unsigned short mdi_readLocalInStreams(void)
                     "Could not find SCTP Instance for Port %u in List, FIXME !",
                     lastDestPort);
         }
-        sctpInstance = (SCTP_instance*) result->data;
+        curr_geco_instance_ = (SCTP_instance*) result->data;
     }
     else
     {
         /* retrieve SCTP-instance with SCTP-instance name in current association */
         temporary.sctpInstanceName =
-                currentAssociation->sctpInstance->sctpInstanceName;
+                curr_channel_->sctpInstance->sctpInstanceName;
         event_logi(VERBOSE, "Searching for SCTP Instance with Name %u ",
-                currentAssociation->sctpInstance->sctpInstanceName);
+                curr_channel_->sctpInstance->sctpInstanceName);
         result = g_list_find_custom(InstanceList, &temporary,
                 &CompareInstanceNames);
         if (result == NULL)
         {
             error_logi(ERROR_FATAL,
                     "Could not find SCTP Instance with name %u in List, FIXME !",
-                    currentAssociation->sctpInstance->sctpInstanceName);
+                    curr_channel_->sctpInstance->sctpInstanceName);
         }
-        sctpInstance = (SCTP_instance*) result->data;
+        curr_geco_instance_ = (SCTP_instance*) result->data;
     }
-    return sctpInstance->noOfInStreams;
+    return curr_geco_instance_->noOfInStreams;
 }
 
 /**
@@ -4921,7 +4921,7 @@ unsigned short mdi_readLocalOutStreams(void)
     SCTP_instance temporary;
     GList* result = NULL;
 
-    if (currentAssociation == NULL)
+    if (curr_channel_ == NULL)
     {
         /* retrieve SCTP-instance with last destination port */
         lastDestPort = mdi_readLastDestPort();
@@ -4945,26 +4945,26 @@ unsigned short mdi_readLocalOutStreams(void)
                     "Could not find SCTP Instance for Port %u in List, FIXME !",
                     lastDestPort);
         }
-        sctpInstance = (SCTP_instance*) result->data;
+        curr_geco_instance_ = (SCTP_instance*) result->data;
     }
     else
     {
         /* retrieve SCTP-instance with SCTP-instance name in current association */
         temporary.sctpInstanceName =
-                currentAssociation->sctpInstance->sctpInstanceName;
+                curr_channel_->sctpInstance->sctpInstanceName;
         event_logi(VERBOSE, "Searching for SCTP Instance with Name %u ",
-                currentAssociation->sctpInstance->sctpInstanceName);
+                curr_channel_->sctpInstance->sctpInstanceName);
         result = g_list_find_custom(InstanceList, &temporary,
                 &CompareInstanceNames);
         if (result == NULL)
         {
             error_logi(ERROR_FATAL,
                     "Could not find SCTP Instance with name %u in List, FIXME !",
-                    currentAssociation->sctpInstance->sctpInstanceName);
+                    curr_channel_->sctpInstance->sctpInstanceName);
         }
-        sctpInstance = (SCTP_instance*) result->data;
+        curr_geco_instance_ = (SCTP_instance*) result->data;
     }
-    return sctpInstance->noOfOutStreams;
+    return curr_geco_instance_->noOfOutStreams;
 }
 
 /**
@@ -4986,18 +4986,18 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
     gboolean localHostFound = FALSE, linkLocalFound = FALSE, siteLocalFound =
             FALSE;
 
-    if ((currentAssociation == NULL) && (sctpInstance == NULL))
+    if ((curr_channel_ == NULL) && (curr_geco_instance_ == NULL))
     {
         error_log(ERROR_FATAL,
                 "mdi_readLocalAddresses: neither assoc nor instance set - error !");
         *noOfAddresses = 0;
         return;
     }
-    if (sctpInstance == NULL)
+    if (curr_geco_instance_ == NULL)
     {
         error_log(ERROR_MAJOR,
                 "mdi_readLocalAddresses: instance not set - program error");
-        sctpInstance = currentAssociation->sctpInstance;
+        curr_geco_instance_ = curr_channel_->sctpInstance;
     }
 
     for (count = 0; count < numPeerAddresses; count++)
@@ -5050,7 +5050,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 
     count = 0;
 
-    if (sctpInstance->has_INADDR_ANY_set == TRUE)
+    if (curr_geco_instance_->has_INADDR_ANY_set == TRUE)
     {
         for (tmp = 0; tmp < myNumberOfAddresses; tmp++)
         {
@@ -5076,7 +5076,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 "mdi_readLocalAddresses: found %u local addresses from INADDR_ANY (from %u)",
                 count, myNumberOfAddresses);
     }
-    else if (sctpInstance->has_IN6ADDR_ANY_set == TRUE)
+    else if (curr_geco_instance_->has_IN6ADDR_ANY_set == TRUE)
     {
         for (tmp = 0; tmp < myNumberOfAddresses; tmp++)
         {
@@ -5116,19 +5116,19 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
     }
     else
     {
-        for (tmp = 0; tmp < sctpInstance->noOfLocalAddresses; tmp++)
+        for (tmp = 0; tmp < curr_geco_instance_->noOfLocalAddresses; tmp++)
         {
-            switch (sockunion_family(&(sctpInstance->localAddressList[tmp])))
+            switch (sockunion_family(&(curr_geco_instance_->localAddressList[tmp])))
             {
             case AF_INET:
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0)
                 {
                     if (adl_filterInetAddress(
-                            &(sctpInstance->localAddressList[tmp]), filterFlags)
+                            &(curr_geco_instance_->localAddressList[tmp]), filterFlags)
                             == TRUE)
                     {
                         memcpy(&(laddresses[count]),
-                                &(sctpInstance->localAddressList[tmp]),
+                                &(curr_geco_instance_->localAddressList[tmp]),
                                 sizeof(union sockunion));
                         count++;
                     }
@@ -5138,9 +5138,9 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 case AF_INET6 :
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV6) != 0)
                 {
-                    if ( adl_filterInetAddress(&(sctpInstance->localAddressList[tmp]), filterFlags) == TRUE)
+                    if ( adl_filterInetAddress(&(curr_geco_instance_->localAddressList[tmp]), filterFlags) == TRUE)
                     {
-                        memcpy(&(laddresses[count]), &(sctpInstance->localAddressList[tmp]),
+                        memcpy(&(laddresses[count]), &(curr_geco_instance_->localAddressList[tmp]),
                                 sizeof(union sockunion));
                         count++;
                     }
@@ -5153,7 +5153,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         }
         event_logii(VERBOSE,
                 "mdi_readLocalAddresses: found %u local addresses from instance (from %u)",
-                count, sctpInstance->noOfLocalAddresses);
+                count, curr_geco_instance_->noOfLocalAddresses);
     }
     event_logi(INTERNAL_EVENT_0,
             "mdi_readLocalAddresses() : returning %u addresses !", count);
@@ -5166,22 +5166,22 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 
 gboolean mdi_supportsPRSCTP(void)
 {
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        return (currentAssociation->supportsPRSCTP
-                && currentAssociation->peerSupportsPRSCTP);
+        return (curr_channel_->supportsPRSCTP
+                && curr_channel_->peerSupportsPRSCTP);
     }
-    if (sctpInstance != NULL)
+    if (curr_geco_instance_ != NULL)
     {
-        return sctpInstance->supportsPRSCTP;
+        return curr_geco_instance_->supportsPRSCTP;
     }
     return (librarySupportsPRSCTP);
 }
 
 gboolean mdi_peerSupportsPRSCTP(void)
 {
-    if (currentAssociation == NULL) return FALSE;
-    return currentAssociation->peerSupportsPRSCTP;
+    if (curr_channel_ == NULL) return FALSE;
+    return curr_channel_->peerSupportsPRSCTP;
 }
 
 int mdi_getDefaultRtoInitial(void* sctpInstance)
@@ -5209,14 +5209,14 @@ int mdi_getDefaultMaxInitRetransmits(void* sctpInstance)
     if (sctpInstance == NULL) return -1;
     else return ((SCTP_instance*) sctpInstance)->default_maxInitRetransmits;
 }
-int mdi_getDefaultMyRwnd()
+int get_my_default_rwnd()
 {
-    if (sctpInstance == NULL) return -1;
+    if (curr_geco_instance_ == NULL) return -1;
     else
     {
-        event_logi(VVERBOSE, " mdi_getDefaultMyRwnd is %u",
-                sctpInstance->default_myRwnd);
-        return ((SCTP_instance*) sctpInstance)->default_myRwnd;
+        event_logi(VVERBOSE, " get_my_default_rwnd is %u",
+                curr_geco_instance_->default_myRwnd);
+        return ((SCTP_instance*) curr_geco_instance_)->default_myRwnd;
     }
 }
 int mdi_getDefaultRtoMin(void* sctpInstance)
@@ -5233,12 +5233,12 @@ int mdi_getDefaultRtoMax(void* sctpInstance)
 
 int mdi_getDefaultMaxBurst(void)
 {
-    if (sctpInstance == NULL) return DEFAULT_MAX_BURST;
-    else if (currentAssociation == NULL) return DEFAULT_MAX_BURST;
-    else return (currentAssociation->sctpInstance->default_maxBurst);
+    if (curr_geco_instance_ == NULL) return DEFAULT_MAX_BURST;
+    else if (curr_channel_ == NULL) return DEFAULT_MAX_BURST;
+    else return (curr_channel_->sctpInstance->default_maxBurst);
 }
 
-int mdi_getDefaultDelay(void* sctpInstance)
+int get_default_delay(void* sctpInstance)
 {
     if (sctpInstance == NULL) return -1;
     else return ((SCTP_instance*) sctpInstance)->default_delay;
@@ -5262,8 +5262,8 @@ int mdi_getDefaultMaxRecvQueue(void* sctpInstance)
 
 unsigned int mdi_getSupportedAddressTypes(void)
 {
-    if (sctpInstance == NULL) return -1;
-    else return sctpInstance->supportedAddressTypes;
+    if (curr_geco_instance_ == NULL) return -1;
+    else return curr_geco_instance_->supportedAddressTypes;
 }
 
 /*------------- functions to set and clear the association data ----------------------------------*/
@@ -5282,19 +5282,19 @@ unsigned int mdi_getSupportedAddressTypes(void)
  */
 unsigned short mdi_setAssociationData(unsigned int associationID)
 {
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     error_log(ERROR_MINOR,
             "mdi_setAssociationData: previous assoc not cleared");
 
     /* retrieve association from list */
-    currentAssociation = retrieveAssociation(associationID);
-    if (currentAssociation == NULL)
+    curr_channel_ = retrieveAssociation(associationID);
+    if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR,
                 "mdi_setAssociationData: association does not exist");
         return 1;
     }
-    sctpInstance = currentAssociation->sctpInstance;
+    curr_geco_instance_ = curr_channel_->sctpInstance;
     return 0;
 }
 
@@ -5309,8 +5309,8 @@ unsigned short mdi_setAssociationData(unsigned int associationID)
  */
 unsigned short mdi_clearAssociationData(void)
 {
-    currentAssociation = NULL;
-    sctpInstance = NULL;
+    curr_channel_ = NULL;
+    curr_geco_instance_ = NULL;
     return 0;
 }
 
@@ -5344,7 +5344,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
 
     if (sInstance == NULL)
     {
-        if (sctpInstance == NULL)
+        if (curr_geco_instance_ == NULL)
         {
             error_logi(ERROR_FATAL,
                     "SCTP Instance for Port %u were all NULL, call sctp_registerInstance FIRST !",
@@ -5353,7 +5353,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
         }
         else
         {
-            instance = sctpInstance;
+            instance = curr_geco_instance_;
         }
     }
     else
@@ -5385,30 +5385,30 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
         return 1;
     }
 
-    if (currentAssociation)
+    if (curr_channel_)
     {
         error_log(ERROR_MINOR, "current association not cleared");
     }
 
-    currentAssociation = (Association *) malloc(sizeof(Association));
+    curr_channel_ = (Association *) malloc(sizeof(Association));
 
-    if (!currentAssociation)
+    if (!curr_channel_)
     {
         error_log_sys(ERROR_FATAL, (short)errno);
         return 1;
     }
 
-    currentAssociation->sctpInstance = instance;
-    currentAssociation->localPort = local_port;
-    currentAssociation->remotePort = remote_port;
-    currentAssociation->tagLocal = tagLocal;
-    currentAssociation->assocId = mdi_getUnusedAssocId();
-    currentAssociation->tagRemote = 0;
-    currentAssociation->deleted = FALSE;
+    curr_channel_->sctpInstance = instance;
+    curr_channel_->localPort = local_port;
+    curr_channel_->remotePort = remote_port;
+    curr_channel_->tagLocal = tagLocal;
+    curr_channel_->assocId = mdi_getUnusedAssocId();
+    curr_channel_->tagRemote = 0;
+    curr_channel_->deleted = FALSE;
 
-    currentAssociation->ulp_dataptr = NULL;
-    currentAssociation->ipTos = instance->default_ipTos;
-    currentAssociation->maxSendQueue = instance->default_maxSendQueue;
+    curr_channel_->ulp_dataptr = NULL;
+    curr_channel_->ipTos = instance->default_ipTos;
+    curr_channel_->maxSendQueue = instance->default_maxSendQueue;
 
     result = mdi_updateMyAddressList();
     if (result != SCTP_SUCCESS)
@@ -5421,10 +5421,10 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     if (instance->has_IN6ADDR_ANY_set)
     {
         /* get ALL addresses */
-        currentAssociation->noOfLocalAddresses = myNumberOfAddresses;
-        currentAssociation->localAddresses = (union sockunion *) calloc(
+        curr_channel_->noOfLocalAddresses = myNumberOfAddresses;
+        curr_channel_->localAddresses = (union sockunion *) calloc(
                 myNumberOfAddresses, sizeof(union sockunion));
-        memcpy(currentAssociation->localAddresses, myAddressList,
+        memcpy(curr_channel_->localAddresses, myAddressList,
                 myNumberOfAddresses * sizeof(union sockunion));
         event_logi(VERBOSE,
                 " mdi_newAssociation: Assoc has has_IN6ADDR_ANY_set, and %d addresses",
@@ -5433,91 +5433,91 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     else if (instance->has_INADDR_ANY_set)
     {
         /* get all IPv4 addresses */
-        currentAssociation->noOfLocalAddresses = 0;
+        curr_channel_->noOfLocalAddresses = 0;
         for (ii = 0; ii < myNumberOfAddresses; ii++)
         {
             if (sockunion_family(&(myAddressList[ii])) == AF_INET)
             {
-                currentAssociation->noOfLocalAddresses++;
+                curr_channel_->noOfLocalAddresses++;
             }
         }
-        currentAssociation->localAddresses = (union sockunion *) calloc(
-                currentAssociation->noOfLocalAddresses,
+        curr_channel_->localAddresses = (union sockunion *) calloc(
+                curr_channel_->noOfLocalAddresses,
                 sizeof(union sockunion));
-        currentAssociation->noOfLocalAddresses = 0;
+        curr_channel_->noOfLocalAddresses = 0;
         for (ii = 0; ii < myNumberOfAddresses; ii++)
         {
             if (sockunion_family(&(myAddressList[ii])) == AF_INET)
             {
                 memcpy(
-                        &(currentAssociation->localAddresses[currentAssociation->noOfLocalAddresses]),
+                        &(curr_channel_->localAddresses[curr_channel_->noOfLocalAddresses]),
                         &(myAddressList[ii]), sizeof(union sockunion));
-                currentAssociation->noOfLocalAddresses++;
+                curr_channel_->noOfLocalAddresses++;
             }
         }
         event_logi(VERBOSE,
                 " mdi_newAssociation: Assoc has has_INADDR_ANY_set, and %d addresses",
-                currentAssociation->noOfLocalAddresses);
+                curr_channel_->noOfLocalAddresses);
     }
     else
     { /* get all specified addresses */
-        currentAssociation->noOfLocalAddresses = instance->noOfLocalAddresses;
-        currentAssociation->localAddresses = (union sockunion *) malloc(
+        curr_channel_->noOfLocalAddresses = instance->noOfLocalAddresses;
+        curr_channel_->localAddresses = (union sockunion *) malloc(
                 instance->noOfLocalAddresses * sizeof(union sockunion));
-        memcpy(currentAssociation->localAddresses, instance->localAddressList,
+        memcpy(curr_channel_->localAddresses, instance->localAddressList,
                 instance->noOfLocalAddresses * sizeof(union sockunion));
 
     }
 
-    currentAssociation->had_IN6ADDR_ANY_set = instance->has_IN6ADDR_ANY_set;
-    currentAssociation->had_INADDR_ANY_set = instance->has_INADDR_ANY_set;
+    curr_channel_->had_IN6ADDR_ANY_set = instance->has_IN6ADDR_ANY_set;
+    curr_channel_->had_INADDR_ANY_set = instance->has_INADDR_ANY_set;
 
-    currentAssociation->noOfNetworks = noOfDestinationAddresses;
-    currentAssociation->destinationAddresses = (union sockunion *) malloc(
+    curr_channel_->noOfNetworks = noOfDestinationAddresses;
+    curr_channel_->destinationAddresses = (union sockunion *) malloc(
             noOfDestinationAddresses * sizeof(union sockunion));
-    memcpy(currentAssociation->destinationAddresses, destinationAddressList,
+    memcpy(curr_channel_->destinationAddresses, destinationAddressList,
             noOfDestinationAddresses * sizeof(union sockunion));
 
     /* check if newly created association already exists. */
-    if (checkForExistingAssociations(currentAssociation) == 1)
+    if (checkForExistingAssociations(curr_channel_) == 1)
     {
         error_log(ERROR_MAJOR, "tried to establish an existing association");
         /* FIXME : also free bundling, pathmanagement,sctp_control */
-        free(currentAssociation->localAddresses);
-        free(currentAssociation->destinationAddresses);
-        free(currentAssociation);
-        currentAssociation = NULL;
+        free(curr_channel_->localAddresses);
+        free(curr_channel_->destinationAddresses);
+        free(curr_channel_);
+        curr_channel_ = NULL;
         return 1;
     }
 
     /* initialize pointer to other modules of SCTP */
-    currentAssociation->flowControl = NULL;
-    currentAssociation->reliableTransfer = NULL;
-    currentAssociation->rx_control = NULL;
-    currentAssociation->streamengine = NULL;
+    curr_channel_->flowControl = NULL;
+    curr_channel_->reliableTransfer = NULL;
+    curr_channel_->rx_control = NULL;
+    curr_channel_->streamengine = NULL;
 
     /* only pathman, bundling and sctp-control are created at this point, the rest is created
      with mdi_initAssociation */
-    currentAssociation->bundling = bu_new();
-    currentAssociation->pathMan = pm_newPathman(noOfDestinationAddresses,
+    curr_channel_->bundling = bu_new();
+    curr_channel_->pathMan = pm_newPathman(noOfDestinationAddresses,
             primaryDestinitionAddress, instance);
-    currentAssociation->sctp_control = sci_newSCTP_control(instance);
+    curr_channel_->sctp_control = sci_newSCTP_control(instance);
 
-    currentAssociation->supportsPRSCTP = instance->supportsPRSCTP;
-    currentAssociation->peerSupportsPRSCTP = instance->supportsPRSCTP;
+    curr_channel_->supportsPRSCTP = instance->supportsPRSCTP;
+    curr_channel_->peerSupportsPRSCTP = instance->supportsPRSCTP;
 
-    currentAssociation->supportsADDIP = FALSE;
-    currentAssociation->peerSupportsADDIP = FALSE;
+    curr_channel_->supportsADDIP = FALSE;
+    curr_channel_->peerSupportsADDIP = FALSE;
 
     event_logii(INTERNAL_EVENT_1,
             "new Association created ID=%08x, local tag=%08x",
-            currentAssociation->assocId, currentAssociation->tagLocal);
+            curr_channel_->assocId, curr_channel_->tagLocal);
 
     /* Enter association into list */
     event_logi(INTERNAL_EVENT_0, "entering association %08x into list",
-            currentAssociation->assocId);
+            curr_channel_->assocId);
 
-    AssociationList = g_list_insert_sorted(AssociationList, currentAssociation,
+    AssociationList = g_list_insert_sorted(AssociationList, curr_channel_,
             &compareAssociationIDs);
 
     return 0;
@@ -5550,7 +5550,7 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
 {
     gboolean withPRSCTP;
 
-    if (!currentAssociation)
+    if (!curr_channel_)
     {
         error_log(ERROR_MAJOR,
                 "mdi_initAssociation: current association does not exist, can not initialize");
@@ -5560,39 +5560,39 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
     /* if  mdi_initAssociation has already be called, delete modules and make new ones
      with possibly new data. Multiple calls of of mdi_initAssociation can occur on the
      a-side in the case of stale cookie errors. */
-    if (currentAssociation->tagRemote != 0)
+    if (curr_channel_->tagRemote != 0)
     {
         event_log(INTERNAL_EVENT_1,
                 "Deleting Modules in mdi_initAssociation() -- then recreating them !!!!");
         /* association init was already completed */
-        fc_delete_flowcontrol(currentAssociation->flowControl);
-        rtx_delete_reltransfer(currentAssociation->reliableTransfer);
-        rxc_delete_recvctrl(currentAssociation->rx_control);
-        se_delete_stream_engine(currentAssociation->streamengine);
+        fc_delete_flowcontrol(curr_channel_->flowControl);
+        rtx_delete_reltransfer(curr_channel_->reliableTransfer);
+        rxc_delete_recvctrl(curr_channel_->rx_control);
+        se_delete_stream_engine(curr_channel_->streamengine);
     }
 
     /* TODO : check number of input and output streams (although that should be fixed now) */
 
-    currentAssociation->tagRemote = tagRemote;
+    curr_channel_->tagRemote = tagRemote;
 
-    withPRSCTP = assocSupportsPRSCTP && currentAssociation->supportsPRSCTP;
-    currentAssociation->peerSupportsPRSCTP = withPRSCTP;
-    currentAssociation->supportsPRSCTP = withPRSCTP;
+    withPRSCTP = assocSupportsPRSCTP && curr_channel_->supportsPRSCTP;
+    curr_channel_->peerSupportsPRSCTP = withPRSCTP;
+    curr_channel_->supportsPRSCTP = withPRSCTP;
 
-    currentAssociation->reliableTransfer = (void *) rtx_new_reltransfer(
-            currentAssociation->noOfNetworks, localInitialTSN);
-    currentAssociation->flowControl = (void *) fc_new_flowcontrol(
+    curr_channel_->reliableTransfer = (void *) alloc_reliable_transfer(
+            curr_channel_->noOfNetworks, localInitialTSN);
+    curr_channel_->flowControl = (void *) fc_new_flowcontrol(
             remoteSideReceiverWindow, localInitialTSN,
-            currentAssociation->noOfNetworks, currentAssociation->maxSendQueue);
+            curr_channel_->noOfNetworks, curr_channel_->maxSendQueue);
 
-    currentAssociation->rx_control = (void *) rxc_new_recvctrl(remoteInitialTSN,
-            currentAssociation->noOfNetworks, currentAssociation->sctpInstance);
-    currentAssociation->streamengine = (void *) se_new_stream_engine(
+    curr_channel_->rx_control = (void *) alloc_recvctrl(remoteInitialTSN,
+            curr_channel_->noOfNetworks, curr_channel_->sctpInstance);
+    curr_channel_->streamengine = (void *) alloc_deliverman(
             noOfInStreams, noOfOutStreams, withPRSCTP);
 
     event_logii(INTERNAL_EVENT_1,
             "second step of association initialisation performed ID=%08x, local tag=%08x",
-            currentAssociation->assocId, currentAssociation->tagLocal);
+            curr_channel_->assocId, curr_channel_->tagLocal);
 
     return 0;
 
@@ -5608,19 +5608,19 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
     int result;
     gboolean withPRSCTP;
 
-    if (!currentAssociation)
+    if (!curr_channel_)
     {
         error_log(ERROR_MAJOR,
                 "mdi_restartAssociation: current association is NULL !");
         return 1;
     }
-    if (!sctpInstance)
+    if (!curr_geco_instance_)
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: sctpInstance is NULL !");
+                "mdi_restartAssociation: curr_geco_instance_ is NULL !");
         return 1;
     }
-    if (noOfPaths > currentAssociation->noOfNetworks)
+    if (noOfPaths > curr_channel_->noOfNetworks)
     {
         error_log(ERROR_MAJOR,
                 "mdi_restartAssociation tries to increase number of paths !");
@@ -5634,45 +5634,45 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
             "ASSOCIATION RESTART: remote initial TSN:  %u, local initial TSN",
             remoteInitialTSN, localInitialTSN);
 
-    currentAssociation->reliableTransfer = rtx_restart_reliable_transfer(
-            currentAssociation->reliableTransfer, noOfPaths, localInitialTSN);
-    fc_restart(new_rwnd, localInitialTSN, currentAssociation->maxSendQueue);
-    rxc_restart_receivecontrol(mdi_getDefaultMyRwnd(), remoteInitialTSN);
+    curr_channel_->reliableTransfer = rtx_restart_reliable_transfer(
+            curr_channel_->reliableTransfer, noOfPaths, localInitialTSN);
+    fc_restart(new_rwnd, localInitialTSN, curr_channel_->maxSendQueue);
+    rxc_restart_receivecontrol(get_my_default_rwnd(), remoteInitialTSN);
 
-    withPRSCTP = assocSupportsPRSCTP && currentAssociation->supportsPRSCTP;
-    currentAssociation->peerSupportsPRSCTP = withPRSCTP;
-    currentAssociation->supportsPRSCTP = withPRSCTP;
+    withPRSCTP = assocSupportsPRSCTP && curr_channel_->supportsPRSCTP;
+    curr_channel_->peerSupportsPRSCTP = withPRSCTP;
+    curr_channel_->supportsPRSCTP = withPRSCTP;
 
-    if (currentAssociation->streamengine)
+    if (curr_channel_->streamengine)
     {
-        se_delete_stream_engine(currentAssociation->streamengine);
+        se_delete_stream_engine(curr_channel_->streamengine);
     }
     else
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: currentAssociation->streamengine is NULL !");
+                "mdi_restartAssociation: curr_channel_->streamengine is NULL !");
     }
-    currentAssociation->streamengine = (void *) se_new_stream_engine(
+    curr_channel_->streamengine = (void *) alloc_deliverman(
             noOfInStreams, noOfOutStreams, withPRSCTP);
 
-    if (currentAssociation->pathMan)
+    if (curr_channel_->pathMan)
     {
-        pm_deletePathman(currentAssociation->pathMan);
-        currentAssociation->pathMan = NULL;
+        pm_deletePathman(curr_channel_->pathMan);
+        curr_channel_->pathMan = NULL;
     }
     else
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: currentAssociation->pathMan is NULL !");
+                "mdi_restartAssociation: curr_channel_->pathMan is NULL !");
     }
 
     /* frees old address-list before assigning new one */
     mdi_writeDestinationAddresses(destinationAddressList, noOfPaths);
 
-    currentAssociation->pathMan = pm_newPathman(noOfPaths, primaryAddress,
-            sctpInstance);
+    curr_channel_->pathMan = pm_newPathman(noOfPaths, primaryAddress,
+            curr_geco_instance_);
 
-    if (!currentAssociation->pathMan)
+    if (!curr_channel_->pathMan)
     {
         error_log(ERROR_FATAL, "Error 1 in RESTART --> Fix implementation");
         return -1;
@@ -5696,18 +5696,18 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
  *
  *  The association will not be deleted at once, but is only marked for deletion. This is done in
  *  this way to allow other modules to finish their current activities. To prevent them to start
- *  new activities, the currentAssociation pointer is set to NULL.
+ *  new activities, the curr_channel_ pointer is set to NULL.
  */
 void mdi_deleteCurrentAssociation(void)
 {
     short pathID;
 
-    if (currentAssociation != NULL)
+    if (curr_channel_ != NULL)
     {
-        if (currentAssociation->tagRemote != 0)
+        if (curr_channel_->tagRemote != 0)
         {
             /* stop timers */
-            for (pathID = 0; pathID < currentAssociation->noOfNetworks;
+            for (pathID = 0; pathID < curr_channel_->noOfNetworks;
                     pathID++)
                 pm_disableHB(pathID);
 
@@ -5718,9 +5718,9 @@ void mdi_deleteCurrentAssociation(void)
 
         /* mark association as deleted, it will be deleted when retrieveAssociation(..) encounters
          a "deleted" association. */
-        currentAssociation->deleted = TRUE;
+        curr_channel_->deleted = TRUE;
         event_logi(INTERNAL_EVENT_1, "association ID=%08x marked for deletion",
-                currentAssociation->assocId);
+                curr_channel_->assocId);
     }
     else
     {

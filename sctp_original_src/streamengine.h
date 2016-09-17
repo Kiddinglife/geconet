@@ -67,7 +67,7 @@
    called from MessageDisribution 
    returns: the pointer to the Stream Engine 
 */
-void* se_new_stream_engine (unsigned int numberReceiveStreams,        /* max of streams to receive */
+void* alloc_deliverman (unsigned int numberReceiveStreams,        /* max of streams to receive */
                             unsigned int numberSendStreams,           /* max of streams to send */
                             gboolean assocSupportsPRSCTP);
 

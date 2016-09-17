@@ -1707,7 +1707,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 				 the INIT ACK and cookie.*/
 				init_tag = generate_init_tag();  // todo use safe generate_init_tag
 				init_ack_cid = alloc_init_ack_chunk(init_tag,
-					curr_channel_->receive_control->curr_rwnd,
+					curr_channel_->receive_control->my_rwnd,
 					curr_channel_->deliverman_control->numSendStreams,
 					curr_channel_->deliverman_control->numReceiveStreams,
 					smctrl->my_init_chunk->init_fixed.initial_tsn);

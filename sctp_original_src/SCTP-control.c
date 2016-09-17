@@ -364,7 +364,7 @@ void scu_associate(unsigned short noOfOutStreams,
 			event_log(EXTERNAL_EVENT, "event: scu_assocatiate in state CLOSED");
 			/* create init chunk and write data to it -- take AssocID as tag !!! */
 			initCID = ch_makeInit(mdi_readLocalTag(),
-				mdi_getDefaultMyRwnd(),
+				get_my_default_rwnd(),
 				noOfOutStreams, noOfInStreams, mdi_generateStartTSN());
 
 			/* store the number of streams */
@@ -780,7 +780,7 @@ int sctlr_init(SCTP_init * init)
 		outbound_streams = min(ch_noInStreams(initCID), mdi_readLocalOutStreams());
 		/* fire back an InitAck with a Cookie */
 		initAckCID = ch_makeInitAck(mdi_generateTag(),
-			mdi_getDefaultMyRwnd(),
+			get_my_default_rwnd(),
 			outbound_streams,
 			inbound_streams, mdi_generateStartTSN());
 
