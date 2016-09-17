@@ -33,10 +33,10 @@ typedef short chunk_id_t;
 #define GECO_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
 struct geco_packet_fixed_t
 {
-        ushort src_port;
-        ushort dest_port;
-        uint verification_tag;
-        uint checksum;
+	ushort src_port;
+	ushort dest_port;
+	uint verification_tag;
+	uint checksum;
 };
 
 #ifdef USE_UDP
@@ -46,10 +46,10 @@ struct geco_packet_fixed_t
 /* #warning Using SCTP over UDP! */
 struct udp_packet_fixed_t
 {
-    ushort src_port;
-    ushort dest_port;
-    ushort length;
-    ushort checksum;
+	ushort src_port;
+	ushort dest_port;
+	ushort length;
+	ushort checksum;
 };
 #else
 #define MAX_NETWORK_PACKET_VALUE_SIZE \
@@ -62,8 +62,8 @@ struct udp_packet_fixed_t
 // A general struct for an SCTP-message
 struct geco_packet_t
 {
-        geco_packet_fixed_t pk_comm_hdr;
-        uchar chunk[MAX_NETWORK_PACKET_VALUE_SIZE];
+	geco_packet_fixed_t pk_comm_hdr;
+	uchar chunk[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 /**************************** SCTP chunk definitions ******************************************/
@@ -105,9 +105,9 @@ struct geco_packet_t
 #define CHUNK_FIXED_SIZE (2*sizeof(uchar)+sizeof(ushort))
 struct chunk_fixed_t
 {
-        uchar chunk_id; /* e.g. CHUNK_DATA etc. */
-        uchar chunk_flags; /* usually 0    */
-        ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
+	uchar chunk_id; /* e.g. CHUNK_DATA etc. */
+	uchar chunk_flags; /* usually 0    */
+	ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 };
 #define FLAG_TBIT_UNSET       0x00
 #define FLAG_DELETED_CHANNEL  0x00
@@ -135,15 +135,15 @@ struct chunk_fixed_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
 struct data_chunk_fixed_t
 {
-        uint trans_seq_num;  // unrealiable msg has NO this field
-        ushort stream_identity;
-        ushort stream_seq_num;  // unordered msg has NO this field
+	uint trans_seq_num;  // unrealiable msg has NO this field
+	ushort stream_identity;
+	ushort stream_seq_num;  // unordered msg has NO this field
 };
 struct data_chunk_t
 {
-        chunk_fixed_t comm_chunk_hdr;
-        data_chunk_fixed_t data_chunk_hdr;
-        uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
+	chunk_fixed_t comm_chunk_hdr;
+	data_chunk_fixed_t data_chunk_hdr;
+	uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
 
 #define DATA_CHUNK_FIXED_NOTSN_SIZE (sizeof(uint)+sizeof(ushort))
@@ -152,15 +152,15 @@ struct data_chunk_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOTSN_SIZES)
 struct data_chunk_fixed_notsn_t
 {
-        //uint trans_seq_num; // unrealiable msg has NO this field
-        ushort stream_identity;
-        ushort stream_seq_num;  // unordered msg has NO this field
+	//uint trans_seq_num; // unrealiable msg has NO this field
+	ushort stream_identity;
+	ushort stream_seq_num;  // unordered msg has NO this field
 };
 struct data_chunk_notsn_t
 {
-        chunk_fixed_t comm_chunk_hdr;
-        data_chunk_fixed_notsn_t data_chunk_hdr;
-        uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOTSN_SIZE];
+	chunk_fixed_t comm_chunk_hdr;
+	data_chunk_fixed_notsn_t data_chunk_hdr;
+	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOTSN_SIZE];
 };
 
 #define DATA_CHUNK_FIXED_NOSSN_SIZE (sizeof(uint)+sizeof(ushort))
@@ -169,15 +169,15 @@ struct data_chunk_notsn_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSN_SIZES)
 struct data_chunk_fixed_nossn_t
 {
-        uint trans_seq_num;  // unrealiable msg has NO this field
-        ushort stream_identity;
-        //ushort stream_seq_num; // unordered msg has NO this field
+	uint trans_seq_num;  // unrealiable msg has NO this field
+	ushort stream_identity;
+	//ushort stream_seq_num; // unordered msg has NO this field
 };
 struct data_chunk_nossn_t
 {
-        chunk_fixed_t comm_chunk_hdr;
-        data_chunk_fixed_nossn_t data_chunk_hdr;
-        uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSN_SIZE];
+	chunk_fixed_t comm_chunk_hdr;
+	data_chunk_fixed_nossn_t data_chunk_hdr;
+	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSN_SIZE];
 };
 
 #define DATA_CHUNK_FIXED_NOSSNTSN_SIZE (sizeof(ushort))
@@ -187,31 +187,35 @@ struct data_chunk_nossn_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSNTSN_SIZES)
 struct data_chunk_fixed_nossntsn_t
 {
-        //uint trans_seq_num; // unrealiable msg has NO this field
-        ushort stream_identity;
-        //ushort stream_seq_num; // unordered msg has NO this field
+	//uint trans_seq_num; // unrealiable msg has NO this field
+	ushort stream_identity;
+	//ushort stream_seq_num; // unordered msg has NO this field
 };
 struct data_chunk_nossntsn_t
 {
-        chunk_fixed_t comm_chunk_hdr;
-        data_chunk_fixed_nossntsn_t data_chunk_hdr;
-        uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSNTSN_SIZE];
+	chunk_fixed_t comm_chunk_hdr;
+	data_chunk_fixed_nossntsn_t data_chunk_hdr;
+	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSNTSN_SIZE];
 };
 
 /*************************** variable length parameter definitions ***************************/
 // See RFC4960 Section 3.2.1 Optional/Variable-Length Parameter Format From Page 19
 // vl params only appear in control chunks
 enum ActionWhenUnknownVlpOrChunkType
-    : int
-    {
-        STOP_PROCESS_CHUNK,
-    STOP_PROCESS_CHUNK_REPORT_EREASON,
-    SKIP_CHUNK,
-    SKIP_CHUNK_REPORT_EREASON,
-    STOP_PROCESS_PARAM,
-    STOP_PROCES_PARAM_REPORT_EREASON,
-    SKIP_PARAM,
-    SKIP_PARAM_REPORT_EREASON
+	: int
+{
+	STOP_PROCESS_CHUNK_FOR_FOUND_NEW_ADDR = 1,
+	STOP_PROCESS_CHUNK_FOR_INVALID_MANDORY_INIT_PARAMS,
+	STOP_PROCESS_CHUNK_FOR_WRONG_CHUNK_TYPE,
+	STOP_PROCESS_CHUNK_FOR_NULL_CHANNEL,
+	STOP_PROCESS_CHUNK_FOR_NULL_SRC_ADDR,
+
+	SKIP_CHUNK,
+	SKIP_CHUNK_REPORT_EREASON,
+	STOP_PROCESS_PARAM,
+	STOP_PROCES_PARAM_REPORT_EREASON,
+	SKIP_PARAM,
+	SKIP_PARAM_REPORT_EREASON
 };
 #define STOP_PROCESS_PARAM(param_type)   \
 (((ushort)param_type & 0xC000)==0x0000)
@@ -245,29 +249,29 @@ enum ActionWhenUnknownVlpOrChunkType
 /* Header of variable length parameters */
 struct vlparam_fixed_t
 {
-        ushort param_type;
-        ushort param_length;
+	ushort param_type;
+	ushort param_length;
 };
 struct ip_address_t
 {
-        vlparam_fixed_t vlparam_header;
-        union
-        {
-                uint ipv4_addr;
-                in6_addr ipv6_addr;
-        } dest_addr_un;
+	vlparam_fixed_t vlparam_header;
+	union
+	{
+		uint ipv4_addr;
+		in6_addr ipv6_addr;
+	} dest_addr_un;
 };
 /* Supported Addresstypes */
 struct supported_address_types_t
 {
-        vlparam_fixed_t vlparam_header;
-        ushort address_type[4];
+	vlparam_fixed_t vlparam_header;
+	ushort address_type[4];
 };
 /* Cookie Preservative */
 struct cookie_preservative_t
 {
-        vlparam_fixed_t vlparam_header;
-        uint cookieLifetimeInc;
+	vlparam_fixed_t vlparam_header;
+	uint cookieLifetimeInc;
 };
 
 #define IS_IPV4_ADDRESS_NBO(a)  \
@@ -304,11 +308,11 @@ struct cookie_preservative_t
  */
 struct init_chunk_fixed_t
 {
-        uint init_tag;
-        uint rwnd;
-        ushort outbound_streams;
-        ushort inbound_streams;
-        uint initial_tsn;
+	uint init_tag;
+	uint rwnd;
+	ushort outbound_streams;
+	ushort inbound_streams;
+	uint initial_tsn;
 };
 /* max. length of optional parameters */
 #define INIT_CHUNK_TOTAL_SIZE MAX_NETWORK_PACKET_VALUE_SIZE
@@ -320,9 +324,9 @@ struct init_chunk_fixed_t
 /* init chunk structure, also used for initAck */
 struct init_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        init_chunk_fixed_t init_fixed;
-        uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
+	chunk_fixed_t chunk_header;
+	init_chunk_fixed_t init_fixed;
+	uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 
 /*************************** selective acknowledgements defs ***************************/
@@ -332,44 +336,44 @@ struct init_chunk_t
 (MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE - SACK_CHUNK_FIXED_SIZE )
 struct sack_chunk_fixed_t
 {
-        uint cumulative_tsn_ack;
-        uint a_rwnd;
-        ushort num_of_fragments;
-        ushort num_of_duplicates;
+	uint cumulative_tsn_ack;
+	uint a_rwnd;
+	ushort num_of_fragments;
+	ushort num_of_duplicates;
 };
 struct sack_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        sack_chunk_fixed_t sack_fixed;
-        uchar fragments_and_dups[MAX_SACK_CHUNK_VALUE_SIZE];
+	chunk_fixed_t chunk_header;
+	sack_chunk_fixed_t sack_fixed;
+	uchar fragments_and_dups[MAX_SACK_CHUNK_VALUE_SIZE];
 };
 struct segment32_t
 {
-        uint start_tsn;
-        uint stop_tsn;
+	uint start_tsn;
+	uint stop_tsn;
 };
 struct segment16_t
 {
-        ushort start;
-        ushort stop;
+	ushort start;
+	ushort stop;
 };
 struct duplicate_tsn_t
 {
-        uint duplicate_tsn;
+	uint duplicate_tsn;
 };
 
 /************************** heartbeat chunk defs ***************************/
 /* our heartbeat chunk structure */
 struct heartbeat_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        vlparam_fixed_t HB_Info;
-        uint sendingTime;
-        uint pathID;
+	chunk_fixed_t chunk_header;
+	vlparam_fixed_t HB_Info;
+	uint sendingTime;
+	uint pathID;
 #ifdef MD5_HMAC
-        uchar hmac[16];
+	uchar hmac[16];
 #elif SHA_HMAC
-        uint hmac[5];
+	uint hmac[5];
 #endif
 };
 
@@ -388,14 +392,14 @@ struct heartbeat_chunk_t
 #define MAX_SIMPLE_CHUNK_VALUE_SIZE  (MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE)
 struct simple_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        uchar chunk_value[MAX_SIMPLE_CHUNK_VALUE_SIZE];
+	chunk_fixed_t chunk_header;
+	uchar chunk_value[MAX_SIMPLE_CHUNK_VALUE_SIZE];
 };
 struct forward_tsn_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        uint forward_tsn;
-        uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
+	chunk_fixed_t chunk_header;
+	uint forward_tsn;
+	uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 /***************************- parameter definitions***************************/
@@ -410,7 +414,7 @@ struct forward_tsn_chunk_t
  *  Only the fixed part is defined here.
  */
 #include "auth.h"
-/* cookie chunks fixed params length including chunk header */
+ /* cookie chunks fixed params length including chunk header */
 #ifdef MD5_HMAC
 #define HMAC_SIZE (16*sizeof(uchar))
 #define COOKIE_FIXED_SIZE  \
@@ -422,25 +426,25 @@ struct forward_tsn_chunk_t
 #endif
 struct cookie_fixed_t
 {
-        init_chunk_fixed_t local_initack;
-        init_chunk_fixed_t peer_init;
-        ushort src_port;
-        ushort dest_port;
-        uint local_tie_tag;
-        uint peer_tie_tag;
-        uint sendingTime;
-        uint cookieLifetime;
+	init_chunk_fixed_t local_initack;
+	init_chunk_fixed_t peer_init;
+	ushort src_port;
+	ushort dest_port;
+	uint local_tie_tag;
+	uint peer_tie_tag;
+	uint sendingTime;
+	uint cookieLifetime;
 #ifdef MD5_HMAC
-        uchar hmac[HMAC_SIZE];
+	uchar hmac[HMAC_SIZE];
 #elif SHA_HMAC
-        uint hmac[HMAC_SIZE];
+	uint hmac[HMAC_SIZE];
 #endif
-        ushort no_local_ipv4_addresses;
-        ushort no_remote_ipv4_addresses;
-        ushort no_local_ipv6_addresses;
-        ushort no_remote_ipv6_addresses;
-        ushort no_local_dns_addresses;
-        ushort no_remote_dns_addresses;
+	ushort no_local_ipv4_addresses;
+	ushort no_remote_ipv4_addresses;
+	ushort no_local_ipv6_addresses;
+	ushort no_remote_ipv6_addresses;
+	ushort no_local_dns_addresses;
+	ushort no_remote_dns_addresses;
 };
 /* max. length of cookie variable length params parameters */
 #define MAX_COOKIE_VLPARAMS_SIZE \
@@ -448,17 +452,17 @@ struct cookie_fixed_t
 /* cookie echo chunk structure */
 struct cookie_echo_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        cookie_fixed_t cookie;
-        uchar vlparams[MAX_COOKIE_VLPARAMS_SIZE];
+	chunk_fixed_t chunk_header;
+	cookie_fixed_t cookie;
+	uchar vlparams[MAX_COOKIE_VLPARAMS_SIZE];
 };
 #define COOKIE_PARAM_SIZE \
 (COOKIE_FIXED_SIZE+VLPARAM_FIXED_SIZE)
 /* the variable parameters should be appended in thatsame order to the cookie*/
 struct cookie_param_t
 {
-        vlparam_fixed_t vlparam_header;
-        cookie_fixed_t ck;
+	vlparam_fixed_t vlparam_header;
+	cookie_fixed_t ck;
 };
 
 /*************************** Error definitions ***************************/
@@ -470,23 +474,23 @@ struct cookie_param_t
 (CHUNK_FIXED_SIZE+MAX_DATA_CHUNK_VALUE_SIZE)
 struct error_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
+	chunk_fixed_t chunk_header;
+	uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
 #define ERR_CAUSE_FIXED_SIZE (2*sizeof(ushort))
 struct error_cause_t
 {
-        ushort error_reason_code;
-        ushort error_reason_length;
-        uchar error_reason[MAX_NETWORK_PACKET_VALUE_SIZE];
+	ushort error_reason_code;
+	ushort error_reason_length;
+	uchar error_reason[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 
 const static char* ECCSTRS[32] =
 { "ECC_INVALID_STREAM_ID", "ECC_MISSING_MANDATORY_PARAM", "ECC_STALE_COOKIE_ERROR", "ECC_OUT_OF_RESOURCE_ERROR",
-        "ECC_UNRESOLVABLE_ADDRESS", "ECC_UNRECOGNIZED_CHUNKTYPE", "ECC_INVALID_MANDATORY_PARAM",
-        "ECC_UNRECOGNIZED_PARAMS", "ECC_NO_USER_DATA", "ECC_COOKIE_RECEIVED_DURING_SHUTDWN",
-        "ECC_RESTART_WITH_NEW_ADDRESSES", "ECC_USER_INITIATED_ABORT", "ECC_PROTOCOL_VIOLATION",
-        "ECC_PEER_INSTANCE_NOT_FOUND", "ECC_PEER_NOT_LISTENNING_PORT" };
+		"ECC_UNRESOLVABLE_ADDRESS", "ECC_UNRECOGNIZED_CHUNKTYPE", "ECC_INVALID_MANDATORY_PARAM",
+		"ECC_UNRECOGNIZED_PARAMS", "ECC_NO_USER_DATA", "ECC_COOKIE_RECEIVED_DURING_SHUTDWN",
+		"ECC_RESTART_WITH_NEW_ADDRESSES", "ECC_USER_INITIATED_ABORT", "ECC_PROTOCOL_VIOLATION",
+		"ECC_PEER_INSTANCE_NOT_FOUND", "ECC_PEER_NOT_LISTENNING_PORT" };
 
 // Error reson codes
 #define ECC_INVALID_STREAM_ID                   1
@@ -516,56 +520,56 @@ const static char* ECCSTRS[32] =
 // Error REASON param defs
 struct stale_cookie_err_t
 {
-        vlparam_fixed_t vlparam_header;
-        uint staleness;
+	vlparam_fixed_t vlparam_header;
+	uint staleness;
 };
 struct invalid_stream_id_err_t
 {
-        ushort stream_id;
-        ushort reserved;
+	ushort stream_id;
+	ushort reserved;
 };
 struct unresolved_addr_err_t
 {
-        vlparam_fixed_t vlparam_header;
-        uchar addrs[MAX_NETWORK_PACKET_VALUE_SIZE];
+	vlparam_fixed_t vlparam_header;
+	uchar addrs[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct unrecognized_params_err_t
 {
-        vlparam_fixed_t vlparam_header;
-        uchar params[MAX_NETWORK_PACKET_VALUE_SIZE];
+	vlparam_fixed_t vlparam_header;
+	uchar params[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct missing_mandaory_params_err_t
 {
-        unsigned int numberOfParams;
-        unsigned short params[20];
+	unsigned int numberOfParams;
+	unsigned short params[20];
 };
 
 /************* ASCONF Chunk and Parameter Types *************/
 struct asconfig_chunk_fixed_t
 {
-        uint serial_number;
-        ushort reserved16;
-        uchar reserved8;
-        uchar address_type;
-        uint sctp_address[4];
-        uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
+	uint serial_number;
+	ushort reserved16;
+	uchar reserved8;
+	uchar address_type;
+	uint sctp_address[4];
+	uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct asconfig_ack_chunk_fixed_t
 {
-        uint serial_number;
-        uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
+	uint serial_number;
+	uchar variableParams[MAX_NETWORK_PACKET_VALUE_SIZE];
 };
 struct asconfig_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        asconfig_chunk_fixed_t asc_fixed;
-        uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
+	chunk_fixed_t chunk_header;
+	asconfig_chunk_fixed_t asc_fixed;
+	uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 struct asconf_ack_chunk_t
 {
-        chunk_fixed_t chunk_header;
-        asconfig_ack_chunk_fixed_t asc_ack;
-        uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
+	chunk_fixed_t chunk_header;
+	asconfig_ack_chunk_fixed_t asc_ack;
+	uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
 
 /******************** some useful macros ************************/

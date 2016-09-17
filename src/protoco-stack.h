@@ -35,15 +35,17 @@ enum ChannelState :int
 };
 
 /* Return codes for a number of functions that treat incoming chunks */
-/* these are used in  bundle controller !                          */
+/* these are used in  bundle controller !                         
+/* stop -> stop processing not sending replying chunk */
 enum ChunkProcessResult : int
 {
 	Good,
 	Stop,
-	SkipProcessInitChunk_UnkownParamError,
-	StopProcessInitChunk_UnkownParamError,
-	StopProcessInitChunk_NewAddrAddedError,
-	StopAndDeleteChannel,
+	SKIP_PROCESS_PARAM_REPORT_ERROR,
+	SKIP_PROCESS_PARAM,
+	StopProcessForUnrecognizedParamError,
+	StopProcessForNewAddrAddedError,
+	StopProcessAndDeleteChannel,
 	StopAndDeleteChannel_LastSrcPortNullError,
 	StopAndDeleteChannel_ValidateInitParamFailedError,
 	ChunkProcessResultSize

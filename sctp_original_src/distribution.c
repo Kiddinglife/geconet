@@ -5587,7 +5587,7 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
 
     curr_channel_->rx_control = (void *) alloc_recvctrl(remoteInitialTSN,
             curr_channel_->noOfNetworks, curr_channel_->sctpInstance);
-    curr_channel_->streamengine = (void *) alloc_deliverman(
+    curr_channel_->streamengine = (void *) alloc_deliverma(
             noOfInStreams, noOfOutStreams, withPRSCTP);
 
     event_logii(INTERNAL_EVENT_1,

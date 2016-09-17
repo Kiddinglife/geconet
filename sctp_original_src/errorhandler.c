@@ -76,17 +76,17 @@ void eh_delete(void *instancePtr)
  */
 int eh_recv_chunk(SCTP_simple_chunk * errchunk)
 {
-    SCTP_error_chunk *chunk;
+    error_chunk_t *chunk;
     SCTP_vlparam_header *header;
-    SCTP_error_cause *cause;
+    error_cause_t *cause;
     unsigned char* data;
 
     unsigned short err_cause;
     unsigned short cause_len;
     int result = (-1);
 
-    chunk = (SCTP_error_chunk *) errchunk;
-    cause = (SCTP_error_cause *) chunk->data;
+    chunk = (error_chunk_t *) errchunk;
+    cause = (error_cause_t *) chunk->data;
     data =  cause->cause_information;
 
     err_cause = ntohs(cause->cause_code);

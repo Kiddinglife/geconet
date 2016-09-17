@@ -1433,6 +1433,9 @@ public:
 	 * The following data are created and included in the init acknowledgement:
 	 * a COOKIE parameter.
 	 * @param init_chunk_t  pointer to the received init-chunk (including optional parameters)
+	 * 0 all good, 
+	 * 	ActionWhenUnknownVlpOrChunkType::STOP_PROCESS_CHUNK: stop process the chunk and delete channel
+	 * 
 	 */
 	int process_init_chunk(init_chunk_t * init);
 
@@ -2278,8 +2281,7 @@ public:
 	 * that is returned then. Returns -1 if unrecognized chunk forces termination of chunk parsing
 	 * without any further action, 1 for an error that stops chunk parsing, but returns error to
 	 * the peer and 0 for normal continuation */
-	int process_unrecognized_params_from_init_chunk(uint initCID, uint AckCID,
-		uint supportedAddressTypes);
+	int process_unrecognized_vlparams(uint initCID, uint AckCID );
 
 	/*
 	 * ch_enterUnrecognizedErrors enters unrecognized params from InitAck into an Error chunk

@@ -1246,10 +1246,11 @@ gboolean sctlr_initAck(SCTP_init * initAck)
 					pm_setPrimaryPath(preferredPath);
 			}
 
-			state = COOKIE_ECHOED;
-
+			// stop init timer
 			if( localData->initTimer != 0 ) sctp_stopTimer(localData->initTimer);
+
 			/* start cookie timer */
+			state = COOKIE_ECHOED;
 			localData->initTimer = adl_startTimer(localData->initTimerDuration,
 				&sci_timer_expired, TIMER_TYPE_INIT,
 				(void *) &localData->associationID, NULL);

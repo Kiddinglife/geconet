@@ -477,14 +477,14 @@ typedef struct SCTP_ERROR_CHUNK
 {
     SCTP_chunk_header chunk_header;
     unsigned char data[MAX_DATACHUNK_PDU_LENGTH];
-} SCTP_error_chunk;
+} error_chunk_t;
 
 typedef struct SCTP_ERROR_CAUSE
 {
     unsigned short cause_code;
     unsigned short cause_length;
-    guchar cause_information[MAX_SCTP_PDU];
-}SCTP_error_cause;
+    unsigned char cause_information[MAX_SCTP_PDU];
+}error_cause_t;
 
 
 /*--------------------------- Error causes definitions ---------------------------------------*/

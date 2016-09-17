@@ -2405,15 +2405,15 @@ ChunkID ch_makeSimpleChunk(unsigned char chunkType, unsigned char flag)
 /* ch_makeErrorChunk makes an error chunk */
 ChunkID ch_makeErrorChunk(void)
 {
-    SCTP_error_chunk *errorChunk;
+    error_chunk_t *errorChunk;
 
     /* creat init chunk */
-    errorChunk = (SCTP_error_chunk *) malloc(sizeof(SCTP_error_chunk));
+    errorChunk = (error_chunk_t *) malloc(sizeof(error_chunk_t));
 
     if (errorChunk == NULL)
     error_log_sys(ERROR_FATAL, (short)errno);
 
-    memset(errorChunk, 0, sizeof(SCTP_error_chunk));
+    memset(errorChunk, 0, sizeof(error_chunk_t));
 
     /* enter fixed part of init */
     errorChunk->chunk_header.chunk_id = CHUNK_ERROR;
@@ -2429,13 +2429,13 @@ void ch_addUnrecognizedParameter(unsigned char* pos, ChunkID cid,
         unsigned short length, unsigned char* data)
 
 {
-    SCTP_error_cause * ec;
+    error_cause_t * ec;
 
     if (pos == NULL)
     {
         error_log(ERROR_MAJOR, "Invalid chunk ID");
     }
-    ec = (SCTP_error_cause*) pos;
+    ec = (error_cause_t*) pos;
     ec->cause_code = htons(VLPARAM_UNRECOGNIZED_PARAM);
     ec->cause_length = htons(
             (unsigned short) (length + 2 * sizeof(unsigned short)));
@@ -2483,7 +2483,7 @@ void ch_addParameterToInitChunk(ChunkID initChunkID, unsigned short pCode,
 void ch_enterErrorCauseData(ChunkID chunkID, unsigned short code,
         unsigned short length, unsigned char* data)
 {
-    SCTP_error_cause * ec;
+    error_cause_t * ec;
     unsigned short index;
 
     if (chunks[chunkID] == NULL)
@@ -2504,7 +2504,7 @@ void ch_enterErrorCauseData(ChunkID chunkID, unsigned short code,
         return;
     }
     index = writeCursor[chunkID];
-    ec = (SCTP_error_cause*) &(chunks[chunkID]->simple_chunk_data[index]);
+    ec = (error_cause_t*) &(chunks[chunkID]->simple_chunk_data[index]);
     ec->cause_code = htons(code);
     ec->cause_length = htons(
             (unsigned short) (length + 2 * sizeof(unsigned short)));
