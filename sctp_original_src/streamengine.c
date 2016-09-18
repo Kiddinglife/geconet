@@ -977,7 +977,7 @@ int se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk)
 	}
 
 	numOfSkippedStreams = (ntohs(chk->chunk_header.chunk_length) -
-		sizeof(unsigned int) - sizeof(SCTP_chunk_header)) / sizeof(pr_stream_data);
+		sizeof(unsigned int) - sizeof(chunk_fixed_t)) / sizeof(pr_stream_data);
 
 	if (se->unreliable == TRUE) {
 		/* TODO: optimization !!!! loop through all streams */

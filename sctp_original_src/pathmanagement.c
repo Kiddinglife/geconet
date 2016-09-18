@@ -485,7 +485,7 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
         return;
     }
 
-    heartbeatCID = ch_makeChunk((SCTP_simple_chunk *) heartbeatChunk);
+    heartbeatCID = alloc_simple_chunk((SCTP_simple_chunk *) heartbeatChunk);
     pathID = ch_HBpathID(heartbeatCID);
     sendingTime = ch_HBsendingTime(heartbeatCID);
     roundtripTime = pm_getTime() - sendingTime;

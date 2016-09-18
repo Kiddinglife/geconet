@@ -432,7 +432,7 @@ int rtx_send_forward_tsn(reltransfer_controller_t *rtx, unsigned int forward_tsn
     chk.forward_tsn                = htonl(forward_tsn);
     chk.chunk_header.chunk_id      = CHUNK_FORWARD_TSN;
     chk.chunk_header.chunk_flags   = 0;
-    chk.chunk_header.chunk_length  = htons((unsigned short)(sizeof(SCTP_chunk_header)+
+    chk.chunk_header.chunk_length  = htons((unsigned short)(sizeof(chunk_fixed_t)+
                                            sizeof(unsigned int)+
                                            rtx->prChunks->len*sizeof(pr_stream_data)));
 
@@ -545,7 +545,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
     num_of_gaps = ntohs(sack->num_of_fragments);
     num_of_dups = ntohs(sack->num_of_duplicates);
     /* var_len contains gap acks AND duplicates ! Thanks to Janar for pointing this out */
-    var_len = chunk_len - sizeof(SCTP_chunk_header) - 2 * sizeof(unsigned int) - 2 * sizeof(unsigned short);
+    var_len = chunk_len - sizeof(chunk_fixed_t) - 2 * sizeof(unsigned int) - 2 * sizeof(unsigned short);
     gap_len = num_of_gaps * sizeof(unsigned int);
     dup_len = num_of_dups * sizeof(unsigned int);
     if (var_len != gap_len+dup_len) {

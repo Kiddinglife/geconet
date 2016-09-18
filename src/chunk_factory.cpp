@@ -167,79 +167,6 @@ uint put_vlp_addrlist(uchar* vlp_start,
     return length;  // no need to align because MUST be 4 bytes aliged
 }
 
-/*
- 3.3.11.  Cookie Echo (COOKIE ECHO) (10)
- This chunk is used only during the initialization of an association.
- It is sent by the initiator of an association to its peer to complete
- the initialization process.  This chunk MUST precede any DATA chunk
- sent within the association, but MAY be bundled with one or more DATA
- chunks in the same packet.
-
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |   Type = 10   |Chunk  Flags   |         Length                |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- /                     Cookie                                    /
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- Set to 0 on transmit and ignored on receipt.
- 5.1.3.  Generating State Cookie
- When sending an INIT ACK as a response to an INIT chunk, the sender
- of INIT ACK creates a State Cookie and sends it in the State Cookie
- parameter of the INIT ACK.  Inside this State Cookie, the sender
- should include a MAC (see [RFC2104] for an example), a timestamp on
- when the State Cookie is created, and the lifespan of the State
- Cookie, along with all the information necessary for it to establish
- the association.
-
- The following steps SHOULD be taken to generate the State Cookie:
- 1)  Create an association TCB using information from both the
- received INIT and the outgoing INIT ACK chunk,
- 2)  In the TCB, set the creation time to the current time of day, and
- the lifespan to the protocol parameter 'Valid.Cookie.Life' (see
- Section 15),
- 3)  From the TCB, identify and collect the minimal subset of
- information needed to re-create the TCB, and generate a MAC using
- this subset of information and a secret key (see [RFC2104] for an
- example of generating a MAC), and
- 4)  Generate the State Cookie by combining this subset of information
- and the resultant MAC.
- */
- /** computes a cookie signature.*/
-int put_hmac(cookie_param_t* cookieString)
-{
-    if( cookieString == NULL ) return -1;
-
-    cookieString->ck.hmac[0] = 0;
-    cookieString->ck.hmac[1] = 0;
-    cookieString->ck.hmac[2] = 0;
-    cookieString->ck.hmac[3] = 0;
-
-    uint cookieLength = ntohs(
-        cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
-    if( cookieLength == 0 ) return -1;
-
-    uchar* key = get_secre_key(KEY_READ);
-    if( key == NULL )
-    {
-        ERRLOG(MAJOR_ERROR, "put_hmac()::get_secre_key() FAILED!");
-        return -1;
-    }
-
-    static MD5_CTX ctx;
-    MD5Init(&ctx);
-    MD5Update(&ctx, (uchar*) cookieString, cookieLength);
-    MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
-    unsigned char digest[HMAC_LEN];
-    MD5Final(digest, &ctx);
-    memcpy(cookieString->ck.hmac, digest, sizeof(cookieString->ck.hmac));
-
-#ifdef _DEBUG
-    EVENTLOG1(DEBUG, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
-#endif
-    return 0;
-}
-
 void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
     init_chunk_fixed_t* local_initack, uint cookieLifetime,
     uint local_tie_tag, uint peer_tie_tag, ushort last_dest_port,
@@ -305,4 +232,111 @@ uint put_vlp_cookie_life_span(cookie_preservative_t* preserv, unsigned int lifes
     preserv->vlparam_header.param_length = htons(len);
     preserv->cookieLifetimeInc = htonl(lifespanIncrement);
     return len;
+}
+
+/*
+3.3.11.  Cookie Echo (COOKIE ECHO) (10)
+This chunk is used only during the initialization of an association.
+It is sent by the initiator of an association to its peer to complete
+the initialization process.  This chunk MUST precede any DATA chunk
+sent within the association, but MAY be bundled with one or more DATA
+chunks in the same packet.
+
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   Type = 10   |Chunk  Flags   |         Length                |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/                     Cookie                                    /
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Set to 0 on transmit and ignored on receipt.
+5.1.3.  Generating State Cookie
+When sending an INIT ACK as a response to an INIT chunk, the sender
+of INIT ACK creates a State Cookie and sends it in the State Cookie
+parameter of the INIT ACK.  Inside this State Cookie, the sender
+should include a MAC (see [RFC2104] for an example), a timestamp on
+when the State Cookie is created, and the lifespan of the State
+Cookie, along with all the information necessary for it to establish
+the association.
+
+The following steps SHOULD be taken to generate the State Cookie:
+1)  Create an association TCB using information from both the
+received INIT and the outgoing INIT ACK chunk,
+2)  In the TCB, set the creation time to the current time of day, and
+the lifespan to the protocol parameter 'Valid.Cookie.Life' (see
+Section 15),
+3)  From the TCB, identify and collect the minimal subset of
+information needed to re-create the TCB, and generate a MAC using
+this subset of information and a secret key (see [RFC2104] for an
+example of generating a MAC), and
+4)  Generate the State Cookie by combining this subset of information
+and the resultant MAC.
+*/
+/** computes a cookie signature.*/
+int put_hmac(cookie_param_t* cookieString)
+{
+	if (cookieString == NULL) return -1;
+
+	cookieString->ck.hmac[0] = 0;
+	cookieString->ck.hmac[1] = 0;
+	cookieString->ck.hmac[2] = 0;
+	cookieString->ck.hmac[3] = 0;
+
+	uint cookieLength = ntohs(
+		cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
+	if (cookieLength == 0) return -1;
+
+	uchar* key = get_secre_key(KEY_READ);
+	if (key == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "put_hmac()::get_secre_key() FAILED!");
+		return -1;
+	}
+
+	static MD5_CTX ctx;
+	MD5Init(&ctx);
+	MD5Update(&ctx, (uchar*)&cookieString->ck, cookieLength);
+	MD5Update(&ctx, (uchar*)key, SECRET_KEYSIZE);
+	unsigned char digest[HMAC_LEN];
+	MD5Final(cookieString->ck.hmac, &ctx);
+
+#ifdef _DEBUG
+	EVENTLOG1(DEBUG, "Computed MD5 signature : %s", hexdigest(cookieString->ck.hmac, HMAC_LEN));
+#endif
+	return 0;
+}
+
+static int put_hmac(uchar* cookieString, ushort cookieLength, uchar* digest)
+{
+	if (cookieString == NULL || cookieLength == 0) return -1;
+	memset(((cookie_fixed_t *)cookieString)->hmac, 0, HMAC_LEN);
+
+	uchar* key = get_secre_key(KEY_READ);
+	if (key == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "put_hmac()::get_secre_key() FAILED!");
+		return -1;
+	}
+
+	static MD5_CTX ctx;
+	MD5Init(&ctx);
+	MD5Update(&ctx, cookieString, cookieLength);
+	MD5Update(&ctx, (uchar*)key, SECRET_KEYSIZE);
+	MD5Final(digest, &ctx);
+
+#ifdef _DEBUG
+	EVENTLOG1(DEBUG, "Computed MD5 signature : %s", hexdigest(digest, HMAC_LEN));
+#endif
+	return 0;
+}
+bool verify_hmac(cookie_echo_chunk_t* cookie_chunk)
+{
+	cookie_fixed_t* cookie = &cookie_chunk->cookie;
+	uchar cookieSignature[HMAC_LEN];
+	memcpy(cookieSignature, cookie->hmac, HMAC_LEN); // store existing hmac
+
+	uchar ourSignature[HMAC_LEN];
+	ushort cookieLength = cookie_chunk->chunk_header.chunk_length - CHUNK_FIXED_SIZE;
+	put_hmac((uchar*)cookie, cookieLength, ourSignature); // recalculate and store hmac
+	return (memcmp(cookieSignature, ourSignature, HMAC_LEN) == 0); //compare noth hmacs
 }

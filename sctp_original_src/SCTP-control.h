@@ -139,7 +139,7 @@ int sctlr_initAck(SCTP_init * initAck);
 
 
 
-/* sctlr_cookie_echo is called by bundling when a cookie chunk was received from  the peer.
+/* process_cookie_echo_chunk is called by bundling when a cookie chunk was received from  the peer.
    The following data are retrieved from the cookie and saved for this association:
    - from the init chunk: + peers tag.
                           + peers receiver window credit.
@@ -152,7 +152,7 @@ int sctlr_initAck(SCTP_init * initAck);
    - # of receive streams this side uses, can be lower than peers # of send streams the requested in
      the init chunk.
 */
-void sctlr_cookie_echo(SCTP_cookie_echo * cookie);
+void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie);
 
 
 

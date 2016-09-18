@@ -142,7 +142,7 @@ int ch_IPaddresses(ChunkID chunkID, unsigned int mySupportedTypes,
         union sockunion* lastSource);
 
 /* ch_cookieParam reads the cookie from an initAck */
-SCTP_cookie_param *ch_cookieParam(ChunkID chunkID);
+cookie_param_t *ch_cookieParam(ChunkID chunkID);
 
 /* ch_initFixed reads the fixed part from an init or initAck as complete structure */
 SCTP_init_fixed *ch_initFixed(ChunkID chunkID);
@@ -152,7 +152,7 @@ SCTP_init_fixed *ch_initFixed(ChunkID chunkID);
 /**
  * ch_makeCookie creates a cookie chunk.
  */
-ChunkID ch_makeCookie(SCTP_cookie_param * cookieParam);
+ChunkID ch_makeCookie(cookie_param_t * cookieParam);
 
 /**
  *  ch_cookieInitFixed creates an init chunk from the fixed part of an init contained in a cookie
@@ -254,8 +254,8 @@ unsigned short ch_chunkLength(ChunkID chunkID);
 //get_simple_chunk() done
 SCTP_simple_chunk *ch_chunkString(ChunkID chunkID);
 
-/* ch_makeChunk makes a chunk from a simple chunk, which is nearly a byte string */
-ChunkID ch_makeChunk(SCTP_simple_chunk * chunk);
+/* alloc_simple_chunk makes a chunk from a simple chunk, which is nearly a byte string */
+ChunkID alloc_simple_chunk(SCTP_simple_chunk * chunk);
 
 /* ch_deleteChunk removes the chunk from the array of chunks and frees the
  memory allocated for that chunk.
@@ -266,7 +266,7 @@ void ch_deleteChunk(ChunkID chunkID);
  memory allocated for that chunk.
  This is used in the following cases:
  - the caller wants to keep the chunk for retransmissions.
- - the chunk was created with ch_makeChunk and the pointer to the chunk points
+ - the chunk was created with alloc_simple_chunk and the pointer to the chunk points
  into an SCTP-message, which was allocated as a whole. In this case the chunk
  can not be freed here.
  */

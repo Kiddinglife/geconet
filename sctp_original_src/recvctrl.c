@@ -715,7 +715,7 @@ void rxc_all_chunks_processed(boolean new_data_received)
     sack = (SCTP_sack_chunk*)rxc->sack_chunk;
     sack->chunk_header.chunk_id = CHUNK_SACK;
     sack->chunk_header.chunk_flags = 0;
-    len16 = sizeof(SCTP_chunk_header) + (2 + num_of_dups) * sizeof(unsigned int) +
+    len16 = sizeof(chunk_fixed_t) + (2 + num_of_dups) * sizeof(unsigned int) +
             (2 * num_of_frags + 2) * sizeof(unsigned short);
 
     sack->chunk_header.chunk_length = htons(len16);

@@ -1158,6 +1158,10 @@ int dispatch_layer_t::disassemle_curr_geco_packet()
 			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT_ACK");
 			handle_ret = process_init_ack_chunk((init_chunk_t *)chunk);
 			break;
+		case CHUNK_COOKIE_ECHO:
+			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_COOKIE_ECHO");
+			process_cookie_echo_chunk((cookie_echo_chunk_t*)chunk);
+			break;
 		case CHUNK_SACK:
 			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_SACK");
 			handle_ret = process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
@@ -2582,8 +2586,37 @@ ChunkProcessResult dispatch_layer_t::process_init_ack_chunk(init_chunk_t * initA
 
 int dispatch_layer_t::process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen)
 {
-	return 0;
+	EVENTLOG(VERBOSE, "Enter process_sack_chunk()");
+	int ret = 0;
+
+	leave:
+	EVENTLOG(VERBOSE, "Leave process_sack_chunk()");
+	return ret;
 }
+
+void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
+{
+	EVENTLOG(VERBOSE, "Enter process_cookie_echo_chunk()");
+
+	chunk_id_t cookie_echo_cid = alloc_simple_chunk((simple_chunk_t*)cookie_echo);
+	if (cookie_echo->chunk_header.chunk_id != CHUNK_COOKIE_ECHO)
+	{
+		remove_simple_chunk(cookie_echo_cid);
+		EVENTLOG(NOTICE, "cookie_echo->chunk_header.chunk_id != CHUNK_COOKIE_ECHO -> return");
+		return;
+	}
+
+	if (!verify_hmac(cookie_echo))
+	{
+		remove_simple_chunk(cookie_echo_cid);
+		EVENTLOG(NOTICE, "verify_hmac() failed ! -> return");
+		return;
+	}
+
+	//
+	EVENTLOG(VERBOSE, "Leave process_cookie_echo_chunk()");
+}
+
 uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len,
 	ushort param_type)
 {

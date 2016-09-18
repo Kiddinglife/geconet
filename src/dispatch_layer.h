@@ -1440,7 +1440,7 @@ public:
 	int process_init_chunk(init_chunk_t * init);
 
 	/**
-	 *   deletes the current chanel.
+	 *  deletes the current chanel.
 	 *  The chanel will not be deleted at once, but is only marked for deletion. This is done in
 	 *  this way to allow other modules to finish their current activities. To prevent them to start
 	 *  new activities, the currentAssociation pointer is set to NULL.
@@ -1599,6 +1599,27 @@ public:
 	 * @return -1 on error, 0 if okay.
 	 */
 	int process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen);
+
+	/**
+	sctlr_cookie_echo is called by bundling when a cookie echo chunk was received from  the peer.
+	The following data is retrieved from the cookie and saved for this association:
+	\begin{itemize}
+	\item  from the init chunk:
+	\begin{itemize}
+	\item peers tag
+	\item peers receiver window credit
+	\item peers initial TSN
+	\item peers network address list if multihoming is used
+	\end{itemize}
+	\item local tag generated before the initAck was sent
+	\item my initial TSN generated before the initAck was sent
+	\item number of send streams I use, must be lower or equal to peers number of receive streams from init chunk
+	\item number of receive streams I use (can be lower than number of send streams the peer requested in
+	the init chunk
+	\end{itemiz}
+	@param  cookie_echo pointer to the received cookie echo chunk
+	*/
+	void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo);
 
 	void clear()
 	{

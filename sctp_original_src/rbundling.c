@@ -70,7 +70,7 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
         event_logii(VERBOSE, "rbu_scanPDU : len==%u, processed_len == %u", len, processed_len);
 
         chunk = (SCTP_simple_chunk *)current_position;
-        chunk_len = CHUNKP_LENGTH((SCTP_chunk_header *)chunk);
+        chunk_len = CHUNKP_LENGTH((chunk_fixed_t *)chunk);
 
         if (chunk_len < 4 || chunk_len + processed_len > len) return result;
 
@@ -90,7 +90,7 @@ unsigned int rbu_scanPDU(guchar * pdu, guint len)
         pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
         processed_len += pad_bytes;
         chunk_len =
-            (CHUNKP_LENGTH((SCTP_chunk_header *)chunk) + pad_bytes * sizeof(unsigned char));
+            (CHUNKP_LENGTH((chunk_fixed_t *)chunk) + pad_bytes * sizeof(unsigned char));
 
         if (chunk_len < 4 || chunk_len + processed_len > len) return result;
         current_position += chunk_len;
@@ -136,7 +136,7 @@ guchar* rbu_scanInitChunkForParameter(guchar * chunk, gushort paramType)
     }
     len = ntohs(initChunk->chunk_header.chunk_length);
     current_position = initChunk->variableParams;
-    processed_len = (sizeof(SCTP_chunk_header) + sizeof(SCTP_init_fixed));
+    processed_len = (sizeof(chunk_fixed_t) + sizeof(SCTP_init_fixed));
 
     while (processed_len < len)
     {
@@ -189,13 +189,13 @@ guchar* rbu_findChunk(guchar * datagram, guint len, gushort chunk_type)
             return current_position;
         else
         {
-            chunk_len = CHUNKP_LENGTH((SCTP_chunk_header *)chunk);
+            chunk_len = CHUNKP_LENGTH((chunk_fixed_t *)chunk);
             if (chunk_len < 4 || chunk_len + processed_len > len) return NULL;
 
-            processed_len += CHUNKP_LENGTH((SCTP_chunk_header *)chunk);
+            processed_len += CHUNKP_LENGTH((chunk_fixed_t *)chunk);
             pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
             processed_len += pad_bytes;
-            chunk_len = (CHUNKP_LENGTH((SCTP_chunk_header *)chunk)
+            chunk_len = (CHUNKP_LENGTH((chunk_fixed_t *)chunk)
                 + pad_bytes * sizeof(unsigned char));
             if (chunk_len < 4 || chunk_len + processed_len > len) return NULL;
             current_position += chunk_len;
@@ -238,7 +238,7 @@ gint rbu_findAddress(guchar * chunk, guint n, union sockunion* foundAddress,
     }
     len = ntohs(initChunk->chunk_header.chunk_length);
     current_position = initChunk->variableParams;
-    processed_len = (sizeof(SCTP_chunk_header) + sizeof(SCTP_init_fixed));
+    processed_len = (sizeof(chunk_fixed_t) + sizeof(SCTP_init_fixed));
 
     while (processed_len < len)
     {
@@ -324,7 +324,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
             "rbu_scanDatagramForError : len==%u, processed_len == %u", len, processed_len);
 
         chunk = (SCTP_simple_chunk *)current_position;
-        chunk_length = CHUNKP_LENGTH((SCTP_chunk_header *)chunk);
+        chunk_length = CHUNKP_LENGTH((chunk_fixed_t *)chunk);
         if (chunk_length < 4 || chunk_length + processed_len > len) return FALSE;
 
         if (chunk->chunk_header.chunk_id == CHUNK_ERROR)
@@ -334,7 +334,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
 
             event_log(INTERNAL_EVENT_0, "rbu_scanDatagramForError : Error Chunk Found");
             /* now search for error parameter that fits */
-            while (err_len < chunk_length - sizeof(SCTP_chunk_header))
+            while (err_len < chunk_length - sizeof(chunk_fixed_t))
             {
                 err_chunk = (SCTP_staleCookieError *) &(chunk->simple_chunk_data[err_len]);
                 if (ntohs(err_chunk->vlparam_header.param_type) == error_cause)
@@ -356,7 +356,7 @@ gboolean rbu_scanDatagramForError(guchar * datagram, guint len, gushort error_ca
         processed_len += chunk_length;
         pad_bytes = ((processed_len % 4) == 0) ? 0 : (4 - processed_len % 4);
         processed_len += pad_bytes;
-        chunk_length = (CHUNKP_LENGTH((SCTP_chunk_header *)chunk)
+        chunk_length = (CHUNKP_LENGTH((chunk_fixed_t *)chunk)
             + pad_bytes * sizeof(unsigned char));
         if (chunk_length < 4 || chunk_length + processed_len > len) return FALSE;
         current_position += chunk_length;
@@ -412,7 +412,7 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
     {
 
         chunk = (SCTP_simple_chunk *)current_position;
-        chunk_len = CHUNKP_LENGTH((SCTP_chunk_header *)chunk);
+        chunk_len = CHUNKP_LENGTH((chunk_fixed_t *)chunk);
         event_logiiii(INTERNAL_EVENT_0,
             "rbu_rcvDatagram(address=%u) : len==%u, processed_len = %u, chunk_len=%u",
             address_index, len, processed_len, chunk_len);
@@ -479,7 +479,7 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
         case CHUNK_COOKIE_ECHO:
             event_log(INTERNAL_EVENT_0,
                 "*******************  Bundling received COOKIE ECHO chunk");
-            sctlr_cookie_echo((SCTP_cookie_echo *)chunk);
+            process_cookie_echo_chunk((cookie_echo_chunk_t *)chunk);
             break;
         case CHUNK_COOKIE_ACK:
             event_log(INTERNAL_EVENT_0,
