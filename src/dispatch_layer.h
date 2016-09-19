@@ -1600,6 +1600,42 @@ public:
 	 */
 	int process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen);
 
+	chunk_id_t build_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
+	{
+		assert(cookie_echo_chunk !=NULL);
+		init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__,__LINE__);
+		if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+		memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
+		initChunk->chunk_header.chunk_id = CHUNK_INIT;
+		initChunk->chunk_header.chunk_flags = 0x00;
+		initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
+		initChunk->init_fixed = cookie_echo_chunk->cookie.peer_init;
+		return add2chunklist((simple_chunk_t*)initChunk, "add2chunklist()::created initChunk  from cookie %u");
+	}
+
+	chunk_id_t build_init_ack_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
+	{
+		assert(cookie_echo_chunk != NULL);
+		init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
+		if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+		memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
+		initChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
+		initChunk->chunk_header.chunk_flags = 0x00;
+		initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
+		initChunk->init_fixed = cookie_echo_chunk->cookie.local_initack;
+		return add2chunklist((simple_chunk_t*)initChunk, "add2chunklist()::created init ack chunk  from cookie %u");
+	}
+
+	uint get_local_tag()
+	{
+		return curr_channel_ == NULL ? 0 : curr_channel_->local_tag;
+	}
+
+	uint get_remote_tag()
+	{
+		return curr_channel_ == NULL ? 0 : curr_channel_->remote_tag;
+	}
+
 	/**
 	sctlr_cookie_echo is called by bundling when a cookie echo chunk was received from  the peer.
 	The following data is retrieved from the cookie and saved for this association:
@@ -1925,13 +1961,14 @@ public:
 		}
 	}
 
-	void add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL)
+	chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL)
 	{
 		simple_chunk_index_ = ((simple_chunk_index_ + 1) % MAX_CHUNKS_SIZE_MASK);
 		EVENTLOG1(DEBUG, log_text, simple_chunk_index_);
 		simple_chunks_[simple_chunk_index_] = chunk;
 		curr_write_pos_[simple_chunk_index_] = 0;
 		completed_chunks_[simple_chunk_index_] = false;
+		return simple_chunk_index_;
 	}
 
 	/**

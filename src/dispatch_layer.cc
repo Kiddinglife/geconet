@@ -2589,7 +2589,7 @@ int dispatch_layer_t::process_sack_chunk(uint adr_index, void *sack_chunk, uint 
 	EVENTLOG(VERBOSE, "Enter process_sack_chunk()");
 	int ret = 0;
 
-	leave:
+leave:
 	EVENTLOG(VERBOSE, "Leave process_sack_chunk()");
 	return ret;
 }
@@ -2612,8 +2612,36 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 		EVENTLOG(NOTICE, "verify_hmac() failed ! -> return");
 		return;
 	}
+	chunk_id_t initCID = build_init_chunk_from_cookie(cookie_echo);
+	chunk_id_t initAckCID = build_init_ack_chunk_from_cookie(cookie_echo);
 
-	//
+	uint cookie_remote_tag = read_init_tag(initCID);
+	uint cookie_local_tag = read_init_tag(initAckCID);
+
+	uint local_tag = get_local_tag();
+	uint remote_tag = get_remote_tag();
+
+	if (last_init_tag_ != cookie_local_tag &&
+		last_dest_port_ != ntohs(cookie_echo->cookie.dest_port) &&
+		last_src_port_ != ntohs(cookie_echo->cookie.src_port))
+	{
+		remove_simple_chunk(cookie_echo_cid);
+		free_simple_chunk(initCID);
+		free_simple_chunk(initAckCID);
+		EVENTLOG(NOTICE, "validate cookie echo failed ! -> return");
+		return;
+	}
+
+	uint lifetime = this->get_safe_time_ms() - cookie_echo->cookie.sendingTime;
+	if (lifetime > cookie_echo->cookie.cookieLifetime)
+	{
+		EVENTLOG2(NOTICE,
+			"process_cookie_echo_chunk()::actual lifetime %u ms > cookie lifetime %u -> stale cookie!", 
+			cookie_echo->cookie.cookieLifetime, lifetime);
+		//
+	}
+
+
 	EVENTLOG(VERBOSE, "Leave process_cookie_echo_chunk()");
 }
 
@@ -3327,14 +3355,14 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
 										"IPv6 was in the INIT or INIT ACK chunk more than once");
 								}
 							}
-						}
-					}
 				}
+			}
+		}
 				else
 				{
 					ERRLOG(WARNNING_ERROR, "Too many addresses found during IPv4 reading");
 				}
-			}
+	}
 			break;
 		case VLPARAM_SUPPORTED_ADDR_TYPES:
 			if (peer_supported_addr_types != NULL)
@@ -3353,7 +3381,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
 					*peer_supported_addr_types);
 			}
 			break;
-		}
+}
 		read_len += vlp_len;
 		while (read_len & 3)
 			++read_len;
@@ -3455,8 +3483,8 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
+			}
 		}
-	}
 
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
@@ -3509,7 +3537,7 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
 		}
 	}
 	return ret;
-}
+	}
 
 int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
 	sockaddrunion* foundAddress, int supportedAddressTypes)
