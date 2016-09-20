@@ -1433,9 +1433,9 @@ public:
 	 * The following data are created and included in the init acknowledgement:
 	 * a COOKIE parameter.
 	 * @param init_chunk_t  pointer to the received init-chunk (including optional parameters)
-	 * 0 all good, 
+	 * 0 all good,
 	 * 	ActionWhenUnknownVlpOrChunkType::STOP_PROCESS_CHUNK: stop process the chunk and delete channel
-	 * 
+	 *
 	 */
 	int process_init_chunk(init_chunk_t * init);
 
@@ -1453,6 +1453,18 @@ public:
 	 * @param  status  type of event, that has caused the association to be terminated
 	 */
 	void on_connection_lost(uint status);
+	/**
+	* indicates that an association is established (chapter 10.2.D).
+	* @param status     type of event that caused association to come up;
+	* either COMM_UP_RECEIVED_VALID_COOKIE, COMM_UP_RECEIVED_COOKIE_ACK
+	* or COMM_UP_RECEIVED_COOKIE_RESTART
+	*/
+	void on_connection_up(uint status);
+	/**
+	* indicates that a restart has occured(chapter 10.2.G).
+	* Calls the respective ULP callback function.
+	*/
+	void on_peer_restart(void);
 
 	/**
 	 * Clear the global association data.
@@ -1602,8 +1614,8 @@ public:
 
 	chunk_id_t build_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
 	{
-		assert(cookie_echo_chunk !=NULL);
-		init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__,__LINE__);
+		assert(cookie_echo_chunk != NULL);
+		init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
 		if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
 		memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
 		initChunk->chunk_header.chunk_id = CHUNK_INIT;
@@ -1635,6 +1647,30 @@ public:
 	{
 		return curr_channel_ == NULL ? 0 : curr_channel_->remote_tag;
 	}
+	/**
+	*  This function allocates memory for a new association.
+	*  For the active side of an association, this function is called when ULP calls Associate
+	*  For the passive side this function is called when a valid cookie message is received.
+	*  It also creates all the modules path management, bundling and SCTP-control.
+	*  The rest of the modules are created with mdi_initAssociation.
+	*  The created association is put into the list of associations.
+	*
+	*  @param SCTP_InstanceName    identifier for an SCTP instance (if there are more)
+	*  @param  local_port          src port (which this association listens to)
+	*  @param  remote_port         destination port (peers source port)
+	*  @param   tagLocal           randomly generated tag belonging to this association
+	*  @param  primaryDestinitionAddress   index of the primary address
+	*  @param  noOfDestinationAddresses    number of addresses the peer has
+	*  @param  destinationAddressList      pointer to the array of peer's addresses
+	*  @return true for success, else for failure
+	*/
+	bool alloc_new_channel(geco_instance_t* sInstance,
+		ushort local_port,
+		ushort remote_port,
+		uint tagLocal,
+		short primaryDestinitionAddress,
+		ushort noOfDestinationAddresses,
+		sockaddrunion *destinationAddressList);
 
 	/**
 	sctlr_cookie_echo is called by bundling when a cookie echo chunk was received from  the peer.
@@ -2339,7 +2375,7 @@ public:
 	 * that is returned then. Returns -1 if unrecognized chunk forces termination of chunk parsing
 	 * without any further action, 1 for an error that stops chunk parsing, but returns error to
 	 * the peer and 0 for normal continuation */
-	int process_unrecognized_vlparams(uint initCID, uint AckCID );
+	int process_unrecognized_vlparams(uint initCID, uint AckCID);
 
 	/*
 	 * ch_enterUnrecognizedErrors enters unrecognized params from InitAck into an Error chunk

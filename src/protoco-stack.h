@@ -21,7 +21,7 @@
 #define __INCLUDE_PROTOCOL_STACK_H
 
 /* the possible 7 states of an association */
-enum ChannelState :int
+enum ChannelState
 {
 	Closed,
 	CookieWait,
@@ -31,11 +31,12 @@ enum ChannelState :int
 	ShutdownReceived,
 	ShutdownSent,
 	ShutdownAckSent,
-	ChannelStateSize
+	ChannelStateSize,
+	UnknownChannelState,
 };
 
 /* Return codes for a number of functions that treat incoming chunks */
-/* these are used in  bundle controller !                         
+/* these are used in  bundle controller !
 /* stop -> stop processing not sending replying chunk */
 enum ChunkProcessResult : int
 {
@@ -64,8 +65,8 @@ enum ConnectionLostReason :int
 	ConnectionLostReasonSize // number od reasons 
 };
 
-#define SCTP_COMM_UP_RECEIVED_VALID_COOKIE       1
-#define SCTP_COMM_UP_RECEIVED_COOKIE_ACK         2
-#define SCTP_COMM_UP_RECEIVED_COOKIE_RESTART     3
+const uint COMM_UP_RECEIVED_VALID_COOKIE = 1;
+const uint COMM_UP_RECEIVED_COOKIE_ACK = 2;
+const uint COMM_UP_RECEIVED_COOKIE_RESTART = 3;
 
 #endif
