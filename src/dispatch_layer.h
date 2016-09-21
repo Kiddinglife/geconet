@@ -275,9 +275,9 @@ struct state_machine_controller_t
         /** peer's tie tag for cross initialization and other sick cases */
         uint peer_tie_tag;
         /** todo we store these here, too. Maybe better be stored with StreamEngine ? */
-        ushort out_stream_count;
+        ushort outbound_stream;
         /** todo we store these here, too. Maybe better be stored with StreamEngine ? */
-        ushort in_stream_count;
+        ushort inbound_stream;
         /** value for maximum retransmissions per association */
         uint max_retrans_count;
         /** value for maximum initial retransmissions per association */
@@ -544,7 +544,7 @@ class dispatch_layer_t
         channel_t *curr_channel_;
 
         /* inits along with library inits*/
-        uint defaultlocaladdrlistsize_;
+        int defaultlocaladdrlistsize_;
         sockaddrunion* defaultlocaladdrlist_;
 
         /* these one-shot state variables are so frequently used in recv_gco_packet()
@@ -767,19 +767,19 @@ class dispatch_layer_t
          * @param  localInitialTSN      my initial TSN, needed for initializing my flow control
          * @return 0 for success, else 1 for error
          */
-        unsigned short set_channel(unsigned int remoteSideReceiverWindow,
+        unsigned short init_channel(unsigned int remoteSideReceiverWindow,
                 unsigned short noOfInStreams, unsigned short noOfOutStreams,
                 unsigned int remoteInitialTSN, unsigned int tagRemote,
                 unsigned int localInitialTSN, bool assocSupportsPRSCTP,
                 bool assocSupportsADDIP)
         {
-            EVENTLOG(DEBUG, "- - - Enter set_channel()");
+            EVENTLOG(DEBUG, "- - - Enter init_channel()");
             assert(curr_channel_ == NULL);
 
             if (curr_channel_->remote_tag != 0)
             {
                 /* channel init was already completed */
-                EVENTLOG(INFO, "set_channel()::reset channel members!");
+                EVENTLOG(INFO, "init_channel()::reset channel members!");
                 free_flow_control(curr_channel_->flow_control);
                 free_reliable_transfer(curr_channel_->reliable_transfer_control);
                 free_recvctrl(curr_channel_->receive_control);
@@ -1633,6 +1633,42 @@ class dispatch_layer_t
 #endif
             return ret;
         }
+		bool peer_supports_addip(cookie_echo_chunk_t* cookie_echo)
+		{
+#ifdef _DEBUG
+			EVENTLOG(VERBOSE,
+				"- - - - - Enter peer_supports_addip(cookie_echo_chunk_t)");
+#endif
+
+			assert(cookie_echo != 0);
+			assert(COOKIE_FIXED_SIZE == sizeof(cookie_fixed_t));
+			bool ret = false;
+			uchar* foundvlp =
+				find_first_vlparam_of(VLPARAM_ADDIP, cookie_echo->vlparams,
+					cookie_echo->chunk_header.chunk_length - CHUNK_FIXED_SIZE
+					- COOKIE_FIXED_SIZE);
+			if (foundvlp != NULL)
+			{
+				if (ntohs(((vlparam_fixed_t*)foundvlp)->param_length) >= VLPARAM_FIXED_SIZE)
+				{
+					ret = true;
+					goto leave;
+				}
+				else
+				{
+					EVENTLOG(VERBOSE, " pr vlp too short < 4 bytes");
+					goto leave;
+				}
+			}
+
+		leave:
+#ifdef _DEBUG
+			EVENTLOG1(VERBOSE,
+				"- - - - - Enter peer_supports_addip(cookie_echo_chunk_t)::ret=%d",
+				ret);
+#endif
+			return ret;
+		}
         /**
          * this is called by bundling, when a SACK needs to be processed.This is a LONG function !
          * FIXME : check correct update of rtx->lowest_tsn !

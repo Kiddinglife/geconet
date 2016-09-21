@@ -101,9 +101,9 @@ typedef struct SCTP_CONTROLDATA
     /** peer's tie tag for cross initialization and other sick cases */
     guint32 peer_tie_tag;
     /** we store these here, too. Maybe better be stored with StreamEngine ? */
-    unsigned short NumberOfOutStreams;
+    unsigned short outbound_stream;
     /** we store these here, too. Maybe better be stored with StreamEngine ? */
-    unsigned short NumberOfInStreams;
+    unsigned short inbound_stream;
     /** value for maximum retransmissions per association */
     int assocMaxRetransmissions;
     /** value for maximum initial retransmissions per association */
@@ -120,7 +120,7 @@ typedef struct SCTP_CONTROLDATA
 /*
 pointer to the current controller structure. Only set when association exists.
 */
-static SCTP_controlData *localData;
+static SCTP_controlData *smctrl;
 
 /* ------------------ Function Implementations ---------------------------------------------------*/
 
@@ -151,14 +151,14 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	return;
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log: association exist, but has no SCTP-control ? */
 	error_log(ERROR_MAJOR, "Association without SCTP-control");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
     primary = pm_readPrimaryPath();
 
     event_logiii(VERBOSE, "sci_timer_expired(AssocID=%u,  state=%u, Primary=%u",
@@ -170,19 +170,19 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 
 	event_log(EXTERNAL_EVENT, "init timer expired in state COOKIE_WAIT");
 
-	if (localData->initRetransCounter < localData->assocMaxInitRetransmissions)
+	if (smctrl->initRetransCounter < smctrl->assocMaxInitRetransmissions)
 	{
 	    /* increase retransmissission-counter, resend init and restart init-timer */
-	    localData->initRetransCounter++;
-	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)localData->initChunk, NULL);
+	    smctrl->initRetransCounter++;
+	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->initChunk, NULL);
 	    bu_sendAllChunks(NULL);
 	    /* restart init timer after timer backoff */
-	    localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+	    smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
 	    event_logi(INTERNAL_EVENT_0, "init timer backedoff %d msecs",
-		       localData->initTimerDuration);
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_INIT,
-			       (void *)&localData->associationID, NULL);
+		       smctrl->initTimerDuration);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_INIT,
+			       (void *)&smctrl->associationID, NULL);
 	}
 	else
 	{
@@ -190,9 +190,9 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	    event_log(EXTERNAL_EVENT,
 		      "init retransmission counter exeeded threshold in state COOKIE_WAIT");
 	    /* free memory for initChunk */
-	    free(localData->initChunk);
-	    localData->initTimer = 0;
-	    localData->initChunk = NULL;
+	    free(smctrl->initChunk);
+	    smctrl->initTimer = 0;
+	    smctrl->initChunk = NULL;
 	    /* report error to ULP tbd: status */
 	    mdi_deleteCurrentAssociation();
 	    mdi_communicationLostNotif(SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
@@ -203,20 +203,20 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 
 	event_log(EXTERNAL_EVENT, "cookie timer expired in state COOKIE_ECHOED");
 
-	if (localData->initRetransCounter < localData->assocMaxInitRetransmissions)
+	if (smctrl->initRetransCounter < smctrl->assocMaxInitRetransmissions)
 	{
 	    /* increase retransmissission-counter, resend init and restart init-timer */
-	    localData->initRetransCounter++;
-	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)localData->cookieChunk, NULL);
+	    smctrl->initRetransCounter++;
+	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->cookieChunk, NULL);
 	    bu_sendAllChunks(NULL);
 	    /* restart cookie timer after timer backoff */
-	    localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+	    smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
 	    event_logi(INTERNAL_EVENT_0, "cookie timer backedoff %d msecs",
-		       localData->initTimerDuration);
+		       smctrl->initTimerDuration);
 
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_INIT,
-			       (void *)&localData->associationID, NULL);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_INIT,
+			       (void *)&smctrl->associationID, NULL);
 	}
 	else
 	{
@@ -224,9 +224,9 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	    event_log(EXTERNAL_EVENT,
 		      "init retransmission counter exeeded threshold; state: COOKIE_ECHOED");
 	    /* free memory for cookieChunk */
-	    free(localData->cookieChunk);
-	    localData->initTimer = 0;
-	    localData->cookieChunk = NULL;
+	    free(smctrl->cookieChunk);
+	    smctrl->initTimer = 0;
+	    smctrl->cookieChunk = NULL;
 	    /* report error to ULP tbd: status */
 	    mdi_deleteCurrentAssociation();
 	    mdi_communicationLostNotif(SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
@@ -239,10 +239,10 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 			   for init, but are reused for shutdown after the shutdown timer was introduced
 			   in the draft. */
 
-	if (localData->initRetransCounter < localData->assocMaxRetransmissions)
+	if (smctrl->initRetransCounter < smctrl->assocMaxRetransmissions)
 	{
 	    /* increase retransmissission-counter */
-	    localData->initRetransCounter++;
+	    smctrl->initRetransCounter++;
 
 	    /* make and send shutdown again, with updated TSN (section 9.2)     */
 	    shutdownCID = ch_makeShutdown(rxc_read_cummulativeTSNacked());
@@ -251,20 +251,20 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	    ch_deleteChunk(shutdownCID);
 
 	    /* restart shutdown timer after timer backoff */
-	    localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+	    smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
 	    event_logi(INTERNAL_EVENT_0, "shutdown timer backed off %d msecs",
-		       localData->initTimerDuration);
+		       smctrl->initTimerDuration);
 
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-			       (void *)&localData->associationID, NULL);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+			       (void *)&smctrl->associationID, NULL);
 	}
 	else
 	{
 	    /* mdi_communicationLostNotif() may call sctp_deleteAssociation().
-				   This would invalidate localData and therefore localData->initTimer
+				   This would invalidate smctrl and therefore smctrl->initTimer
 				   has to be reset before! */
-	    localData->initTimer = 0;
+	    smctrl->initTimer = 0;
 	    /* shut down failed, delete current association. */
 	    mdi_deleteCurrentAssociation();
 	    mdi_communicationLostNotif(SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
@@ -276,10 +276,10 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	/* some of the variable names are missleading, because they where only used
 			   for init, but are reused for shutdown */
 
-	if (localData->initRetransCounter < localData->assocMaxRetransmissions)
+	if (smctrl->initRetransCounter < smctrl->assocMaxRetransmissions)
 	{
 	    /* increase retransmissission-counter */
-	    localData->initRetransCounter++;
+	    smctrl->initRetransCounter++;
 
 	    shutdownAckCID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_ACK, FLAG_NONE);
 	    bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID), &primary);
@@ -294,19 +294,19 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	    /* ch_deleteChunk(shutdown_complete_CID); */
 
 	    /* restart shutdown timer after timer backoff */
-	    localData->initTimerDuration = min(localData->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+	    smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
 	    event_logi(INTERNAL_EVENT_0, "shutdown timer backed off %d msecs",
-		       localData->initTimerDuration);
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-			       (void *)&localData->associationID, NULL);
+		       smctrl->initTimerDuration);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+			       (void *)&smctrl->associationID, NULL);
 	}
 	else
 	{
 	    /* mdi_communicationLostNotif() may call sctp_deleteAssociation().
-				   This would invalidate localData and therefore localData->initTimer
+				   This would invalidate smctrl and therefore smctrl->initTimer
 				   has to be reset before! */
-	    localData->initTimer = 0;
+	    smctrl->initTimer = 0;
 	    mdi_deleteCurrentAssociation();
 	    mdi_communicationLostNotif(SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
 	}
@@ -315,11 +315,11 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
     default:
 	/* error log */
 	error_logi(ERROR_MAJOR, "unexpected event: timer expired in state %02d", state);
-	localData->initTimer = 0;
+	smctrl->initTimer = 0;
 	break;
     }
 
-    localData = NULL;
+    smctrl = NULL;
     mdi_clearAssociationData();
 }
 
@@ -350,13 +350,13 @@ void scu_associate(unsigned short noOfOutStreams,
     /* ULP has called sctp_associate at distribution.
 	   Distribution has allready allocated the association data and partially initialized */
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	error_log(ERROR_MAJOR, "read SCTP-control failed");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -368,8 +368,8 @@ void scu_associate(unsigned short noOfOutStreams,
 			      noOfOutStreams, noOfInStreams, mdi_generateStartTSN());
 
 	/* store the number of streams */
-	localData->NumberOfOutStreams = noOfOutStreams;
-	localData->NumberOfInStreams = noOfInStreams;
+	smctrl->outbound_stream = noOfOutStreams;
+	smctrl->inbound_stream = noOfInStreams;
 
 	supportedTypes = mdi_getSupportedAddressTypes();
 
@@ -391,10 +391,10 @@ void scu_associate(unsigned short noOfOutStreams,
 	}
 
 #ifdef BAKEOFF
-	ch_addParameterToInitChunk(initCID, 0x8123, 17, (unsigned char *)localData);
-	ch_addParameterToInitChunk(initCID, 0x8343, 23, (unsigned char *)localData);
-	ch_addParameterToInitChunk(initCID, 0x8324, 1, (unsigned char *)localData);
-	ch_addParameterToInitChunk(initCID, 0xC123, 31, (unsigned char *)localData);
+	ch_addParameterToInitChunk(initCID, 0x8123, 17, (unsigned char *)smctrl);
+	ch_addParameterToInitChunk(initCID, 0x8343, 23, (unsigned char *)smctrl);
+	ch_addParameterToInitChunk(initCID, 0x8324, 1, (unsigned char *)smctrl);
+	ch_addParameterToInitChunk(initCID, 0xC123, 31, (unsigned char *)smctrl);
 #endif
 
 #ifdef HAVE_IPV6
@@ -421,30 +421,30 @@ void scu_associate(unsigned short noOfOutStreams,
 	if (nlAddresses > 1)
 	    ch_enterIPaddresses(initCID, lAddresses, nlAddresses);
 
-	localData->initChunk = (SCTP_init *)ch_chunkString(initCID);
+	smctrl->initChunk = (SCTP_init *)ch_chunkString(initCID);
 	ch_forgetChunk(initCID);
 
 	/* send init chunk */
 	for (count = 0; count < numDestAddresses; count++)
 	{
-	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)localData->initChunk, &count);
+	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->initChunk, &count);
 	    bu_sendAllChunks(&count);
 	}
 
-	localData->cookieChunk = NULL;
-	localData->local_tie_tag = 0;
-	localData->peer_tie_tag = 0;
+	smctrl->cookieChunk = NULL;
+	smctrl->local_tie_tag = 0;
+	smctrl->peer_tie_tag = 0;
 
 	/* start init timer */
-	localData->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
+	smctrl->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
 
-	if (localData->initTimer != 0)
-	    sctp_stopTimer(localData->initTimer);
+	if (smctrl->initTimer != 0)
+	    sctp_stopTimer(smctrl->initTimer);
 
-	localData->initTimer = adl_startTimer(localData->initTimerDuration,
+	smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
 					      &sci_timer_expired,
 					      TIMER_TYPE_INIT,
-					      (void *)&localData->associationID, NULL);
+					      (void *)&smctrl->associationID, NULL);
 
 	state = COOKIE_WAIT;
 	break;
@@ -453,8 +453,8 @@ void scu_associate(unsigned short noOfOutStreams,
 	break;
     }
 
-    localData->association_state = state;
-    localData = NULL;
+    smctrl->association_state = state;
+    smctrl = NULL;
 }
 
 /**
@@ -466,14 +466,14 @@ void scu_shutdown()
     ChunkID shutdownCID;
     boolean readyForShutdown;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "read SCTP-control failed");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -496,16 +496,16 @@ void scu_shutdown()
 	    ch_deleteChunk(shutdownCID);
 
 	    /* start shutdown timer */
-	    localData->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
+	    smctrl->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
 
-	    if (localData->initTimer != 0)
-		sctp_stopTimer(localData->initTimer);
+	    if (smctrl->initTimer != 0)
+		sctp_stopTimer(smctrl->initTimer);
 
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-			       (void *)&localData->associationID, NULL);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+			       (void *)&smctrl->associationID, NULL);
 
-	    localData->initRetransCounter = 0;
+	    smctrl->initRetransCounter = 0;
 
 	    /* receive control must acknoweledge every datachunk at once after the shutdown
 				   was sent. */
@@ -520,8 +520,8 @@ void scu_shutdown()
 	    /* wait for sci_allChunksAcked from reliable transfer */
 	    state = SHUTDOWNPENDING;
 	}
-	localData->association_state = state;
-	localData = NULL;
+	smctrl->association_state = state;
+	smctrl = NULL;
 
 	break;
     case CLOSED:
@@ -537,12 +537,12 @@ void scu_shutdown()
     case SHUTDOWNACKSENT:
 	/* ignore, keep on waiting for completion of the running shutdown */
 	event_logi(EXTERNAL_EVENT, "event: scu_shutdown in state %", state);
-	localData = NULL;
+	smctrl = NULL;
 	break;
     default:
 	/* error logging */
 	event_log(EXTERNAL_EVENT_X, "unexpected event: scu_shutdown");
-	localData = NULL;
+	smctrl = NULL;
 	break;
     }
 }
@@ -586,14 +586,14 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
     ChunkID abortCID;
     gboolean removed = FALSE;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "read SCTP-control failed");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -624,10 +624,10 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
 	/* free abort chunk */
 	ch_deleteChunk(abortCID);
 	/* stop init timer */
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 	/* delete all data of this association */
 	mdi_deleteCurrentAssociation();
@@ -732,7 +732,7 @@ int sctlr_init(SCTP_init *init)
 	/* free abort chunk */
 	ch_deleteChunk(abortCID);
 	/* delete all data of this association */
-	if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) != NULL)
+	if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) != NULL)
 	{
 	    bu_unlock_sender(NULL);
 	    mdi_deleteCurrentAssociation();
@@ -747,16 +747,16 @@ int sctlr_init(SCTP_init *init)
     result = mdi_readLastFromAddress(&last_source);
     if (result != 0)
     {
-	if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+	if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
 	{
 	    mdi_clearAssociationData();
 	    return_state = STATE_STOP_PARSING_REMOVED;
 	    return return_state;
 	}
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 	bu_unlock_sender(NULL);
 	mdi_deleteCurrentAssociation();
@@ -766,7 +766,7 @@ int sctlr_init(SCTP_init *init)
 	return return_state;
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	event_log(VERBOSE, " DO_5_1_B_INIT: Normal init case ");
 	/* DO_5_1_B_INIT : Normal case, no association exists yet */
@@ -836,7 +836,7 @@ int sctlr_init(SCTP_init *init)
 		   tag).
 		   mdi_writeLastInitiateTag(ch_initiateTag(initCID)); */
 
-	state = localData->association_state;
+	state = smctrl->association_state;
 	event_logi(EXTERNAL_EVENT, "sctlr_init: received INIT chunk in state %02u", state);
 	primary = pm_readPrimaryPath();
 	supportedTypes = mdi_getSupportedAddressTypes();
@@ -845,20 +845,20 @@ int sctlr_init(SCTP_init *init)
 	{
 	/* see section 5.2.1 */
 	case COOKIE_WAIT:
-	    if ((localData->local_tie_tag != 0) || (localData->peer_tie_tag != 0))
+	    if ((smctrl->local_tie_tag != 0) || (smctrl->peer_tie_tag != 0))
 	    {
 		error_logii(ERROR_FATAL, "Tie tags NOT zero in COOKIE_WAIT, but %u and %u",
-			    localData->local_tie_tag, localData->peer_tie_tag);
+			    smctrl->local_tie_tag, smctrl->peer_tie_tag);
 	    }
-	    localData->local_tie_tag = 0;
-	    localData->peer_tie_tag = 0;
+	    smctrl->local_tie_tag = 0;
+	    smctrl->peer_tie_tag = 0;
 
 	case COOKIE_ECHOED:
 	    if ((state == COOKIE_ECHOED) &&
-		((localData->local_tie_tag == 0) || (localData->peer_tie_tag == 0)))
+		((smctrl->local_tie_tag == 0) || (smctrl->peer_tie_tag == 0)))
 	    {
 		error_logii(ERROR_FATAL, "Tie tags zero in COOKIE_ECHOED, local: %u, peer: %u",
-			    localData->local_tie_tag, localData->peer_tie_tag);
+			    smctrl->local_tie_tag, smctrl->peer_tie_tag);
 	    }
 
 	    if (state == COOKIE_ECHOED)
@@ -868,8 +868,8 @@ int sctlr_init(SCTP_init *init)
 					 * its Tie-Tags with random values so that possible attackers cannot guess
 					 * real tag values of the association (see Implementer's Guide > version 10)
 					 */
-		localData->local_tie_tag = mdi_generateTag();
-		localData->peer_tie_tag = mdi_generateTag();
+		smctrl->local_tie_tag = mdi_generateTag();
+		smctrl->peer_tie_tag = mdi_generateTag();
 	    }
 
 	    /* save remote  tag ?
@@ -877,7 +877,7 @@ int sctlr_init(SCTP_init *init)
 	    inbound_streams = min(ch_noOutStreams(initCID), mdi_readLocalInStreams());
 
 	    /* Set length of chunk to HBO !! */
-	    initCID_local = alloc_simple_chunk((SCTP_simple_chunk *)localData->initChunk);
+	    initCID_local = alloc_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 	    /* section 5.2.1 : take original parameters from first INIT chunk */
 	    initAckCID = ch_makeInitAck(ch_initiateTag(initCID_local),
 					ch_receiverWindow(initCID_local),
@@ -903,8 +903,8 @@ int sctlr_init(SCTP_init *init)
 			      ch_initFixed(initCID),
 			      ch_initFixed(initAckCID),
 			      ch_cookieLifeTime(initCID),
-			      localData->local_tie_tag, /* tie tags may be zero OR populated here */
-			      localData->peer_tie_tag,
+			      smctrl->local_tie_tag, /* tie tags may be zero OR populated here */
+			      smctrl->peer_tie_tag,
 			      lAddresses, nlAddresses,
 			      rAddresses, nrAddresses);
 
@@ -935,10 +935,10 @@ int sctlr_init(SCTP_init *init)
 	case SHUTDOWNPENDING:
 	case SHUTDOWNRECEIVED:
 	case SHUTDOWNSENT:
-	    if ((localData->local_tie_tag == 0) || (localData->peer_tie_tag == 0))
+	    if ((smctrl->local_tie_tag == 0) || (smctrl->peer_tie_tag == 0))
 	    {
 		error_logiii(ERROR_MINOR, "Tie tags zero in state %u, local: %u, peer: %u --> Restart ?",
-			     state, localData->local_tie_tag, localData->peer_tie_tag);
+			     state, smctrl->local_tie_tag, smctrl->peer_tie_tag);
 	    }
 
 	    inbound_streams = min(ch_noOutStreams(initCID), mdi_readLocalInStreams());
@@ -950,8 +950,8 @@ int sctlr_init(SCTP_init *init)
 					mdi_generateStartTSN());
 
 	    /*
-				   localData->local_tie_tag = mdi_generateTag();
-				   localData->peer_tie_tag = mdi_generateTag();
+				   smctrl->local_tie_tag = mdi_generateTag();
+				   smctrl->peer_tie_tag = mdi_generateTag();
 				   */
 
 	    /* retreive remote source addresses from message */
@@ -967,9 +967,9 @@ int sctlr_init(SCTP_init *init)
 			      ch_initFixed(initCID),
 			      ch_initFixed(initAckCID),
 			      ch_cookieLifeTime(initCID),
-			      localData->local_tie_tag,
+			      smctrl->local_tie_tag,
 			      /* this should be different from that in Init_Ack now */
-			      localData->peer_tie_tag,
+			      smctrl->peer_tie_tag,
 			      lAddresses, nlAddresses,
 			      rAddresses, nrAddresses);
 
@@ -1064,14 +1064,14 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	return return_state;
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	ch_forgetChunk(initAckCID);
 	error_log(ERROR_MAJOR, "sctlr_initAck: read SCTP-control failed");
 	return return_state;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -1080,15 +1080,15 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	event_log(EXTERNAL_EVENT, "event: initAck in state COOKIE_WAIT");
 
 	/* Set length of chunk to HBO !! */
-	initCID = alloc_simple_chunk((SCTP_simple_chunk *)localData->initChunk);
+	initCID = alloc_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 
 	/* FIXME: check also the noPeerOutStreams <= noLocalInStreams */
 	if (ch_noOutStreams(initAckCID) == 0 || ch_noInStreams(initAckCID) == 0 || ch_initiateTag(initAckCID) == 0)
 	{
-	    if (localData->initTimer != 0)
+	    if (smctrl->initTimer != 0)
 	    {
-		sctp_stopTimer(localData->initTimer);
-		localData->initTimer = 0;
+		sctp_stopTimer(smctrl->initTimer);
+		smctrl->initTimer = 0;
 	    }
 	    /* make and send abort message */
 	    abortCID = ch_makeSimpleChunk(CHUNK_ABORT, FLAG_NONE);
@@ -1109,10 +1109,10 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	result = mdi_readLastFromAddress(&destAddress);
 	if (result != 0)
 	{
-	    if (localData->initTimer != 0)
+	    if (smctrl->initTimer != 0)
 	    {
-		sctp_stopTimer(localData->initTimer);
-		localData->initTimer = 0;
+		sctp_stopTimer(smctrl->initTimer);
+		smctrl->initTimer = 0;
 	    }
 	    bu_unlock_sender(NULL);
 	    mdi_deleteCurrentAssociation();
@@ -1128,8 +1128,8 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	mdi_writeDestinationAddresses(dAddresses, ndAddresses);
 
 	/* initialize rest of association with data received from peer */
-	inbound_streams = min(ch_noOutStreams(initAckCID), localData->NumberOfInStreams);
-	outbound_streams = min(ch_noInStreams(initAckCID), localData->NumberOfOutStreams);
+	inbound_streams = min(ch_noOutStreams(initAckCID), smctrl->inbound_stream);
+	outbound_streams = min(ch_noInStreams(initAckCID), smctrl->outbound_stream);
 
 	peerSupportsPRSCTP = ch_getPRSCTPfromInitAck(initAckCID);
 
@@ -1157,10 +1157,10 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	    event_log(EXTERNAL_EVENT, "received a initAck without cookie");
 
 	    /* stop shutdown timer */
-	    if (localData->initTimer != 0)
+	    if (smctrl->initTimer != 0)
 	    {
-		sctp_stopTimer(localData->initTimer);
-		localData->initTimer = 0;
+		sctp_stopTimer(smctrl->initTimer);
+		smctrl->initTimer = 0;
 	    }
 	    missing_params.numberOfParams = htonl(1);
 	    missing_params.params[0] = htons(VLPARAM_COOKIE);
@@ -1170,8 +1170,8 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	    /* delete this association */
 
 	    return_state = STATE_STOP_PARSING_REMOVED;
-	    localData->association_state = CLOSED;
-	    localData = NULL;
+	    smctrl->association_state = CLOSED;
+	    smctrl = NULL;
 	    return return_state;
 	}
 
@@ -1192,16 +1192,16 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	    if (errorCID != 0)
 		ch_deleteChunk(errorCID);
 	    bu_unlock_sender(NULL);
-	    if (localData->initTimer != 0)
+	    if (smctrl->initTimer != 0)
 	    {
-		sctp_stopTimer(localData->initTimer);
-		localData->initTimer = 0;
+		sctp_stopTimer(smctrl->initTimer);
+		smctrl->initTimer = 0;
 	    }
 	    mdi_deleteCurrentAssociation();
 	    mdi_communicationLostNotif(SCTP_COMM_LOST_FAILURE);
 	    mdi_clearAssociationData();
-	    localData->association_state = CLOSED;
-	    localData = NULL;
+	    smctrl->association_state = CLOSED;
+	    smctrl = NULL;
 	    return_state = STATE_STOP_PARSING_REMOVED;
 	    return return_state;
 	}
@@ -1210,13 +1210,13 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	    return_state = STATE_STOP_PARSING;
 	}
 
-	localData->cookieChunk = (cookie_echo_chunk_t *)ch_chunkString(cookieCID);
+	smctrl->cookieChunk = (cookie_echo_chunk_t *)ch_chunkString(cookieCID);
 	/* populate tie tags -> section 5.2.1/5.2.2 */
-	localData->local_tie_tag = mdi_readLocalTag();
-	localData->peer_tie_tag = ch_initiateTag(initAckCID);
+	smctrl->local_tie_tag = mdi_readLocalTag();
+	smctrl->peer_tie_tag = ch_initiateTag(initAckCID);
 
-	localData->NumberOfOutStreams = outbound_streams;
-	localData->NumberOfInStreams = inbound_streams;
+	smctrl->outbound_stream = outbound_streams;
+	smctrl->inbound_stream = inbound_streams;
 
 	ch_forgetChunk(cookieCID);
 	ch_forgetChunk(initAckCID);
@@ -1227,7 +1227,7 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 		break;
 
 	/* send cookie */
-	bu_put_Ctrl_Chunk((SCTP_simple_chunk *)localData->cookieChunk, &index);
+	bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->cookieChunk, &index);
 	if (errorCID != 0)
 	{
 	    bu_put_Ctrl_Chunk((SCTP_simple_chunk *)ch_chunkString(errorCID), &index);
@@ -1246,14 +1246,14 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	}
 
 	// stop init timer
-	if (localData->initTimer != 0)
-	    sctp_stopTimer(localData->initTimer);
+	if (smctrl->initTimer != 0)
+	    sctp_stopTimer(smctrl->initTimer);
 
 	/* start cookie timer */
 	state = COOKIE_ECHOED;
-	localData->initTimer = adl_startTimer(localData->initTimerDuration,
+	smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
 					      &sci_timer_expired, TIMER_TYPE_INIT,
-					      (void *)&localData->associationID, NULL);
+					      (void *)&smctrl->associationID, NULL);
 	break;
 
     case COOKIE_ECHOED:
@@ -1274,8 +1274,8 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	break;
     }
 
-    localData->association_state = state;
-    localData = NULL;
+    smctrl->association_state = state;
+    smctrl = NULL;
     return return_state;
 }
 
@@ -1402,7 +1402,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	return;
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	noOfDestinationAddresses = 1;
 	primaryDestinationAddress = 0;
@@ -1425,7 +1425,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	}
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	error_log(ERROR_MAJOR, "sctlr_cookie-echo: program error: SCTP-control NULL");
 	ch_deleteChunk(initCID);
@@ -1434,7 +1434,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     event_logiii(VERBOSE, "State : %u, cookie_remote_tag : %x , cookie_local_tag : %x ",
 		 state, cookie_remote_tag, cookie_local_tag);
@@ -1466,10 +1466,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			    ch_initialTSN(initCID), cookie_remote_tag, ch_initialTSN(initAckCID),
 			    peerSupportsPRSCTP, FALSE);
 
-	localData->NumberOfOutStreams = ch_noOutStreams(initAckCID);
-	localData->NumberOfInStreams = ch_noInStreams(initAckCID);
+	smctrl->outbound_stream = ch_noOutStreams(initAckCID);
+	smctrl->inbound_stream = ch_noInStreams(initAckCID);
 	event_logii(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u",
-		    localData->NumberOfOutStreams, localData->NumberOfInStreams);
+		    smctrl->outbound_stream, smctrl->inbound_stream);
 
 	/* make cookie acknowledgement */
 	cookieAckCID = ch_makeSimpleChunk(CHUNK_COOKIE_ACK, FLAG_NONE);
@@ -1514,10 +1514,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	running and send a COOKIE ACK */
 		event_log(VERBOSE, "Dupl. CookieEcho, case 5.2.4.D)");
 		/* stop COOKIE timers */
-		if (localData->initTimer != 0)
+		if (smctrl->initTimer != 0)
 		{
-		    sctp_stopTimer(localData->initTimer);
-		    localData->initTimer = 0;
+		    sctp_stopTimer(smctrl->initTimer);
+		    smctrl->initTimer = 0;
 		}
 		/* go to ESTABLISHED state */
 		new_state = ESTABLISHED;
@@ -1543,10 +1543,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 					ch_initialTSN(initAckCID),
 					peerSupportsPRSCTP, FALSE);
 
-		    localData->NumberOfOutStreams = ch_noOutStreams(initAckCID);
-		    localData->NumberOfInStreams = ch_noInStreams(initAckCID);
+		    smctrl->outbound_stream = ch_noOutStreams(initAckCID);
+		    smctrl->inbound_stream = ch_noInStreams(initAckCID);
 		    event_logii(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u",
-				localData->NumberOfOutStreams, localData->NumberOfInStreams);
+				smctrl->outbound_stream, smctrl->inbound_stream);
 
 		    /* notification to ULP */
 		    SendCommUpNotification = SCTP_COMM_UP_RECEIVED_VALID_COOKIE;
@@ -1567,10 +1567,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 				  running and send a COOKIE ACK. */
 		event_log(VERBOSE, "Dupl. CookieEcho, case 5.2.4.B)");
 		/* stop COOKIE timers */
-		if (localData->initTimer != 0)
+		if (smctrl->initTimer != 0)
 		{
-		    sctp_stopTimer(localData->initTimer);
-		    localData->initTimer = 0;
+		    sctp_stopTimer(smctrl->initTimer);
+		    smctrl->initTimer = 0;
 		}
 		new_state = ESTABLISHED;
 
@@ -1596,10 +1596,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 					ch_initialTSN(initAckCID),
 					peerSupportsPRSCTP, FALSE);
 
-		    localData->NumberOfOutStreams = ch_noOutStreams(initAckCID);
-		    localData->NumberOfInStreams = ch_noInStreams(initAckCID);
+		    smctrl->outbound_stream = ch_noOutStreams(initAckCID);
+		    smctrl->inbound_stream = ch_noInStreams(initAckCID);
 		    event_logii(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u",
-				localData->NumberOfOutStreams, localData->NumberOfInStreams);
+				smctrl->outbound_stream, smctrl->inbound_stream);
 
 		    /* notification to ULP */
 		    SendCommUpNotification = SCTP_COMM_UP_RECEIVED_VALID_COOKIE;
@@ -1626,12 +1626,12 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		ch_forgetChunk(cookieCID);
 		ch_deleteChunk(initCID);
 		ch_deleteChunk(initAckCID);
-		localData = NULL;
+		smctrl = NULL;
 		return; /* process data as usual ? */
 	    }
 	    else if ((cookie_remote_tag != remote_tag) &&
-		     (cookie_local_tietag == localData->local_tie_tag) &&
-		     (cookie_remote_tietag == localData->peer_tie_tag))
+		     (cookie_local_tietag == smctrl->local_tie_tag) &&
+		     (cookie_remote_tietag == smctrl->peer_tie_tag))
 	    { /* case A */
 		/* section 5.2.4. action A : Possible Peer Restart  */
 		if (state != SHUTDOWNACKSENT)
@@ -1673,7 +1673,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			ch_forgetChunk(cookieCID);
 			ch_deleteChunk(initCID);
 			ch_deleteChunk(initAckCID);
-			localData = NULL;
+			smctrl = NULL;
 			return; /* process data as usual ? */
 		    }
 		}
@@ -1700,7 +1700,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		ch_forgetChunk(cookieCID);
 		ch_deleteChunk(initCID);
 		ch_deleteChunk(initAckCID);
-		localData = NULL;
+		smctrl = NULL;
 		return; /* process data as usual ? */
 	    }
 	}
@@ -1716,8 +1716,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
     ch_forgetChunk(cookieCID);
 
     if (new_state != 0xFFFFFFFF)
-	localData->association_state = new_state;
-    localData = NULL;
+	smctrl->association_state = new_state;
+    smctrl = NULL;
 
     if (SendCommUpNotification != -1)
     {
@@ -1751,13 +1751,13 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
     }
     ch_forgetChunk(cookieAckCID);
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	error_log(ERROR_MAJOR, "sctlr_cookieAck: read SCTP-control failed");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -1765,16 +1765,16 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 
 	event_logi(EXTERNAL_EVENT_X, "event: sctlr_cookieAck in state %02d", state);
 	/* stop init timer */
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 	/* free  cookieChunk */
-	free(localData->initChunk);
-	free(localData->cookieChunk);
-	localData->initChunk = NULL;
-	localData->cookieChunk = NULL;
+	free(smctrl->initChunk);
+	free(smctrl->cookieChunk);
+	smctrl->initChunk = NULL;
+	smctrl->cookieChunk = NULL;
 	SendCommUpNotif = SCTP_COMM_UP_RECEIVED_COOKIE_ACK;
 	/* mdi_communicationUpNotif(SCTP_COMM_UP_RECEIVED_COOKIE_ACK); */
 
@@ -1798,8 +1798,8 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 	break;
     }
 
-    localData->association_state = state;
-    localData = NULL;
+    smctrl->association_state = state;
+    smctrl = NULL;
     if (SendCommUpNotif == SCTP_COMM_UP_RECEIVED_COOKIE_ACK)
 	mdi_communicationUpNotif(SCTP_COMM_UP_RECEIVED_COOKIE_ACK);
 }
@@ -1830,7 +1830,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	return return_state;
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_shutdown: read SCTP-control failed");
@@ -1838,7 +1838,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	return return_state;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
     new_state = state;
 
     lastFromPath = mdi_readLastFromPath();
@@ -1892,12 +1892,12 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	    bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID), &lastFromPath);
 	    bu_sendAllChunks(&lastFromPath);
 	    ch_deleteChunk(shutdownAckCID);
-	    if (localData->initTimer != 0)
-		sctp_stopTimer(localData->initTimer);
+	    if (smctrl->initTimer != 0)
+		sctp_stopTimer(smctrl->initTimer);
 
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-			       (void *)&localData->associationID, NULL);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+			       (void *)&smctrl->associationID, NULL);
 	    new_state = SHUTDOWNACKSENT;
 	}
 	else
@@ -1924,11 +1924,11 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	    bu_put_Ctrl_Chunk(ch_chunkString(shutdownAckCID), &lastFromPath);
 	    bu_sendAllChunks(&lastFromPath);
 	    ch_deleteChunk(shutdownAckCID);
-	    if (localData->initTimer != 0)
-		sctp_stopTimer(localData->initTimer);
-	    localData->initTimer =
-		adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-			       (void *)&localData->associationID, NULL);
+	    if (smctrl->initTimer != 0)
+		sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer =
+		adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+			       (void *)&smctrl->associationID, NULL);
 
 	    new_state = SHUTDOWNACKSENT;
 	}
@@ -1951,8 +1951,8 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	mdi_peerShutdownReceivedNotif();
     }
 
-    localData->association_state = new_state;
-    localData = NULL;
+    smctrl->association_state = new_state;
+    smctrl = NULL;
     if (removed == TRUE)
     {
 	mdi_communicationLostNotif(SCTP_COMM_LOST_NO_TCB);
@@ -1975,7 +1975,7 @@ int sctlr_shutdownAck()
     int return_state = STATE_OK;
     int removed = 0; /* i.e. meaning FALSE here ! */
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_shutdownAck: read SCTP-control failed");
@@ -1983,7 +1983,7 @@ int sctlr_shutdownAck()
     }
 
     lastFromPath = mdi_readLastFromPath();
-    state = localData->association_state;
+    state = smctrl->association_state;
     new_state = state;
 
     switch (state)
@@ -2034,10 +2034,10 @@ int sctlr_shutdownAck()
     case SHUTDOWNSENT:
     case SHUTDOWNACKSENT:
 
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 	else
 	{
@@ -2066,8 +2066,8 @@ int sctlr_shutdownAck()
 	break;
     }
 
-    localData->association_state = new_state;
-    localData = NULL;
+    smctrl->association_state = new_state;
+    smctrl = NULL;
     if (removed != 0)
     {
 	if (removed == SCTP_SHUTDOWN_COMPLETE)
@@ -2093,7 +2093,7 @@ int sctlr_shutdownComplete()
     unsigned int lastFromPath;
     int return_state = STATE_OK;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_shutdownComplete: read SCTP-control failed");
@@ -2102,7 +2102,7 @@ int sctlr_shutdownComplete()
 
     lastFromPath = mdi_readLastFromPath();
 
-    state = localData->association_state;
+    state = smctrl->association_state;
     new_state = state;
 
     switch (state)
@@ -2118,10 +2118,10 @@ int sctlr_shutdownComplete()
 	break;
 
     case SHUTDOWNACKSENT:
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 	else
 	{
@@ -2134,12 +2134,12 @@ int sctlr_shutdownComplete()
 	/* delete all data of this association */
 	mdi_deleteCurrentAssociation();
 
-	localData->association_state = CLOSED;
+	smctrl->association_state = CLOSED;
 
 	mdi_shutdownCompleteNotif();
 	mdi_clearAssociationData();
 
-	localData = NULL;
+	smctrl = NULL;
 
 	return_state = STATE_STOP_PARSING_REMOVED;
 
@@ -2151,8 +2151,8 @@ int sctlr_shutdownComplete()
 	event_logi(EXTERNAL_EVENT_X, "sctlr_shutdownComplete in state %02d: unexpected event", state);
 	break;
     }
-    localData->association_state = new_state;
-    localData = NULL;
+    smctrl->association_state = new_state;
+    smctrl = NULL;
     return return_state;
 }
 
@@ -2167,7 +2167,7 @@ int sctlr_abort()
     unsigned int lastFromPath;
     int return_state = STATE_OK;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_abort: read SCTP-control failed");
@@ -2176,7 +2176,7 @@ int sctlr_abort()
 
     lastFromPath = mdi_readLastFromPath();
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -2190,10 +2190,10 @@ int sctlr_abort()
 	event_logi(EXTERNAL_EVENT, "event: sctlr_abort in state %2d", state);
 
 	/* stop possible timer */
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 	/* delete all data of this association */
 
@@ -2215,10 +2215,10 @@ int sctlr_abort()
 	return_state = STATE_STOP_PARSING_REMOVED;
 
 	/* stop init timer, just in case */
-	if (localData->initTimer != 0)
+	if (smctrl->initTimer != 0)
 	{
-	    sctp_stopTimer(localData->initTimer);
-	    localData->initTimer = 0;
+	    sctp_stopTimer(smctrl->initTimer);
+	    smctrl->initTimer = 0;
 	}
 
 	bu_unlock_sender(&lastFromPath);
@@ -2234,7 +2234,7 @@ int sctlr_abort()
 	event_logi(EXTERNAL_EVENT_X, "sctlr_abort in state %02d: unexpected event", state);
 	break;
     }
-    localData = NULL;
+    smctrl = NULL;
     return return_state;
 }
 
@@ -2258,21 +2258,21 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	return;
     }
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_staleCookie: read SCTP-control failed");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
     case COOKIE_ECHOED:
 
 	/* make chunkHandler init chunk from stored init chunk string */
-	initCID = alloc_simple_chunk((SCTP_simple_chunk *)localData->initChunk);
+	initCID = alloc_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 
 	/* read staleness from error chunk and enter it into the cookie preserv. */
 	ch_enterCookiePreservative(initCID, ch_stalenessOfCookieError(errorCID));
@@ -2290,8 +2290,8 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	event_logi(EXTERNAL_EVENT_X, "sctlr_staleCookie in state %02d: unexpected event", state);
 	break;
     }
-    localData->association_state = state;
-    localData = NULL;
+    smctrl->association_state = state;
+    smctrl = NULL;
 }
 
 /**
@@ -2303,14 +2303,14 @@ guint32 sci_getState()
 {
     guint32 state;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_getState: read SCTP-control failed");
 	return CLOSED;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -2345,7 +2345,7 @@ guint32 sci_getState()
     }
 
     return state;
-    localData = NULL;
+    smctrl = NULL;
 }
 
 /*------------------- Functions called by reliable transfer --------------------------------------*/
@@ -2361,16 +2361,16 @@ void sci_allChunksAcked()
     guint32 state;
     ChunkID shutdownCID;
     ChunkID shutdownAckCID;
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_allChunksAcked: read SCTP-control failed");
 	return;
     }
 
-    state = localData->association_state;
+    state = smctrl->association_state;
 
     switch (state)
     {
@@ -2385,16 +2385,16 @@ void sci_allChunksAcked()
 	ch_deleteChunk(shutdownCID);
 
 	/* start shutdown timer */
-	localData->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
+	smctrl->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
 
-	if (localData->initTimer != 0)
-	    sctp_stopTimer(localData->initTimer);
+	if (smctrl->initTimer != 0)
+	    sctp_stopTimer(smctrl->initTimer);
 
-	localData->initTimer = adl_startTimer(localData->initTimerDuration,
+	smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
 					      &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-					      (void *)&localData->associationID, NULL);
+					      (void *)&smctrl->associationID, NULL);
 
-	localData->initRetransCounter = 0;
+	smctrl->initRetransCounter = 0;
 
 	/* receive control must acknowledge every datachunk at once after the shutdown
 			   was sent. */
@@ -2415,11 +2415,11 @@ void sci_allChunksAcked()
 	ch_deleteChunk(shutdownAckCID);
 
 	/* ADDED : should probably be OK */
-	if (localData->initTimer != 0)
-	    sctp_stopTimer(localData->initTimer);
+	if (smctrl->initTimer != 0)
+	    sctp_stopTimer(smctrl->initTimer);
 
-	localData->initTimer = adl_startTimer(localData->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
-					      (void *)&localData->associationID, NULL);
+	smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+					      (void *)&smctrl->associationID, NULL);
 
 	state = SHUTDOWNACKSENT;
 	break;
@@ -2430,8 +2430,8 @@ void sci_allChunksAcked()
 	break;
     }
 
-    localData->association_state = state;
-    localData = old_data;
+    smctrl->association_state = state;
+    smctrl = old_data;
 }
 
 /*------------------- Functions called message by distribution to create and delete --------------*/
@@ -2460,8 +2460,8 @@ void *sci_newSCTP_control(void *sctpInstance)
     tmp->initChunk = NULL;
     tmp->cookieChunk = NULL;
     tmp->associationID = get_curr_channel_id();
-    tmp->NumberOfOutStreams = mdi_readLocalOutStreams();
-    tmp->NumberOfInStreams = mdi_readLocalInStreams();
+    tmp->outbound_stream = mdi_readLocalOutStreams();
+    tmp->inbound_stream = mdi_readLocalInStreams();
     tmp->local_tie_tag = 0;
     tmp->peer_tie_tag = 0;
 
@@ -2501,18 +2501,18 @@ void sci_deleteSCTP_control(void *sctpControlData)
  */
 int sci_getMaxAssocRetransmissions(void)
 {
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
     int max;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_getMaxAssocRetransmissions(): read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return -1;
     }
-    max = localData->assocMaxRetransmissions;
-    localData = old_data;
+    max = smctrl->assocMaxRetransmissions;
+    smctrl = old_data;
     return max;
 }
 
@@ -2522,17 +2522,17 @@ int sci_getMaxAssocRetransmissions(void)
  */
 int sci_getMaxInitRetransmissions(void)
 {
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
     int max;
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_getMaxInitRetransmissions(): read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return -1;
     }
-    max = localData->assocMaxInitRetransmissions;
-    localData = old_data;
+    max = smctrl->assocMaxInitRetransmissions;
+    smctrl = old_data;
     return max;
 }
 
@@ -2543,17 +2543,17 @@ int sci_getMaxInitRetransmissions(void)
 int sci_getCookieLifeTime(void)
 {
     int max;
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MINOR, "sci_getCookieLifeTime(): read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return -1;
     }
-    max = localData->cookieLifeTime;
-    localData = old_data;
+    max = smctrl->cookieLifeTime;
+    smctrl = old_data;
     return max;
 }
 
@@ -2564,16 +2564,16 @@ int sci_getCookieLifeTime(void)
  */
 int sci_setMaxAssocRetransmissions(int new_max)
 {
-    SCTP_controlData *old_data = localData;
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    SCTP_controlData *old_data = smctrl;
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_setMaxAssocRetransmissions(): read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return -1;
     }
-    localData->assocMaxRetransmissions = new_max;
-    localData = old_data;
+    smctrl->assocMaxRetransmissions = new_max;
+    smctrl = old_data;
     return 0;
 }
 
@@ -2584,17 +2584,17 @@ int sci_setMaxAssocRetransmissions(int new_max)
  */
 int sci_setMaxInitRetransmissions(int new_max)
 {
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_setMaxInitRetransmissions(): read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return -1;
     }
-    localData->assocMaxInitRetransmissions = new_max;
-    localData = old_data;
+    smctrl->assocMaxInitRetransmissions = new_max;
+    smctrl = old_data;
     return 0;
 }
 
@@ -2605,34 +2605,34 @@ int sci_setMaxInitRetransmissions(int new_max)
  */
 int sci_setCookieLifeTime(int new_max)
 {
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
 
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_setCookieLifeTime(): read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return -1;
     }
-    localData->cookieLifeTime = new_max;
-    localData = old_data;
+    smctrl->cookieLifeTime = new_max;
+    smctrl = old_data;
     return 0;
 }
 
 gboolean sci_shutdown_procedure_started()
 {
-    SCTP_controlData *old_data = localData;
+    SCTP_controlData *old_data = smctrl;
 
     guint32 state;
-    if ((localData = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_readState : read SCTP-control failed");
-	localData = old_data;
+	smctrl = old_data;
 	return FALSE;
     }
-    state = localData->association_state;
-    localData = old_data;
+    state = smctrl->association_state;
+    smctrl = old_data;
 
     if (state == SHUTDOWNPENDING || state == SHUTDOWNRECEIVED || state == SHUTDOWNSENT || state == SHUTDOWNACKSENT)
 	return TRUE;

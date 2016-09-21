@@ -74,8 +74,8 @@
 
 /*------------------------ Default Definitions --------------------------------------------------*/
 static int myRWND = 0x7FFF;
-static union sockunion *myAddressList = NULL;
-static unsigned int myNumberOfAddresses = 0;
+static union sockunion *defaultlocaladdrlist_ = NULL;
+static unsigned int defaultlocaladdrlistsize_ = 0;
 static gboolean sendAbortForOOTB = TRUE;
 static int checksumAlgorithm = SCTP_CHECKSUM_ALGORITHM_CRC32C;
 static gboolean librarySupportsPRSCTP = TRUE;
@@ -1671,7 +1671,7 @@ int sctp_initLibrary(void)
     /* we might need to replace this socket !*/
     sfd = adl_get_sctpv4_socket();
 
-    if (adl_gatherLocalAddresses(&myAddressList, (int *) &myNumberOfAddresses,
+    if (adl_gatherLocalAddresses(&defaultlocaladdrlist_, (int *) &defaultlocaladdrlistsize_,
             sfd, TRUE, &maxMTU, flag_Default) == FALSE)
     {
         LEAVE_LIBRARY("sctp_initLibrary");
@@ -1690,9 +1690,9 @@ int mdi_updateMyAddressList(void)
 
     /* we might need to replace this socket !*/
     sfd = adl_get_sctpv4_socket();
-    free(myAddressList);
+    free(defaultlocaladdrlist_);
 
-    if (adl_gatherLocalAddresses(&myAddressList, (int *) &myNumberOfAddresses,
+    if (adl_gatherLocalAddresses(&defaultlocaladdrlist_, (int *) &defaultlocaladdrlistsize_,
             sfd, TRUE, &maxMTU, flag_Default) == FALSE)
     {
         return SCTP_SPECIFIC_FUNCTION_ERROR;
@@ -1752,22 +1752,22 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
             {
                 if (curr_geco_instance_->has_INADDR_ANY_set)
                 {
-                    for (counter = 0; counter < myNumberOfAddresses; counter++)
+                    for (counter = 0; counter < defaultlocaladdrlistsize_; counter++)
                     {
-                        if (sockunion_family(&myAddressList[counter]) == AF_INET)
+                        if (sockunion_family(&defaultlocaladdrlist_[counter]) == AF_INET)
                         {
                             if (adl_equal_address(&(addressList[ii]),
-                                    &(myAddressList[counter])) == TRUE) result =
+                                    &(defaultlocaladdrlist_[counter])) == TRUE) result =
                                     TRUE;
                         }
                     }
                 }
                 if (curr_geco_instance_->has_IN6ADDR_ANY_set)
                 {
-                    for (counter = 0; counter < myNumberOfAddresses; counter++)
+                    for (counter = 0; counter < defaultlocaladdrlistsize_; counter++)
                     {
                         if (adl_equal_address(&(addressList[ii]),
-                                &(myAddressList[counter])) == TRUE) result =
+                                &(defaultlocaladdrlist_[counter])) == TRUE) result =
                                 TRUE;
                     }
                 }
@@ -1805,9 +1805,9 @@ gboolean mdi_checkForCorrectAddress(union sockunion* su)
         break;
     }
 
-    for (counter = 0; counter < myNumberOfAddresses; counter++)
+    for (counter = 0; counter < defaultlocaladdrlistsize_; counter++)
     {
-        if (adl_equal_address(su, &(myAddressList[counter])) == TRUE) found =
+        if (adl_equal_address(su, &(defaultlocaladdrlist_[counter])) == TRUE) found =
                 TRUE;
     }
     return found;
@@ -3314,10 +3314,10 @@ int sctp_getAssocDefaults(unsigned short SCTP_InstanceName,
 
     if (numOfAddresses == 0)
     {
-        params->noOfLocalAddresses = myNumberOfAddresses;
-        for (count = 0; count < myNumberOfAddresses; count++)
+        params->noOfLocalAddresses = defaultlocaladdrlistsize_;
+        for (count = 0; count < defaultlocaladdrlistsize_; count++)
         {
-            adl_sockunion2str(&(myAddressList[count]),
+            adl_sockunion2str(&(defaultlocaladdrlist_[count]),
                     params->localAddressList[count], SCTP_MAX_IP_LEN);
         }
     }
@@ -5052,17 +5052,17 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 
     if (curr_geco_instance_->has_INADDR_ANY_set == TRUE)
     {
-        for (tmp = 0; tmp < myNumberOfAddresses; tmp++)
+        for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
         {
-            switch (sockunion_family(&(myAddressList[tmp])))
+            switch (sockunion_family(&(defaultlocaladdrlist_[tmp])))
             {
             case AF_INET:
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0)
                 {
-                    if (adl_filterInetAddress(&(myAddressList[tmp]),
+                    if (adl_filterInetAddress(&(defaultlocaladdrlist_[tmp]),
                             filterFlags) == TRUE)
                     {
-                        memcpy(&(laddresses[count]), &(myAddressList[tmp]),
+                        memcpy(&(laddresses[count]), &(defaultlocaladdrlist_[tmp]),
                                 sizeof(union sockunion));
                         count++;
                     }
@@ -5074,21 +5074,21 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         }
         event_logii(VERBOSE,
                 "mdi_readLocalAddresses: found %u local addresses from INADDR_ANY (from %u)",
-                count, myNumberOfAddresses);
+                count, defaultlocaladdrlistsize_);
     }
     else if (curr_geco_instance_->has_IN6ADDR_ANY_set == TRUE)
     {
-        for (tmp = 0; tmp < myNumberOfAddresses; tmp++)
+        for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
         {
-            switch (sockunion_family(&(myAddressList[tmp])))
+            switch (sockunion_family(&(defaultlocaladdrlist_[tmp])))
             {
             case AF_INET:
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0)
                 {
-                    if (adl_filterInetAddress(&(myAddressList[tmp]),
+                    if (adl_filterInetAddress(&(defaultlocaladdrlist_[tmp]),
                             filterFlags) == TRUE)
                     {
-                        memcpy(&(laddresses[count]), &(myAddressList[tmp]),
+                        memcpy(&(laddresses[count]), &(defaultlocaladdrlist_[tmp]),
                                 sizeof(union sockunion));
                         count++;
                     }
@@ -5097,10 +5097,10 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
             case AF_INET6:
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV6) != 0)
                 {
-                    if (adl_filterInetAddress(&(myAddressList[tmp]),
+                    if (adl_filterInetAddress(&(defaultlocaladdrlist_[tmp]),
                             filterFlags) == TRUE)
                     {
-                        memcpy(&(laddresses[count]), &(myAddressList[tmp]),
+                        memcpy(&(laddresses[count]), &(defaultlocaladdrlist_[tmp]),
                                 sizeof(union sockunion));
                         count++;
                     }
@@ -5112,7 +5112,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         }
         event_logii(VERBOSE,
                 "mdi_readLocalAddresses: found %u local addresses from IN6ADDR_ANY (from %u)",
-                count, myNumberOfAddresses);
+                count, defaultlocaladdrlistsize_);
     }
     else
     {
@@ -5421,22 +5421,22 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     if (instance->has_IN6ADDR_ANY_set)
     {
         /* get ALL addresses */
-        curr_channel_->noOfLocalAddresses = myNumberOfAddresses;
+        curr_channel_->noOfLocalAddresses = defaultlocaladdrlistsize_;
         curr_channel_->localAddresses = (union sockunion *) calloc(
-                myNumberOfAddresses, sizeof(union sockunion));
-        memcpy(curr_channel_->localAddresses, myAddressList,
-                myNumberOfAddresses * sizeof(union sockunion));
+                defaultlocaladdrlistsize_, sizeof(union sockunion));
+        memcpy(curr_channel_->localAddresses, defaultlocaladdrlist_,
+                defaultlocaladdrlistsize_ * sizeof(union sockunion));
         event_logi(VERBOSE,
                 " mdi_newAssociation: Assoc has has_IN6ADDR_ANY_set, and %d addresses",
-                myNumberOfAddresses);
+                defaultlocaladdrlistsize_);
     }
     else if (instance->has_INADDR_ANY_set)
     {
         /* get all IPv4 addresses */
         curr_channel_->noOfLocalAddresses = 0;
-        for (ii = 0; ii < myNumberOfAddresses; ii++)
+        for (ii = 0; ii < defaultlocaladdrlistsize_; ii++)
         {
-            if (sockunion_family(&(myAddressList[ii])) == AF_INET)
+            if (sockunion_family(&(defaultlocaladdrlist_[ii])) == AF_INET)
             {
                 curr_channel_->noOfLocalAddresses++;
             }
@@ -5445,13 +5445,13 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
                 curr_channel_->noOfLocalAddresses,
                 sizeof(union sockunion));
         curr_channel_->noOfLocalAddresses = 0;
-        for (ii = 0; ii < myNumberOfAddresses; ii++)
+        for (ii = 0; ii < defaultlocaladdrlistsize_; ii++)
         {
-            if (sockunion_family(&(myAddressList[ii])) == AF_INET)
+            if (sockunion_family(&(defaultlocaladdrlist_[ii])) == AF_INET)
             {
                 memcpy(
                         &(curr_channel_->localAddresses[curr_channel_->noOfLocalAddresses]),
-                        &(myAddressList[ii]), sizeof(union sockunion));
+                        &(defaultlocaladdrlist_[ii]), sizeof(union sockunion));
                 curr_channel_->noOfLocalAddresses++;
             }
         }
