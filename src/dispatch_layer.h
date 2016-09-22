@@ -446,6 +446,8 @@ struct channel_t
         uint local_addres_size;
 
         ushort remote_port;
+
+        // it uses geco_malloc_ext() to alloc remeber to use geco_free_ext() to free mempey
         sockaddrunion *remote_addres;
         uint remote_addres_size;
 
