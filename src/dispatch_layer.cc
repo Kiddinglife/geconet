@@ -2645,7 +2645,7 @@ bool dispatch_layer_t::alloc_new_channel(geco_instance_t* sInstance,
 	{
 		if (curr_geco_instance_ == NULL)
 		{
-			EVENTLOG(FALTAL_ERROR_EXIT, "SCTP Instance for Port %u were all NULL, call sctp_registerInstance FIRST !", local_port);
+			EVENTLOG1(FALTAL_ERROR_EXIT, "SCTP Instance for Port %u were all NULL, call sctp_registerInstance FIRST !", local_port);
 			return false;
 		}
 		else
@@ -2889,6 +2889,7 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 	int SendCommUpNotification = 0;
 	ChannelState newstate = UnknownChannelState;
 	ChannelState state = smctrl->channel_state;
+	chunk_id_t cookie_ack_cid;
 
 	EVENTLOG5(DEBUG,
 		"State: %u, cookie_remote_tag: %u , cookie_local_tag: %u, remote_tag: %u , local_tag : %u",
@@ -2924,7 +2925,7 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 			smctrl->outbound_stream, smctrl->inbound_stream);
 
 		//bundle and send cookie ack
-		chunk_id_t cookie_ack_cid = alloc_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
+		cookie_ack_cid = alloc_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
 		bundle_ctrl_chunk(complete_simple_chunk(cookie_ack_cid));
 		free_simple_chunk(cookie_ack_cid);
 		unlock_bundle_ctrl();
