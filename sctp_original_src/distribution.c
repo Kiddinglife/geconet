@@ -51,7 +51,7 @@
 #include  "bundling.h"          /* interfaces to bundling */
 #include  "SCTP-control.h"      /* interfaces to SCTP-control */
 #include  "auxiliary.h"
-#include  "streamengine.h"      /* interfaces to streamengine */
+#include  "deliverman_control.h"      /* interfaces to deliverman_control */
 #include  "flowcontrol.h"       /* interfaces to flowcontrol */
 #include  "recvctrl.h"          /* interfaces to receive-controller */
 #include  "chunkHandler.h"
@@ -87,7 +87,7 @@ static gboolean supportADDIP = FALSE;
  * Each SCTP-instances is related to one port and to
  * one SCTP adaption-layer. This may change soon !
  */
-typedef struct SCTPINSTANCE
+typedef struct SCTPINSTANCE //geco inst
 {
     /*@{ */
     /** The name of this SCTP-instance, used as key. */
@@ -111,7 +111,7 @@ typedef struct SCTPINSTANCE
     /** here follow default parameters for instance initialization */
     unsigned int default_rtoInitial;
     unsigned int default_validCookieLife;
-    unsigned int default_assocMaxRetransmits;
+    unsigned int default_assocMaxRetransmitsPerChannel;
     unsigned int default_pathMaxRetransmits;
     unsigned int default_maxInitRetransmits;
     unsigned int default_myRwnd;
@@ -160,15 +160,15 @@ typedef struct ASSOCIATION
     /** array of local addresses */
     union sockunion *localAddresses;
     /** pointer to flowcontrol structure */
-    void *flowControl;
+    void *flow_control;
     /** pointer to reliable-transfer structure */
-    void *reliableTransfer;
+    void *reliable_transfer_control;
     /** pointer to receive-control structure */
-    void *rx_control;
+    void *receive_control;
     /** pointer to stream structure */
-    void *streamengine;
+    void *deliverman_control;
     /** pointer to pathmanagement structure */
-    void *pathMan;
+    void *path_control;
     /** pointer to bundling structure */
     void *bundling;
     /** pointer to SCTP-control */
@@ -714,33 +714,33 @@ static void mdi_removeAssociationData(Association * assoc)
         if (assoc->tagRemote != 0)
         {
             /* association init was already completed */
-            if (assoc->flowControl)
+            if (assoc->flow_control)
             {
-                fc_delete_flowcontrol(assoc->flowControl);
-                assoc->flowControl = NULL;
+                fc_delete_flowcontrol(assoc->flow_control);
+                assoc->flow_control = NULL;
             }
-            if (assoc->reliableTransfer)
+            if (assoc->reliable_transfer_control)
             {
-                rtx_delete_reltransfer(assoc->reliableTransfer);
-                assoc->reliableTransfer = NULL;
+                rtx_delete_reltransfer(assoc->reliable_transfer_control);
+                assoc->reliable_transfer_control = NULL;
             }
-            if (assoc->rx_control)
+            if (assoc->receive_control)
             {
-                rxc_delete_recvctrl(assoc->rx_control);
-                assoc->rx_control = NULL;
+                rxc_delete_recvctrl(assoc->receive_control);
+                assoc->receive_control = NULL;
             }
-            if (assoc->streamengine)
+            if (assoc->deliverman_control)
             {
-                se_delete_stream_engine(assoc->streamengine);
-                assoc->streamengine = NULL;
+                se_delete_stream_engine(assoc->deliverman_control);
+                assoc->deliverman_control = NULL;
             }
         }
 
-        pm_deletePathman(assoc->pathMan);
+        pm_deletePathman(assoc->path_control);
         bu_delete(assoc->bundling);
         sci_deleteSCTP_control(assoc->sctp_control);
 
-        assoc->pathMan = NULL;
+        assoc->path_control = NULL;
         assoc->bundling = NULL;
         assoc->sctp_control = NULL;
 
@@ -2121,7 +2121,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 
     curr_geco_instance_->default_rtoInitial = RTO_INITIAL;
     curr_geco_instance_->default_validCookieLife = VALID_COOKIE_LIFE_TIME;
-    curr_geco_instance_->default_assocMaxRetransmits = ASSOCIATION_MAX_RETRANS;
+    curr_geco_instance_->default_assocMaxRetransmitsPerChannel = ASSOCIATION_MAX_RETRANS;
     curr_geco_instance_->default_pathMaxRetransmits = MAX_PATH_RETRANSMITS;
     curr_geco_instance_->default_maxInitRetransmits = MAX_INIT_RETRANSMITS;
     /* using the static variable defined after initialization of the adaptation layer */
@@ -2651,10 +2651,10 @@ short sctp_setPrimary(unsigned int associationID, short path_id)
  * get the received data.
  * The stream engine must copy the chunk data from a received  SCTP datagram to
  * a new byte string, because the SCTP datagram is overwritten when the next datagram
- * is received and the lifetime of a chunk in the streamengine might outlast the
+ * is received and the lifetime of a chunk in the deliverman_control might outlast the
  *  the reception of several SCTP datagrams.
  *  For this reasons and to avoid repeated copying of byte strings, a pointer to
- *  the byte string of chunkdata allocated by the streamengine is returned.
+ *  the byte string of chunkdata allocated by the deliverman_control is returned.
  *  According to the standard, the chunkdata should be copied to to a buffer provided
  *  by the ULP.
  *  @param   associationID  ID of association.
@@ -2711,7 +2711,7 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID,
     {
         curr_geco_instance_ = curr_channel_->sctpInstance;
 
-        /* retrieve data from streamengine instance */
+        /* retrieve data from deliverman_control instance */
         result = se_ulpreceivefrom(buffer, length, streamID, streamSN, tsn,
                 addressIndex, flags);
     }
@@ -3251,7 +3251,7 @@ int sctp_setAssocDefaults(unsigned short SCTP_InstanceName,
     instance->default_rtoMin = params->rtoMin;
     instance->default_rtoMax = params->rtoMax;
     instance->default_validCookieLife = params->validCookieLife;
-    instance->default_assocMaxRetransmits = params->assocMaxRetransmits;
+    instance->default_assocMaxRetransmitsPerChannel = params->assocMaxRetransmits;
     instance->default_pathMaxRetransmits = params->pathMaxRetransmits;
     instance->default_maxInitRetransmits = params->maxInitRetransmits;
     instance->default_myRwnd = params->myRwnd;
@@ -3334,7 +3334,7 @@ int sctp_getAssocDefaults(unsigned short SCTP_InstanceName,
     params->rtoMin = instance->default_rtoMin;
     params->rtoMax = instance->default_rtoMax;
     params->validCookieLife = instance->default_validCookieLife;
-    params->assocMaxRetransmits = instance->default_assocMaxRetransmits;
+    params->assocMaxRetransmits = instance->default_assocMaxRetransmitsPerChannel;
     params->pathMaxRetransmits = instance->default_pathMaxRetransmits;
     params->maxInitRetransmits = instance->default_maxInitRetransmits;
     params->myRwnd = instance->default_myRwnd;
@@ -4435,7 +4435,7 @@ void* get_flowctrl(void)
     }
     else
     {
-        return curr_channel_->flowControl;
+        return curr_channel_->flow_control;
     }
 }
 
@@ -4453,8 +4453,8 @@ void *mdi_readReliableTransfer(void)
     else
     {
         /*        event_logii(VVERBOSE, "setting RelTransfer MemoryAddress %x, for association %u",
-         curr_channel_->reliableTransfer, curr_channel_->assocId); */
-        return curr_channel_->reliableTransfer;
+         curr_channel_->reliable_transfer_control, curr_channel_->assocId); */
+        return curr_channel_->reliable_transfer_control;
     }
 }
 
@@ -4471,7 +4471,7 @@ void *mdi_readRX_control(void)
     }
     else
     {
-        return curr_channel_->rx_control;
+        return curr_channel_->receive_control;
     }
 }
 
@@ -4490,8 +4490,8 @@ void *mdi_readStreamEngine(void)
     {
         event_logii(VVERBOSE,
                 "setting StreamEngine MemoryAddress %x, for association %u",
-                curr_channel_->streamengine, curr_channel_->assocId);
-        return curr_channel_->streamengine;
+                curr_channel_->deliverman_control, curr_channel_->assocId);
+        return curr_channel_->deliverman_control;
     }
 }
 
@@ -4508,7 +4508,7 @@ void *mdi_readPathMan(void)
     }
     else
     {
-        return curr_channel_->pathMan;
+        return curr_channel_->path_control;
     }
 }
 
@@ -5197,7 +5197,7 @@ int mdi_getDefaultValidCookieLife(void* sctpInstance)
 int mdi_getDefaultAssocMaxRetransmits(void* sctpInstance)
 {
     if (sctpInstance == NULL) return -1;
-    else return ((SCTP_instance*) sctpInstance)->default_assocMaxRetransmits;
+    else return ((SCTP_instance*) sctpInstance)->default_assocMaxRetransmitsPerChannel;
 }
 int mdi_getDefaultPathMaxRetransmits(void* sctpInstance)
 {
@@ -5491,17 +5491,17 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     }
 
     /* initialize pointer to other modules of SCTP */
-    curr_channel_->flowControl = NULL;
-    curr_channel_->reliableTransfer = NULL;
-    curr_channel_->rx_control = NULL;
-    curr_channel_->streamengine = NULL;
+    curr_channel_->flow_control = NULL;
+    curr_channel_->reliable_transfer_control = NULL;
+    curr_channel_->receive_control = NULL;
+    curr_channel_->deliverman_control = NULL;
 
     /* only pathman, bundling and sctp-control are created at this point, the rest is created
      with mdi_initAssociation */
     curr_channel_->bundling = bu_new();
-    curr_channel_->pathMan = pm_newPathman(noOfDestinationAddresses,
+    curr_channel_->path_control = pm_new(noOfDestinationAddresses,
             primaryDestinitionAddress, instance);
-    curr_channel_->sctp_control = sci_newSCTP_control(instance);
+    curr_channel_->sctp_control = sm_new(instance);
 
     curr_channel_->supportsPRSCTP = instance->supportsPRSCTP;
     curr_channel_->peerSupportsPRSCTP = instance->supportsPRSCTP;
@@ -5565,10 +5565,10 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
         event_log(INTERNAL_EVENT_1,
                 "Deleting Modules in mdi_initAssociation() -- then recreating them !!!!");
         /* association init was already completed */
-        fc_delete_flowcontrol(curr_channel_->flowControl);
-        rtx_delete_reltransfer(curr_channel_->reliableTransfer);
-        rxc_delete_recvctrl(curr_channel_->rx_control);
-        se_delete_stream_engine(curr_channel_->streamengine);
+        fc_delete_flowcontrol(curr_channel_->flow_control);
+        rtx_delete_reltransfer(curr_channel_->reliable_transfer_control);
+        rxc_delete_recvctrl(curr_channel_->receive_control);
+        se_delete_stream_engine(curr_channel_->deliverman_control);
     }
 
     /* TODO : check number of input and output streams (although that should be fixed now) */
@@ -5579,15 +5579,15 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
     curr_channel_->peerSupportsPRSCTP = withPRSCTP;
     curr_channel_->supportsPRSCTP = withPRSCTP;
 
-    curr_channel_->reliableTransfer = (void *) alloc_reliable_transfer(
+    curr_channel_->reliable_transfer_control = (void *) alloc_reliable_transfer(
             curr_channel_->noOfNetworks, localInitialTSN);
-    curr_channel_->flowControl = (void *) fc_new_flowcontrol(
+    curr_channel_->flow_control = (void *) fc_new_flowcontrol(
             remoteSideReceiverWindow, localInitialTSN,
             curr_channel_->noOfNetworks, curr_channel_->maxSendQueue);
 
-    curr_channel_->rx_control = (void *) alloc_recvctrl(remoteInitialTSN,
+    curr_channel_->receive_control = (void *) alloc_recvctrl(remoteInitialTSN,
             curr_channel_->noOfNetworks, curr_channel_->sctpInstance);
-    curr_channel_->streamengine = (void *) alloc_deliverma(
+    curr_channel_->deliverman_control = (void *) alloc_deliverma(
             noOfInStreams, noOfOutStreams, withPRSCTP);
 
     event_logii(INTERNAL_EVENT_1,
@@ -5634,8 +5634,8 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
             "ASSOCIATION RESTART: remote initial TSN:  %u, local initial TSN",
             remoteInitialTSN, localInitialTSN);
 
-    curr_channel_->reliableTransfer = rtx_restart_reliable_transfer(
-            curr_channel_->reliableTransfer, noOfPaths, localInitialTSN);
+    curr_channel_->reliable_transfer_control = rtx_restart_reliable_transfer(
+            curr_channel_->reliable_transfer_control, noOfPaths, localInitialTSN);
     fc_restart(new_rwnd, localInitialTSN, curr_channel_->maxSendQueue);
     rxc_restart_receivecontrol(get_my_default_rwnd(), remoteInitialTSN);
 
@@ -5643,36 +5643,36 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
     curr_channel_->peerSupportsPRSCTP = withPRSCTP;
     curr_channel_->supportsPRSCTP = withPRSCTP;
 
-    if (curr_channel_->streamengine)
+    if (curr_channel_->deliverman_control)
     {
-        se_delete_stream_engine(curr_channel_->streamengine);
+        se_delete_stream_engine(curr_channel_->deliverman_control);
     }
     else
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: curr_channel_->streamengine is NULL !");
+                "mdi_restartAssociation: curr_channel_->deliverman_control is NULL !");
     }
-    curr_channel_->streamengine = (void *) alloc_deliverman(
+    curr_channel_->deliverman_control = (void *) alloc_deliverman(
             noOfInStreams, noOfOutStreams, withPRSCTP);
 
-    if (curr_channel_->pathMan)
+    if (curr_channel_->path_control)
     {
-        pm_deletePathman(curr_channel_->pathMan);
-        curr_channel_->pathMan = NULL;
+        pm_deletePathman(curr_channel_->path_control);
+        curr_channel_->path_control = NULL;
     }
     else
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: curr_channel_->pathMan is NULL !");
+                "mdi_restartAssociation: curr_channel_->path_control is NULL !");
     }
 
     /* frees old address-list before assigning new one */
     mdi_writeDestinationAddresses(destinationAddressList, noOfPaths);
 
-    curr_channel_->pathMan = pm_newPathman(noOfPaths, primaryAddress,
+    curr_channel_->path_control = pm_new(noOfPaths, primaryAddress,
             curr_geco_instance_);
 
-    if (!curr_channel_->pathMan)
+    if (!curr_channel_->path_control)
     {
         error_log(ERROR_FATAL, "Error 1 in RESTART --> Fix implementation");
         return -1;

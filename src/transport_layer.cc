@@ -2026,13 +2026,12 @@ bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
     // reorder addres to put ip4 addr together and ip6 addres together
     sockaddrunion* buf = (sockaddrunion*) calloc(*numberOfNets, sizeof(sockaddrunion));
     int count = 0;
-    int i;
     //copy ip4
     for (i = 0; i < *numberOfNets; i++)
     {
-        if (saddr_family(addresses[ii]) == AF_INET)
+        if (saddr_family(addresses[i]) == AF_INET)
         {
-            memcpy(buf + count, addresses[ii], sizeof(sockaddrunion));
+            memcpy(buf + count, addresses[i], sizeof(sockaddrunion));
             count++;
         }
     }
@@ -2040,9 +2039,9 @@ bool network_interface_t::get_local_addresses(union sockaddrunion **addresses,
     count = 0;
     for (i = 0; i < *numberOfNets; i++)
     {
-        if (saddr_family(addresses[ii]) == AF_INET6)
+        if (saddr_family(addresses[i]) == AF_INET6)
         {
-            memcpy(buf + count, addresses[ii], sizeof(sockaddrunion));
+            memcpy(buf + count, addresses[i], sizeof(sockaddrunion));
             count++;
         }
     }

@@ -46,7 +46,7 @@
 #include "recvctrl.h"
 #include "reltransfer.h"
 #include "errorhandler.h"
-#include "streamengine.h"
+#include "deliverman_control.h"
 #include "distribution.h"
 
 #include <stdio.h>

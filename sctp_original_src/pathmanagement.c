@@ -118,7 +118,7 @@ typedef struct PATHMANDATA
     /** association-ID */
     unsigned int associationID;
     /** maximum retransmissions per path parameter */
-    int maxPathRetransmissions;
+    int max_retrans_per_path;
     /** initial RTO, a configurable parameter */
     int rto_initial;
     /** minimum RTO, a configurable parameter */
@@ -208,7 +208,7 @@ static gboolean handleChunksRetransmitted(short pathID)
         return TRUE;
     }
 
-    if (pmData->pathData[pathID].pathRetranscount >= (unsigned int)pmData->maxPathRetransmissions) {
+    if (pmData->pathData[pathID].pathRetranscount >= (unsigned int)pmData->max_retrans_per_path) {
         /* Set state of this path to inactive and notify change of state to ULP */
         pmData->pathData[pathID].state = PM_INACTIVE;
         event_logi(INTERNAL_EVENT_0, "handleChunksRetransmitted: path %d to INACTIVE ", pathID);
@@ -1004,9 +1004,9 @@ unsigned short pm_readPrimaryPath(void)
 }                               /* end: pm_readPrimaryPath */
 
 /**
-  pm_getMaxPathRetransmisions is used to get the current  maxPathRetransmissions
+  pm_getMaxPathRetransmisions is used to get the current  max_retrans_per_path
   parameter value
-  @return   maxPathRetransmissions of the current instance
+  @return   max_retrans_per_path of the current instance
 */
 int  pm_getMaxPathRetransmisions(void)
 {
@@ -1016,14 +1016,14 @@ int  pm_getMaxPathRetransmisions(void)
         event_log(ERROR_MAJOR, "pm_getMaxPathRetransmisions(): pathmanagement-instance does not exist");
         return -1;
     } else {
-        return pmData->maxPathRetransmissions;
+        return pmData->max_retrans_per_path;
     }
 }                               /* end: pm_getMaxPathRetransmisions(void) */
 
 /**
-  pm_setMaxPathRetransmisions is used to get the current  maxPathRetransmissions
+  pm_setMaxPathRetransmisions is used to get the current  max_retrans_per_path
   parameter value
-  @param   new_max  new value for  maxPathRetransmissions parameter
+  @param   new_max  new value for  max_retrans_per_path parameter
   @return   0 for success, -1 for error
 */
 int  pm_setMaxPathRetransmisions(int new_max)
@@ -1034,7 +1034,7 @@ int  pm_setMaxPathRetransmisions(int new_max)
         event_log(ERROR_MAJOR, "pm_setMaxPathRetransmisions(): pathmanagement-instance does not exist");
         return -1;
     } else {
-        pmData->maxPathRetransmissions = new_max;
+        pmData->max_retrans_per_path = new_max;
     }
     return 0;
 }                               /* end: pm_setMaxPathRetransmisions(void) */
@@ -1260,7 +1260,7 @@ short pm_setPaths(short noOfPaths, short primaryPathID)
 
 
 /**
- * pm_newPathman creates a new instance of pathmanagement. There is one pathmanagement instance
+ * pm_new creates a new instance of pathmanagement. There is one pathmanagement instance
  * per association. WATCH IT : this needs to be fixed ! pathData is NULL, but may accidentally be
  * referenced !
  * @param numberOfPaths    number of paths of the association
@@ -1268,7 +1268,7 @@ short pm_setPaths(short noOfPaths, short primaryPathID)
  * @param  sctpInstance pointer to the SCTP instance
  * @return pointer to the newly created path management instance !
  */
-void *pm_newPathman(short numberOfPaths, short primaryPath, void* sctpInstance)
+void *pm_new(short numberOfPaths, short primaryPath, void* sctpInstance)
 {
     PathmanData *pmData;
 
@@ -1280,12 +1280,12 @@ void *pm_newPathman(short numberOfPaths, short primaryPath, void* sctpInstance)
     pmData->primaryPath = primaryPath;
     pmData->numberOfPaths = numberOfPaths;
     pmData->associationID = get_curr_channel_id();
-    pmData->maxPathRetransmissions = mdi_getDefaultPathMaxRetransmits(sctpInstance);
+    pmData->max_retrans_per_path = mdi_getDefaultPathMaxRetransmits(sctpInstance);
     pmData->rto_initial = mdi_getDefaultRtoInitial(sctpInstance);
     pmData->rto_min = mdi_getDefaultRtoMin(sctpInstance);
     pmData->rto_max = mdi_getDefaultRtoMax(sctpInstance);
     return pmData;
-}                               /* end: pm_newPathman */
+}                               /* end: pm_new */
 
 
 

@@ -51,7 +51,7 @@
 #include "recvctrl.h"
 #include "chunkHandler.h"
 #include "flowcontrol.h"
-#include "streamengine.h"
+#include "deliverman_control.h"
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
@@ -113,14 +113,14 @@ typedef struct SCTP_CONTROLDATA
     /** the sctp instance */
     void *instance;
     /*@} */
-} SCTP_controlData;
+} smctrl_t;
 
 /* -------------------- Declarations -------------------------------------------------------------*/
 
 /*
 pointer to the current controller structure. Only set when association exists.
 */
-static SCTP_controlData *smctrl;
+static smctrl_t *smctrl;
 
 /* ------------------ Function Implementations ---------------------------------------------------*/
 
@@ -151,7 +151,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	return;
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log: association exist, but has no SCTP-control ? */
 	error_log(ERROR_MAJOR, "Association without SCTP-control");
@@ -350,7 +350,7 @@ void scu_associate(unsigned short noOfOutStreams,
     /* ULP has called sctp_associate at distribution.
 	   Distribution has allready allocated the association data and partially initialized */
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	error_log(ERROR_MAJOR, "read SCTP-control failed");
 	return;
@@ -466,7 +466,7 @@ void scu_shutdown()
     ChunkID shutdownCID;
     boolean readyForShutdown;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "read SCTP-control failed");
@@ -586,7 +586,7 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
     ChunkID abortCID;
     gboolean removed = FALSE;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "read SCTP-control failed");
@@ -732,7 +732,7 @@ int sctlr_init(SCTP_init *init)
 	/* free abort chunk */
 	ch_deleteChunk(abortCID);
 	/* delete all data of this association */
-	if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) != NULL)
+	if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) != NULL)
 	{
 	    bu_unlock_sender(NULL);
 	    mdi_deleteCurrentAssociation();
@@ -747,7 +747,7 @@ int sctlr_init(SCTP_init *init)
     result = mdi_readLastFromAddress(&last_source);
     if (result != 0)
     {
-	if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+	if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
 	{
 	    mdi_clearAssociationData();
 	    return_state = STATE_STOP_PARSING_REMOVED;
@@ -766,7 +766,7 @@ int sctlr_init(SCTP_init *init)
 	return return_state;
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	event_log(VERBOSE, " DO_5_1_B_INIT: Normal init case ");
 	/* DO_5_1_B_INIT : Normal case, no association exists yet */
@@ -1064,7 +1064,7 @@ gboolean sctlr_initAck(SCTP_init *initAck)
 	return return_state;
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	ch_forgetChunk(initAckCID);
 	error_log(ERROR_MAJOR, "sctlr_initAck: read SCTP-control failed");
@@ -1402,7 +1402,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	return;
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	noOfDestinationAddresses = 1;
 	primaryDestinationAddress = 0;
@@ -1425,7 +1425,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	}
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	error_log(ERROR_MAJOR, "sctlr_cookie-echo: program error: SCTP-control NULL");
 	ch_deleteChunk(initCID);
@@ -1751,7 +1751,7 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
     }
     ch_forgetChunk(cookieAckCID);
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	error_log(ERROR_MAJOR, "sctlr_cookieAck: read SCTP-control failed");
 	return;
@@ -1830,7 +1830,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	return return_state;
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_shutdown: read SCTP-control failed");
@@ -1975,7 +1975,7 @@ int sctlr_shutdownAck()
     int return_state = STATE_OK;
     int removed = 0; /* i.e. meaning FALSE here ! */
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_shutdownAck: read SCTP-control failed");
@@ -2093,7 +2093,7 @@ int sctlr_shutdownComplete()
     unsigned int lastFromPath;
     int return_state = STATE_OK;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_shutdownComplete: read SCTP-control failed");
@@ -2167,7 +2167,7 @@ int sctlr_abort()
     unsigned int lastFromPath;
     int return_state = STATE_OK;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_abort: read SCTP-control failed");
@@ -2258,7 +2258,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	return;
     }
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sctlr_staleCookie: read SCTP-control failed");
@@ -2303,7 +2303,7 @@ guint32 sci_getState()
 {
     guint32 state;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_getState: read SCTP-control failed");
@@ -2361,9 +2361,9 @@ void sci_allChunksAcked()
     guint32 state;
     ChunkID shutdownCID;
     ChunkID shutdownAckCID;
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_allChunksAcked: read SCTP-control failed");
@@ -2439,17 +2439,17 @@ void sci_allChunksAcked()
 /**
 	newSCTP_control allocates data for a new SCTP-Control instance
 	*/
-void *sci_newSCTP_control(void *sctpInstance)
+void *sm_new(void *sctpInstance)
 {
-    SCTP_controlData *tmp = NULL;
+    smctrl_t *tmp = NULL;
 
     event_logi(INTERNAL_EVENT_0, "Create SCTP-control for Instance %x", sctpInstance);
 
-    tmp = (SCTP_controlData *)malloc(sizeof(SCTP_controlData));
+    tmp = (smctrl_t *)malloc(sizeof(smctrl_t));
 
     if (tmp == NULL)
     {
-	error_log(ERROR_MAJOR, " Malloc failed in sci_newSCTP_control()");
+	error_log(ERROR_MAJOR, " Malloc failed in sm_new()");
 	return NULL;
     }
 
@@ -2480,10 +2480,10 @@ void *sci_newSCTP_control(void *sctpInstance)
   */
 void sci_deleteSCTP_control(void *sctpControlData)
 {
-    SCTP_controlData *sctpCD;
+    smctrl_t *sctpCD;
 
     event_log(INTERNAL_EVENT_0, "deleting SCTP-control");
-    sctpCD = (SCTP_controlData *)sctpControlData;
+    sctpCD = (smctrl_t *)sctpControlData;
     if (sctpCD->initTimer != 0)
     {
 	sctp_stopTimer(sctpCD->initTimer);
@@ -2501,10 +2501,10 @@ void sci_deleteSCTP_control(void *sctpControlData)
  */
 int sci_getMaxAssocRetransmissions(void)
 {
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
     int max;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_getMaxAssocRetransmissions(): read SCTP-control failed");
@@ -2522,9 +2522,9 @@ int sci_getMaxAssocRetransmissions(void)
  */
 int sci_getMaxInitRetransmissions(void)
 {
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
     int max;
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_getMaxInitRetransmissions(): read SCTP-control failed");
@@ -2543,9 +2543,9 @@ int sci_getMaxInitRetransmissions(void)
 int sci_getCookieLifeTime(void)
 {
     int max;
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MINOR, "sci_getCookieLifeTime(): read SCTP-control failed");
@@ -2564,8 +2564,8 @@ int sci_getCookieLifeTime(void)
  */
 int sci_setMaxAssocRetransmissions(int new_max)
 {
-    SCTP_controlData *old_data = smctrl;
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    smctrl_t *old_data = smctrl;
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_setMaxAssocRetransmissions(): read SCTP-control failed");
@@ -2584,9 +2584,9 @@ int sci_setMaxAssocRetransmissions(int new_max)
  */
 int sci_setMaxInitRetransmissions(int new_max)
 {
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_setMaxInitRetransmissions(): read SCTP-control failed");
@@ -2605,9 +2605,9 @@ int sci_setMaxInitRetransmissions(int new_max)
  */
 int sci_setCookieLifeTime(int new_max)
 {
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
 
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_setCookieLifeTime(): read SCTP-control failed");
@@ -2621,10 +2621,10 @@ int sci_setCookieLifeTime(int new_max)
 
 gboolean sci_shutdown_procedure_started()
 {
-    SCTP_controlData *old_data = smctrl;
+    smctrl_t *old_data = smctrl;
 
     guint32 state;
-    if ((smctrl = (SCTP_controlData *)mdi_readSCTP_control()) == NULL)
+    if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
 	error_log(ERROR_MAJOR, "sci_readState : read SCTP-control failed");

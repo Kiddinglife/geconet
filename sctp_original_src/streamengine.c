@@ -1,4 +1,4 @@
-/* $Id: streamengine.c 2199 2009-08-31 06:43:13Z dreibh $
+/* $Id: deliverman_control.c 2199 2009-08-31 06:43:13Z dreibh $
  * --------------------------------------------------------------------------
  *
  *           //=====   //===== ===//=== //===//  //       //   //===//
@@ -45,7 +45,7 @@
 #include "globals.h"
 #include <errno.h>
 #include "flowcontrol.h"
-#include "streamengine.h"
+#include "deliverman_control.h"
 #include "distribution.h"
 #include "errorhandler.h"
 #include "SCTP-control.h"

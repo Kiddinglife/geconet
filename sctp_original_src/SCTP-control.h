@@ -211,7 +211,7 @@ void sci_allChunksAcked(void);
 
 /* newSCTP_control allocates data for a new SCTP-Control instance
 */
-void *sci_newSCTP_control(void* sctpInstance);
+void *sm_new(void* sctpInstance);
 
 
 

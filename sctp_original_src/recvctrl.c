@@ -45,7 +45,7 @@
 #include "adaptation.h"
 #include "bundling.h"
 #include "distribution.h"
-#include "streamengine.h"
+#include "deliverman_control.h"
 #include "SCTP-control.h"
 
 #include <glib.h>
