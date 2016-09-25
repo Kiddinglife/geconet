@@ -5,19 +5,19 @@
  *      Author: jakez
  */
 
-/**
- * WHY WE NEED MEMORY ALIGNMENT?
- * 1. Mips CPU 只能通过Load/Store两条指令访问内存
- * RISC的指令一般比较整齐，单条指令的功能单一，执行时间比较快。只能对寄存器中的数据运算，存储器的寻址一般只能通过L/S(Load/Store)进行。一般为等长指令，更便于流水线。
- * MIPS为RISC系统，等长指令，每条指令都有相同的长度：32位。其操作码固定为：6位。其余26位为若干个操作数。
- * 2. 内存地址的对齐
- * 对于一个32位的系统来说，CPU 一次只能从内存读32位长度的数据。如果CPU要读取一个int类型的变量并且该变量的起始位不在所读32位数据的首位，
- * 那么CPU肯定无法一次性读完这个变量，这时就说这个变量的地址是不对齐的。相反，如果CPU可以一次性读完一个变量，则说该变量的地址是对齐的。
- * 3. Mips CPU 要求内存地址（即Load/Store的操作地址）必须是对齐的
- * 其实不管是Mips，还是X86，都希望所操作地址是对齐的，因为这样可以最快速地处理数据。
- * 不过X86平台可以很容易很快速地处理不对齐的情况，而Mips一旦遇到地址不对齐的变量就会抛出exception,从而调用一大段后续处理代码，继而消耗大量的时间。
- * 因此，不管工作在什么平台下，程序员都应该养成使内存地址对齐的好习惯。
- */
+ /**
+  * WHY WE NEED MEMORY ALIGNMENT?
+  * 1. Mips CPU 只能通过Load/Store两条指令访问内存
+  * RISC的指令一般比较整齐，单条指令的功能单一，执行时间比较快。只能对寄存器中的数据运算，存储器的寻址一般只能通过L/S(Load/Store)进行。一般为等长指令，更便于流水线。
+  * MIPS为RISC系统，等长指令，每条指令都有相同的长度：32位。其操作码固定为：6位。其余26位为若干个操作数。
+  * 2. 内存地址的对齐
+  * 对于一个32位的系统来说，CPU 一次只能从内存读32位长度的数据。如果CPU要读取一个int类型的变量并且该变量的起始位不在所读32位数据的首位，
+  * 那么CPU肯定无法一次性读完这个变量，这时就说这个变量的地址是不对齐的。相反，如果CPU可以一次性读完一个变量，则说该变量的地址是对齐的。
+  * 3. Mips CPU 要求内存地址（即Load/Store的操作地址）必须是对齐的
+  * 其实不管是Mips，还是X86，都希望所操作地址是对齐的，因为这样可以最快速地处理数据。
+  * 不过X86平台可以很容易很快速地处理不对齐的情况，而Mips一旦遇到地址不对齐的变量就会抛出exception,从而调用一大段后续处理代码，继而消耗大量的时间。
+  * 因此，不管工作在什么平台下，程序员都应该养成使内存地址对齐的好习惯。
+  */
 
 #ifndef MY_GLOBALS_H_
 #define MY_GLOBALS_H_
@@ -110,20 +110,20 @@
 
 #else
 #define ADDRESS_LIST_BUFFER_SIZE        4096
-//#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
+  //#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
 #define IFNAMSIZ IF_NAMESIZE
 struct iphdr
 {
-    uchar version_length;
-    uchar typeofservice; /* type of service */
-    ushort length; /* total length */
-    ushort identification; /* identification */
-    ushort fragment_offset; /* fragment offset field */
-    uchar ttl; /* time to live */
-    uchar protocol; /* protocol */
-    ushort checksum; /* checksum */
-    struct in_addr src_addr; /* source and dest address */
-    struct in_addr dst_addr;
+	uchar version_length;
+	uchar typeofservice; /* type of service */
+	ushort length; /* total length */
+	ushort identification; /* identification */
+	ushort fragment_offset; /* fragment offset field */
+	uchar ttl; /* time to live */
+	uchar protocol; /* protocol */
+	ushort checksum; /* checksum */
+	struct in_addr src_addr; /* source and dest address */
+	struct in_addr dst_addr;
 };
 
 #define msghdr _WSAMSG
@@ -139,9 +139,9 @@ ap = (struct sockaddr *)((caddr_t) ap + (ap->sa_len ? \
 ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
 inline bool IN6_ADDR_EQUAL(const in6_addr *x, const in6_addr *y)
 {
-    uint64_t* a = (uint64_t*)x;
-    uint64_t* b = (uint64_t*)y;
-    return (bool) ((a[1] == b[1]) && (a[0] == b[0]));
+	uint64_t* a = (uint64_t*)x;
+	uint64_t* b = (uint64_t*)y;
+	return (bool)((a[1] == b[1]) && (a[0] == b[0]));
 }
 #else
 #define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
@@ -200,35 +200,35 @@ inline bool IN6_ADDR_EQUAL(const in6_addr *x, const in6_addr *y)
 #include "messages.h"
 
 enum geco_return_enum
-    :int
-    {
-        good,
-    discard,
-    reply_abort,
-    recv_geco_packet_but_integrity_check_failed,
-    recv_geco_packet_but_port_numbers_check_failed,
-    recv_geco_packet_but_addrs_formate_check_failed,
-    recv_geco_packet_but_found_channel_has_no_instance,
-    recv_geco_packet_but_dest_addr_check_failed,
-    recv_geco_packet_but_morethanone_init,
-    recv_geco_packet_but_morethanone_init_ack,
-    recv_geco_packet_but_morethanone_shutdown_complete,
-    recv_geco_packet_but_init_chunk_has_zero_verifi_tag,
-    recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag,
-    recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate,
-    recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal,
-    recv_geco_packet_but_nootb_sdack_otherthan_sds_state,
-    recv_geco_packet_but_nootb_initack_otherthan_cookiew_state,
-    recv_geco_packet_but_nootb_packet_verifitag_illegal,
-    recv_geco_packet_but_it_is_ootb_abort_discard,
-    recv_geco_packet_but_it_is_ootb_sdc_discard,
-    recv_geco_packet_but_it_is_ootb_sdack_send_sdc,
-    recv_geco_packet_but_it_is_ootb_cookie_ack_discard,
-    recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard,
-    recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag,
-    recv_geco_packet_but_local_instance_has_zero_portnum,
-    recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk,
-    recv_geco_packet_but_not_send_abort_for_ootb_packet
+	:int
+{
+	good,
+	discard,
+	reply_abort,
+	recv_geco_packet_but_integrity_check_failed,
+	recv_geco_packet_but_port_numbers_check_failed,
+	recv_geco_packet_but_addrs_formate_check_failed,
+	recv_geco_packet_but_found_channel_has_no_instance,
+	recv_geco_packet_but_dest_addr_check_failed,
+	recv_geco_packet_but_morethanone_init,
+	recv_geco_packet_but_morethanone_init_ack,
+	recv_geco_packet_but_morethanone_shutdown_complete,
+	recv_geco_packet_but_init_chunk_has_zero_verifi_tag,
+	recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag,
+	recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate,
+	recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal,
+	recv_geco_packet_but_nootb_sdack_otherthan_sds_state,
+	recv_geco_packet_but_nootb_initack_otherthan_cookiew_state,
+	recv_geco_packet_but_nootb_packet_verifitag_illegal,
+	recv_geco_packet_but_it_is_ootb_abort_discard,
+	recv_geco_packet_but_it_is_ootb_sdc_discard,
+	recv_geco_packet_but_it_is_ootb_sdack_send_sdc,
+	recv_geco_packet_but_it_is_ootb_cookie_ack_discard,
+	recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard,
+	recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag,
+	recv_geco_packet_but_local_instance_has_zero_portnum,
+	recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk,
+	recv_geco_packet_but_not_send_abort_for_ootb_packet
 };
 extern geco_return_enum global_ret_val;
 
@@ -239,8 +239,8 @@ const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
  * it is alos the resolution of wheel-timer*/
 #define GRANULARITY 1
 
-/* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
-/* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
+ /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
+ /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
 #define MAX_IPADDR_STR_LEN           46        /* ==  INET6_ADDRSTRLEN      */
 
 // if our impl is based on UDP, this is the well-known-port 
@@ -263,7 +263,7 @@ const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 #define MAX_NETWORK_PACKET_HDR_SIZES 5552
 
-//<--------------------------------- log ------------------------->
+ //<--------------------------------- log ------------------------->
 #define TRACE_MUDULE_SIZE 50
 #define ENABLE_STR_LOG   false  /* set to != 0 if byte string logging should be done */
 
@@ -290,15 +290,15 @@ GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 #define CURR_EVENT_LOG_LEVEL VERBOSE
 #endif
 
-/* Definition of levels for the logging of errors */
-/* warning, recovery not necessary. */
+ /* Definition of levels for the logging of errors */
+ /* warning, recovery not necessary. */
 #define WARNNING_ERROR 4
 /* recovery from error was possible without affecting the system. */
 #define MINOR_ERROR  3
 /*recovery from error was possible with some affects to the system,
  * for instance abort of an association.*/
 #define MAJOR_ERROR  2
-/* recovery from error was not possible, the program exits. */
+ /* recovery from error was not possible, the program exits. */
 #define FALTAL_ERROR_EXIT 1
 /* Defines the level up to which the errors are prInt32ed.
  *ERROR_WARNING (4) means all events are prInt32ed.
@@ -388,7 +388,7 @@ if (x <= CURR_ERROR_LOG_LEVEL) {y}
  * in that file, which causes all output from event_logs() to go into a logfile in the local
  * directory.
  */
-extern void read_trace_levels(void);
+	extern void read_trace_levels(void);
 // print fixed date and then the msg
 extern void debug_print(FILE * fd, const char *f, ...);
 
@@ -419,7 +419,7 @@ extern void perr_abort(const char *infostring);
  @author     H�zlwimmer
  */
 extern void event_log1(short event_loglvl, const char *module_name, int line, const char *log_info,
-        ...);
+	...);
 
 /* This function logs errors.
  Parameters:
@@ -430,7 +430,7 @@ extern void event_log1(short event_loglvl, const char *module_name, int line, co
  @author     H�zlwimmer
  */
 extern void error_log1(short error_loglvl, const char *module_name, int line_no,
-        const char *log_info, ...);
+	const char *log_info, ...);
 
 /* This function logs system call errors.
  This function calls ERRLOG.
@@ -443,7 +443,7 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
  @author     H�zlwimmer
  */
 extern void error_log_sys1(short error_loglvl, const char *module_name, int line_no,
-        short errnumber);
+	short errnumber);
 
 //<---------------- time-------------------->
 #define   TIMER_TYPE_INIT       0
@@ -488,55 +488,55 @@ extern void print_timeval(timeval* tv);
 //<---------------------- helpers --------------------->
 enum ctrl_type
 {
-    bundle_ctrl,
-    recv_ctrl,
-    flow_ctrl,
-    reliable_transfer_ctrl,
-    path_ctrl,
-    geco_ctrl,
-    stream_ctrl,
-    unkown
+	bundle_ctrl,
+	recv_ctrl,
+	flow_ctrl,
+	reliable_transfer_ctrl,
+	path_ctrl,
+	geco_ctrl,
+	stream_ctrl,
+	unkown
 };
 
 struct internal_stream_data_t
 {
-        ushort stream_id;
-        ushort stream_sn;
+	ushort stream_id;
+	ushort stream_sn;
 };
 
 //chunk_data_struct
 struct internal_data_chunk_t
 {
-        uint chunk_len;
-        uint chunk_tsn; /* for efficiency */
-        uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
+	uint chunk_len;
+	uint chunk_tsn; /* for efficiency */
+	uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
 
-        uint gap_reports;
+	uint gap_reports;
 
-        struct timeval transmission_time;
-        /* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
-        int ack_time;
-        uint num_of_transmissions;
+	struct timeval transmission_time;
+	/* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
+	int ack_time;
+	uint num_of_transmissions;
 
-        /* time after which chunk should not be retransmitted */
-        struct timeval expiry_time;
-        bool dontBundle;
+	/* time after which chunk should not be retransmitted */
+	struct timeval expiry_time;
+	bool dontBundle;
 
-        /* lst destination used to send chunk to */
-        uint last_destination;
-        int initial_destination;
+	/* lst destination used to send chunk to */
+	uint last_destination;
+	int initial_destination;
 
-        /* this is set to true, whenever chunk is sent/received on unreliable stream */
-        bool isUnreliable;
+	/* this is set to true, whenever chunk is sent/received on unreliable stream */
+	bool isUnreliable;
 
-        bool hasBeenAcked;
-        bool hasBeenDropped;
-        bool hasBeenFastRetransmitted;
-        bool hasBeenRequeued;
-        bool context;
+	bool hasBeenAcked;
+	bool hasBeenDropped;
+	bool hasBeenFastRetransmitted;
+	bool hasBeenRequeued;
+	bool context;
 
-        /*which ctrl this struct belongs to*/
-        ctrl_type ct;
+	/*which ctrl this struct belongs to*/
+	ctrl_type ct;
 };
 
 /**
@@ -618,35 +618,35 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 //} AddressScopingFlags;
 enum IPAddrType
 {
-    LoopBackAddrType = (1 << 0),
-    LinkLocalAddrType = (1 << 1),
-    SiteLocalAddrType = (1 << 2),
-    AnyCastAddrType = (1 << 3),
-    MulticastAddrType = (1 << 4),
-    BroadcastAddrType = (1 << 5),
-    ReservedAddrType = (1 << 6),
-    AllExceptLoopbackAddrTypes = (1 << 7),
-    AllExceptLinkLocalAddrTypes = (1 << 8),
-    ExceptSiteLocalAddrTypes = (1 << 9),
-    //flag_Default
-    AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
-    //flag_HideLocal
-    AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
+	LoopBackAddrType = (1 << 0),
+	LinkLocalAddrType = (1 << 1),
+	SiteLocalAddrType = (1 << 2),
+	AnyCastAddrType = (1 << 3),
+	MulticastAddrType = (1 << 4),
+	BroadcastAddrType = (1 << 5),
+	ReservedAddrType = (1 << 6),
+	AllExceptLoopbackAddrTypes = (1 << 7),
+	AllExceptLinkLocalAddrTypes = (1 << 8),
+	ExceptSiteLocalAddrTypes = (1 << 9),
+	//flag_Default
+	AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
+	//flag_HideLocal
+	AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
 };
 
 /* union for handling either type of addresses: ipv4 and ipv6 */
 union sockaddrunion
 {
-        struct sockaddr sa;
-        struct sockaddr_in sin;
-        struct sockaddr_in6 sin6;
+	struct sockaddr sa;
+	struct sockaddr_in sin;
+	struct sockaddr_in6 sin6;
 };
 
 // key of channel
 struct transport_addr_t
 {
-        sockaddrunion local_saddr;
-        sockaddrunion peer_saddr;
+	sockaddrunion local_saddr;
+	sockaddrunion peer_saddr;
 };
 
 /* converts address-string
@@ -659,24 +659,12 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0, bool 
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum = NULL);
 inline extern bool saddr_equals(sockaddrunion *a, sockaddrunion *b, bool ignore_port = false)
 {
-//	EVENTLOG2(VERBOSE, "a af%d, b af%d\n", a->sin.sin_family,
-//			b->sin.sin_family);
-    switch (saddr_family(a))
-    {
-    case AF_INET:
-        return saddr_family(b) == AF_INET &&
-        s4addr(&a->sin) == s4addr(&b->sin) && (ignore_port || a->sin.sin_port == b->sin.sin_port);
-        break;
-    case AF_INET6:
-        return saddr_family(b) == AF_INET6
-                && (ignore_port || a->sin6.sin6_port == b->sin6.sin6_port)
-                && (memcmp(s6addr(&a->sin6), s6addr(&b->sin6), 16) == 0);
-        break;
-    default:
-        ERRLOG1(MAJOR_ERROR, "Address family %d not supported", saddr_family(a));
-        return false;
-        break;
-    }
+	return saddr_family(a) == AF_INET ? (saddr_family(b) == AF_INET &&
+		s4addr(&a->sin) == s4addr(&b->sin) &&
+		(ignore_port ? true : a->sin.sin_port == b->sin.sin_port)) :
+		(saddr_family(b) == AF_INET6
+			&& (memcmp(s6addr(&a->sin6), s6addr(&b->sin6), 16) == 0)
+			&& (ignore_port ? true : a->sin6.sin6_port == b->sin6.sin6_port));
 }
 
 //! From http://www.azillionmonkeys.com/qed/hash.html
@@ -688,7 +676,7 @@ extern unsigned long SuperFastHashIncremental(const char * data, int len, unsign
 extern unsigned long SuperFastHashFile(const char * filename);
 extern unsigned long SuperFastHashFilePtr(FILE *fp);
 extern unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
-        const sockaddrunion* peer_sa);
+	const sockaddrunion* peer_sa);
 extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
@@ -736,119 +724,119 @@ if (d_pdu->ddata != NULL)\
 	geco_free_ext(d_pdu, __FILE__, __LINE__);\
 }
 
-/*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
-/**
- This struct containes the pointers to ULP callback functions.
- Each SCTP-instance can have its own set of callback functions.
- The callback functions of each SCTP-instance can be found by
- first reading the datastruct of an association from the list of
- associations. The datastruct of the association contains the name
- of the SCTP instance to which it belongs. With the name of the SCTP-
- instance its datastruct can be read from the list of SCTP-instances.
- */
+ /*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
+ /**
+  This struct containes the pointers to ULP callback functions.
+  Each SCTP-instance can have its own set of callback functions.
+  The callback functions of each SCTP-instance can be found by
+  first reading the datastruct of an association from the list of
+  associations. The datastruct of the association contains the name
+  of the SCTP instance to which it belongs. With the name of the SCTP-
+  instance its datastruct can be read from the list of SCTP-instances.
+  */
 struct applicaton_layer_cbs_t
 {
-        /* @{ */
-        /**
-         * indicates that new data arrived from peer (chapter 10.2.A).
-         *  @param 1 associationID
-         *  @param 2 streamID
-         *  @param 3 length of data
-         *  @param 4 stream sequence number
-         *  @param 5 tsn of (at least one) chunk belonging to the message
-         *  @param 6 protocol ID
-         *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
-         *  @param 8 pointer to ULP data
-         */
-        void (*dataArriveNotif)(unsigned int, unsigned short, unsigned int, unsigned short,
-                unsigned int, unsigned int, unsigned int, void*);
-        /**
-         * indicates a send failure (chapter 10.2.B).
-         *  @param 1 associationID
-         *  @param 2 pointer to data not sent
-         *  @param 3 dataLength
-         *  @param 4 pointer to context from sendChunk
-         *  @param 5 pointer to ULP data
-         */
-        void (*sendFailureNotif)(unsigned int, unsigned char *, unsigned int, unsigned int *,
-                void*);
-        /**
-         * indicates a change of network status (chapter 10.2.C).
-         *  @param 1 associationID
-         *  @param 2 destinationAddresses
-         *  @param 3 newState
-         *  @param 4 pointer to ULP data
-         */
-        void (*networkStatusChangeNotif)(unsigned int, short, unsigned short, void*);
-        /**
-         * indicates that a association is established (chapter 10.2.D).
-         *  @param 1 associationID
-         *  @param 2 status, type of event
-         *  @param 3 number of destination addresses
-         *  @param 4 number input streamns
-         *  @param 5 number output streams
-         *  @param 6 int  supportPRSCTP (0=FALSE, 1=TRUE)
-         *  @param 7 pointer to ULP data, usually NULL
-         *  @return the callback is to return a pointer, that will be transparently returned with every callback
-         */
-        void* (*communicationUpNotif)(unsigned int, int, unsigned int, unsigned short,
-                unsigned short, int, void*);
-        /**
-         * indicates that communication was lost to peer (chapter 10.2.E).
-         *  @param 1 associationID
-         *  @param 2 status, type of event
-         *  @param 3 pointer to ULP data
-         */
-        void (*communicationLostNotif)(unsigned int, unsigned short, void*);
-        /**
-         * indicates that communication had an error. (chapter 10.2.F)
-         * Currently not implemented !?
-         *  @param 1 associationID
-         *  @param 2 status, type of error
-         *  @param 3 pointer to ULP data
-         */
-        void (*communicationErrorNotif)(unsigned int, unsigned short, void*);
-        /**
-         * indicates that a RESTART has occurred. (chapter 10.2.G)
-         *  @param 1 associationID
-         *  @param 2 pointer to ULP data
-         */
-        void (*restartNotif)(unsigned int, void*);
-        /**
-         * indicates that a SHUTDOWN has been received by the peer. Tells the
-         * application to stop sending new data.
-         *  @param 0 instanceID
-         *  @param 1 associationID
-         *  @param 2 pointer to ULP data
-         */
-        void (*peerShutdownReceivedNotif)(unsigned int, void*);
-        /**
-         * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
-         *  @param 0 instanceID
-         *  @param 1 associationID
-         *  @param 2 pointer to ULP data
-         */
-        void (*shutdownCompleteNotif)(unsigned int, void*);
-        /**
-         * indicates that a queue length has exceeded (or length has dropped
-         * below) a previously determined limit
-         *  @param 0 associationID
-         *  @param 1 queue type (in-queue, out-queue, stream queue etc.)
-         *  @param 2 queue identifier (maybe for streams ? 0 if not used)
-         *  @param 3 queue length (either bytes or messages - depending on type)
-         *  @param 4 pointer to ULP data
-         */
-        void (*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
-        /**
-         * indicates that a ASCONF request from the ULP has succeeded or failed.
-         *  @param 0 associationID
-         *  @param 1 correlation ID
-         *  @param 2 result (int, negative for error)
-         *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
-         *  @param 4 pointer to ULP data
-         */
-        void (*asconfStatusNotif)(unsigned int, unsigned int, int, void*, void*);
-        /* @} */
+	/* @{ */
+	/**
+	 * indicates that new data arrived from peer (chapter 10.2.A).
+	 *  @param 1 associationID
+	 *  @param 2 streamID
+	 *  @param 3 length of data
+	 *  @param 4 stream sequence number
+	 *  @param 5 tsn of (at least one) chunk belonging to the message
+	 *  @param 6 protocol ID
+	 *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
+	 *  @param 8 pointer to ULP data
+	 */
+	void(*dataArriveNotif)(unsigned int, unsigned short, unsigned int, unsigned short,
+		unsigned int, unsigned int, unsigned int, void*);
+	/**
+	 * indicates a send failure (chapter 10.2.B).
+	 *  @param 1 associationID
+	 *  @param 2 pointer to data not sent
+	 *  @param 3 dataLength
+	 *  @param 4 pointer to context from sendChunk
+	 *  @param 5 pointer to ULP data
+	 */
+	void(*sendFailureNotif)(unsigned int, unsigned char *, unsigned int, unsigned int *,
+		void*);
+	/**
+	 * indicates a change of network status (chapter 10.2.C).
+	 *  @param 1 associationID
+	 *  @param 2 destinationAddresses
+	 *  @param 3 newState
+	 *  @param 4 pointer to ULP data
+	 */
+	void(*networkStatusChangeNotif)(unsigned int, short, unsigned short, void*);
+	/**
+	 * indicates that a association is established (chapter 10.2.D).
+	 *  @param 1 associationID
+	 *  @param 2 status, type of event
+	 *  @param 3 number of destination addresses
+	 *  @param 4 number input streamns
+	 *  @param 5 number output streams
+	 *  @param 6 int  supportPRSCTP (0=FALSE, 1=TRUE)
+	 *  @param 7 pointer to ULP data, usually NULL
+	 *  @return the callback is to return a pointer, that will be transparently returned with every callback
+	 */
+	void* (*communicationUpNotif)(unsigned int, int, unsigned int, unsigned short,
+		unsigned short, int, void*);
+	/**
+	 * indicates that communication was lost to peer (chapter 10.2.E).
+	 *  @param 1 associationID
+	 *  @param 2 status, type of event
+	 *  @param 3 pointer to ULP data
+	 */
+	void(*communicationLostNotif)(unsigned int, unsigned short, void*);
+	/**
+	 * indicates that communication had an error. (chapter 10.2.F)
+	 * Currently not implemented !?
+	 *  @param 1 associationID
+	 *  @param 2 status, type of error
+	 *  @param 3 pointer to ULP data
+	 */
+	void(*communicationErrorNotif)(unsigned int, unsigned short, void*);
+	/**
+	 * indicates that a RESTART has occurred. (chapter 10.2.G)
+	 *  @param 1 associationID
+	 *  @param 2 pointer to ULP data
+	 */
+	void(*restartNotif)(unsigned int, void*);
+	/**
+	 * indicates that a SHUTDOWN has been received by the peer. Tells the
+	 * application to stop sending new data.
+	 *  @param 0 instanceID
+	 *  @param 1 associationID
+	 *  @param 2 pointer to ULP data
+	 */
+	void(*peerShutdownReceivedNotif)(unsigned int, void*);
+	/**
+	 * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
+	 *  @param 0 instanceID
+	 *  @param 1 associationID
+	 *  @param 2 pointer to ULP data
+	 */
+	void(*shutdownCompleteNotif)(unsigned int, void*);
+	/**
+	 * indicates that a queue length has exceeded (or length has dropped
+	 * below) a previously determined limit
+	 *  @param 0 associationID
+	 *  @param 1 queue type (in-queue, out-queue, stream queue etc.)
+	 *  @param 2 queue identifier (maybe for streams ? 0 if not used)
+	 *  @param 3 queue length (either bytes or messages - depending on type)
+	 *  @param 4 pointer to ULP data
+	 */
+	void(*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
+	/**
+	 * indicates that a ASCONF request from the ULP has succeeded or failed.
+	 *  @param 0 associationID
+	 *  @param 1 correlation ID
+	 *  @param 2 result (int, negative for error)
+	 *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
+	 *  @param 4 pointer to ULP data
+	 */
+	void(*asconfStatusNotif)(unsigned int, unsigned int, int, void*, void*);
+	/* @} */
 };
 
 #endif /* MY_GLOBALS_H_ */

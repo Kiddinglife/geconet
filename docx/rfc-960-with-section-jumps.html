@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <!-- saved from url=(0035)https://tools.ietf.org/html/rfc4960 -->
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head profile="http://dublincore.org/documents/2008/08/04/dc-html/"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
@@ -254,6 +254,32 @@ wrote at 20:23 PM on 6 Aug 2016 by Jackie Zhang at baukham hill home
 Hightlight line 1176 at page 21  
 If the receiver of an INIT chunk detects unrecognized parameters...
 wrote at 08:23 AM on 7 Aug 2016 by Jackie Zhang at baukham hill home
+
+On Sep 30, 2008, at 3:12 AM, Somsak Vanit-anunchai wrote:
+Hi Michael
+Thank you very much for your reply.  See my answer below.
+The X in the first column should mean the the local tag in
+the COOKIE and in the TCB do not match. I think we agree on
+this. Right?
+Yes, I agree.
+Now the legend says:
+ "X - Tag does not match the existing TCB"
+Therefore the 'Local Tag' in the column header must be
+the local tag in the COOKIE (to make any non-trivial sense).
+Yes, agree
+Now you see a contradiction with the sentence
+"We will refer to the copy within an association's TCB as the
+ Local Tag and Peer's Tag."
+within the section 5.2.2.
+Is this the error you are referring to?
+Yes, this is the problem I was confused. This leads to another question.
+OK. Fine.
+What is the purpose to store Tie-Tags in an association's TCB???
+The Tie Tags are random nonces to "tie together" the COOKIE
+for the "new" association and the old association. So you
+compare the tie tags in the received cookie with the ones stored
+in the TCP to make sure that the cookie is sent by the end-point for
+this association.
 
 Status of This Memo
 

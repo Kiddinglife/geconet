@@ -226,6 +226,8 @@ struct path_controller_t
 
 	// store the current primary path
 	int primary_path;
+	int destaddr_in_init_sentbyme;
+
 	//the number of paths used by this channel
 	int path_num;
 	//counter for all retransmittions over all paths
@@ -624,6 +626,13 @@ public:
 	bool library_support_unreliability_;
 	char chunkflag2use_;
 
+	// tmp variables used in process_cookie_echo() 
+	chunk_id_t cookie_ack_cid_;
+	uint cookie_local_tie_tag_;
+	uint cookie_remote_tie_tag_;
+	uint cookiesendtime_;
+	uint currtime_;
+	uint cookielifetime_;
 #if ENABLE_UNIT_TEST
 	/* unit test extra variables*/
 	bool enable_mock_dispatcher_disassemle_curr_geco_packet_;
@@ -2394,8 +2403,44 @@ public:
 
 	/** check if endpoint is ADD-IP capable, store result, and put HIS chunk in cookie */
 	int write_add_ip_chunk(uint initAckCID, uint initCID)
-	{  //todo
-		return 0;
+	{
+		EVENTLOG(VERBOSE, " - - - Enter write_add_ip_chunk() to cookie");
+
+		init_chunk_t* init = (init_chunk_t*)(simple_chunks_[initCID]);
+		init_chunk_t* initack = (init_chunk_t*)(simple_chunks_[initAckCID]);
+		if (init == NULL || initack == NULL)
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "Invalid init or initAck chunk ID");
+			return -1;
+		}
+		uchar* foundvlp = find_first_vlparam_of(VLPARAM_ADDIP, &init->variableParams[0],
+			init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+		if (foundvlp != NULL)
+		{
+			ushort vlp_len = ntohs(((vlparam_fixed_t*)foundvlp)->param_length);
+			if (vlp_len < VLPARAM_FIXED_SIZE)
+			{
+				EVENTLOG(VERBOSE, "vlp length less than 4 bytes -> return -1");
+				return  -1;
+			}
+			if (vlp_len >= VLPARAM_FIXED_SIZE)
+			{
+				memcpy(&initack->variableParams[curr_write_pos_[initAckCID]], foundvlp, vlp_len);
+				curr_write_pos_[initAckCID] += vlp_len;
+				while (curr_write_pos_[initAckCID] & 3)
+					curr_write_pos_[initAckCID]++;
+				EVENTLOG1(VERBOSE, "Found VLPARAM_ADDIP (len %d ), copied to init ack cookie", vlp_len);
+				return 1;
+			}
+		}
+		else
+		{
+			EVENTLOG(VERBOSE, "Not found VLPARAM_ADDIP");
+			return 0;
+		}
+
+		EVENTLOG(VERBOSE, " - - - Leave write_add_ip_chunk() to cookie");
+		return -1;
 	}
 	/** check for set primary chunk ? Maybe add this only after Cookie Chunk ! */
 	int write_set_primary_chunk(uint initAckCID, uint initCID)

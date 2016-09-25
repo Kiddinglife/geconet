@@ -83,7 +83,7 @@ typedef struct SCTP_CONTROLDATA
 {
     /*@{ */
     /** the state of this state machine */
-    guint32 association_state;
+    unsigned int association_state;
     /** stores timer-ID of init/cookie-timer, used to stop this timer */
     TimerID initTimer;
     /** */
@@ -97,9 +97,9 @@ typedef struct SCTP_CONTROLDATA
     /** pointer to the cookie chunk data structure (for retransmissions) */
     cookie_echo_chunk_t *cookieChunk;
     /** my tie tag for cross initialization and other sick cases */
-    guint32 local_tie_tag;
+    unsigned int local_tie_tag;
     /** peer's tie tag for cross initialization and other sick cases */
-    guint32 peer_tie_tag;
+    unsigned int peer_tie_tag;
     /** we store these here, too. Maybe better be stored with StreamEngine ? */
     unsigned short outbound_stream;
     /** we store these here, too. Maybe better be stored with StreamEngine ? */
@@ -339,9 +339,9 @@ void scu_associate(unsigned short noOfOutStreams,
 		   unsigned short noOfInStreams,
 		   union sockunion *destinationList,
 		   unsigned int numDestAddresses,
-		   gboolean withPRSCTP)
+		   bool withPRSCTP)
 {
-    guint32 state;
+    unsigned int state;
     guint16 nlAddresses;
     union sockunion lAddresses[MAX_NUM_ADDRESSES];
     ChunkID initCID;
@@ -462,7 +462,7 @@ void scu_associate(unsigned short noOfOutStreams,
  */
 void scu_shutdown()
 {
-    guint32 state;
+    unsigned int state;
     ChunkID shutdownCID;
     boolean readyForShutdown;
 
@@ -582,9 +582,9 @@ void sci_add_abort_error_cause(ChunkID abortChunk,
  */
 void scu_abort(short error_type, unsigned short error_param_length, unsigned char *error_param_data)
 {
-    guint32 state;
+    unsigned int state;
     ChunkID abortCID;
-    gboolean removed = FALSE;
+    bool removed = FALSE;
 
     if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
@@ -1026,9 +1026,9 @@ int sctlr_init(SCTP_init *init)
  * The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
  * @param initAck  pointer to received initAck-chunk including optional parameters without chunk header
  */
-gboolean sctlr_initAck(SCTP_init *initAck)
+bool sctlr_initAck(SCTP_init *initAck)
 {
-    guint32 state;
+    unsigned int state;
     int result;
     unsigned int index = 0;
     union sockunion destAddress;
@@ -1047,11 +1047,11 @@ gboolean sctlr_initAck(SCTP_init *initAck)
     int return_state = STATE_OK;
 
     union sockunion preferredPrimary;
-    gboolean preferredSet = FALSE;
-    gboolean peerSupportsPRSCTP = FALSE;
-    gboolean peerSupportsADDIP = FALSE;
-    gboolean peerSupportsIPV4 = FALSE;
-    gboolean peerSupportsIPV6 = FALSE;
+    bool preferredSet = FALSE;
+    bool peerSupportsPRSCTP = FALSE;
+    bool peerSupportsADDIP = FALSE;
+    bool peerSupportsIPV4 = FALSE;
+    bool peerSupportsIPV6 = FALSE;
     short preferredPath;
 
     initAckCID = alloc_simple_chunk((SCTP_simple_chunk *)initAck);
@@ -1304,7 +1304,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
     union sockunion destAddress;
     union sockunion dAddresses[MAX_NUM_ADDRESSES];
     int ndAddresses, result;
-    guint32 state, new_state = 0xFFFFFFFF;
+    unsigned int state, new_state = 0xFFFFFFFF;
     unsigned int cookieLifetime;
     unsigned int mySupportedTypes;
     ChunkID cookieCID;
@@ -1313,12 +1313,12 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
     ChunkID initAckCID;
     ChunkID shutdownAckCID;
     ChunkID errorCID;
-    guint32 cookie_local_tag, cookie_remote_tag;
-    guint32 cookie_local_tietag, cookie_remote_tietag;
-    guint32 local_tag, remote_tag;
+    unsigned int cookie_local_tag, cookie_remote_tag;
+    unsigned int cookie_local_tietag, cookie_remote_tietag;
+    unsigned int local_tag, remote_tag;
     short primaryDestinationAddress;
     short noOfDestinationAddresses;
-    gboolean peerSupportsPRSCTP;
+    bool peerSupportsPRSCTP;
 
     unsigned short noSuccess, restart_result;
     unsigned int peerAddressTypes;
@@ -1737,7 +1737,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
   */
 void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 {
-    guint32 state;
+    unsigned int state;
     ChunkID cookieAckCID;
     int SendCommUpNotif = -1;
 
@@ -1811,9 +1811,9 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
   */
 int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 {
-    guint32 state, new_state;
+    unsigned int state, new_state;
     boolean readyForShutdown;
-    gboolean removed = FALSE, sendNotification = FALSE;
+    bool removed = FALSE, sendNotification = FALSE;
     unsigned int lastFromPath;
     int return_state = STATE_OK;
     ChunkID abortCID;
@@ -1968,7 +1968,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
   */
 int sctlr_shutdownAck()
 {
-    guint32 state, new_state;
+    unsigned int state, new_state;
     unsigned int lastFromPath, lastTag;
     boolean tagWasZero = FALSE;
     ChunkID shdcCID;
@@ -2089,7 +2089,7 @@ int sctlr_shutdownAck()
   */
 int sctlr_shutdownComplete()
 {
-    guint32 state, new_state;
+    unsigned int state, new_state;
     unsigned int lastFromPath;
     int return_state = STATE_OK;
 
@@ -2163,7 +2163,7 @@ int sctlr_shutdownComplete()
   */
 int sctlr_abort()
 {
-    guint32 state;
+    unsigned int state;
     unsigned int lastFromPath;
     int return_state = STATE_OK;
 
@@ -2244,7 +2244,7 @@ int sctlr_abort()
    */
 void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 {
-    guint32 state;
+    unsigned int state;
     ChunkID errorCID;
     ChunkID initCID;
 
@@ -2299,9 +2299,9 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
    This function also logs the state with log-level VVERBOSE.
    @return state value (0=CLOSED, 3=ESTABLISHED)
    */
-guint32 sci_getState()
+unsigned int sci_getState()
 {
-    guint32 state;
+    unsigned int state;
 
     if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
@@ -2358,7 +2358,7 @@ guint32 sci_getState()
   */
 void sci_allChunksAcked()
 {
-    guint32 state;
+    unsigned int state;
     ChunkID shutdownCID;
     ChunkID shutdownAckCID;
     smctrl_t *old_data = smctrl;
@@ -2619,11 +2619,11 @@ int sci_setCookieLifeTime(int new_max)
     return 0;
 }
 
-gboolean sci_shutdown_procedure_started()
+bool sci_shutdown_procedure_started()
 {
     smctrl_t *old_data = smctrl;
 
-    guint32 state;
+    unsigned int state;
     if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
     {
 	/* error log */
