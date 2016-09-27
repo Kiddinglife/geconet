@@ -1324,11 +1324,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 	uchar init_ack_cid;
 	uint init_tag;
 
-	/* 4) this branch handles the cases below:
-	 * 1) RFC 4960 - 5.2.1.INIT Received in COOKIE-WAIT or COOKIE-ECHOED State - (B)
-	 * Both sides are trying to initialize the association at about the same time,
-	 * which lead to unexpected INIT sent to an endpoint without existing assciation)
-	 * 2) RFC 4960 - 5.1.Normal Establishment of an Association - (B)
+	/* 4) RFC 4960 - 5.1.Normal Establishment of an Association - (B)
 	 * "Z" shall respond immediately with an INIT ACK chunk.*/
 	if (smctrl == NULL)
 	{
@@ -1379,9 +1375,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 		}
 
-		/*4.5) generate and append cookie to INIT ACK*/
-		write_cookie(
-			init_cid, init_ack_cid,
+		// 4.5) generate and append cookie to INIT ACK
+		write_cookie(init_cid, init_ack_cid,
 			get_init_fixed(init_cid), get_init_fixed(init_ack_cid),
 			get_cookie_lifespan(init_cid),
 			/* normal case: no existing channel, set both zero*/
@@ -1418,7 +1413,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			EVENTLOG(INFO, "event: sent normal init ack chunk peer");
 		}
 	}
-	else // existing channel found 
+	else // existing channel found
 	{
 		/* the below codes handle the following cases:
 		5.2.1.  INIT Received in COOKIE-WAIT or COOKIE-ECHOED State
@@ -1452,15 +1447,11 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			responding, the endpoint MUST send the INIT ACK back to the same
 			address that the original INIT (sent by this endpoint) was sent.*/
 
-			// should have been init as zeros when smctrl inited
-			assert(smctrl->local_tie_tag == 0);
-			assert(smctrl->peer_tie_tag == 0);
-
 			// assign to zeros means we have not received and set peer tag
 			smctrl->local_tie_tag = 0;
 			smctrl->peer_tie_tag = 0;
 
-			// make init ack
+			// make init ack with params from init chunk I sent
 			init_ack_cid = alloc_init_ack_chunk(smctrl->my_init_chunk->init_fixed.init_tag,
 				smctrl->my_init_chunk->init_fixed.rwnd,
 				smctrl->my_init_chunk->init_fixed.outbound_streams,
@@ -1469,8 +1460,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 
 			// append localaddrlist to INIT_ACK
 			tmp_local_addreslist_size_ = get_local_addreslist(tmp_local_addreslist_,
-				last_source_addr_, 1, 
-				tmp_peer_supported_types_, 
+				last_source_addr_, 1,
+				tmp_peer_supported_types_,
 				true /*receivedfrompeer*/);
 			enter_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
@@ -1538,16 +1529,14 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			- For an endpoint that is in the COOKIE-ECHOED state, it MUST populate
 			its Tie-Tags within both the association TCB and inside the State
 			Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
-			// 5.1) validate tie tags NOT zeros 
-			if (smctrl->local_tie_tag == 0 || smctrl->peer_tie_tag == 0)
-			{
-				ERRLOG2(NOTICE,
-					"a zero Tie tag in Cookie Echoed state, local %u and peer %u -> return and discard",
-					smctrl->local_tie_tag, smctrl->peer_tie_tag);
-				return discard;
-			}
 
-			// 5.2) validate no new addr aaded from the newly received INIT 
+		    // we have set up tie tags from previouly received init ack chunk
+		    // local_tie_tag is channel's local tag
+		    // remote_tie_tag is the init tag carried in init ack
+			assert(smctrl->local_tie_tag != 0);
+			assert(smctrl->peer_tie_tag != 0);
+
+			// 5.2) validate no new addr aaded from the newly received INIT
 			// read and validate peer addrlist carried in the received init chunk
 			assert(my_supported_addr_types_ != 0);
 			assert(curr_geco_packet_value_len_ == init->chunk_header.chunk_length);
@@ -1813,7 +1802,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 				EVENTLOG(INTERNAL_EVENT, "event: initAck sent at state of ShutdownSent");
 			}
 		}
-	}// existing channel 
+	}// existing channel
 	/*6) remove NOT free INIT CHUNK*/
 	remove_simple_chunk(init_cid);
 	return ret;
@@ -3040,9 +3029,9 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 	{
 		EVENTLOG(DEBUG,
 			"event: process_cookie_echo_chunk in state other than CLOSED -> Unnormal association setup");
-		//1) 
-		// cookie_local_tag, cookie_remote_tag are set  
-		// local_tag, remote_tag are also set from the TCB 
+		//1)
+		// cookie_local_tag, cookie_remote_tag are set
+		// local_tag, remote_tag are also set from the TCB
 		cookie_local_tie_tag_ = ntohl(cookie_echo->cookie.local_tie_tag);
 		cookie_remote_tie_tag_ = ntohl(cookie_echo->cookie.peer_tie_tag);
 		EVENTLOG2(VERBOSE, "cookie_remote_tie_tag_ ; %u , cookie_local_tie_tag_ : %u ",
