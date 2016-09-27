@@ -1447,9 +1447,12 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			responding, the endpoint MUST send the INIT ACK back to the same
 			address that the original INIT (sent by this endpoint) was sent.*/
 
-			// assign to zeros means we have not received and set peer tag
-			smctrl->local_tie_tag = 0;
-			smctrl->peer_tie_tag = 0;
+			// both tie tags of zero value indicates that connection procedures are not done completely.
+			// in other words, we are not connected to Z side although channel is not null
+			assert(smctrl->local_tie_tag == 0);
+			assert(smctrl->peer_tie_tag == 0);
+			assert(curr_channel_->local_tag != 0);
+			assert(curr_channel_->remote_tag == 0);
 
 			// make init ack with params from init chunk I sent
 			init_ack_cid = alloc_init_ack_chunk(smctrl->my_init_chunk->init_fixed.init_tag,
@@ -1469,8 +1472,8 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			write_cookie(init_cid, init_ack_cid,
 				get_init_fixed(init_cid), get_init_fixed(init_ack_cid),
 				get_cookie_lifespan(init_cid),
-				/*set both zero to indicate we have not received and set peer tag*/
-				smctrl->local_tie_tag, smctrl->peer_tie_tag,
+				0, 0, /*set both tie tags to zero to indicate channel is not null but connection procedures are not done completely
+				in other words, we are not connected to Z side although channel is not null*/
 				last_dest_port_, last_src_port_,
 				tmp_local_addreslist_, tmp_local_addreslist_size_,
 				tmp_peer_addreslist_, tmp_peer_addreslist_size_);
@@ -1491,8 +1494,7 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 				* as we SHOULD let peer's imple to finish the
 				* unnormal connection handling precedures*/
 
-				/* send all bundled chunks to ensure init ack is the only chunk sent
-				* in the whole geco packet*/
+				// send all bundled chunks to ensure init ack is the only chunk sent in the whole geco packet
 				EVENTLOG1(VERBOSE, "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)",
 					get_bundle_total_size(get_bundle_controller()));
 				unlock_bundle_ctrl();
@@ -1504,14 +1506,6 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 				free_simple_chunk(init_ack_cid);
 				EVENTLOG(VERBOSE, "event: initAck sent at state of cookie wait");
 			}
-
-			/* 7) see RFC 4960 - Section 5.2.2
-			Unexpected INIT in States Other than CLOSED, COOKIE-ECHOED,
-			COOKIE-WAIT, and SHUTDOWN-ACK-SENT
-			Unless otherwise stated, upon receipt of an unexpected INIT for this
-			association, the endpoint shall generate an INIT ACK with a State
-			Cookie.  Before responding, the endpoint MUST check to see if the
-			unexpected INIT adds new addresses to the association.*/
 		}
 		else if (channel_state == ChannelState::CookieEchoed)
 		{
@@ -1530,11 +1524,15 @@ int dispatch_layer_t::process_init_chunk(init_chunk_t * init)
 			its Tie-Tags within both the association TCB and inside the State
 			Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
 
-		    // we have set up tie tags from previouly received init ack chunk
-		    // local_tie_tag is channel's local tag
-		    // remote_tie_tag is the init tag carried in init ack
+			// because we have set up tie tags in process_init_ack() where :
+			// smctrl->local_tie_tag is channel's local tag
+			// smctrl->peer_tie_tag is the init tag carried in init ack
 			assert(smctrl->local_tie_tag != 0);
 			assert(smctrl->peer_tie_tag != 0);
+			assert(curr_channel_->local_tag != 0);
+			assert(curr_channel_->remote_tag != 0);
+			assert(curr_channel_->local_tag == smctrl->local_tie_tag);
+			assert(curr_channel_->remote_tag == smctrl->peer_tie_tag);
 
 			// 5.2) validate no new addr aaded from the newly received INIT
 			// read and validate peer addrlist carried in the received init chunk
@@ -2986,11 +2984,10 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 
 	int SendCommUpNotification = 0;
 
-	if (curr_channel_ == NULL)
+	//============== Normal Case ============
+	if (smctrl->channel_state == Closed)
 	{
-		// Normal association setup
-		EVENTLOG(DEBUG,
-			"event: process_cookie_echo_chunk in state CLOSED -> Normal association setup");
+		EVENTLOG(DEBUG,"event: process_cookie_echo_chunk in state CLOSED -> Normal Case");
 		tmp_peer_addreslist_size_ = read_addrlist_from_cookie(cookie_echo,
 			curr_geco_instance_->supportedAddressTypes,
 			tmp_peer_addreslist_,
@@ -3025,18 +3022,64 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 		SendCommUpNotification = COMM_UP_RECEIVED_VALID_COOKIE;
 		newstate = ChannelState::Connected;
 	}
+	//============== Sick Cases ============
 	else
 	{
-		EVENTLOG(DEBUG,
-			"event: process_cookie_echo_chunk in state other than CLOSED -> Unnormal association setup");
-		//1)
-		// cookie_local_tag, cookie_remote_tag are set
-		// local_tag, remote_tag are also set from the TCB
+		//case COOKIE_WAIT:
+		//case COOKIE_ECHOED:
+		//case ESTABLISHED:
+		//case SHUTDOWNPENDING:
+		//case SHUTDOWNSENT:
+		//case SHUTDOWNRECEIVED:
+		//case SHUTDOWNACKSENT:
+		EVENTLOG(DEBUG,"event: process_cookie_echo_chunk in state other than CLOSED -> Sick Case");
+
 		cookie_local_tie_tag_ = ntohl(cookie_echo->cookie.local_tie_tag);
 		cookie_remote_tie_tag_ = ntohl(cookie_echo->cookie.peer_tie_tag);
-		EVENTLOG2(VERBOSE, "cookie_remote_tie_tag_ ; %u , cookie_local_tie_tag_ : %u ",
-			cookie_remote_tie_tag_, cookie_local_tie_tag_);
-		// @TODO
+		EVENTLOG2(VERBOSE, "cookie_remote_tie_tag ; %u , cookie_local_tie_tag : %u,"
+			"remote_tag ; %u , local_tag : %u ",
+			cookie_remote_tie_tag_, cookie_local_tie_tag_,
+			remote_tag, local_tag);
+
+		if (local_tag == cookie_local_tag)
+		{ //ACTION 5.2.4.B OR 5.2.4.D
+			if (remote_tag != cookie_remote_tag)
+			{//ACTION 5.2.4.B - CONNECTION COLLISION
+				EVENTLOG(INFO, "event: recv COOKIE-ECHO, it is sick case of connection collision, take action 5.2.4.B -> go to connected state !");
+				newstate = ChannelState::Connected;
+				if (state != ChannelState::Connected)
+				{
+					//we must be at COOKIE_WAIT or COOKIE_ECHOED state at this moment
+					// at such case, we must update remote tag
+					//TODO
+				}
+			}
+			else
+			{//ACTION 5.2.4.D
+				//todo
+			}
+		}
+		else
+		{//ACTION 5.2.4.A OR 5.2.4.C
+			if (remote_tag != cookie_remote_tag && 
+				cookie_local_tie_tag_ == smctrl->local_tie_tag &&
+				cookie_remote_tie_tag_ == smctrl->peer_tie_tag)
+			{//ACTION 5.2.4.A
+			 //todo
+			}
+			else if (remote_tag != cookie_remote_tag &&				
+				cookie_local_tie_tag_ == 0 &&
+				cookie_remote_tie_tag_ == 0)
+			{//ACTION 5.2.4.C
+				//todo
+			}
+			else
+			{
+				// silently discard
+				EVENTLOG(NOTICE, "event: recv COOKIE-ECHO, it is sick case with no matched case -> discard !");
+				//todo
+			}
+		}
 	}
 
 	remove_simple_chunk(cookie_echo_cid);
@@ -3110,7 +3153,7 @@ uchar* dispatch_layer_t::find_vlparam_from_setup_chunk(uchar * setup_chunk, uint
 	}  // while
 
 	return NULL;
-}
+	}
 
 int dispatch_layer_t::send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 {
@@ -3785,7 +3828,7 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
 				{
 					ERRLOG(WARNNING_ERROR, "Too many addresses found during IPv4 reading");
 				}
-			}
+		}
 			break;
 		case VLPARAM_SUPPORTED_ADDR_TYPES:
 			if (peer_supported_addr_types != NULL)
@@ -3804,14 +3847,14 @@ int dispatch_layer_t::read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM
 					*peer_supported_addr_types);
 			}
 			break;
-		}
+	}
 		read_len += vlp_len;
 		while (read_len & 3)
 			++read_len;
 		curr_pos = chunk + read_len;
-	}  // while
+}  // while
 
-	// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
+// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
 	if (!ignore_last_src_addr)
 	{
 		is_new_addr = true;
@@ -3906,7 +3949,7 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
 			}
-			}
+	}
 
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
@@ -3959,7 +4002,7 @@ inline bool dispatch_layer_t::contain_local_addr(sockaddrunion* addr_list, uint 
 		}
 	}
 	return ret;
-		}
+}
 
 int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
 	sockaddrunion* foundAddress, int supportedAddressTypes)
@@ -4050,14 +4093,14 @@ int dispatch_layer_t::read_peer_addr(uchar * chunk, uint chunk_len, uint n,
 				}
 			}
 			break;
-		}
+				}
 		read_len += chunk_len;
 		while (read_len & 3)
 			++read_len;
 		curr_pos = init_chunk->variableParams + read_len;
-		}  // while
+			}  // while
 	return 1;
-	}
+		}
 uchar* dispatch_layer_t::find_first_chunk_of(uchar * packet_value, uint packet_val_len,
 	uint chunk_type)
 {
