@@ -239,27 +239,27 @@ int dispatch_layer_t::recv_geco_packet(int socket_fd, char *dctp_packet, uint dc
 
 		if (IN_CLASSD(ip4_saddr_))
 		{
-			EVENTLOG(VERBOSE, "IN_CLASSD(source_addr) -> discard !");
+			EVENTLOG(NOTICE, "IN_CLASSD(source_addr) -> discard !");
 			should_discard_curr_geco_packet_ = true;
 		}
 		else if (IN_EXPERIMENTAL(ip4_saddr_))
 		{
-			EVENTLOG(VERBOSE, "IN_EXPERIMENTAL(source_addr) -> discard !");
+			EVENTLOG(NOTICE, "IN_EXPERIMENTAL(source_addr) -> discard !");
 			should_discard_curr_geco_packet_ = true;
 		}
 		else if (IN_BADCLASS(ip4_saddr_))
 		{
-			EVENTLOG(VERBOSE, "IN_BADCLASS(source_addr) -> discard !");
+			EVENTLOG(NOTICE, "IN_BADCLASS(source_addr) -> discard !");
 			should_discard_curr_geco_packet_ = true;
 		}
 		else if (INADDR_ANY == ip4_saddr_)
 		{
-			EVENTLOG(VERBOSE, "INADDR_ANY(source_addr) -> discard !");
+			EVENTLOG(NOTICE, "INADDR_ANY(source_addr) -> discard !");
 			should_discard_curr_geco_packet_ = true;
 		}
 		else if (INADDR_BROADCAST == ip4_saddr_)
 		{
-			EVENTLOG(VERBOSE, "INADDR_BROADCAST(source_addr) -> discard !");
+			EVENTLOG(NOTICE, "INADDR_BROADCAST(source_addr) -> discard !");
 			should_discard_curr_geco_packet_ = true;
 		}
 		//if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
@@ -2899,9 +2899,23 @@ void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_ec
 	uint cookie_local_tag = read_init_tag(initAckCID);
 	uint local_tag = get_local_tag();
 	uint remote_tag = get_remote_tag();
-	if (last_veri_tag_ != cookie_local_tag &&
-		last_dest_port_ != ntohs(cookie_echo->cookie.dest_port) &&
-		last_src_port_ != ntohs(cookie_echo->cookie.src_port))
+	bool valid = true;
+	if (last_veri_tag_ != cookie_local_tag)
+	{
+		EVENTLOG(NOTICE, "validate cookie echo failed as last_veri_tag_ != cookie_local_tag! -> return");
+		valid = false;
+	}
+	if(last_dest_port_ != ntohs(cookie_echo->cookie.dest_port))
+	{
+		EVENTLOG(NOTICE, "validate cookie echo failed as last_dest_port_ != cookie.dest_port -> return");
+		valid = false;
+	}
+	if(last_src_port_ != ntohs(cookie_echo->cookie.src_port)
+	{
+		EVENTLOG(NOTICE, "validate cookie echo failed as last_src_port_ != cookie.src_port -> return");
+		valid = false;
+	}
+	if(valid == false)
 	{
 		remove_simple_chunk(cookie_echo_cid);
 		free_simple_chunk(initCID);
