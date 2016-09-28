@@ -1,12 +1,79 @@
-1   a sends init to z
+1  a sends init to z at state of close
     a->z_init[vt=0,it=a1]
     a [lt=a1,pt=0,ltt=0,ptt=0]
+	a's channel not null
     a enters cookie wait state
-    
-2   a recvs init sent from z (sick case)
-    2.1 z send init before it recvs a->z_init
-        a<-z_init[vt=0,it=z1] 
-        z [lt=z1,pt=0,ltt=0,ptt=0]
-    2.1 z send init after it recvs a->z_init and sends a<-z
-        a<-z_init[vt=0,it=z1] 
-        z [lt=z1,pt=0,ltt=0,ptt=0]
+	z is now close state
+	1.1   a recvs init from z at state of cookie wait (sick case) 
+			z is now cookie wait state
+			1.1.1 z send init before it recvs a->z_init 
+					a<-z_init[vt=0,it=z1], 
+					z [lt=z1,pt=0,ltt=0,ptt=0]
+					a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
+					1.1.1.1 a recvs cookie echo from z (normal case)
+								a<-z cookie_echo[vtag=a1,cookie={lt=a1,pt=z1,ltt=0, ptt=0}]
+								(z must be updated){z [lt=z1,pt=a1,ltt=z1,ptt=a1]}
+								(validate cookie){
+								cookie[lt=a1,pt=z1,ltt=0, ptt=0]
+								a[lt=a1,pt=0,ltt=0,ptt=0]
+								}->mxaa->ACTION B->update a_pt with cookie_pt->a[lt=a1,pt=z1,ltt=0,ptt=0]
+								(update z's tie tags){a[lt=a1,pt=z1,ltt=a1,ptt=z1]}
+								(a enters CONNECTED state)
+								1.1.1.2 a->z cookie_ack[vtag=z1]
+											(z enters CONNECTED state)
+											{a[lt=a1,pt=z1,ltt=a1,ptt=z1]
+											z [lt=z1,pt=a1,ltt=z1,ptt=a1]}->mmmm
+											==================================================================> A IS NOW CONNECTED TO Z
+					1.1.1.2 a recv init_ack from z (sick case)
+								1.1.1.2.1	z send init_ack before it recvs a->z_init_ack 
+												a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]]
+												(z state remians) z is still cookie wait state
+												z[lt=z1,pt=a1,ltt=0, ptt=0]
+												(a update its channel) 
+												a[lt=a1,pt=z1,ltt=a1,ptt=z1]
+												1.1.1.2.1.1		a->z cookie_echo[vtag=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]] 
+																	(a updates its state){a is now cookie echoed state} 		
+																	(validate cookie){
+																	cookie[lt=z1,pt=a1,ltt=0, ptt=0]
+																			 z[lt=z1,pt=a1,ltt=0, ptt=0]}->mmaa->but z is not cookie echoed state
+																	==========================================================> Discard
+								1.1.1.2.2	z send  init_ack after it recvs a->z_init_ack
+												a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=z1, ptt=a1]]
+												(z state updated) z is now cookie echoed state
+												z[[lt=z1,pt=a1,ltt=z1, ptt=a1]
+												(a update its channel) 
+												a[lt=a1,pt=z1,ltt=a1,ptt=z1]
+												1.1.1.2.1.1		a->z cookie_echo[vtag=z1,cookie[lt=z1,pt=a1,ltt=z1, ptt=a1] 
+																	(a updates its state){a is now cookie echoed state} 		
+																	(validate cookie){cookie[lt=z1,pt=a1,ltt=z1, ptt=a1]
+																	z[[lt=z1,pt=a1,ltt=z1, ptt=a1]}->  m m  a a  but not cookie echoed state -> discard
+																	(update z's tie tags)
+																	z[lt=z1,pt=a1,ltt=z1,ptt=a1]
+																	(z enters CONNECTED state)]			
+												1.1.1.2.1.2		a<-z cookie_ack[vtag=a1]
+																	(a enters CONNECTED state)
+																	{a[lt=a1,pt=z1,ltt=a1,ptt=z1] = z[[lt=z1,pt=a1,ltt=z1, ptt=a1]}->mmmm
+																	================================================================== A IS NOW CONNECTED TO Z
+											    
+			1.1.2 z send init after it recvs (a->z_init&&sends a<-z_initack)
+					a<-z_init[vt=0,it=z1], 
+					z [lt=z1,pt=0,ltt=0,ptt=0]
+	1.2   a recv init_ack from z at state of cookie wait (normal case) 
+			a<-z_init_ack[vt=a1,itag=z1, cookie[lt=z1,pt=a1,ltt=0, ptt=0]]
+			z is now close state
+			z[lt=z1,pt=a1,ltt=0,ptt=0]
+			(a update its channel) 
+			a[lt=a1,pt=z1,ltt=a1,ptt=z1]
+			1.2.1 a->z cookie_echo[cookie[lt=z1,pt=a1,ltt=0, ptt=0]] at state of close 
+					(validate cookie)
+					{cookie[lt=z1,pt=a1,ltt=0, ptt=0]
+					z[lt=z1,pt=a1,ltt=0,ptt=0]}->  m m  m m -> ACTION D
+					(update z's tie tags)
+					z[lt=z1,pt=a1,ltt=z1,ptt=a1]
+					(z enters CONNECTED state)
+			1.2.2 a<-z cookie_ack[vtag=a1]
+					(a enters CONNECTED state)
+
+	{A IS NOW CONNECTED TO Z}
+	{a[lt=a1,pt=z1,ltt=a1,ptt=z1]
+	 z[lt=z1,pt=a1,ltt=z1,ptt=a1]} -> m m m m 
