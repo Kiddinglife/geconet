@@ -1,0 +1,12 @@
+1   a sends init to z
+    a->z_init[vt=0,it=a1]
+    a [lt=a1,pt=0,ltt=0,ptt=0]
+    a enters cookie wait state
+    
+2   a recvs init sent from z (sick case)
+    2.1 z send init before it recvs a->z_init
+        a<-z_init[vt=0,it=z1] 
+        z [lt=z1,pt=0,ltt=0,ptt=0]
+    2.1 z send init after it recvs a->z_init and sends a<-z
+        a<-z_init[vt=0,it=z1] 
+        z [lt=z1,pt=0,ltt=0,ptt=0]

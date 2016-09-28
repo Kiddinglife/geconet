@@ -2827,6 +2827,7 @@ int dispatch_layer_t::read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk
 #endif
 	return (no_remote_ipv4_addresses + no_remote_ipv6_addresses);
 }
+
 void dispatch_layer_t::set_channel_addrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES],
 	int noOfAddresses)
 {
@@ -2852,6 +2853,7 @@ void dispatch_layer_t::set_channel_addrlist(sockaddrunion addresses[MAX_NUM_ADDR
 		curr_channel_->remote_addres_size);
 #endif
 }
+
 void dispatch_layer_t::process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 {
 	EVENTLOG(VERBOSE, "Enter process_cookie_echo_chunk()");
