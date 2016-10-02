@@ -1,216 +1,237 @@
-1   a sends init to z at state of CLOSE
-    a->z_init[vt=0,it=a1]
-    a [lt=a1,pt=0,ltt=0,ptt=0]
-	a's channel not null
-    a enters cookie wait state
-	z is now close state
+- - - - - - - - - - - - - - SICK CASE of RECEIVE INIT At COOKIE_WAIT_STATE - - - - - - - - - - - - - - - -
+CASE(1): Z sends INIT before it  receives INIT sent by A
+{A sets connection with z}
+(build channel)
+A [lt=a1,pt=0,ltt=0,ptt=0]
+T0 INIT [vt=0,it=a1]                                   
+(starts t1-init timer)                                 
+(enters COOKIE-WAIT state)  
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >                          																							
+			 																			{Z sets connection with z}
+																						Z [lt=z1,pt=0,ltt=0,ptt=0]
+																						T1 INIT [vt=0,it=a1]                                   
+																						(starts t1-init timer)                                 
+																						(enters COOKIE-WAIT state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 																					 
+Sick Case happens: recv INIT at cookie wait state
+(compose tmp channel and cookie_a)
+(uses old itag a1)
+T2 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+FLYING CHUNKS AT THIS MOMENT HAVE T0 INIT && T2 INIT_ACK
+CASE(1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+																						Z firstly receives T2 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+																						(canncel t1-init timer)
+																						(update curr channel)
+																						Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+																						T3 COOKIE_ECHO [COOKIE_Z [lt=z1,pt=a1,ltt=z1, ptt=a1]]
+																						(start t1-init timer)
+																						(enters COOKIE_ECHOED state)
 
-	1.1   a recvs init from z at state of cookie wait (sick case of collision connection) 
-			z is now cookie wait state
-			1.1.1   z send init before it recvs a->z_init
-                    (z sends a<-z_init[vt=0,it=z1])
-                    (now){z [lt=z1,pt=0,ltt=0,ptt=0]
-                    z is cookie wait state}
-                    (sick case:z recvs a->z_init at cookie wait state)
-                    (z sends a<-z_init_ack use old itag z1)
-                    a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]]
-                    (z not change its inner states)
-                    (now){z [lt=z1,pt=a1,ltt=0,ptt=0]
-                    z is cookie wait state}
-					(now){a [lt=a1,pt=0,ltt=0,ptt=0]}
+																						Z secondly receives T0 INIT [vt=0,it=a1]
+																						sick case happens: recv INIT at COOKIE_ECHOED state
+																						(uses old itag z1 and populate tie tags)
+																						T4 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE T3 COOKIE_ECHO && T4 INIT_ACK
+CASE(1.1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=z1, ptt=a1]]
+(validate cookie)
+(compare tags within cookie and A)
+(take action B for it is mxaa)
+COOKIE_A [lt=a1,pt=z1,ltt=z1, ptt=a1]
+A [lt=a1,pt=0,ltt=0,ptt=0])
+(update A's pt with cookie_z1)
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+T5 COOKIE_ACK [vt=z1]
+(Enters CONNECTED)
 
-                    1.1.1.1 a sends a->z_init_ack to z when a recvs init from z at state of cookie wait
-                            (a not change its inner states,use old itag)
-                            a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-                            (z recvs it and updates itself)
-                            (now){z [lt=z1,pt=a1,ltt=z1,ptt=a1]}
-                            (z sends cookie_echo[lt=a1,pt=z1,ltt=0, ptt=0])
+Z secondly receives T4 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+Sick Case happens: recv INIT_ACK at CONNECTED state
+(discard INIT_ACK)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
+FLYING CHUNKS AT THIS MOMENT HAVE ONLY T5 COOKIE_ACK [vt=z1]
+																						Z COOKIE_ECHOED state
+																						(canncel t1-init timer)
+																						(Enters CONNECTED)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+Z successfully connects to A
+CASE(1.1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T4 INIT_ACK 
+[vt=a1,itag=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+(update A's channel)
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+(start t1-init timer)
+(enters COOKIE_ECHOED state)
 
-                            (now){the chunks a may recv from z (flying chunks)  are either of
-                            cookie_echo as a sends a->z_init_ack to z just now at step 1.1.1.1;
-                            init_ack as a sends init to z previously at step 1}
+A secondly receives T3 COOKIE_ECHO [COOKIE_A[lt=z1,pt=a1,ltt=z1, ptt=a1]]
+(validate cookie)
+(compare tags within cookie and A)
+(take action B for it is mxaa)
+COOKIE_A [lt=a1,pt=z1,ltt=z1, ptt=a1]
+A [lt=a1,pt=0,ltt=a1,ptt=a1])
+(update A's pt with cookie_z1)
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+T6 COOKIE_ACK [vt=z1]
+(Enters CONNECTED)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
+FLYING CHUNKS AT THIS MOMENT HAVE T6 COOKIE_ACK [vt=z1] && T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+CASE(1.1.2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>
+																						Z COOKIE_ECHOED state
+																						Z firstly receives T6 COOKIE_ACK [vt=z1]
+																						(canncel t1-init timer)
+																						(Enters CONNECTED)
 
-                            1.1.1.1.1   a recvs cookie echo from z
-                                        a<-z cookie_echo[vtag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-                                        {z [lt=z1,pt=a1,ltt=z1,ptt=a1]}
-                                        (validate cookie){
-                                        cookie[lt=a1,pt=z1,ltt=0, ptt=0]
-                                        a[lt=a1,pt=0,ltt=0,ptt=0]
-                                        }->mxaa->ACTION B->update a_pt with cookie_pt->a[lt=a1,pt=z1,ltt=0,ptt=0]
-                                        (update z's tie tags){a[lt=a1,pt=z1,ltt=a1,ptt=z1]}
-                                        (a enters CONNECTED state)
+																						Z CONNECTED state
+																						Z secondly receives T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+																						(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=p1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+Z successfully connects to A
+CASE(1.1.2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>
+CASE(1.1.2.2) >>>>>>>>>>>>>>>>>>>>>>>>>>
+																						Z COOKIE_ECHOED state
+																						Z firstly receives T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+																						(validate cookie)
+																						(compare tags within cookie and Z)
+																						COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]
+																						Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+																						(take action D for it is mmaa && at  COOKIE_ECHOED state)
+																						(Enters CONNECTED)
 
-                                    1.1.1.1.1.1 a-> z cookie_ack[vtag=z1]
-                                                (z enters CONNECTED state)
-                                                {a[lt=a1,pt=z1,ltt=a1,ptt=z1]
-                                                z [lt=z1,pt=a1,ltt=z1,ptt=a1]}->mmmm
+																						Z CONNECTED state
+																						Z secondly receives T6 COOKIE_ACK [vt=z1]
+																						(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+A successfully connects to Z
+CASE(1.1.2.2) <<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+																						Z firstly receives T0 INIT [vt=0,it=a1] 
+																						Sick Case happens: recv INIT at cookie wait state
+																						(compose tmp channel and cookie_z)
+																						(uses old itag z1)
+																						T3 INIT_ACK [vt=a1,itag=z1,COOKIE_Z [lt=z1,pt=a1,ltt=0, ptt=0]])
 
-                                                summary
-                                                a->z_init[vt=0,it=a1]
-                                                a<-z_init[vt=0,it=z1
-                                                a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-                                                a<-z cookie_echo[vtag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-                                                a-> z cookie_ack[vtag=z1]
-                                                - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  - - - > Z CONNECTED TO A
+																						Z secondly receives T2 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+																						(update Z's channel)
+																						Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+																						T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=z1, ptt=a1]]
+																						(start t1-init timer)
+																						(enters COOKIE_ECHOED state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE T3 INIT_ACK && T4 COOKIE_ECHO
+CASE(1.2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=z1, ptt=a1]]
+(validate cookie)
+(compare tags within cookie and A)
+(take action B for it is mxaa)
+COOKIE_Z [lt=z1,pt=a1,ltt=z1, ptt=a1]
+A [lt=a1,pt=0,ltt=0,ptt=0])
+(update A's pt with cookie_z1)
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+T5 COOKIE_ACK [vt=z1]
+(Enters CONNECTED)
 
-                            1.1.1.1.2   a recv init_ack from z
-                                    1.1.1.1.2.1 z send init_ack before it recvs a->z_init_ack at state cookie wait
-                                                a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]]
-                                                (z inner states remians){z[lt=z1,pt=a1,ltt=0, ptt=0],z is still cookie wait state}
-                                                (a update its channel){a[lt=a1,pt=z1,ltt=a1,ptt=z1]}
-                                                1.1.1.2.1.1 a replies cookie echo to z 
-                                                            a->z_cookie_echo[vt=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]] 
-                                                            (a updates its state){a is now cookie echoed state} 		
-                                                            (validate cookie){
-                                                            cookie[lt=z1,pt=a1,ltt=0, ptt=0]
-                                                            z[lt=z1,pt=a1,ltt=0, ptt=0]}->mmaa->but z is not cookie echoed state
+A secondly receives T3 INIT_ACK [vt=a1,itag=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+Sick Case happens: recv INIT_ACK at CONNECTED state
+(discard INIT_ACK)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
+FLYING CHUNKS AT THIS MOMENT HAVE ONLY T5 COOKIE_ACK 
+																						Z COOKIE_ECHOED state
+																						Z receives T5 COOKIE_ACK [vt=z1]
+																						(canncel t1-init timer)
+																						(Enters CONNECTED)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+Z successfully connects to A
+CASE(1.2.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T3 INIT_ACK [vt=a1,itag=z1,COOKIE_Z [lt=z1,pt=a1,ltt=0, ptt=0]]) 
+(update A's channel)
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+(start t1-init timer)
+(enters COOKIE_ECHOED state)
 
-                                                            summary
-                                                            a is conencting to z, a connects firstly
-                                                            z is connecting to a, z connects secondly 
-                                                            connection collision happens  
+A secondly receives T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=z1, ptt=a1]]
+(validate cookie)
+(compare tags within cookie and A)
+(take action B for it is mxaa)
+COOKIE_Z [lt=a1,pt=z1,ltt=z1, ptt=a1]
+A [lt=a1,pt=0,ltt=a1,ptt=a1])
+(update A's pt with cookie_z1)
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+T6 COOKIE_ACK [vt=z1]
+(Enters CONNECTED)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
+FLYING CHUNKS AT THIS MOMENT HAVE T5 COOKIE_ECHO && T6 COOKIE_ACK
+CASE(1.2.2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>
+																						Z COOKIE_ECHOED state
+																						Z firstly receives T6 COOKIE_ACK [vt=z1]
+																						(canncel t1-init timer)
+																						(Enters CONNECTED)
 
-                                                            a->z_init[vt=0,it=a1]
-                                                            a<-z_init[vt=0,it=z1
-                                                            a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-                                                            a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]]
-                                                            a->z_cookie_echo[vt=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]] 
-                                                            z[lt=z1,pt=a1,ltt=0, ptt=0] cookie wait state
-                                                            a[lt=a1,pt=z1,ltt=a1,ptt=z1]cookie echoed state
-                                                            - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - > DISCARD
-                                                            now case  1.1.1.1.1  a recvs cookie echo from z will works and Z finally CONNECTED TO A
+																						Z CONNECTED state
+																						Z secondly receives T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+																						(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+Z successfully connects to A
+CASE(1.2.2.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2.2.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>
+																						Z COOKIE_ECHOED state
+																						Z firstly receives T5 COOKIE_ECHO [vt=z1,COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]]
+																						(validate cookie)
+																						(compare tags within cookie and Z)
+																						COOKIE_A[lt=z1,pt=a1,ltt=zr1, ptt=lr1]
+																						Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+																						(take action D for it is mmaa && at  COOKIE_ECHOED state)
+																						(Enters CONNECTED)
 
-                                    1.1.1.1.2.2	z send init_ack after it recvs a->z_init_ack at state cookie wait
-														(z must have updated its inner states with a->z_init-ack at state cookie wait)
-														(z also sends cookie_echo[vt=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]] to a){
-														a<-z_cookie_echo[vt=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]}
-														(now){z[lt=z1,pt=a1,ltt=z1, ptt=a1], z is cookie echoed sate}
+																						Z CONNECTED state
+																						Z secondly receives T6 COOKIE_ACK [vt=z1]
+																						(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=a1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+A successfully connects to Z
+CASE(1.2.2.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1) ENDS
 
-														(z does not update its inner states, use old itag)
-														a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=r1, ptt=r2]]}
-														(now){z[lt=a1,pt=z1,ltt=a1,ptt=z1]}
-														(a updates inner states)
-														(now){a[lt=a1,pt=z1,ltt=a1,ptt=z1]}
-														1.1.1.2.1.1	a->z cookie_echo[vtag=z1,cookie[lt=z1,pt=a1,ltt=r1, ptt=r2] 
-																			(a updates its state)
-																			(now){a is cookie echoed state} 		
-																			(validate cookie){cookie[lt=z1,pt=a1,ltt=r1, ptt=r2]
-																			z[[lt=z1,pt=a1,ltt=z1, ptt=a1]}->mmaa->ACTION D
-																			(z enters CONNECTED state)]	
-														1.1.1.2.1.2	a<-z cookie_ack[vtag=a1]
-																			(a enters CONNECTED state)
-																			{a[lt=a1,pt=z1,ltt=a1,ptt=z1] 
-																			z[[lt=z1,pt=a1,ltt=z1, ptt=a1]}->mmmm
+CASE(2): Z sends INIT AFTER it  receives INIT sent by A
+//TODO change something in CASE(1) and mke it the CASE (2)
+{A sets connection with z}
+(build channel)
+A [lt=a1,pt=0,ltt=0,ptt=0]
+T0 INIT [vt=0,it=a1]                                   
+(starts t1-init timer)                                 
+(enters COOKIE-WAIT state)  
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - > 
+																						(compose tmp channel and cookie_z)
+																						(use newly created itag z1)
+																						T2 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
 
-																			summary
-																			a->z_init[vt=0,it=a1]
-																			a<-z_init[vt=0,it=z1
-																			a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-																			a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=r1, ptt=r2]]}
-																			a->z_cookie_echo[vt=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]] 
-																			a<-z cookie_ack[vtag=a1]
-																			z[lt=z1,pt=a1,ltt=0, ptt=0] cookie wait state
-																			a[lt=a1,pt=z1,ltt=a1,ptt=z1]cookie echoed state
-																			- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->  A CONNECTED TO Z
-											    
-			1.1.2 z send init after it recvs a->z_init at state of closed
-                    (z sends a<-z_init_ack with a newly created itag z1) 
-					{a<-z_init_ack[vtag=a1,itag=z1,cookie[lt=a1,pt=z1,ltt=0,ptt=0]]}
-					(z remains unchanged)
-					(now){z[lt=0,pt=0,ltt=0,ptt=0]}
-                    (z sends a<-z_init with a newly created itag z2)
-                    {a<-z_init[vt=0,it=z2]}
-					(z updates its inner states)
-                    (now){z[lt=z2,pt=0,ltt=0,ptt=0], z is cookie wait state}}
-					(now){a [lt=a1,pt=0,ltt=0,ptt=0]}
-					(now){a recved a<-z_init[vt=0,it=z2]}
+																						{Z sets connection with z}
+																						(use newly created itag z2)
+																						Z [lt=z2,pt=0,ltt=0,ptt=0]
+																						T3 INIT [vt=0,it=z2]                                   
+																						(starts t1-init timer)                                 
+																						(enters COOKIE-WAIT state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE T3 INIT [vt=0,it=z2] && T2 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+//todo
+CASE(2) ENDS
 
-                    1.1.2.1	a immediately sends a->z_init_ack to z when a recvs init from z at state of cookie wait
-								(a not change its inner states,use old itag a1)
-								a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-
-								(z recvs  a->z_init_ack and updates itself, immediately send back cookie_echo)
-								(z sends cookie_echo[vt=a1,cookie[lt=z1,at=z1,ltt=0, ptt=0]])
-								(now){z [lt=z1,pt=a1,ltt=z1,ptt=a1], z is cookie echoed state}
-
-								(now){the chunks a may recv from z (flying chunks)  are either of
-								cookie_echo as a sendsa->z_init_ack to z just now at step 1.1.2;
-								init_ack as z recvs a->z_init at state of closed at step 1.1.2}
-
-								1.1.2.1.1	a recvs cookie_echo from z
-												a<-z cookie_echo[vt=a1,cookie={lt=a1,pt=z1,ltt=0, ptt=0}]
-												(now){z [lt=z1,pt=a1,ltt=z1,ptt=a1]}
-												(validate cookie){
-												cookie[lt=a1,pt=z1,ltt=0, ptt=0]
-												a[lt=a1,pt=0,ltt=0,ptt=0]
-												}->mxaa->ACTION B->update a_pt with cookie_pt->a[lt=a1,pt=z1,ltt=0,ptt=0]
-												(a enters CONNECTED state)
-												1.1.2.1.1	a-> z cookie_ack[vtag=z1]
-																{a[lt=a1,pt=z1,ltt=a1,ptt=z1]
-																z [lt=z1,pt=a1,ltt=z1,ptt=a1]}->mmmm
-																(z enters CONNECTED state)
-
-																summary
-																a->z_init[vt=0,it=a1]
-																a<-z_init[vt=0,it=z2]
-																a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-																a<-z cookie_echo[vt=a1,cookie={lt=a1,pt=z1,ltt=0, ptt=0}]
-																a-> z cookie_ack[vtag=z1]
-																a[lt=a1,pt=z1,ltt=a1,ptt=z1]
-																z [lt=z1,pt=a1,ltt=z1,ptt=a1]}->mmmm
-																- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->  Z CONNECTED TO A 
-								// todo
-								1.1.2.1.2	z send init_ack after it recvs a->z_init_ack at state cookie wait
-												(z must have updated its inner states with a->z_init-ack at state cookie wait)
-												(z also sends cookie_echo[vt=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]] to a){
-												a<-z_cookie_echo[vt=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]}
-												(now){z[lt=z1,pt=a1,ltt=z1, ptt=a1], z is cookie echoed sate}
-
-												(z does not update its inner states, use old itag)
-												a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=r1, ptt=r2]]}
-												(now){z[lt=a1,pt=z1,ltt=a1,ptt=z1]}
-												(a updates inner states)
-												(now){a[lt=a1,pt=z1,ltt=a1,ptt=z1]}
-												1.1.1.2.1.1	a->z cookie_echo[vtag=z1,cookie[lt=z1,pt=a1,ltt=r1, ptt=r2] 
-																	(a updates its state)
-																	(now){a is cookie echoed state} 		
-																	(validate cookie){cookie[lt=z1,pt=a1,ltt=r1, ptt=r2]
-																	z[[lt=z1,pt=a1,ltt=z1, ptt=a1]}->mmaa->ACTION D
-																	(z enters CONNECTED state)]	
-												1.1.1.2.1.2	a<-z cookie_ack[vtag=a1]
-																	(a enters CONNECTED state)
-																	{a[lt=a1,pt=z1,ltt=a1,ptt=z1] 
-																	z[[lt=z1,pt=a1,ltt=z1, ptt=a1]}->mmmm
-
-																	summary
-																	a->z_init[vt=0,it=a1]
-																	a<-z_init[vt=0,it=z1
-																	a->z_init_ack[vt=z1,itag=a1,cookie[lt=a1,pt=z1,ltt=0, ptt=0]]
-																	a<-z_init_ack[vt=a1,itag=z1,cookie[lt=z1,pt=a1,ltt=r1, ptt=r2]]}
-																	a->z_cookie_echo[vt=z1,cookie[lt=z1,pt=a1,ltt=0, ptt=0]] 
-																	a<-z cookie_ack[vtag=a1]
-																	z[lt=z1,pt=a1,ltt=0, ptt=0] cookie wait state
-																	a[lt=a1,pt=z1,ltt=a1,ptt=z1]cookie echoed state
-																	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - A CONNECTED TO Z
-
-
-
-	1.2   a recv init_ack from z at state of cookie wait (normal case) 
-			a<-z_init_ack[vt=a1,itag=z1, cookie[lt=z1,pt=a1,ltt=0, ptt=0]]
-			z is now close state
-			z[lt=z1,pt=a1,ltt=0,ptt=0]
-			(a update its channel) 
-			a[lt=a1,pt=z1,ltt=a1,ptt=z1]
-			1.2.1 a->z cookie_echo[cookie[lt=z1,pt=a1,ltt=0, ptt=0]] at state of close 
-					(validate cookie)
-					{cookie[lt=z1,pt=a1,ltt=0, ptt=0]
-					z[lt=z1,pt=a1,ltt=0,ptt=0]}->  m m  m m -> ACTION D
-					(update z's tie tags)
-					z[lt=z1,pt=a1,ltt=z1,ptt=a1]
-					(z enters CONNECTED state)
-			1.2.2 a<-z cookie_ack[vtag=a1]
-					(a enters CONNECTED state)
-
-	{A IS NOW CONNECTED TO Z}
-	{a[lt=a1,pt=z1,ltt=a1,ptt=z1]
-	 z[lt=z1,pt=a1,ltt=z1,ptt=a1]} -> m m m m 
