@@ -1125,7 +1125,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 	supportedTypes = mdi_getSupportedAddressTypes();
 	/* retrieve addresses from initAck */
 	ndAddresses = ch_IPaddresses(initAckCID, supportedTypes, dAddresses, &peerSupportedTypes, &destAddress);
-	mdi_writeDestinationAddresses(dAddresses, ndAddresses);
+	mdi_set_channel_addrlist(dAddresses, ndAddresses);
 
 	/* initialize rest of association with data received from peer */
 	inbound_streams = min(ch_noOutStreams(initAckCID), smctrl->inbound_stream);
@@ -1142,7 +1142,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 			   peerSupportsPRSCTP,
 			   FALSE);
 
-	event_logii(VERBOSE, "sctlr_InitAck(): called mdi_initAssociation(in-streams=%u, out-streams=%u)",
+	event_logii(VERBOSE, "sctlr_InitAck(): called mdi_init_channel(in-streams=%u, out-streams=%u)",
 		    inbound_streams, outbound_streams);
 
 	/* reset length field again to NBO... */
@@ -1447,20 +1447,20 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	event_log(EXTERNAL_EVENT, "event: process_cookie_echo_chunk in state CLOSED");
 	mySupportedTypes = mdi_getSupportedAddressTypes();
 	/* retrieve destination addresses from cookie */
-	ndAddresses = ch_cookieIPDestAddresses(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
+	ndAddresses = ch_read_addrlist_from_cookie(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
 
 	if (ndAddresses > 0)
 	{
 	    /* save addresses if initAck contained more then zero, otherwise the source address
 				   of the IP-message carrying the cookie-chunk will be used for this association. */
 	    event_logi(VERBOSE, "Storing %d destination addresses as paths", ndAddresses);
-	    mdi_writeDestinationAddresses(dAddresses, ndAddresses);
+	    mdi_set_channel_addrlist(dAddresses, ndAddresses);
 	}
 
 	peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
 
 	/* initialize new association from cookie data */
-	mdi_initAssociation(ch_receiverWindow(initCID),
+	mdi_init_channel(ch_receiverWindow(initCID),
 			    ch_noInStreams(initAckCID),
 			    ch_noOutStreams(initAckCID),
 			    ch_initialTSN(initCID), cookie_remote_tag, ch_initialTSN(initAckCID),
@@ -1524,18 +1524,18 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		if (state == COOKIE_WAIT || state == COOKIE_ECHOED)
 		{
 		    mySupportedTypes = mdi_getSupportedAddressTypes();
-		    ndAddresses = ch_cookieIPDestAddresses(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
+		    ndAddresses = ch_read_addrlist_from_cookie(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
 		    if (ndAddresses > 0)
 		    {
 			/* save addresses if initAck contained more then zero, otherwise the source address
 							   of the IP-message carrying the cookie-chunk will be used for this association. */
 			event_logi(VERBOSE, "Storing %d destination addresses as paths", ndAddresses);
-			mdi_writeDestinationAddresses(dAddresses, ndAddresses);
+			mdi_set_channel_addrlist(dAddresses, ndAddresses);
 		    }
 		    peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
 
 		    /* initialize new association from cookie data */
-		    mdi_initAssociation(ch_receiverWindow(initCID),
+		    mdi_init_channel(ch_receiverWindow(initCID),
 					ch_noInStreams(initAckCID),
 					ch_noOutStreams(initAckCID),
 					ch_initialTSN(initCID),
@@ -1577,18 +1577,18 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		if (state == COOKIE_WAIT || state == COOKIE_ECHOED)
 		{
 		    mySupportedTypes = mdi_getSupportedAddressTypes();
-		    ndAddresses = ch_cookieIPDestAddresses(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
+		    ndAddresses = ch_read_addrlist_from_cookie(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
 		    if (ndAddresses > 0)
 		    {
 			/* save addresses if initAck contained more then zero, otherwise the source address
 							   of the IP-message carrying the cookie-chunk will be used for this association. */
 			event_logi(VERBOSE, "Storing %d destination addresses as paths", ndAddresses);
-			mdi_writeDestinationAddresses(dAddresses, ndAddresses);
+			mdi_set_channel_addrlist(dAddresses, ndAddresses);
 		    }
 		    peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
 
 		    /* initialize new association from cookie data */
-		    mdi_initAssociation(ch_receiverWindow(initCID),
+		    mdi_init_channel(ch_receiverWindow(initCID),
 					ch_noInStreams(initAckCID),
 					ch_noOutStreams(initAckCID),
 					ch_initialTSN(initCID),
@@ -1639,10 +1639,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		    event_logi(VERBOSE, "Peer Restart, case 5.2.4.A, state == %u", state);
 
 		    mySupportedTypes = mdi_getSupportedAddressTypes();
-		    ndAddresses = ch_cookieIPDestAddresses(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
+		    ndAddresses = ch_read_addrlist_from_cookie(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
 		    peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
 
-		    restart_result = mdi_restartAssociation(ch_noInStreams(initAckCID),
+		    restart_result = mdi_restart_channel(ch_noInStreams(initAckCID),
 							    ch_noOutStreams(initAckCID),
 							    ch_receiverWindow(initCID),
 							    ch_initialTSN(initCID),

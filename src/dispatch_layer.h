@@ -783,19 +783,19 @@ public:
 	 * @param  localInitialTSN      my initial TSN, needed for initializing my flow control
 	 * @return 0 for success, else 1 for error
 	 */
-	unsigned short init_channel(unsigned int remoteSideReceiverWindow,
+	unsigned short mdi_init_channel(unsigned int remoteSideReceiverWindow,
 		unsigned short noOfInStreams, unsigned short noOfOutStreams,
 		unsigned int remoteInitialTSN, unsigned int tagRemote,
 		unsigned int localInitialTSN, bool assocSupportsPRSCTP,
 		bool assocSupportsADDIP)
 	{
-		EVENTLOG(DEBUG, "- - - Enter init_channel()");
+		EVENTLOG(DEBUG, "- - - Enter mdi_init_channel()");
 		assert(curr_channel_ == NULL);
 
 		if (curr_channel_->remote_tag != 0)
 		{
 			/* channel init was already completed */
-			EVENTLOG(INFO, "init_channel()::reset channel members!");
+			EVENTLOG(INFO, "mdi_init_channel()::reset channel members!");
 			free_flow_control(curr_channel_->flow_control);
 			free_reliable_transfer(curr_channel_->reliable_transfer_control);
 			free_recvctrl(curr_channel_->receive_control);
@@ -819,7 +819,19 @@ public:
 			curr_channel_->local_tag);
 		return 0;
 	}
-
+	unsigned short mdi_restart_channel(unsigned int new_rwnd,
+		unsigned short noOfInStreams,
+		unsigned short noOfOutStreams,
+		unsigned int remoteInitialTSN,
+		unsigned int localInitialTSN,
+		short primaryAddress,
+		short noOfPaths,
+		union sockaddrunion *destinationAddressList,
+		bool assocSupportsPRSCTP, bool assocSupportsADDIP)
+	{
+		//TODO
+		return 0;
+	}
 	/**
 	 * after submitting results from a SACK to flowcontrol, the counters in
 	 * reliable transfer must be reset
@@ -1579,6 +1591,26 @@ public:
 		}
 		return false;
 	}
+	bool peer_supports_addip(init_chunk_t* initack)
+	{
+		assert(initack != 0);
+		uchar* foundvlp = find_first_vlparam_of(VLPARAM_ADDIP,
+			&initack->variableParams[0],
+			initack->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+		if (foundvlp != NULL)
+		{
+			if (ntohs(((vlparam_fixed_t*)foundvlp)->param_length) >= VLPARAM_FIXED_SIZE)
+			{
+				return true;
+			}
+			else
+			{
+				EVENTLOG(VERBOSE, " pr vlp too short < 4 bytes");
+				return false;
+			}
+		}
+		return false;
+	}
 	cookie_param_t* get_state_cookie_from_init_ack(init_chunk_t* initack)
 	{
 		assert(initack != 0);
@@ -1762,7 +1794,7 @@ public:
 		ushort noOfDestinationAddresses,
 		sockaddrunion *destinationAddressList);
 
-	int read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk, uint mySupportedTypes,
+	int mch_read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk, uint mySupportedTypes,
 		sockaddrunion addresses[MAX_NUM_ADDRESSES], uint*peerSupportedAddressTypes,
 		sockaddrunion* lastSource);
 	/**
@@ -1770,7 +1802,7 @@ public:
 	 * @param addresses array that will hold the destination addresses after returning
 	 * @param noOfAddresses number of addresses that the peer has (and sends along in init/initAck)
 	 */
-	void set_channel_addrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
+	void mdi_set_channel_addrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 
 	/**
 	 sctlr_cookie_echo is called by bundling when a cookie echo chunk was received from  the peer.

@@ -1944,7 +1944,7 @@ ChunkID ch_cookieInitAckFixed(ChunkID chunkID)
 }
 
 /* ch_cookieIPaddresses reads the IP-addresses from a cookie */
-int ch_cookieIPDestAddresses(ChunkID chunkID, unsigned int mySupportedTypes,
+int ch_read_addrlist_from_cookie(ChunkID chunkID, unsigned int mySupportedTypes,
         union sockunion addresses[], unsigned int *peerSupportedAddressTypes,
         union sockunion* lastSource)
 {

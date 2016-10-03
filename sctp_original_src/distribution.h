@@ -322,7 +322,7 @@ gboolean mdi_supportsPRSCTP(void);
 gboolean mdi_peerSupportsPRSCTP(void);
 /*------------- functions to write and read addresses --------------------------------------------*/
 
-void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
+void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 
 void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         guint16 * noOfAddresses,
@@ -383,7 +383,7 @@ unsigned short mdi_newAssociation(void* sInstance,
  after calling this function, the initialisation is completed.
  */
 unsigned short
-mdi_initAssociation(unsigned int remoteSideReceiverWindow,
+mdi_init_channel(unsigned int remoteSideReceiverWindow,
         unsigned short noOfInStreams,
         unsigned short noOfOutStreams,
         unsigned int remoteInitialTSN,
@@ -391,7 +391,7 @@ mdi_initAssociation(unsigned int remoteSideReceiverWindow,
         gboolean assocSupportsPRSCTP, gboolean assocSupportsADDIP);
 
 unsigned short
-mdi_restartAssociation(unsigned short noOfInStreams,
+mdi_restart_channel(unsigned short noOfInStreams,
         unsigned short noOfOutStreams,
         unsigned int new_rwnd,
         unsigned int remoteInitialTSN,

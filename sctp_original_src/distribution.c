@@ -4822,14 +4822,14 @@ short mdi_getIndexForAddress(union sockunion* address)
  * @param addresses array that will hold the destination addresses after returning
  * @param noOfAddresses number of addresses that the peer has (and sends along in init/initAck)
  */
-void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES],
+void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES],
         int noOfAddresses)
 {
 
     if (curr_channel_ == NULL)
     {
         error_log(ERROR_MINOR,
-                "mdi_writeDestinationAddresses: association not set");
+                "mdi_set_channel_addrlist: association not set");
         return;
     }
     else
@@ -4843,7 +4843,7 @@ void mdi_writeDestinationAddresses(union sockunion addresses[MAX_NUM_ADDRESSES],
                 noOfAddresses * sizeof(union sockunion));
 
         if (curr_channel_->destinationAddresses == NULL)
-        error_log(ERROR_FATAL, "mdi_writeDestinationAddresses: out of memory");
+        error_log(ERROR_FATAL, "mdi_set_channel_addrlist: out of memory");
 
         memcpy(curr_channel_->destinationAddresses, addresses,
                 noOfAddresses * sizeof(union sockunion));
@@ -5321,7 +5321,7 @@ unsigned short mdi_clearAssociationData(void)
  *  For the active side of an association, this function is called when ULP calls Associate
  *  For the passive side this function is called when a valid cookie message is received.
  *  It also creates all the modules path management, bundling and SCTP-control.
- *  The rest of the modules are created with mdi_initAssociation.
+ *  The rest of the modules are created with mdi_init_channel.
  *  The created association is put into the list of associations.
  *
  *  @param SCTP_InstanceName    identifier for an SCTP instance (if there are more)
@@ -5497,7 +5497,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     curr_channel_->deliverman_control = NULL;
 
     /* only pathman, bundling and sctp-control are created at this point, the rest is created
-     with mdi_initAssociation */
+     with mdi_init_channel */
     curr_channel_->bundling = bu_new();
     curr_channel_->path_control = pm_new(noOfDestinationAddresses,
             primaryDestinitionAddress, instance);
@@ -5532,7 +5532,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
  * \item init acknowledgement
  * \end{enumerate}
  * At the z-side, with the cookie message all data is available at once. So mdi_newAssociation
- * and mdi_initAssociation must be called when the initAck with valid Cookie is received.
+ * and mdi_init_channel must be called when the initAck with valid Cookie is received.
  *
  * @param  remoteSideReceiverWindow  rwnd size that the peer allowed in this association
  * @param  noOfInStreams  number of incoming (receive) streams after negotiation
@@ -5542,7 +5542,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
  * @param  localInitialTSN      my initial TSN, needed for initializing my flow control
  * @return 0 for success, else 1 for error
  */
-unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
+unsigned short mdi_init_channel(unsigned int remoteSideReceiverWindow,
         unsigned short noOfInStreams, unsigned short noOfOutStreams,
         unsigned int remoteInitialTSN, unsigned int tagRemote,
         unsigned int localInitialTSN, gboolean assocSupportsPRSCTP,
@@ -5553,17 +5553,17 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
     if (!curr_channel_)
     {
         error_log(ERROR_MAJOR,
-                "mdi_initAssociation: current association does not exist, can not initialize");
+                "mdi_init_channel: current association does not exist, can not initialize");
         return 1;
     }
 
-    /* if  mdi_initAssociation has already be called, delete modules and make new ones
-     with possibly new data. Multiple calls of of mdi_initAssociation can occur on the
+    /* if  mdi_init_channel has already be called, delete modules and make new ones
+     with possibly new data. Multiple calls of of mdi_init_channel can occur on the
      a-side in the case of stale cookie errors. */
     if (curr_channel_->tagRemote != 0)
     {
         event_log(INTERNAL_EVENT_1,
-                "Deleting Modules in mdi_initAssociation() -- then recreating them !!!!");
+                "Deleting Modules in mdi_init_channel() -- then recreating them !!!!");
         /* association init was already completed */
         fc_delete_flowcontrol(curr_channel_->flow_control);
         rtx_delete_reltransfer(curr_channel_->reliable_transfer_control);
@@ -5596,9 +5596,9 @@ unsigned short mdi_initAssociation(unsigned int remoteSideReceiverWindow,
 
     return 0;
 
-} /* end: mdi_initAssociation */
+} /* end: mdi_init_channel */
 
-unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
+unsigned short mdi_restart_channel(unsigned short noOfInStreams,
         unsigned short noOfOutStreams, unsigned int new_rwnd,
         unsigned int remoteInitialTSN, unsigned int localInitialTSN,
         short noOfPaths, short primaryAddress,
@@ -5611,19 +5611,19 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
     if (!curr_channel_)
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: current association is NULL !");
+                "mdi_restart_channel: current association is NULL !");
         return 1;
     }
     if (!curr_geco_instance_)
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: curr_geco_instance_ is NULL !");
+                "mdi_restart_channel: curr_geco_instance_ is NULL !");
         return 1;
     }
     if (noOfPaths > curr_channel_->noOfNetworks)
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation tries to increase number of paths !");
+                "mdi_restart_channel tries to increase number of paths !");
         /* discard silently */
         return -1;
     }
@@ -5650,7 +5650,7 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
     else
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: curr_channel_->deliverman_control is NULL !");
+                "mdi_restart_channel: curr_channel_->deliverman_control is NULL !");
     }
     curr_channel_->deliverman_control = (void *) alloc_deliverman(
             noOfInStreams, noOfOutStreams, withPRSCTP);
@@ -5663,11 +5663,11 @@ unsigned short mdi_restartAssociation(unsigned short noOfInStreams,
     else
     {
         error_log(ERROR_MAJOR,
-                "mdi_restartAssociation: curr_channel_->path_control is NULL !");
+                "mdi_restart_channel: curr_channel_->path_control is NULL !");
     }
 
     /* frees old address-list before assigning new one */
-    mdi_writeDestinationAddresses(destinationAddressList, noOfPaths);
+    mdi_set_channel_addrlist(destinationAddressList, noOfPaths);
 
     curr_channel_->path_control = pm_new(noOfPaths, primaryAddress,
             curr_geco_instance_);
