@@ -243,6 +243,10 @@ const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
  /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
 #define MAX_IPADDR_STR_LEN           46        /* ==  INET6_ADDRSTRLEN      */
 
+/*this parameter specifies the maximum number of addresses
+ that an endpoint may have */
+#define MAX_NUM_ADDRESSES      32
+
 // if our impl is based on UDP, this is the well-known-port 
 // receiver and sender endpoints use 
 #ifndef USED_UDP_PORT
@@ -694,10 +698,6 @@ extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
 #define DEFAULT_MAX_BURST       4       /* maximum burst parameter */
 #define DEFAULT_ENDPOINT_SIZE 128
 
-/*this parameter specifies the maximum number of addresses
- that an endpoint may have */
-#define MAX_NUM_ADDRESSES      32
-
 #define free_flowctrl_data_chunk(list_element)\
 if((list_element) == NULL ) return; \
 if((list_element)->num_of_transmissions == 0 )\
@@ -723,120 +723,5 @@ if (d_pdu->ddata != NULL)\
 	geco_free_ext(d_pdu->ddata, __FILE__, __LINE__);\
 	geco_free_ext(d_pdu, __FILE__, __LINE__);\
 }
-
- /*====== APPLICATION LAYER DEFINES AND FUNTIONS =======*/
- /**
-  This struct containes the pointers to ULP callback functions.
-  Each SCTP-instance can have its own set of callback functions.
-  The callback functions of each SCTP-instance can be found by
-  first reading the datastruct of an association from the list of
-  associations. The datastruct of the association contains the name
-  of the SCTP instance to which it belongs. With the name of the SCTP-
-  instance its datastruct can be read from the list of SCTP-instances.
-  */
-struct applicaton_layer_cbs_t
-{
-	/* @{ */
-	/**
-	 * indicates that new data arrived from peer (chapter 10.2.A).
-	 *  @param 1 associationID
-	 *  @param 2 streamID
-	 *  @param 3 length of data
-	 *  @param 4 stream sequence number
-	 *  @param 5 tsn of (at least one) chunk belonging to the message
-	 *  @param 6 protocol ID
-	 *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
-	 *  @param 8 pointer to ULP data
-	 */
-	void(*dataArriveNotif)(unsigned int, unsigned short, unsigned int, unsigned short,
-		unsigned int, unsigned int, unsigned int, void*);
-	/**
-	 * indicates a send failure (chapter 10.2.B).
-	 *  @param 1 associationID
-	 *  @param 2 pointer to data not sent
-	 *  @param 3 dataLength
-	 *  @param 4 pointer to context from sendChunk
-	 *  @param 5 pointer to ULP data
-	 */
-	void(*sendFailureNotif)(unsigned int, unsigned char *, unsigned int, unsigned int *,
-		void*);
-	/**
-	 * indicates a change of network status (chapter 10.2.C).
-	 *  @param 1 associationID
-	 *  @param 2 destinationAddresses
-	 *  @param 3 newState
-	 *  @param 4 pointer to ULP data
-	 */
-	void(*networkStatusChangeNotif)(unsigned int, short, unsigned short, void*);
-	/**
-	 * indicates that a association is established (chapter 10.2.D).
-	 *  @param 1 associationID
-	 *  @param 2 status, type of event
-	 *  @param 3 number of destination addresses
-	 *  @param 4 number input streamns
-	 *  @param 5 number output streams
-	 *  @param 6 int  supportPRSCTP (0=FALSE, 1=TRUE)
-	 *  @param 7 pointer to ULP data, usually NULL
-	 *  @return the callback is to return a pointer, that will be transparently returned with every callback
-	 */
-	void* (*communicationUpNotif)(unsigned int, int, unsigned int, unsigned short,
-		unsigned short, int, void*);
-	/**
-	 * indicates that communication was lost to peer (chapter 10.2.E).
-	 *  @param 1 associationID
-	 *  @param 2 status, type of event
-	 *  @param 3 pointer to ULP data
-	 */
-	void(*communicationLostNotif)(unsigned int, unsigned short, void*);
-	/**
-	 * indicates that communication had an error. (chapter 10.2.F)
-	 * Currently not implemented !?
-	 *  @param 1 associationID
-	 *  @param 2 status, type of error
-	 *  @param 3 pointer to ULP data
-	 */
-	void(*communicationErrorNotif)(unsigned int, unsigned short, void*);
-	/**
-	 * indicates that a RESTART has occurred. (chapter 10.2.G)
-	 *  @param 1 associationID
-	 *  @param 2 pointer to ULP data
-	 */
-	void(*restartNotif)(unsigned int, void*);
-	/**
-	 * indicates that a SHUTDOWN has been received by the peer. Tells the
-	 * application to stop sending new data.
-	 *  @param 0 instanceID
-	 *  @param 1 associationID
-	 *  @param 2 pointer to ULP data
-	 */
-	void(*peerShutdownReceivedNotif)(unsigned int, void*);
-	/**
-	 * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
-	 *  @param 0 instanceID
-	 *  @param 1 associationID
-	 *  @param 2 pointer to ULP data
-	 */
-	void(*shutdownCompleteNotif)(unsigned int, void*);
-	/**
-	 * indicates that a queue length has exceeded (or length has dropped
-	 * below) a previously determined limit
-	 *  @param 0 associationID
-	 *  @param 1 queue type (in-queue, out-queue, stream queue etc.)
-	 *  @param 2 queue identifier (maybe for streams ? 0 if not used)
-	 *  @param 3 queue length (either bytes or messages - depending on type)
-	 *  @param 4 pointer to ULP data
-	 */
-	void(*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
-	/**
-	 * indicates that a ASCONF request from the ULP has succeeded or failed.
-	 *  @param 0 associationID
-	 *  @param 1 correlation ID
-	 *  @param 2 result (int, negative for error)
-	 *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
-	 *  @param 4 pointer to ULP data
-	 */
-	void(*asconfStatusNotif)(unsigned int, unsigned int, int, void*, void*);
-	/* @} */
-};
 
 #endif /* MY_GLOBALS_H_ */

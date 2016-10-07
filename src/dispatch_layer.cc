@@ -3,6 +3,7 @@
 #include "chunk_factory.h"
 #include "auth.h"
 #include "geco-ds-malloc.h"
+#include "protoco-stack.h"
 
 dispatch_layer_t::dispatch_layer_t()
 {
@@ -4687,5 +4688,21 @@ bool dispatch_layer_t::validate_dest_addr(sockaddrunion * dest_addr)
 		}
 	}
 	return false;
+}
+
+static bool lib_inited = false;
+int initialize(void)
+{
+	if(lib_inited == true) return MULP_LIBRARY_ALREADY_INITIALIZED;
+	read_trace_levels();
+#if defined(HAVE_GETEUID) && !defined(USE_UDP)
+    /* check privileges. Must be root or setuid-root for now ! */
+    if (geteuid() != 0)
+    {
+        EVENTLOG(NOTICE,"You must be root to use the lib (or make your program SETUID-root !).");
+        return MULP_INSUFFICIENT_PRIVILEGES;
+    }
+#endif
+	return 0;
 }
 

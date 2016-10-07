@@ -258,7 +258,7 @@ unsigned int mdi_generateStartTSN(void);
  is used as the only destination address.
  */
 
-gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
+bool mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
         union sockunion* addressList);
 
 /* sets the address from which the last datagramm was received (host byte order).
@@ -318,8 +318,8 @@ int mdi_getDefaultMaxBurst(void);
 
 unsigned int mdi_getSupportedAddressTypes(void);
 
-gboolean mdi_supportsPRSCTP(void);
-gboolean mdi_peerSupportsPRSCTP(void);
+bool mdi_supportsPRSCTP(void);
+bool mdi_peerSupportsPRSCTP(void);
 /*------------- functions to write and read addresses --------------------------------------------*/
 
 void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
@@ -329,7 +329,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         union sockunion *peerAddress,
         unsigned int numPeerAddresses,
         unsigned int addressTypes,
-        gboolean receivedFromPeer);
+        bool receivedFromPeer);
 
 short mdi_getIndexForAddress(union sockunion* address);
 
@@ -388,7 +388,7 @@ mdi_init_channel(unsigned int remoteSideReceiverWindow,
         unsigned short noOfOutStreams,
         unsigned int remoteInitialTSN,
         unsigned int tagRemote, unsigned int localInitialTSN,
-        gboolean assocSupportsPRSCTP, gboolean assocSupportsADDIP);
+        bool assocSupportsPRSCTP, bool assocSupportsADDIP);
 
 unsigned short
 mdi_restart_channel(unsigned short noOfInStreams,
@@ -399,7 +399,7 @@ mdi_restart_channel(unsigned short noOfInStreams,
         short noOfPaths,
         short primaryAddress,
         union sockunion *destinationAddressList,
-        gboolean assocSupportsPRSCTP, gboolean assocSupportsADDIP);
+        bool assocSupportsPRSCTP, bool assocSupportsADDIP);
 
 void mdi_deleteCurrentAssociation(void);
 

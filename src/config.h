@@ -8,6 +8,7 @@
 #ifndef MY_CONFIG_H_
 #define MY_CONFIG_H_
 
+#define HAVE_GETEUID //dispathcehr.cc at line 4698 int initialize(void)
 //#define USED_UDP_PORT 9899
 //#define HAVE_SIN_LEN
 //#define HAVE_IPV6_RECVPKTINFO

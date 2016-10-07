@@ -91,7 +91,7 @@ void scu_associate(unsigned short noOfOutStreams,
                    unsigned short noOfInStreams,
                    union sockunion* destinationList,
                    unsigned int numDestAddresses,
-                   gboolean withPRSCTP);
+                   bool withPRSCTP);
 
 
 /* initiates the shutdown of this association.
@@ -222,7 +222,7 @@ void sci_deleteSCTP_control(void *sctpControlData);
 /**
  * function returns the state of the current SCTP instance
  */
-guint32 sci_getState(void);
+unsigned int sci_getState(void);
 
 
 int sci_getMaxAssocRetransmissions(void);
@@ -242,6 +242,6 @@ int sci_setCookieLifeTime(int new_max);
  * is in the SHUTDOWNs, else FALSE
  */
 
-gboolean sci_shutdown_procedure_started(void);
+bool sci_shutdown_procedure_started(void);
 
 #endif

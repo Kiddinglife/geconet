@@ -76,10 +76,10 @@
 static int myRWND = 0x7FFF;
 static union sockunion *defaultlocaladdrlist_ = NULL;
 static unsigned int defaultlocaladdrlistsize_ = 0;
-static gboolean sendAbortForOOTB = TRUE;
+static bool sendAbortForOOTB = true;
 static int checksumAlgorithm = SCTP_CHECKSUM_ALGORITHM_CRC32C;
-static gboolean librarySupportsPRSCTP = TRUE;
-static gboolean supportADDIP = FALSE;
+static bool librarySupportsPRSCTP = true;
+static bool supportADDIP = false;
 /*------------------------Structure Definitions --------------------------------------------------*/
 
 /**
@@ -98,10 +98,10 @@ typedef struct SCTPINSTANCE //geco inst
     guint16 noOfLocalAddresses;
     union sockunion *localAddressList;
     unsigned char* localAddressStrings;
-    gboolean has_INADDR_ANY_set;
-    gboolean has_IN6ADDR_ANY_set;
-    gboolean uses_IPv4;
-    gboolean uses_IPv6;
+    bool has_INADDR_ANY_set;
+    bool has_IN6ADDR_ANY_set;
+    bool uses_IPv4;
+    bool uses_IPv6;
     /** set of callback functions that were registered by the ULP */
     SCTP_ulpCallbacks ULPcallbackFunctions;
     /** maximum number of incoming streams that this instance will take */
@@ -123,8 +123,8 @@ typedef struct SCTPINSTANCE //geco inst
     unsigned int default_maxRecvQueue;
     unsigned int default_maxBurst;
     unsigned int supportedAddressTypes;
-    gboolean supportsPRSCTP;
-    gboolean supportsADDIP;
+    bool supportsPRSCTP;
+    bool supportsADDIP;
 /*@}*/
 } SCTP_instance;
 
@@ -182,19 +182,19 @@ typedef struct ASSOCIATION
     unsigned int supportedAddressTypes;
     unsigned int maxSendQueue;
     unsigned int maxRecvQueue;
-    gboolean had_INADDR_ANY_set;
-    gboolean had_IN6ADDR_ANY_set;
+    bool had_INADDR_ANY_set;
+    bool had_IN6ADDR_ANY_set;
     /* do I support the SCTP extensions ? */
-    gboolean supportsPRSCTP;
-    gboolean supportsADDIP;
+    bool supportsPRSCTP;
+    bool supportsADDIP;
     /* and these values for our peer */
-    gboolean peerSupportsPRSCTP;
-    gboolean peerSupportsADDIP;
+    bool peerSupportsPRSCTP;
+    bool peerSupportsADDIP;
 /*@}*/
 } Association;
 
 /******************** Declarations ****************************************************************/
-static gboolean sctpLibraryInitialized = FALSE;
+static bool sctpLibraryInitialized = false;
 /*
  Keyed list of SCTP-instances with the instanceName as key
  */
@@ -271,8 +271,8 @@ unsigned short mdi_getUnusedInstanceName(void);
 
 /*------------------- Internal Functions ---------------------------------------------------------*/
 
-#define CHECK_LIBRARY           if(sctpLibraryInitialized == FALSE) return SCTP_LIBRARY_NOT_INITIALIZED
-#define ZERO_CHECK_LIBRARY      if(sctpLibraryInitialized == FALSE) return 0
+#define CHECK_LIBRARY           if(sctpLibraryInitialized == false) return SCTP_LIBRARY_NOT_INITIALIZED
+#define ZERO_CHECK_LIBRARY      if(sctpLibraryInitialized == false) return 0
 
 #ifdef LIBRARY_DEBUG
 #define ENTER_LIBRARY(fname)	printf("Entering sctplib  (%s)\n", fname); fflush(stdout);
@@ -294,7 +294,7 @@ unsigned short mdi_getUnusedInstanceName(void);
 gint CheckForAddressInInstance(gconstpointer a, gconstpointer b)
 {
     int acount, bcount;
-    gboolean found;
+    bool found;
     SCTP_instance* ai = (SCTP_instance*) a;
     SCTP_instance* bi = (SCTP_instance*) b;
 
@@ -317,25 +317,25 @@ gint CheckForAddressInInstance(gconstpointer a, gconstpointer b)
         if (!(ai->has_IN6ADDR_ANY_set || ai->has_INADDR_ANY_set)
                 && (bi->has_IN6ADDR_ANY_set || bi->has_INADDR_ANY_set)) return 0;
         /* both do not have an INADDR_ANY : use code below */
-        found = FALSE;
+        found = false;
         for (acount = 0; acount < ai->noOfLocalAddresses; acount++)
         {
             for (bcount = 0; bcount < bi->noOfLocalAddresses; bcount++)
             {
-                /* if addresses are equal: set found TRUE and break; */
+                /* if addresses are equal: set found true and break; */
                 if (adl_equal_address(&(ai->localAddressList[acount]),
-                        &(bi->localAddressList[bcount])) == TRUE) found = TRUE;
+                        &(bi->localAddressList[bcount])) == true) found = true;
 
                 event_logiii(VVERBOSE,
                         "DEBUG: CheckForAddressInInstance, acount %u, bcount %u, found = %s",
-                        acount, bcount, (found == TRUE) ? "TRUE" : "FALSE");
+                        acount, bcount, (found == true) ? "true" : "false");
 
-                if (found == TRUE) break;
+                if (found == true) break;
             }
-            if (found == TRUE) break;
+            if (found == true) break;
         }
         /* if address was not found, it is not in this instance */
-        if (found == FALSE) return -1; /* to continue search */
+        if (found == false) return -1; /* to continue search */
     }
     return 0;
 
@@ -431,10 +431,10 @@ gint equalAssociations(gconstpointer a, gconstpointer b)
                 if (adl_equal_address(
                         &(((Association *) a)->destinationAddresses[i]),
                         &(((Association *) b)->destinationAddresses[j]))
-                        == TRUE)
+                        == true)
                 {
-                    if ((((Association *) b)->deleted == FALSE)
-                            && (((Association *) a)->deleted == FALSE))
+                    if ((((Association *) b)->deleted == false)
+                            && (((Association *) a)->deleted == false))
                     {
                         event_log(VVERBOSE,
                                 "equalAssociations: found TWO equal assocs !");
@@ -471,7 +471,7 @@ Association *retrieveAssociation(unsigned int assocID)
             assocID);
 
     tmpAssoc.assocId = assocID;
-    tmpAssoc.deleted = FALSE;
+    tmpAssoc.deleted = false;
     assocFindP = &tmpAssoc;
     assoc = NULL;
 
@@ -559,7 +559,7 @@ Association *retrieveAssociationByTransportAddress(
                 fromAddress);
         tmpAssoc.remotePort = fromPort;
         tmpAssoc.localPort = toPort;
-        tmpAssoc.deleted = FALSE;
+        tmpAssoc.deleted = false;
         break;
 #ifdef HAVE_IPV6
         case AF_INET6:
@@ -570,7 +570,7 @@ Association *retrieveAssociationByTransportAddress(
                 tmpAssoc.destinationAddresses[0].sin6.sin6_addr.s6_addr);
         tmpAssoc.remotePort = fromPort;
         tmpAssoc.localPort = toPort;
-        tmpAssoc.deleted = FALSE;
+        tmpAssoc.deleted = false;
         break;
 #endif
     default:
@@ -769,14 +769,14 @@ static void mdi_removeAssociationData(Association * assoc)
 boolean mdi_destination_address_okay(union sockunion * dest_addr)
 {
     unsigned int i;
-    gboolean found = FALSE;
-    gboolean any_set = FALSE;
+    bool found = false;
+    bool any_set = false;
 
     /* this case will be specially treated after the call to mdi_destination_address_okay() */
-    if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return TRUE;
+    if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return true;
 
     /*
-     if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return FALSE;
+     if (curr_geco_instance_ == NULL && curr_channel_ == NULL) return false;
      */
     if (curr_channel_ != NULL)
     {
@@ -789,9 +789,9 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
                     sock2ip(dest_addr),
                     sock2ip(&(curr_channel_->localAddresses[i])));
             if (adl_equal_address(dest_addr,
-                    &(curr_channel_->localAddresses[i])) == TRUE)
+                    &(curr_channel_->localAddresses[i])) == true)
             {
-                found = TRUE;
+                found = true;
                 break;
             }
         }
@@ -800,18 +800,18 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
     else
     {
         /* check whether _instance_ has INADDR_ANY */
-        if (curr_geco_instance_->has_INADDR_ANY_set == TRUE)
+        if (curr_geco_instance_->has_INADDR_ANY_set == true)
         {
-            any_set = TRUE;
+            any_set = true;
             /* if so, accept */
             switch (sockunion_family(dest_addr))
             {
             case AF_INET:
-                return TRUE;
+                return true;
                 break;
 #ifdef HAVE_IPV6
                 case AF_INET6:
-                return FALSE;
+                return false;
                 break;
 #endif
             default:
@@ -819,18 +819,18 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
 
             }
         }
-        if (curr_geco_instance_->has_IN6ADDR_ANY_set == TRUE)
+        if (curr_geco_instance_->has_IN6ADDR_ANY_set == true)
         {
-            any_set = TRUE;
+            any_set = true;
             /* if so, accept */
             switch (sockunion_family(dest_addr))
             {
             case AF_INET:
-                return TRUE;
+                return true;
                 break;
 #ifdef HAVE_IPV6
                 case AF_INET6:
-                return TRUE;
+                return true;
                 break;
 #endif
             default:
@@ -838,14 +838,14 @@ boolean mdi_destination_address_okay(union sockunion * dest_addr)
 
             }
         }
-        if (any_set == TRUE) return FALSE;
+        if (any_set == true) return false;
         /* if not, search through the list */
         for (i = 0; i < curr_geco_instance_->noOfLocalAddresses; i++)
         {
             if (adl_equal_address(dest_addr,
-                    &(curr_geco_instance_->localAddressList[i])) == TRUE)
+                    &(curr_geco_instance_->localAddressList[i])) == true)
             {
-                found = TRUE;
+                found = true;
                 break;
             }
         }
@@ -888,13 +888,13 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
     union sockunion alternateFromAddress;
     int i = 0;
     unsigned int len, state, chunkArray = 0;
-    boolean sourceAddressExists = FALSE;
-    boolean sendAbort = FALSE;
-    boolean discard = FALSE;
+    boolean sourceAddressExists = false;
+    boolean sendAbort = false;
+    boolean discard = false;
     unsigned int addressType = 0;
     int retval = 0, supportedAddressTypes = 0;
 
-    boolean initFound = FALSE, cookieEchoFound = FALSE, abortFound = FALSE;
+    boolean initFound = false, cookieEchoFound = false, abortFound = false;
 
     short shutdownCompleteCID;
     short abortCID;
@@ -940,26 +940,26 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         addressType = SUPPORT_ADDRESS_TYPE_IPV4;
         event_log(VERBOSE,
                 "mdi_receiveMessage: checking for correct IPV4 addresses");
-        if (IN_CLASSD(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = TRUE;
+        if (IN_CLASSD(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = true;
         if (IN_EXPERIMENTAL(ntohl(dest_addr->sin.sin_addr.s_addr))) discard =
-                TRUE;
-        if (IN_BADCLASS(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = TRUE;
-        if (INADDR_ANY == ntohl(dest_addr->sin.sin_addr.s_addr)) discard = TRUE;
+                true;
+        if (IN_BADCLASS(ntohl(dest_addr->sin.sin_addr.s_addr))) discard = true;
+        if (INADDR_ANY == ntohl(dest_addr->sin.sin_addr.s_addr)) discard = true;
         if (INADDR_BROADCAST == ntohl(dest_addr->sin.sin_addr.s_addr)) discard =
-                TRUE;
+                true;
 
-        if (IN_CLASSD(ntohl(source_addr->sin.sin_addr.s_addr))) discard = TRUE;
+        if (IN_CLASSD(ntohl(source_addr->sin.sin_addr.s_addr))) discard = true;
         if (IN_EXPERIMENTAL(ntohl(source_addr->sin.sin_addr.s_addr))) discard =
-                TRUE;
+                true;
         if (IN_BADCLASS(ntohl(source_addr->sin.sin_addr.s_addr))) discard =
-                TRUE;
+                true;
         if (INADDR_ANY == ntohl(source_addr->sin.sin_addr.s_addr)) discard =
-                TRUE;
+                true;
         if (INADDR_BROADCAST == ntohl(source_addr->sin.sin_addr.s_addr)) discard =
-                TRUE;
+                true;
 
         /*  if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr)) &&
-         (source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr)) discard = TRUE;
+         (source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr)) discard = true;
          */
 
     }
@@ -970,29 +970,29 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         addressType = SUPPORT_ADDRESS_TYPE_IPV6;
         event_log(VERBOSE, "mdi_receiveMessage: checking for correct IPV6 addresses");
 #if defined (LINUX)
-        if (IN6_IS_ADDR_UNSPECIFIED(&(dest_addr->sin6.sin6_addr.s6_addr))) discard = TRUE;
-        if (IN6_IS_ADDR_MULTICAST(&(dest_addr->sin6.sin6_addr.s6_addr))) discard = TRUE;
-        /* if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr.s6_addr))) discard = TRUE; */
+        if (IN6_IS_ADDR_UNSPECIFIED(&(dest_addr->sin6.sin6_addr.s6_addr))) discard = true;
+        if (IN6_IS_ADDR_MULTICAST(&(dest_addr->sin6.sin6_addr.s6_addr))) discard = true;
+        /* if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr.s6_addr))) discard = true; */
 
-        if (IN6_IS_ADDR_UNSPECIFIED(&(source_addr->sin6.sin6_addr.s6_addr))) discard = TRUE;
-        if (IN6_IS_ADDR_MULTICAST(&(source_addr->sin6.sin6_addr.s6_addr))) discard = TRUE;
-        /*  if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr))) discard = TRUE; */
+        if (IN6_IS_ADDR_UNSPECIFIED(&(source_addr->sin6.sin6_addr.s6_addr))) discard = true;
+        if (IN6_IS_ADDR_MULTICAST(&(source_addr->sin6.sin6_addr.s6_addr))) discard = true;
+        /*  if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr.s6_addr))) discard = true; */
         if (
                 (!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
                 IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
-                        &(dest_addr->sin6.sin6_addr.s6_addr))) discard = TRUE;
+                        &(dest_addr->sin6.sin6_addr.s6_addr))) discard = true;
 #else
-        if (IN6_IS_ADDR_UNSPECIFIED(&(dest_addr->sin6.sin6_addr))) discard = TRUE;
-        if (IN6_IS_ADDR_MULTICAST(&(dest_addr->sin6.sin6_addr))) discard = TRUE;
-        /* if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr))) discard = TRUE; */
+        if (IN6_IS_ADDR_UNSPECIFIED(&(dest_addr->sin6.sin6_addr))) discard = true;
+        if (IN6_IS_ADDR_MULTICAST(&(dest_addr->sin6.sin6_addr))) discard = true;
+        /* if (IN6_IS_ADDR_V4COMPAT(&(dest_addr->sin6.sin6_addr))) discard = true; */
 
-        if (IN6_IS_ADDR_UNSPECIFIED(&(source_addr->sin6.sin6_addr))) discard = TRUE;
-        if (IN6_IS_ADDR_MULTICAST(&(source_addr->sin6.sin6_addr))) discard = TRUE;
-        /* if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr))) discard = TRUE; */
+        if (IN6_IS_ADDR_UNSPECIFIED(&(source_addr->sin6.sin6_addr))) discard = true;
+        if (IN6_IS_ADDR_MULTICAST(&(source_addr->sin6.sin6_addr))) discard = true;
+        /* if (IN6_IS_ADDR_V4COMPAT(&(source_addr->sin6.sin6_addr))) discard = true; */
         if (
                 (!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr))) &&
                 IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr),
-                        &(dest_addr->sin6.sin6_addr))) discard = TRUE;
+                        &(dest_addr->sin6.sin6_addr))) discard = true;
 
 #endif
     }
@@ -1001,7 +1001,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
     {
         error_log(ERROR_FATAL,
                 "mdi_receiveMessage: Unsupported AddressType Received !");
-        discard = TRUE;
+        discard = true;
     }
     adl_sockunion2str(source_addr, source_addr_string, SCTP_MAX_IP_LEN);
     adl_sockunion2str(dest_addr, dest_addr_string, SCTP_MAX_IP_LEN);
@@ -1011,7 +1011,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             bufferLength, source_addr_string, lastFromPort, dest_addr_string,
             lastDestPort);
 
-    if (discard == TRUE)
+    if (discard == true)
     {
         lastFromAddress = NULL;
         lastDestAddress = NULL;
@@ -1041,8 +1041,8 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
          packet's destination port */
         temporary.localPort = lastDestPort;
         temporary.noOfLocalAddresses = 1;
-        temporary.has_INADDR_ANY_set = FALSE;
-        temporary.has_IN6ADDR_ANY_set = FALSE;
+        temporary.has_INADDR_ANY_set = false;
+        temporary.has_IN6ADDR_ANY_set = false;
         temporary.localAddressList = dest_addr;
         temporary.supportedAddressTypes = addressType;
 
@@ -1072,7 +1072,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         }
     }
 
-    if (mdi_destination_address_okay(dest_addr) == FALSE)
+    if (mdi_destination_address_okay(dest_addr) == false)
     {
         event_log(VERBOSE,
                 "mdi_receiveMsg: this packet is not for me, DISCARDING !!!");
@@ -1135,7 +1135,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         {
             event_log(VERBOSE,
                     "mdi_receiveMsg: found association from INIT (ACK) CHUNK");
-            sourceAddressExists = TRUE;
+            sourceAddressExists = true;
         }
         else
         {
@@ -1145,12 +1145,12 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
     }
 
     /* check whether chunk is illegal or not (see section 3.1 of RFC 4960) */
-    if (((rbu_datagramContains(CHUNK_INIT, chunkArray) == TRUE)
+    if (((rbu_datagramContains(CHUNK_INIT, chunkArray) == true)
             && (chunkArray != (1 << CHUNK_INIT)))
-            || ((rbu_datagramContains(CHUNK_INIT_ACK, chunkArray) == TRUE)
+            || ((rbu_datagramContains(CHUNK_INIT_ACK, chunkArray) == true)
                     && (chunkArray != (1 << CHUNK_INIT_ACK)))
             || ((rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray)
-                    == TRUE) && (chunkArray != (1 << CHUNK_SHUTDOWN_COMPLETE))))
+                    == true) && (chunkArray != (1 << CHUNK_SHUTDOWN_COMPLETE))))
     {
 
         error_log(ERROR_MINOR,
@@ -1172,7 +1172,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
         event_log(VVERBOSE,
                 "mdi_receiveMsg: curr_channel_==NULL, start scanning !");
         /* This is not very elegant, but....only used when assoc is being build up, so :-D */
-        if (rbu_datagramContains(CHUNK_ABORT, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_ABORT, chunkArray) == true)
         {
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found ABORT chunk, discarding it !");
@@ -1184,7 +1184,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             curr_channel_ = NULL;
             return;
         }
-        if (rbu_datagramContains(CHUNK_SHUTDOWN_ACK, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_SHUTDOWN_ACK, chunkArray) == true)
         {
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found SHUTDOWN_ACK chunk, send SHUTDOWN_COMPLETE !");
@@ -1209,7 +1209,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             curr_channel_ = NULL;
             return;
         }
-        if (rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray) == true)
         {
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found SHUTDOWN_COMPLETE chunk, discarding it !");
@@ -1221,7 +1221,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             curr_channel_ = NULL;
             return;
         }
-        if (rbu_datagramContains(CHUNK_COOKIE_ACK, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_COOKIE_ACK, chunkArray) == true)
         {
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found COOKIE_ACK chunk, discarding it !");
@@ -1236,7 +1236,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
 
         /* section 8.4.7) : Discard the datagram, if it contains a STALE-COOKIE ERROR */
         if (rbu_scanDatagramForError(message->sctp_pdu, len,
-        ECC_STALE_COOKIE_ERROR) == TRUE)
+        ECC_STALE_COOKIE_ERROR) == true)
         {
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: Found STALE COOKIE ERROR, discarding packet !");
@@ -1260,7 +1260,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                     /* destination port is not the listening port of this this SCTP-instance. */
                     event_log(INTERNAL_EVENT_0,
                             "mdi_receiveMsg: got INIT Message, but dest. port does not fit -> ABORT");
-                    sendAbort = TRUE;
+                    sendAbort = true;
                     /* as per section 5.1 :
                      If an endpoint receives an INIT, INIT ACK, or COOKIE ECHO chunk but
                      decides not to establish the new association due to missing mandatory
@@ -1282,7 +1282,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                         (SCTP_vlparam_header*) rbu_scanInitChunkForParameter(
                                 initPtr, VLPARAM_HOST_NAME_ADDR)) != NULL)
                 {
-                    sendAbort = TRUE;
+                    sendAbort = true;
                 }
 
             }
@@ -1291,7 +1291,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 event_log(INTERNAL_EVENT_0,
                         "mdi_receiveMsg: got INIT Message, but no instance found -> IGNORE");
 
-                sendAbort = TRUE;
+                sendAbort = true;
                 initChunk =
                         ((SCTP_init_fixed *) &((SCTP_init *) message->sctp_pdu)->init_fixed);
                 lastInitiateTag = ntohl(initChunk->init_tag);
@@ -1300,7 +1300,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             }
 
         }
-        else if (rbu_datagramContains(CHUNK_COOKIE_ECHO, chunkArray) == TRUE)
+        else if (rbu_datagramContains(CHUNK_COOKIE_ECHO, chunkArray) == true)
         {
             if (curr_geco_instance_ != NULL)
             {
@@ -1310,7 +1310,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                     /* destination port is not the listening port of this this SCTP-instance. */
                     event_log(INTERNAL_EVENT_0,
                             "mdi_receiveMsg: COOKIE_ECHO ignored, dest. port does not fit");
-                    sendAbort = TRUE;
+                    sendAbort = true;
                 }
                 else
                 {
@@ -1336,7 +1336,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             /* section 8.4.8) send an ABORT with peers veri-tag, set T-Bit */
             event_log(INTERNAL_EVENT_0,
                     "mdi_receiveMsg: send ABORT -> message ignored (OOTB - see section 8.4.8) ");
-            sendAbort = TRUE;
+            sendAbort = true;
         }
 
     }
@@ -1377,15 +1377,15 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
          tbd: check the draft if this is correct. 
          thi can improved we can update src path when we retrive channel using src
          */
-        if (sourceAddressExists == FALSE)
+        if (sourceAddressExists == false)
         {
             for (i = 0; i < curr_channel_->noOfNetworks; i++)
             {
                 if (adl_equal_address(
                         &(curr_channel_->destinationAddresses[i]),
-                        lastFromAddress) == TRUE)
+                        lastFromAddress) == true)
                 {
-                    sourceAddressExists = TRUE;
+                    sourceAddressExists = true;
                     break;
                 }
             }
@@ -1411,7 +1411,7 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 != NULL)
         {
             /* check that there is ONLY init */
-            initFound = TRUE;
+            initFound = true;
             if (lastInitiateTag != 0)
             {
                 curr_channel_ = NULL;
@@ -1435,15 +1435,15 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
             if ((vlptr = (SCTP_vlparam_header*) rbu_scanInitChunkForParameter(
                     initPtr, VLPARAM_HOST_NAME_ADDR)) != NULL)
             {
-                sendAbort = TRUE;
+                sendAbort = true;
             }
         }
-        if (rbu_datagramContains(CHUNK_ABORT, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_ABORT, chunkArray) == true)
         {
             /* accept my-tag or peers tag, else drop packet */
             if ((lastInitiateTag != curr_channel_->tagLocal
                     && lastInitiateTag != curr_channel_->tagRemote)
-                    || initFound == TRUE)
+                    || initFound == true)
             {
                 curr_channel_ = NULL;
                 curr_geco_instance_ = NULL;
@@ -1453,15 +1453,15 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 lastFromAddress = NULL;
                 return;
             }
-            abortFound = TRUE;
+            abortFound = true;
         }
-        if (rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_SHUTDOWN_COMPLETE, chunkArray) == true)
         {
             /* accept my-tag or peers tag, else drop packet */
             /* TODO : make sure that if it is the peer's tag also T-Bit is set */
             if ((lastInitiateTag != curr_channel_->tagLocal
                     && lastInitiateTag != curr_channel_->tagRemote)
-                    || initFound == TRUE)
+                    || initFound == true)
             {
                 curr_channel_ = NULL;
                 curr_geco_instance_ = NULL;
@@ -1472,9 +1472,9 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 return;
             }
         }
-        if (rbu_datagramContains(CHUNK_SHUTDOWN_ACK, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_SHUTDOWN_ACK, chunkArray) == true)
         {
-            if (initFound == TRUE)
+            if (initFound == true)
             {
                 curr_channel_ = NULL;
                 curr_geco_instance_ = NULL;
@@ -1505,9 +1505,9 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
                 return;
             }
         }
-        if (rbu_datagramContains(CHUNK_COOKIE_ECHO, chunkArray) == TRUE)
+        if (rbu_datagramContains(CHUNK_COOKIE_ECHO, chunkArray) == true)
         {
-            cookieEchoFound = TRUE;
+            cookieEchoFound = true;
         }
 
         if ((initPtr = rbu_findChunk(message->sctp_pdu, len, CHUNK_INIT_ACK))
@@ -1548,12 +1548,12 @@ void mdi_receiveMessage(gint socket_fd, unsigned char *buffer, int bufferLength,
 
     }
 
-    if (sendAbort == TRUE)
+    if (sendAbort == true)
     {
-        if (sendAbortForOOTB == FALSE)
+        if (sendAbortForOOTB == false)
         {
             event_log(VERBOSE,
-                    "mdi_receiveMsg: sendAbortForOOTB==FALSE -> Discarding MESSAGE: not sending ABORT");
+                    "mdi_receiveMsg: sendAbortForOOTB==false -> Discarding MESSAGE: not sending ABORT");
             lastFromAddress = NULL;
             lastDestAddress = NULL;
             lastFromPort = 0;
@@ -1628,7 +1628,7 @@ int sctp_initLibrary(void)
     int i, result, sfd = -1, maxMTU = 0;
     /* initialize the output of event/error-log functions */
     ENTER_LIBRARY("sctp_initLibrary");
-    if (sctpLibraryInitialized == TRUE)
+    if (sctpLibraryInitialized == true)
     {
         LEAVE_LIBRARY("sctp_initLibrary");
         return SCTP_LIBRARY_ALREADY_INITIALIZED;
@@ -1672,13 +1672,13 @@ int sctp_initLibrary(void)
     sfd = adl_get_sctpv4_socket();
 
     if (adl_gatherLocalAddresses(&defaultlocaladdrlist_, (int *) &defaultlocaladdrlistsize_,
-            sfd, TRUE, &maxMTU, flag_Default) == FALSE)
+            sfd, true, &maxMTU, flag_Default) == false)
     {
         LEAVE_LIBRARY("sctp_initLibrary");
         return SCTP_SPECIFIC_FUNCTION_ERROR;
     }
 
-    sctpLibraryInitialized = TRUE;
+    sctpLibraryInitialized = true;
     LEAVE_LIBRARY("sctp_initLibrary");
     return SCTP_SUCCESS;
 }
@@ -1693,7 +1693,7 @@ int mdi_updateMyAddressList(void)
     free(defaultlocaladdrlist_);
 
     if (adl_gatherLocalAddresses(&defaultlocaladdrlist_, (int *) &defaultlocaladdrlistsize_,
-            sfd, TRUE, &maxMTU, flag_Default) == FALSE)
+            sfd, true, &maxMTU, flag_Default) == false)
     {
         return SCTP_SPECIFIC_FUNCTION_ERROR;
     }
@@ -1701,10 +1701,10 @@ int mdi_updateMyAddressList(void)
     return SCTP_SUCCESS;
 }
 
-gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
+bool mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
         union sockunion* addressList)
 {
-    gboolean result = FALSE;
+    bool result = false;
     unsigned int counter;
     unsigned int ii;
     for (ii = 0; ii < noOfAddresses; ii++)
@@ -1716,7 +1716,7 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
             {
                 event_logi(VVERBOSE, "Found IPv4 loopback address ! Num: %u",
                         noOfAddresses);
-                result = TRUE;
+                result = true;
             }
             break;
 #ifdef HAVE_IPV6
@@ -1729,7 +1729,7 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                 {
 #endif
                     event_logi(VVERBOSE, "Found IPv6 loopback address ! Num: %u", noOfAddresses);
-                    result = TRUE;
+                    result = true;
                 }
                 break;
 #endif
@@ -1744,8 +1744,8 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                         counter++)
                 {
                     if (adl_equal_address(&(addressList[ii]),
-                            &(curr_geco_instance_->localAddressList[counter])) == TRUE) result =
-                            TRUE;
+                            &(curr_geco_instance_->localAddressList[counter])) == true) result =
+                            true;
                 }
             }
             else
@@ -1757,8 +1757,8 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                         if (sockunion_family(&defaultlocaladdrlist_[counter]) == AF_INET)
                         {
                             if (adl_equal_address(&(addressList[ii]),
-                                    &(defaultlocaladdrlist_[counter])) == TRUE) result =
-                                    TRUE;
+                                    &(defaultlocaladdrlist_[counter])) == true) result =
+                                    true;
                         }
                     }
                 }
@@ -1767,48 +1767,48 @@ gboolean mdi_addressListContainsLocalhost(unsigned int noOfAddresses,
                     for (counter = 0; counter < defaultlocaladdrlistsize_; counter++)
                     {
                         if (adl_equal_address(&(addressList[ii]),
-                                &(defaultlocaladdrlist_[counter])) == TRUE) result =
-                                TRUE;
+                                &(defaultlocaladdrlist_[counter])) == true) result =
+                                true;
                     }
                 }
             }
         }
     }
     event_logi(VVERBOSE, "Found loopback address returns %s",
-            (result == TRUE) ? "TRUE" : "FALSE");
+            (result == true) ? "true" : "false");
 
     return result;
 }
 
-gboolean mdi_checkForCorrectAddress(union sockunion* su)
+bool mdi_checkForCorrectAddress(union sockunion* su)
 {
-    gboolean found = FALSE;
+    bool found = false;
     unsigned int counter;
 
     /* make sure, if IN(6)ADDR_ANY is specified, it is the only specified address */
     switch (sockunion_family(su))
     {
     case AF_INET:
-        if (sock2ip(su) == INADDR_ANY) return FALSE;
+        if (sock2ip(su) == INADDR_ANY) return false;
         break;
 #ifdef HAVE_IPV6
         case AF_INET6:
 #if defined (LINUX)
-        if (IN6_IS_ADDR_UNSPECIFIED(sock2ip6(su))) return FALSE;
+        if (IN6_IS_ADDR_UNSPECIFIED(sock2ip6(su))) return false;
 #else
-        if (IN6_IS_ADDR_UNSPECIFIED(&sock2ip6addr(su))) return FALSE;
+        if (IN6_IS_ADDR_UNSPECIFIED(&sock2ip6addr(su))) return false;
 #endif
         break;
 #endif
     default:
-        return FALSE;
+        return false;
         break;
     }
 
     for (counter = 0; counter < defaultlocaladdrlistsize_; counter++)
     {
-        if (adl_equal_address(su, &(defaultlocaladdrlist_[counter])) == TRUE) found =
-                TRUE;
+        if (adl_equal_address(su, &(defaultlocaladdrlist_[counter])) == true) found =
+                true;
     }
     return found;
 }
@@ -1852,12 +1852,12 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     unsigned int i;
     int adl_rscb_code;
     union sockunion su;
-    gboolean with_ipv4 = FALSE;
+    bool with_ipv4 = false;
     unsigned short result;
     GList* list_result = NULL;
 
 #ifdef HAVE_IPV6
-    gboolean with_ipv6 = FALSE;
+    bool with_ipv6 = false;
 #endif
     SCTP_instance *old_Instance = curr_geco_instance_;
     Association *old_assoc = curr_channel_;
@@ -1909,24 +1909,24 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         }
         else
         {
-            if (su.sa.sa_family == AF_INET) with_ipv4 = TRUE;
+            if (su.sa.sa_family == AF_INET) with_ipv4 = true;
 
 #ifdef HAVE_IPV6
-            if (su.sa.sa_family == AF_INET6) with_ipv6 = TRUE;
+            if (su.sa.sa_family == AF_INET6) with_ipv6 = true;
 #endif
         }
     }
 
     event_logi(VERBOSE, "sctp_registerInstance : with_ipv4 : %s ",
-            (with_ipv4 == TRUE) ? "TRUE" : "FALSE");
+            (with_ipv4 == true) ? "true" : "false");
     /* if not IPv6 callback must be registered too ! */
 #ifdef HAVE_IPV6
-    event_logi(VERBOSE, "sctp_registerInstance : with_ipv6: %s ",(with_ipv6==TRUE)?"TRUE":"FALSE" );
+    event_logi(VERBOSE, "sctp_registerInstance : with_ipv6: %s ",(with_ipv6==true)?"true":"false" );
 #endif
 
-    if ((with_ipv4 != TRUE)
+    if ((with_ipv4 != true)
 #ifdef HAVE_IPV6
-    && (with_ipv6 != TRUE)
+    && (with_ipv6 != true)
 #endif
     )
     {
@@ -1963,10 +1963,10 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     curr_geco_instance_->localPort = port;
     curr_geco_instance_->noOfInStreams = noOfInStreams;
     curr_geco_instance_->noOfOutStreams = noOfOutStreams;
-    curr_geco_instance_->has_INADDR_ANY_set = FALSE;
-    curr_geco_instance_->has_IN6ADDR_ANY_set = FALSE;
-    curr_geco_instance_->uses_IPv4 = FALSE;
-    curr_geco_instance_->uses_IPv6 = TRUE;
+    curr_geco_instance_->has_INADDR_ANY_set = false;
+    curr_geco_instance_->has_IN6ADDR_ANY_set = false;
+    curr_geco_instance_->uses_IPv4 = false;
+    curr_geco_instance_->uses_IPv6 = true;
     curr_geco_instance_->supportsPRSCTP = librarySupportsPRSCTP;
     curr_geco_instance_->supportsADDIP = supportADDIP;
 
@@ -1978,8 +1978,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         case AF_INET:
             if (sock2ip(&su) == INADDR_ANY)
             {
-                curr_geco_instance_->has_INADDR_ANY_set = TRUE;
-                with_ipv4 = TRUE;
+                curr_geco_instance_->has_INADDR_ANY_set = true;
+                with_ipv4 = true;
             }
             break;
 #ifdef HAVE_IPV6
@@ -1991,9 +1991,9 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
                 if (IN6_IS_ADDR_UNSPECIFIED(&sock2ip6addr(&su)))
                 {
 #endif
-                    with_ipv4 = TRUE;
-                    with_ipv6 = TRUE;
-                    curr_geco_instance_->has_IN6ADDR_ANY_set = TRUE;
+                    with_ipv4 = true;
+                    with_ipv6 = true;
+                    curr_geco_instance_->has_IN6ADDR_ANY_set = true;
                 }
                 break;
 #endif
@@ -2016,8 +2016,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     if (with_ipv6) curr_geco_instance_->supportedAddressTypes |= SUPPORT_ADDRESS_TYPE_IPV6;
 #endif
 
-    if (curr_geco_instance_->has_INADDR_ANY_set == FALSE
-            && curr_geco_instance_->has_IN6ADDR_ANY_set == FALSE)
+    if (curr_geco_instance_->has_INADDR_ANY_set == false
+            && curr_geco_instance_->has_IN6ADDR_ANY_set == false)
     {
 
         curr_geco_instance_->localAddressList = (union sockunion *) malloc(
@@ -2027,7 +2027,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
             adl_str2sockunion(localAddressList[i],
                     &(curr_geco_instance_->localAddressList[i]));
             if (mdi_checkForCorrectAddress(&(curr_geco_instance_->localAddressList[i]))
-                    == FALSE)
+                    == false)
             {
                 releasePort(port);
                 free(curr_geco_instance_->localAddressList);
@@ -2075,14 +2075,14 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         if (!adl_rscb_code)
         error_log(ERROR_FATAL, "register ipv6 socket call back function failed");
     }
-    if (with_ipv6 == TRUE)
+    if (with_ipv6 == true)
     {
         ipv6_users++;
-        curr_geco_instance_->uses_IPv6 = TRUE;
+        curr_geco_instance_->uses_IPv6 = true;
     }
     else
     {
-        curr_geco_instance_->uses_IPv6 = FALSE;
+        curr_geco_instance_->uses_IPv6 = false;
     }
 #endif
     if (with_ipv4 && sctp_socket == 0)
@@ -2097,14 +2097,14 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         error_log(ERROR_FATAL,
                 "registration of IPv4 socket call back function failed");
     }
-    if (with_ipv4 == TRUE)
+    if (with_ipv4 == true)
     {
         ipv4_users++;
-        curr_geco_instance_->uses_IPv4 = TRUE;
+        curr_geco_instance_->uses_IPv4 = true;
     }
     else
     {
-        curr_geco_instance_->uses_IPv4 = FALSE;
+        curr_geco_instance_->uses_IPv4 = false;
     }
 
     curr_geco_instance_->sctpInstanceName = mdi_getUnusedInstanceName();
@@ -2156,9 +2156,9 @@ int sctp_unregisterInstance(unsigned short instance_name)
     SCTP_instance* instance;
     guint32 fds;
     GList* result = NULL;
-    gboolean with_ipv4 = FALSE;
+    bool with_ipv4 = false;
 #ifdef HAVE_IPV6
-    gboolean with_ipv6=FALSE;
+    bool with_ipv6=false;
 #endif
 
     ENTER_LIBRARY("sctp_unregisterInstance");
@@ -2182,13 +2182,13 @@ int sctp_unregisterInstance(unsigned short instance_name)
                 "sctp_unregisterInstance: SCTP Instance %u found !!!",
                 instance_name);
 #ifdef HAVE_IPV6
-        event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv6: %s ",(with_ipv6==TRUE)?"TRUE":"FALSE" );
-        if (with_ipv6 == TRUE) ipv6_users--;
+        event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv6: %s ",(with_ipv6==true)?"true":"false" );
+        if (with_ipv6 == true) ipv6_users--;
         event_logi(VERBOSE, "sctp_unregisterInstance : ipv6_users: %u ",ipv6_users);
 #endif
-        if (with_ipv4 == TRUE) ipv4_users--;
+        if (with_ipv4 == true) ipv4_users--;
         event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv4: %s ",
-                (with_ipv4 == TRUE) ? "TRUE" : "FALSE");
+                (with_ipv4 == true) ? "true" : "false");
         event_logi(VERBOSE, "sctp_unregisterInstance : ipv4_users: %u ",
                 ipv4_users);
 
@@ -2226,18 +2226,18 @@ int sctp_unregisterInstance(unsigned short instance_name)
         }
 #endif
 
-        if (instance->has_INADDR_ANY_set == FALSE)
+        if (instance->has_INADDR_ANY_set == false)
         {
             event_log(VVERBOSE,
-                    "sctp_unregisterInstance : INADDR_ANY == FALSE");
+                    "sctp_unregisterInstance : INADDR_ANY == false");
         }
-        if (instance->has_INADDR_ANY_set == TRUE)
+        if (instance->has_INADDR_ANY_set == true)
         {
-            event_log(VVERBOSE, "sctp_unregisterInstance : INADDR_ANY == TRUE");
+            event_log(VVERBOSE, "sctp_unregisterInstance : INADDR_ANY == true");
         }
 #ifdef HAVE_IPV6
-        if (instance->has_IN6ADDR_ANY_set == FALSE)
-        event_log(VVERBOSE, "sctp_unregisterInstance : IN6ADDR_ANY == FALSE");
+        if (instance->has_IN6ADDR_ANY_set == false)
+        event_log(VVERBOSE, "sctp_unregisterInstance : IN6ADDR_ANY == false");
 #endif
         if (instance->noOfLocalAddresses > 0)
         {
@@ -2284,7 +2284,7 @@ int sctp_deleteAssociation(unsigned int associationID)
             associationID);
 
     tmpAssoc.assocId = associationID;
-    tmpAssoc.deleted = FALSE;
+    tmpAssoc.deleted = false;
     assocFindP = &tmpAssoc;
     curr_channel_ = NULL;
 
@@ -2344,7 +2344,7 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
     unsigned int assocID, count;
     unsigned short zlocalPort;
     union sockunion dest_su[SCTP_MAX_NUM_ADDRESSES];
-    gboolean withPRSCTP;
+    bool withPRSCTP;
     AddressScopingFlags filterFlags = flag_Default;
     SCTP_instance temporary;
     GList* result = NULL;
@@ -2377,7 +2377,7 @@ unsigned int sctp_associatex(unsigned int SCTP_InstanceName,
             LEAVE_LIBRARY("sctp_associate");
             return 0;
         }
-        else if (adl_filterInetAddress(&dest_su[count], filterFlags) == FALSE)
+        else if (adl_filterInetAddress(&dest_su[count], filterFlags) == false)
         {
             error_log(ERROR_MAJOR,
                     "sctp_associate: destination adress not good !");
@@ -2757,7 +2757,7 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID,
  *                         SCTP_MODULE_NOT_FOUND, SCTP_ASSOC_NOT_FOUND
  */
 int sctp_changeHeartBeat(unsigned int associationID, short path_id,
-        gboolean heartbeatON, unsigned int timeIntervall)
+        bool heartbeatON, unsigned int timeIntervall)
 {
     int result;
     SCTP_instance *old_Instance = curr_geco_instance_;
@@ -3362,14 +3362,14 @@ int sctp_setLibraryParameters(SCTP_LibraryParameters *params)
 
     event_logi(VERBOSE,
             "sctp_setLibraryParameters: Parameter sendAbortForOOTB is %s",
-            (sendAbortForOOTB == TRUE) ? "TRUE" : "FALSE");
+            (sendAbortForOOTB == true) ? "true" : "false");
     if (params->sendOotbAborts == 0)
     {
-        sendAbortForOOTB = FALSE;
+        sendAbortForOOTB = false;
     }
     else if (params->sendOotbAborts == 1)
     {
-        sendAbortForOOTB = TRUE;
+        sendAbortForOOTB = true;
     }
     else
     {
@@ -3393,11 +3393,11 @@ int sctp_setLibraryParameters(SCTP_LibraryParameters *params)
 
     if (params->supportPRSCTP == 0)
     {
-        librarySupportsPRSCTP = FALSE;
+        librarySupportsPRSCTP = false;
     }
     else if (params->supportPRSCTP == 1)
     {
-        librarySupportsPRSCTP = TRUE;
+        librarySupportsPRSCTP = true;
     }
     else
     {
@@ -3406,11 +3406,11 @@ int sctp_setLibraryParameters(SCTP_LibraryParameters *params)
     }
     if (params->supportADDIP == 0)
     {
-        supportADDIP = FALSE;
+        supportADDIP = false;
     }
     else if (params->supportADDIP == 1)
     {
-        supportADDIP = TRUE;
+        supportADDIP = true;
     }
     else
     {
@@ -3420,16 +3420,16 @@ int sctp_setLibraryParameters(SCTP_LibraryParameters *params)
 
     event_logi(INTERNAL_EVENT_0,
             "sctp_setLibraryParameters: Set Parameter sendAbortForOOTB to %s",
-            (sendAbortForOOTB == TRUE) ? "TRUE" : "FALSE");
+            (sendAbortForOOTB == true) ? "true" : "false");
     event_logi(INTERNAL_EVENT_0,
             "sctp_setLibraryParameters: Checksum Algorithm is now %s",
             (checksumAlgorithm==SCTP_CHECKSUM_ALGORITHM_CRC32C)?"CRC32C":"ADLER32");
     event_logi(INTERNAL_EVENT_0,
             "sctp_setLibraryParameters: Support of PRSCTP is now %s",
-            (params->supportPRSCTP == TRUE) ? "ENABLED" : "DISABLED");
+            (params->supportPRSCTP == true) ? "ENABLED" : "DISABLED");
     event_logi(INTERNAL_EVENT_0,
             "sctp_setLibraryParameters: Support of ADDIP is now %s",
-            (params->supportADDIP == TRUE) ? "ENABLED" : "DISABLED");
+            (params->supportADDIP == true) ? "ENABLED" : "DISABLED");
 
     LEAVE_LIBRARY("sctp_setLibraryParameters");
     return SCTP_SUCCESS;
@@ -3449,12 +3449,12 @@ int sctp_getLibraryParameters(SCTP_LibraryParameters *params)
 
     event_logi(VERBOSE,
             "sctp_getLibraryParameters: Parameter sendAbortForOOTB is currently %s",
-            (sendAbortForOOTB == TRUE) ? "TRUE" : "FALSE");
+            (sendAbortForOOTB == true) ? "true" : "false");
 
     params->sendOotbAborts = sendAbortForOOTB;
     params->checksumAlgorithm = checksumAlgorithm;
-    params->supportPRSCTP = (librarySupportsPRSCTP == TRUE) ? 1 : 0;
-    params->supportADDIP = (supportADDIP == TRUE) ? 1 : 0;
+    params->supportPRSCTP = (librarySupportsPRSCTP == true) ? 1 : 0;
+    params->supportADDIP = (supportADDIP == true) ? 1 : 0;
     event_logi(INTERNAL_EVENT_0,
             "sctp_getLibraryParameters: Checksum Algorithm is currently %s",
             (checksumAlgorithm==SCTP_CHECKSUM_ALGORITHM_CRC32C)?"CRC32C":"ADLER32");
@@ -3500,7 +3500,7 @@ int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer,
 
     if (curr_channel_ != NULL)
     {
-        if (curr_channel_->deleted == FALSE)
+        if (curr_channel_->deleted == false)
         {
             result = SCTP_WRONG_STATE;
         }
@@ -3565,7 +3565,7 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
 
     if (curr_channel_ != NULL)
     {
-        if (curr_channel_->deleted == FALSE)
+        if (curr_channel_->deleted == false)
         {
             result = SCTP_WRONG_STATE;
         }
@@ -3836,7 +3836,7 @@ int sctp_sendRawData(unsigned int associationID, short path_id,
     SCTP_instance *old_Instance = curr_geco_instance_;
     Association *old_assoc = curr_channel_;
 
-    if (sctpLibraryInitialized == FALSE) return -1;
+    if (sctpLibraryInitialized == false) return -1;
 
     /* Retrieve association from list  */
     curr_channel_ = retrieveAssociation(associationID);
@@ -4053,7 +4053,7 @@ int mdi_send_message(SCTP_message * message, unsigned int length,
  *  @param streamID  received data belongs to this stream
  *  @param  length   so many bytes have arrived (may be used to reserve space)
  *  @param  protoID  the protocol ID of the arrived payload
- *  @param  unordered  unordered flag (TRUE==1==unordered, FALSE==0==normal,numbered chunk)
+ *  @param  unordered  unordered flag (true==1==unordered, false==0==normal,numbered chunk)
  */
 void mdi_dataArriveNotif(unsigned short streamID, unsigned int length,
         unsigned short streamSN, unsigned int tsn, unsigned int protoID,
@@ -4872,8 +4872,8 @@ unsigned short mdi_readLocalInStreams(void)
                 "mdi_readLocalInStreams(): Searching for SCTP Instance with Port %u ",
                 lastDestPort);
         temporary.supportedAddressTypes = 0;
-        temporary.has_INADDR_ANY_set = FALSE;
-        temporary.has_IN6ADDR_ANY_set = FALSE;
+        temporary.has_INADDR_ANY_set = false;
+        temporary.has_IN6ADDR_ANY_set = false;
         temporary.localPort = lastDestPort;
         temporary.noOfLocalAddresses = 1;
         if (lastDestAddress) temporary.localAddressList = lastDestAddress;
@@ -4929,8 +4929,8 @@ unsigned short mdi_readLocalOutStreams(void)
                 lastDestPort);
         temporary.supportedAddressTypes = 0;
         temporary.localPort = lastDestPort;
-        temporary.has_INADDR_ANY_set = FALSE;
-        temporary.has_IN6ADDR_ANY_set = FALSE;
+        temporary.has_INADDR_ANY_set = false;
+        temporary.has_IN6ADDR_ANY_set = false;
         temporary.noOfLocalAddresses = 1;
         if (lastDestAddress) temporary.localAddressList = lastDestAddress;
         else
@@ -4978,13 +4978,13 @@ unsigned short mdi_readLocalOutStreams(void)
 void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
         guint16 * noOfAddresses, union sockunion *peerAddress,
         unsigned int numPeerAddresses, unsigned int addressTypes,
-        gboolean receivedFromPeer)
+        bool receivedFromPeer)
 {
 
     unsigned int count = 0, tmp;
     AddressScopingFlags filterFlags = (AddressScopingFlags) 0;
-    gboolean localHostFound = FALSE, linkLocalFound = FALSE, siteLocalFound =
-            FALSE;
+    bool localHostFound = false, linkLocalFound = false, siteLocalFound =
+            false;
 
     if ((curr_channel_ == NULL) && (curr_geco_instance_ == NULL))
     {
@@ -5010,20 +5010,20 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 SiteLocalAddrType));
     }
 
-    /* if (receivedFromPeer == FALSE) I send an INIT with my addresses to the peer */
-    if ((receivedFromPeer == FALSE) && (localHostFound == TRUE))
+    /* if (receivedFromPeer == false) I send an INIT with my addresses to the peer */
+    if ((receivedFromPeer == false) && (localHostFound == true))
     {
         /* if paddress == loopback then add my loopback */
         filterFlags = flag_Default;
     }
-    else if ((receivedFromPeer == FALSE) && (localHostFound == FALSE))
+    else if ((receivedFromPeer == false) && (localHostFound == false))
     {
         /* only add loopback, if sending to a loopback */
         filterFlags = (AddressScopingFlags) (flag_Default | LoopBackAddrType);
 
-        /* if (receivedFromPeer == TRUE) I got an INIT with addresses from the peer */
+        /* if (receivedFromPeer == true) I got an INIT with addresses from the peer */
     }
-    else if ((receivedFromPeer == TRUE) && (localHostFound == FALSE))
+    else if ((receivedFromPeer == true) && (localHostFound == false))
     {
         /* this is from a normal address, get all except loopback */
         if (linkLocalFound)
@@ -5042,7 +5042,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                     | AllLocalAddrTypes);
         }
     }
-    else /* if ((receivedFromPeer == TRUE) && (localHostFound == TRUE)) */
+    else /* if ((receivedFromPeer == true) && (localHostFound == true)) */
     {
         /* this is from a loopback, get all loopbacks */
         filterFlags = flag_Default;
@@ -5050,7 +5050,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 
     count = 0;
 
-    if (curr_geco_instance_->has_INADDR_ANY_set == TRUE)
+    if (curr_geco_instance_->has_INADDR_ANY_set == true)
     {
         for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
         {
@@ -5060,7 +5060,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0)
                 {
                     if (adl_filterInetAddress(&(defaultlocaladdrlist_[tmp]),
-                            filterFlags) == TRUE)
+                            filterFlags) == true)
                     {
                         memcpy(&(laddresses[count]), &(defaultlocaladdrlist_[tmp]),
                                 sizeof(union sockunion));
@@ -5076,7 +5076,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 "mdi_readLocalAddresses: found %u local addresses from INADDR_ANY (from %u)",
                 count, defaultlocaladdrlistsize_);
     }
-    else if (curr_geco_instance_->has_IN6ADDR_ANY_set == TRUE)
+    else if (curr_geco_instance_->has_IN6ADDR_ANY_set == true)
     {
         for (tmp = 0; tmp < defaultlocaladdrlistsize_; tmp++)
         {
@@ -5086,7 +5086,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV4) != 0)
                 {
                     if (adl_filterInetAddress(&(defaultlocaladdrlist_[tmp]),
-                            filterFlags) == TRUE)
+                            filterFlags) == true)
                     {
                         memcpy(&(laddresses[count]), &(defaultlocaladdrlist_[tmp]),
                                 sizeof(union sockunion));
@@ -5098,7 +5098,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV6) != 0)
                 {
                     if (adl_filterInetAddress(&(defaultlocaladdrlist_[tmp]),
-                            filterFlags) == TRUE)
+                            filterFlags) == true)
                     {
                         memcpy(&(laddresses[count]), &(defaultlocaladdrlist_[tmp]),
                                 sizeof(union sockunion));
@@ -5125,7 +5125,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 {
                     if (adl_filterInetAddress(
                             &(curr_geco_instance_->localAddressList[tmp]), filterFlags)
-                            == TRUE)
+                            == true)
                     {
                         memcpy(&(laddresses[count]),
                                 &(curr_geco_instance_->localAddressList[tmp]),
@@ -5138,7 +5138,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
                 case AF_INET6 :
                 if ((addressTypes & SUPPORT_ADDRESS_TYPE_IPV6) != 0)
                 {
-                    if ( adl_filterInetAddress(&(curr_geco_instance_->localAddressList[tmp]), filterFlags) == TRUE)
+                    if ( adl_filterInetAddress(&(curr_geco_instance_->localAddressList[tmp]), filterFlags) == true)
                     {
                         memcpy(&(laddresses[count]), &(curr_geco_instance_->localAddressList[tmp]),
                                 sizeof(union sockunion));
@@ -5164,7 +5164,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
     *noOfAddresses = count;
 }
 
-gboolean mdi_supportsPRSCTP(void)
+bool mdi_supportsPRSCTP(void)
 {
     if (curr_channel_ != NULL)
     {
@@ -5178,9 +5178,9 @@ gboolean mdi_supportsPRSCTP(void)
     return (librarySupportsPRSCTP);
 }
 
-gboolean mdi_peerSupportsPRSCTP(void)
+bool mdi_peerSupportsPRSCTP(void)
 {
-    if (curr_channel_ == NULL) return FALSE;
+    if (curr_channel_ == NULL) return false;
     return curr_channel_->peerSupportsPRSCTP;
 }
 
@@ -5404,7 +5404,7 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     curr_channel_->tagLocal = tagLocal;
     curr_channel_->assocId = mdi_getUnusedAssocId();
     curr_channel_->tagRemote = 0;
-    curr_channel_->deleted = FALSE;
+    curr_channel_->deleted = false;
 
     curr_channel_->ulp_dataptr = NULL;
     curr_channel_->ipTos = instance->default_ipTos;
@@ -5506,8 +5506,8 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
     curr_channel_->supportsPRSCTP = instance->supportsPRSCTP;
     curr_channel_->peerSupportsPRSCTP = instance->supportsPRSCTP;
 
-    curr_channel_->supportsADDIP = FALSE;
-    curr_channel_->peerSupportsADDIP = FALSE;
+    curr_channel_->supportsADDIP = false;
+    curr_channel_->peerSupportsADDIP = false;
 
     event_logii(INTERNAL_EVENT_1,
             "new Association created ID=%08x, local tag=%08x",
@@ -5545,10 +5545,10 @@ unsigned short mdi_newAssociation(void* sInstance, unsigned short local_port,
 unsigned short mdi_init_channel(unsigned int remoteSideReceiverWindow,
         unsigned short noOfInStreams, unsigned short noOfOutStreams,
         unsigned int remoteInitialTSN, unsigned int tagRemote,
-        unsigned int localInitialTSN, gboolean assocSupportsPRSCTP,
-        gboolean assocSupportsADDIP)
+        unsigned int localInitialTSN, bool assocSupportsPRSCTP,
+        bool assocSupportsADDIP)
 {
-    gboolean withPRSCTP;
+    bool withPRSCTP;
 
     if (!curr_channel_)
     {
@@ -5602,11 +5602,11 @@ unsigned short mdi_restart_channel(unsigned short noOfInStreams,
         unsigned short noOfOutStreams, unsigned int new_rwnd,
         unsigned int remoteInitialTSN, unsigned int localInitialTSN,
         short noOfPaths, short primaryAddress,
-        union sockunion *destinationAddressList, gboolean assocSupportsPRSCTP,
-        gboolean assocSupportsADDIP)
+        union sockunion *destinationAddressList, bool assocSupportsPRSCTP,
+        bool assocSupportsADDIP)
 {
     int result;
-    gboolean withPRSCTP;
+    bool withPRSCTP;
 
     if (!curr_channel_)
     {
@@ -5718,7 +5718,7 @@ void mdi_deleteCurrentAssociation(void)
 
         /* mark association as deleted, it will be deleted when retrieveAssociation(..) encounters
          a "deleted" association. */
-        curr_channel_->deleted = TRUE;
+        curr_channel_->deleted = true;
         event_logi(INTERNAL_EVENT_1, "association ID=%08x marked for deletion",
                 curr_channel_->assocId);
     }
