@@ -96,7 +96,7 @@ const uint COMM_UP_RECEIVED_COOKIE_RESTART = 3;
  * This struct contains parameters that may be set globally with
  * mulp_setLibraryParams(). For now, it only contains one flag.
  */
-struct lib_params_t
+struct lib_infos_t
 {
 	/* 
 	 * flag that controls whether an implementation will send
@@ -183,7 +183,7 @@ struct geco_instance_params_t
  * values can only be retrieved/set, when the association
  * already exists !
  */
-struct path_params_t
+struct path_infos_t
 {
     /* @{ */
     /**   */
@@ -221,7 +221,7 @@ struct path_params_t
  *  may only be retrieved using the  mulp_getAssocStatus() function, or
  *  also set using the  mulp_setAssocStatus() function.
  */
-struct connection_params_t
+struct connection_infos_t
 {
     /* @{ */
     /** (get)  */
@@ -435,13 +435,13 @@ int mulp_abort(channel_t* associationID);
 /*----------------------------------------------------------------------------------------------*/
 /*  These are the new function for getting/setting parameters per instance, association or path */
 /*----------------------------------------------------------------------------------------------*/
-int mulp_set_lib_params(lib_params_t *lib_params);
-int mulp_get_lib_params(lib_params_t *lib_params);
+int mulp_set_lib_params(lib_infos_t *lib_params);
+int mulp_get_lib_params(lib_infos_t *lib_params);
 int mulp_setAssocDefaults(geco_instance_t* mulp_InstanceName, geco_instance_params_t* geco_instance_params);
 int mulp_getAssocDefaults(geco_instance_t* mulp_InstanceName, geco_instance_params_t* geco_instance_params);
-int mulp_getAssocStatus(channel_t* associationID, connection_params_t* status);
-int mulp_setAssocStatus(channel_t* associationID, connection_params_t* new_status);
-int mulp_getPathStatus(channel_t* associationID, short path_id, path_params_t* status);
-int mulp_setPathStatus(channel_t* associationID, short path_id, path_params_t *new_status);
+int mulp_getAssocStatus(channel_t* associationID, connection_infos_t* status);
+int mulp_setAssocStatus(channel_t* associationID, connection_infos_t* new_status);
+int mulp_getPathStatus(channel_t* associationID, short path_id, path_infos_t* status);
+int mulp_setPathStatus(channel_t* associationID, short path_id, path_infos_t *new_status);
 /*----------------------------------------------------------------------------------------------*/
 #endif

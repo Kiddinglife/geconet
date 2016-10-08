@@ -682,6 +682,38 @@ extern unsigned long SuperFastHashFilePtr(FILE *fp);
 extern unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
 	const sockaddrunion* peer_sa);
 extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
+
+/* Defines the callback function that is called when an event occurs
+on an internal GECO or UDP socket
+Params: 1. file-descriptor of the socket
+2. pointer to the datagram data, if any was received
+3. length of datagram data, if any was received
+4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
+5. source port number for UDP sockets, 0 for SCTP raw sockets
+*/
+typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen,
+	const char* addr, ushort port);
+/* Defines the callback function that is called when an event occurs
+on a user file-descriptor
+Params: 1. file-descriptor
+Params: 2. received events mask
+Params: 3. pointer to registered events mask.
+It may be changed by the callback function.
+Params: 4. user data
+*/
+typedef void(*user_cb_fun_t)(int, short int revents, 
+	int* settled_events,void* usrdata);
+union cbunion_t
+{
+	socket_cb_fun_t socket_cb_fun;
+	user_cb_fun_t user_cb_fun;
+};
+extern bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags);
+extern bool get_local_addresses(union sockaddrunion **addresses,
+	int *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
+	const IPAddrType flags);
+extern void mtra_add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
+
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
 #define MAX_INIT_RETRANS_ATTEMPTS    8

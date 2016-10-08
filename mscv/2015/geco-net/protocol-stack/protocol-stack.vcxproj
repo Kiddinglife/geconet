@@ -119,7 +119,7 @@
     </Link>
     <Lib>
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common_Debugx64.lib;Crypt_Debugx64.lib;Math_Debugx64.lib;Tunnel_Debugx64.lib;</AdditionalDependencies>
+      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
@@ -173,7 +173,7 @@
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).lib</OutputFile>
     </Lib>
     <Lib>
-      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common.lib;Crypt.lib;Math.lib;Tunnel.lib;</AdditionalDependencies>
+      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;</AdditionalDependencies>
     </Lib>
     <Lib>
       <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
