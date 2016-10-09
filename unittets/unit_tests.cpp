@@ -7,6 +7,22 @@
 #include "geco-malloc.h"
 using namespace geco::ds;
 
+extern timer_mgr mtra_timer_mgr_;
+extern int mtra_ip4_socket_despt_; /* socket fd for standard SCTP port....      */
+extern int mtra_ip6_socket_despt_; /* socket fd for standard SCTP port....      */
+extern int mtra_icmp_socket_despt_; /* socket fd for ICMP messages */
+extern int socket_despts_size_;
+extern socket_despt_t socket_despts[MAX_FD_SIZE];
+extern event_handler_t event_callbacks[MAX_FD_SIZE];
+
+extern void mtra_set_expected_event_on_fd(int fd_index, int sfd, int event_mask);
+extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type,
+	int event_mask, cbunion_t action, void* userData);
+extern void mtra_add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb);
+extern int mtra_poll(void(*lock)(void* data), void(*unlock)(void* data), void* data);
+extern int mtra_remove_stdin_cb();
+extern int mtra_remove_event_handler(int sfd);
+
 struct alloc_t
 {
     void* ptr;
@@ -359,11 +375,11 @@ TEST(AUTH_MODULE, test_crc32_checksum)
   }
 }
 
+extern int mtran_init(int * myRwnd, bool ip4);
 TEST(TRANSPORT_MODULE, test_get_local_addr)
 {
   int rcwnd = 512;
-  network_interface_t nit;
-  nit.init (&rcwnd, true);
+  mtran_init(&rcwnd, true);
 
   sockaddrunion* saddr = 0;
   int num = 0;
@@ -371,8 +387,7 @@ TEST(TRANSPORT_MODULE, test_get_local_addr)
   ushort port = 0;
   char addr[MAX_IPADDR_STR_LEN];
   IPAddrType t = (IPAddrType) (AllLocalAddrTypes | AllCastAddrTypes);
-  nit.get_local_addresses (&saddr, &num, nit.ip4_socket_despt_, true, &maxmtu,
-                           t);
+  get_local_addresses (&saddr, &num, mtra_ip4_socket_despt_, true, &maxmtu,t);
 
   EVENTLOG1(VERBOSE, "max mtu  %d\n", maxmtu);
 
@@ -384,7 +399,6 @@ TEST(TRANSPORT_MODULE, test_get_local_addr)
     }
 }
 
-static network_interface_t nit;
 static bool flag = true;
 static void
 process_stdin (char* data, size_t datalen)
@@ -402,8 +416,8 @@ process_stdin (char* data, size_t datalen)
   str2saddr (&saddr, "127.0.0.1", USED_UDP_PORT);
   int sampledata = 27;
   uchar tos = IPTOS_DEFAULT;
-  int sentsize = nit.send_ip_packet (nit.ip4_socket_despt_, data, datalen,
-                                     &saddr, tos);
+  int sentsize = 
+	  mtra_send_ip_packet (mtra_ip4_socket_despt_, data, datalen,&saddr, tos);
   assert(sentsize == datalen);
 }
 static void
@@ -420,29 +434,29 @@ timer_cb (timer_id_t& tid, void* a1, void* a2)
   EVENTLOG2(VERBOSE, "timer_cb(id %d, type->%d)::\n", tid->timer_id,
             tid->timer_type);
   if (timercb_cnt < 5)
-    nit.restart_timer (tid, 10000);
+	  mtra_timer_mgr_.reset_timer(tid, 10000);
   else
     flag = false;
   timercb_cnt++;
   return true;
 }
+
 TEST(TRANSPORT_MODULE, test_process_stdin)
 {
   int rcwnd = 512;
-  nit.init (&rcwnd, true);
-
-  nit.cbunion_.socket_cb_fun = socket_cb;
-  nit.poller_.set_expected_event_on_fd (nit.ip4_socket_despt_,
-  EVENTCB_TYPE_SCTP,
-                                        POLLIN | POLLPRI, nit.cbunion_, 0);
+  mtran_init(&rcwnd, true);(&rcwnd, true);
+  cbunion_t cbunion;
+  cbunion.socket_cb_fun = socket_cb;
+  mtra_set_expected_event_on_fd (mtra_ip4_socket_despt_,
+  EVENTCB_TYPE_SCTP,POLLIN | POLLPRI, cbunion, 0);
   // you have to put stdin as last because we test it
-  nit.poller_.add_stdin_cb (process_stdin);
-  nit.start_timer (10000, timer_cb, TIMER_TYPE_INIT, 0, 0);
+  mtra_add_stdin_cb (process_stdin);
+  mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT,10000, timer_cb, 0, 0);
   while (flag)
-    nit.poller_.poll ();
-  nit.poller_.timer_mgr_.timers.clear ();
-  nit.poller_.remove_stdin_cb ();
-  nit.poller_.remove_event_handler (nit.ip4_socket_despt_);
+    mtra_poll(0,0,0);
+  mtra_timer_mgr_.timers.clear ();
+  mtra_remove_stdin_cb ();
+  mtra_remove_event_handler(mtra_ip4_socket_despt_);
 }
 static void
 fd_action_sctp (int sfd, char* data, int datalen, const char* addr, ushort port)
@@ -461,110 +475,107 @@ TEST(TRANSPORT_MODULE, test_add_remove_fd)
 {
   // !!! comment wsaselect() in poller::set_event_on_win32_sdespt()
   // if you run this unit test
-  selector poller;
-  poller.cbunion_.socket_cb_fun = fd_action_sctp;
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.cbunion_.socket_cb_fun = fd_action_udp;
-  poller.set_expected_event_on_fd (2, EVENTCB_TYPE_UDP, POLLIN, poller.cbunion_,
-                                   (void*) 2);
-  poller.cbunion_.socket_cb_fun = fd_action_rounting;
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
-                                   poller.cbunion_, (void*) 1);
+	cbunion_t cbunion_;
+  cbunion_.socket_cb_fun = fd_action_sctp;
+  mtra_set_expected_event_on_fd(1, EVENTCB_TYPE_SCTP, POLLIN,cbunion_, (void*) 1);
+  cbunion_.socket_cb_fun = fd_action_udp;
+  mtra_set_expected_event_on_fd(2, EVENTCB_TYPE_UDP, POLLIN, cbunion_,(void*) 2);
+ cbunion_.socket_cb_fun = fd_action_rounting;
+  mtra_set_expected_event_on_fd(1, EVENTCB_TYPE_ROUTING, POLLIN,cbunion_, (void*) 1);
 
-  int size = poller.remove_event_handler (1);
+  int size = mtra_remove_event_handler (1);
   assert(size == 2);
-  size = poller.remove_event_handler (200);
+  size = mtra_remove_event_handler (200);
   assert(size == 0);
-  size = poller.remove_event_handler (200);
+  size = mtra_remove_event_handler (200);
   assert(size == 0);
-  size = poller.remove_event_handler (2);
+  size = mtra_remove_event_handler (2);
   assert(size == 1);
-  assert(poller.socket_despts_size_ == 0);
-  poller.cbunion_.socket_cb_fun = fd_action_rounting;
-  poller.set_expected_event_on_fd (3, EVENTCB_TYPE_ROUTING, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  assert(poller.socket_despts_size_ == 1);
+  assert(socket_despts_size_ == 0);
+  cbunion_.socket_cb_fun = fd_action_rounting;
+  mtra_set_expected_event_on_fd (3, EVENTCB_TYPE_ROUTING, POLLIN,
+                                   cbunion_, (void*) 1);
+  assert(socket_despts_size_ == 1);
   assert(
-      poller.socket_despts[poller.socket_despts_size_].event_handler_index
+      socket_despts[socket_despts_size_].event_handler_index
           == 0);
   assert(
-      poller.event_callbacks[poller.socket_despts[poller.socket_despts_size_].event_handler_index].action.socket_cb_fun
+      event_callbacks[socket_despts[socket_despts_size_].event_handler_index].action.socket_cb_fun
           == fd_action_rounting);
 
-  size = poller.remove_event_handler (3);
+  size = mtra_remove_event_handler (3);
   assert(size == 1);
-  assert(poller.socket_despts_size_ == 0);
+  assert(socket_despts_size_ == 0);
 
-  size = poller.remove_event_handler (200);
+  size = mtra_remove_event_handler (200);
   assert(size == 0);
-  assert(poller.socket_despts_size_ == 0);
+  assert(socket_despts_size_ == 0);
   for (int i = 0; i < MAX_FD_SIZE; i++)
   {
-    assert(poller.socket_despts[i].fd == -1);
+    assert(socket_despts[i].fd == -1);
   }
 
-  memset (&poller.cbunion_, 0, sizeof(cbunion_t));
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_UDP, POLLIN, poller.cbunion_,
+  memset (&cbunion_, 0, sizeof(cbunion_t));
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_UDP, POLLIN, cbunion_,
                                    (void*) 2);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  size = poller.remove_event_handler (1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_ROUTING, POLLIN,
+                                   cbunion_, (void*) 1);
+  size = mtra_remove_event_handler (1);
   assert(size == 5);
-  assert(poller.socket_despts_size_ == 0);
+  assert(socket_despts_size_ == 0);
 
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  size = poller.remove_event_handler (1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  size = mtra_remove_event_handler (1);
   assert(size == 1);
-  assert(poller.socket_despts_size_ == 0);
+  assert(socket_despts_size_ == 0);
 
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  size = poller.remove_event_handler (1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  size = mtra_remove_event_handler (1);
   assert(size == 2);
-  assert(poller.socket_despts_size_ == 0);
+  assert(socket_despts_size_ == 0);
 
-  poller.set_expected_event_on_fd (2, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  size = poller.remove_event_handler (1);
+  mtra_set_expected_event_on_fd (2, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  size = mtra_remove_event_handler (1);
   assert(size == 2);
-  assert(poller.socket_despts_size_ == 1);
+  assert(socket_despts_size_ == 1);
   assert(
-      poller.event_callbacks[poller.socket_despts[0].event_handler_index].action.socket_cb_fun
+      event_callbacks[socket_despts[0].event_handler_index].action.socket_cb_fun
           == fd_action_sctp);
   assert(
-      poller.event_callbacks[poller.socket_despts[0].event_handler_index].sfd
+      event_callbacks[socket_despts[0].event_handler_index].sfd
           == 2);
 
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (2, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  poller.set_expected_event_on_fd (2, EVENTCB_TYPE_SCTP, POLLIN,
-                                   poller.cbunion_, (void*) 1);
-  size = poller.remove_event_handler (1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (2, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (1, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  mtra_set_expected_event_on_fd (2, EVENTCB_TYPE_SCTP, POLLIN,
+                                   cbunion_, (void*) 1);
+  size = mtra_remove_event_handler (1);
   assert(size == 2);
-  assert(poller.socket_despts_size_ == 3);
+  assert(socket_despts_size_ == 3);
   assert(
-      poller.event_callbacks[poller.socket_despts[0].event_handler_index].action.socket_cb_fun
+      event_callbacks[socket_despts[0].event_handler_index].action.socket_cb_fun
           == fd_action_sctp);
   assert(
-      poller.event_callbacks[poller.socket_despts[1].event_handler_index].action.socket_cb_fun
+      event_callbacks[socket_despts[1].event_handler_index].action.socket_cb_fun
           == fd_action_sctp);
   printf ("ALl Done\n");
 }

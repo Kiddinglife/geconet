@@ -5,6 +5,10 @@
 #include "geco-ds-malloc.h"
 #include "protoco-stack.h"
 
+extern int mtra_ip4_socket_despt_; /* socket fd for standard SCTP port....      */
+extern int mtra_ip6_socket_despt_; /* socket fd for standard SCTP port....      */
+extern int mtra_icmp_socket_despt_; /* socket fd for ICMP messages */
+
 struct transportaddr_hash_functor  //hash 函数
 {
 	size_t operator()(transport_addr_t &addr) const
@@ -56,19 +60,18 @@ std::tr1::unordered_map<sockaddrunion, geco_instance_t*, sockaddr_hash_functor,
 	sockaddr_cmp_functor> instance_map_;
 #endif
 
-/* many diferent channels belongs to a same geco instance*/
-std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
-std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
-
-											   /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
-											   * contain the addressed geco instance. This pointer must be reset to null after the event
-											   * has been handled.*/
+/* whenever an external event (ULP-call, socket-event or timer-event) this variable must
+* contain the addressed geco instance. This pointer must be reset to null after the event
+* has been handled.*/
 geco_instance_t *curr_geco_instance_;
-
 /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
 * contain the addressed channel. This pointer must be reset to null after the event
 * has been handled.*/
 channel_t *curr_channel_;
+
+/* many diferent channels belongs to a same geco instance*/
+std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
+std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
 
 /* inits along with library inits*/
 int defaultlocaladdrlistsize_;
@@ -138,7 +141,7 @@ ushort curr_ecc_code_;
 ushort curr_ecc_len_;
 uchar* curr_ecc_reason_;
 
-timer_mgr timer_mgr_;
+timer_mgr mdis_timer_mgr_;
 char hoststr_[MAX_IPADDR_STR_LEN];
 bool library_support_unreliability_;
 char chunkflag2use_;
@@ -226,8 +229,8 @@ int stop_heart_beat_timer(short pathID)
 	}
 	if (pathctrl->path_params[pathID].hb_enabled)
 	{
-		timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
-		pathctrl->path_params[pathID].hb_timer_id = timer_mgr_.timers.end();
+		mdis_timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
+		pathctrl->path_params[pathID].hb_timer_id = mdis_timer_mgr_.timers.end();
 		pathctrl->path_params[pathID].hb_enabled = false;
 		EVENTLOG1(INTERNAL_TRACE, "stop_heart_beat_timer: path %d disabled", pathID);
 	}
@@ -245,8 +248,8 @@ inline static void stop_sack_timer(void)
 		/* stop running sack timer*/
 		if (curr_channel_->receive_control->timer_running)
 		{
-			timer_mgr_.delete_timer(curr_channel_->receive_control->sack_timer);
-			curr_channel_->receive_control->sack_timer = timer_mgr_.timers.end();
+			mdis_timer_mgr_.delete_timer(curr_channel_->receive_control->sack_timer);
+			curr_channel_->receive_control->sack_timer = mdis_timer_mgr_.timers.end();
 			curr_channel_->receive_control->timer_running = false;
 			EVENTLOG(DEBUG, "stop_sack_timer()::Stopped Timer");
 		}
@@ -426,11 +429,11 @@ static int send_geco_packet(char* geco_packet, uint length, short destAddressInd
 	switch (saddr_family(dest_addr_ptr))
 	{
 	case AF_INET:
-		len = mtra_send_ip_packet(gmtra_ip4_socket_despt_, geco_packet,
+		len = mtra_send_ip_packet(mtra_ip4_socket_despt_, geco_packet,
 			length, dest_addr_ptr, tos);
 		break;
 	case AF_INET6:
-		len = mtra_send_ip_packet(gmtra_ip6_socket_despt_, geco_packet,
+		len = mtra_send_ip_packet(mtra_ip6_socket_despt_, geco_packet,
 			length, dest_addr_ptr, tos);
 		break;
 	default:
@@ -660,7 +663,7 @@ static void lock_bundle_ctrl()
 	bundle_ctrl->got_send_request = false;
 }
 
-static void mdis_init(void)
+void mdis_init(void)
 {
 	assert(MAX_NETWORK_PACKET_VALUE_SIZE == sizeof(simple_chunk_t));
 	default_bundle_ctrl_.ctrl_chunk_in_buffer = false;
@@ -765,7 +768,7 @@ uchar alloc_simple_chunk(simple_chunk_t* chunk)
 * creates a simple chunk except of DATA chunk. It can be used for parameterless
 * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
 * that have only variable length parameters like the error chunks*/
-inline static uint alloc_simple_chunk(uint chunk_type, uchar flag)
+inline uint alloc_simple_chunk(uint chunk_type, uchar flag)
 {
 	//create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
 	simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*)geco_malloc_ext(SIMPLE_CHUNK_SIZE,
@@ -872,7 +875,7 @@ inline static uint read_init_tag(uchar init_chunk_id)
 /**
 * free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
 * memory allocated for that chunk*/
-inline static void free_simple_chunk(uint chunkID)
+inline void free_simple_chunk(uint chunkID)
 {
 	if (simple_chunks_[chunkID] != NULL)
 	{
@@ -947,7 +950,7 @@ leave:
 
 /**check if local addr is found, return  ip4or6 loopback if found,
 *  otherwise return  the ones same to stored in inst localaddrlist*/
-inline static bool contain_local_addr(sockaddrunion* addr_list, uint addr_list_num)
+bool contain_local_addr(sockaddrunion* addr_list, uint addr_list_num)
 {
 	bool ret = false;
 	uint ii;
@@ -1414,7 +1417,7 @@ static bool contains_error_chunk(uchar * packet_value, uint packet_val_len, usho
 	}
 	return false;
 }
-inline static uint get_bundle_total_size(bundle_controller_t* buf)
+inline  uint get_bundle_total_size(bundle_controller_t* buf)
 {
 	assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
 	return ((buf)->ctrl_position + (buf)->sack_position + (buf)->data_position
@@ -1425,7 +1428,7 @@ inline static  uint get_bundle_sack_size(bundle_controller_t* buf)
 	assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
 	return ((buf)->ctrl_position + (buf)->data_position - UDP_GECO_PACKET_FIXED_SIZES);
 }
-static void bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL)
+void bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL)
 {
 	EVENTLOG(VERBOSE, "- -  Enter bundle_ctrl_chunk()");
 	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mbun_get(curr_channel_);
@@ -1486,7 +1489,7 @@ static void bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL)
 * @brief returns a pointer to the beginning of a simple chunk,
 * internally fillup chunk length.
 */
-simple_chunk_t *complete_simple_chunk(uint chunkID)
+inline simple_chunk_t *complete_simple_chunk(uint chunkID)
 {
 	if (simple_chunks_[chunkID] == NULL)
 	{
@@ -1652,7 +1655,7 @@ static uint generate_init_tag(void)
 	return tag;
 }
 
-static int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+ int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uchar * chunk, uint len, uint my_supported_addr_types,
 	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr)
 {
@@ -2304,7 +2307,7 @@ static int get_cookielifespan_from_statectrl(void)
 /**
 * only used for finding some vlparam in init or init ack chunks
 * NULL no params, otherwise have params, return vlp fixed*/
-static uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type)
+uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type)
 {
 	/*1) validate packet length*/
 	uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
@@ -2577,7 +2580,7 @@ static int process_init_chunk(init_chunk_t * init)
 		{
 			if (smctrl->init_timer_id->timer_id != 0)
 			{
-				timer_mgr_.delete_timer(smctrl->init_timer_id);
+				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
 			}
 			unlock_bundle_ctrl();
 			delete_curr_channel();
@@ -3127,10 +3130,10 @@ static void abort_channel(short error_type, uchar* errordata,
 		mdis_send_bundled_chunks();
 		//stop init timer
 		if (curr_channel_->state_machine_control->init_timer_id !=
-			timer_mgr_.timers.end())
+			mdis_timer_mgr_.timers.end())
 		{
-			timer_mgr_.delete_timer(curr_channel_->state_machine_control->init_timer_id);
-			curr_channel_->state_machine_control->init_timer_id = timer_mgr_.timers.end();
+			mdis_timer_mgr_.delete_timer(curr_channel_->state_machine_control->init_timer_id);
+			curr_channel_->state_machine_control->init_timer_id = mdis_timer_mgr_.timers.end();
 		}
 		// delete all data of channel
 		delete_curr_channel();
@@ -3465,10 +3468,10 @@ void fc_stop_timers(void)
 	}
 	for (uint count = 0; count < fc->numofdestaddrlist; count++)
 	{
-		if (fc->T3_timer[count] != timer_mgr_.timers.end())
+		if (fc->T3_timer[count] != mdis_timer_mgr_.timers.end())
 		{
-			timer_mgr_.delete_timer(fc->T3_timer[count]);
-			fc->T3_timer[count] = timer_mgr_.timers.end();
+			mdis_timer_mgr_.delete_timer(fc->T3_timer[count]);
+			fc->T3_timer[count] = mdis_timer_mgr_.timers.end();
 #ifdef _DEBUG
 			EVENTLOG2(VERBOSE, "Stopping T3-Timer(id=%d, timer_type=%d) ",
 				fc->T3_timer[count]->timer_id, fc->T3_timer[count]->timer_type);
@@ -3555,7 +3558,7 @@ flow_controller_t* alloc_flowcontrol(uint peer_rwnd,
 
 	for (uint count = 0; count < numofdestaddres; count++)
 	{
-		tmp->T3_timer[count] = timer_mgr_.timers.end(); /* i.e. timer not running */
+		tmp->T3_timer[count] = mdis_timer_mgr_.timers.end(); /* i.e. timer not running */
 		tmp->addresses[count] = count;
 		(tmp->cparams[count]).cwnd = 2 * MAX_MTU_SIZE;
 		(tmp->cparams[count]).cwnd2 = 0L;
@@ -3604,7 +3607,7 @@ void free_recvctrl(recv_controller_t* rxc_inst)
 	geco_free_ext(rxc_inst->sack_chunk, __FILE__, __LINE__);
 	if (rxc_inst->timer_running)
 	{
-		timer_mgr_.delete_timer(rxc_inst->sack_timer);
+		mdis_timer_mgr_.delete_timer(rxc_inst->sack_timer);
 		rxc_inst->timer_running = false;
 	}
 	for (auto it = rxc_inst->fragmented_data_chunks_list.begin();
@@ -3931,7 +3934,7 @@ static ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			{
 				if (smctrl->init_timer_id->timer_id != 0)
 				{
-					timer_mgr_.delete_timer(smctrl->init_timer_id);
+					mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
 				}
 				unlock_bundle_ctrl();
 				delete_curr_channel();
@@ -3985,10 +3988,10 @@ static ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		{
 			EVENTLOG(INFO, "received a initAck without cookie");
 			// stop shutdown timer
-			if (smctrl->init_timer_id != timer_mgr_.timers.end())
+			if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
 			{
-				timer_mgr_.delete_timer(smctrl->init_timer_id);
-				smctrl->init_timer_id = timer_mgr_.timers.end();
+				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
 			}
 			missing_mandaory_params_err_t missing_mandaory_params_err;
 			missing_mandaory_params_err.numberOfParams = htonl(1);
@@ -4011,10 +4014,10 @@ static ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			free_simple_chunk(cookieecho_cid);
 			if (errorCID > 0) free_simple_chunk(errorCID);
 			// stop shutdown timer
-			if (smctrl->init_timer_id != timer_mgr_.timers.end())
+			if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
 			{
-				timer_mgr_.delete_timer(smctrl->init_timer_id);
-				smctrl->init_timer_id = timer_mgr_.timers.end();
+				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
 			}
 			unlock_bundle_ctrl();
 			delete_curr_channel();
@@ -4049,15 +4052,15 @@ static ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		mdis_send_bundled_chunks();
 
 		// stop init timer
-		if (smctrl->init_timer_id != timer_mgr_.timers.end())
+		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
 		{
-			timer_mgr_.delete_timer(smctrl->init_timer_id);
-			smctrl->init_timer_id = timer_mgr_.timers.end();
+			mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+			smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
 		}
 
 		//start cookie timer
 		channel_state = ChannelState::CookieEchoed;
-		smctrl->init_timer_id = timer_mgr_.add_timer(TIMER_TYPE_INIT,
+		smctrl->init_timer_id = mdis_timer_mgr_.add_timer(TIMER_TYPE_INIT,
 			smctrl->init_timer_interval, &sci_timer_expired, smctrl->channel_ptr,
 			NULL);
 		EVENTLOG(INFO,
@@ -4270,7 +4273,7 @@ smctrl_t*	sm_new(void)
 		return 0;
 	}
 	tmp->channel_state = ChannelState::Closed;
-	tmp->init_timer_id = timer_mgr_.timers.end();
+	tmp->init_timer_id = mdis_timer_mgr_.timers.end();
 	tmp->init_timer_interval = RTO_INITIAL;
 	tmp->init_retrans_count = 0;
 	tmp->channel_id = curr_channel_->channel_id;
@@ -4347,9 +4350,9 @@ bool alloc_new_channel(geco_instance_t* instance,
 	if (defaultlocaladdrlistsize_ == 0)
 	{//expensicve call, only call it one time
 		get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
-			gmtra_ip4_socket_despt_ == 0 ?
-			gmtra_ip6_socket_despt_ :
-			gmtra_ip4_socket_despt_,
+			mtra_ip4_socket_despt_ == 0 ?
+			mtra_ip6_socket_despt_ :
+			mtra_ip4_socket_despt_,
 			true, &maxMTU, IPAddrType::AllCastAddrTypes);
 	}
 	int ii;
@@ -4844,10 +4847,10 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			// notification to ULP 
 			SendCommUpNotification = COMM_UP_RECEIVED_VALID_COOKIE;
 			// stop t1-init timer 
-			if (smctrl->init_timer_id != timer_mgr_.timers.end())
+			if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
 			{
-				timer_mgr_.delete_timer(smctrl->init_timer_id);
-				smctrl->init_timer_id = timer_mgr_.timers.end();
+				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
 			}
 			//bundle and send cookie ack
 			cookie_ack_cid_ = alloc_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
@@ -4894,10 +4897,10 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 				EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u",
 					smctrl->outbound_stream, smctrl->inbound_stream);
 
-				if (smctrl->init_timer_id != timer_mgr_.timers.end())
+				if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
 				{// stop t1-init timer 
-					timer_mgr_.delete_timer(smctrl->init_timer_id);
-					smctrl->init_timer_id = timer_mgr_.timers.end();
+					mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+					smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
 				}
 
 				newstate = ChannelState::Connected;	 // enters CONNECTED state
@@ -5065,7 +5068,7 @@ static int mdis_disassemle_packet()
 	return 0;
 }
 
-static channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
+channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
 	ushort src_port, ushort dest_port)
 {
 	tmp_channel_.remote_addres_size = 1;
@@ -5131,7 +5134,7 @@ static channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
 
 	return result;
 }
-static uint find_chunk_types(uchar* packet_value, uint packet_val_len, uint* total_chunk_count)
+ uint find_chunk_types(uchar* packet_value, uint packet_val_len, uint* total_chunk_count)
 {
 	// 0000 0000 ret = 0 at beginning
 	// 0000 0001 1
@@ -5245,7 +5248,7 @@ static bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b
 	}
 }
 
-static geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
+geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
 	ushort dest_port)
 {
 	if (geco_instances_.size() == 0)
@@ -5287,7 +5290,7 @@ static geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest
 * 2 contains this one and also other type chunks, NOT means two of this
 * @pre: need call find_chunk_types() first
 */
-inline static int contains_chunk(uint chunk_type, uint chunk_types)
+inline int contains_chunk(uint chunk_type, uint chunk_types)
 {
 	// 0000 0000 ret = 0 at beginning
 	// 0000 0001 1
@@ -5316,7 +5319,7 @@ inline static int contains_chunk(uint chunk_type, uint chunk_types)
 	return 0;
 }
 
-static bool validate_dest_addr(sockaddrunion * dest_addr)
+bool validate_dest_addr(sockaddrunion * dest_addr)
 {
 	/* 1)
 	* we can receive this packet means that dest addr is good no matter it is
@@ -5357,26 +5360,24 @@ static bool validate_dest_addr(sockaddrunion * dest_addr)
 
 	if (curr_geco_instance_ != NULL)
 	{
-		ushort af = saddr_family(dest_addr);
+		uchar af = saddr_family(dest_addr);
 		if (curr_geco_instance_->is_inaddr_any && curr_geco_instance_->is_in6addr_any)
 		{            //we supports both of ip4and6
 			if (af == AF_INET || af == AF_INET6)
 				return true;
-			else
-				*curr_ecc_reason_ = AF_INET | AF_INET6;
 		}
 		else if (curr_geco_instance_->is_in6addr_any && !curr_geco_instance_->is_inaddr_any)
 		{            //we only supports ip6
 			if (af == AF_INET6)
 				return true;
 			else
-				*curr_ecc_reason_ = AF_INET6;
+				curr_ecc_reason_ = &af;
 		}
 		else if (!curr_geco_instance_->is_in6addr_any && curr_geco_instance_->is_inaddr_any)
 		{            //we only supports ip4
 			if (af == AF_INET) return true;
 			else
-				*curr_ecc_reason_ = AF_INET;
+				curr_ecc_reason_ = &af;
 		}
 		else  //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
 		{  // we found inst in compare_geco_instance(), here return true
@@ -5385,7 +5386,7 @@ static bool validate_dest_addr(sockaddrunion * dest_addr)
 	}
 	return false;
 }
-static uchar* find_first_chunk_of(uchar * packet_value, uint packet_val_len,
+uchar* find_first_chunk_of(uchar * packet_value, uint packet_val_len,
 	uint chunk_type)
 {
 	uint chunk_len = 0;

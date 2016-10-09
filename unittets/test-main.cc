@@ -26,19 +26,19 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_alloc_dealloc";
     //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_new_delete";
 
-    //::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
+    ::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
-    // ::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
+     //::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
 
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_bundle_ctrl_chunk";
-    ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
-    // ::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_read_peer_addreslist";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr";
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
+   //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_read_peer_addreslist";
+   // ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_first_chunk_of";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_chunk_types";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_validate_dest_addr";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_vlparam_from_setup_chunk";
+  // ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_validate_dest_addr";
+   // ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_vlparam_from_setup_chunk";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contains_chunk";
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_find_geco_instance_by_transport_addr";
 

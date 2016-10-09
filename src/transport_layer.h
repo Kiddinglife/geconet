@@ -79,10 +79,6 @@ struct test_dummy_t
 	uchar out_tos_;
 };
 
-extern int gmtra_ip4_socket_despt_; /* socket fd for standard SCTP port....      */
-extern int gmtra_ip6_socket_despt_; /* socket fd for standard SCTP port....      */
-extern int gmtra_icmp_socket_despt_; /* socket fd for ICMP messages */
-
 extern int mtra_recv_udp_packet(int sfd, char *dest, int maxlen,
 	sockaddrunion *from, socklen_t *from_len);
 extern int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,

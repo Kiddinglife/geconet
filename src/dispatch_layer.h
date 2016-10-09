@@ -484,6 +484,19 @@ struct channel_t
 	void * application_layer_dataptr; /* transparent pointer to some upper layer data */
 };
 
+/* whenever an external event (ULP-call, socket-event or timer-event) this variable must
+* contain the addressed geco instance. This pointer must be reset to null after the event
+* has been handled.*/
+extern geco_instance_t *curr_geco_instance_;
+/* whenever an external event (ULP-call, socket-event or timer-event) this variable must
+* contain the addressed channel. This pointer must be reset to null after the event
+* has been handled.*/
+extern channel_t *curr_channel_;
+
+/* many diferent channels belongs to a same geco instance*/
+extern std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
+extern std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
+
 /**
 *  recv_geco_packet
 *  recv_geco_packet is the callback function of the DCTP-message dispatch_layer.
