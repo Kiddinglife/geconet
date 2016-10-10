@@ -1880,11 +1880,11 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 
     if (port == 0)
     {
-        port = seizePort();
+        port = seizePort(); //allocport
     }
     else
     {
-        port = allocatePort(port);
+        port = allocatePort(port);//unused
     }
     if (port == 0)
     {
@@ -1919,7 +1919,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 
     event_logi(VERBOSE, "sctp_registerInstance : with_ipv4 : %s ",
             (with_ipv4 == true) ? "true" : "false");
-    /* if not IPv6 callback must be registered too ! */
+    /* if not     event_logi(VERBOSE, "sctp_registerInstance : with_ipv4 : %s ",
+            (with_ipv4 == true) ? "true" : "false");IPv6 callback must be registered too ! */
 #ifdef HAVE_IPV6
     event_logi(VERBOSE, "sctp_registerInstance : with_ipv6: %s ",(with_ipv6==true)?"true":"false" );
 #endif

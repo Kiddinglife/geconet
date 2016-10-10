@@ -61,7 +61,7 @@ struct geco_instance_t
 	bool is_ip4;
 	bool is_ip6;
 
-	applicaton_layer_cbs_t applicaton_layer_cbs; /*setup by app layer*/
+	ulp_cbs_t applicaton_layer_cbs; /*setup by app layer*/
 
 	/*maximum number of incoming streams that this instance will take */
 	ushort noOfInStreams;

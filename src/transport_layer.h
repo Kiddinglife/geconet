@@ -79,12 +79,16 @@ struct test_dummy_t
 	uchar out_tos_;
 };
 
+extern int mtran_init(int * myRwnd);
+extern void mtra_free();
+
 extern int mtra_recv_udp_packet(int sfd, char *dest, int maxlen,
 	sockaddrunion *from, socklen_t *from_len);
 extern int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,
 	sockaddrunion *from, sockaddrunion *to);
+
 extern int mtra_send_udp_packet(int sfd, char* buf, int length,sockaddrunion* destsu);
 extern int mtra_send_ip_packet(int sfd, char *buf, int len,
-	sockaddrunion *dest, uchar tos);
+        sockaddrunion *dest, uchar tos);
 
 #endif

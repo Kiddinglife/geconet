@@ -91,7 +91,8 @@ enum ConnectionLostReason :int
 const uint COMM_UP_RECEIVED_VALID_COOKIE = 1;
 const uint COMM_UP_RECEIVED_COOKIE_ACK = 2;
 const uint COMM_UP_RECEIVED_COOKIE_RESTART = 3;
-
+const uint MULP_CHECKSUM_ALGORITHM_MD5 = 1;
+const uint MULP_CHECKSUM_ALGORITHM_CRC32C = 2;
 /**
  * This struct contains parameters that may be set globally with
  * mulp_setLibraryParams(). For now, it only contains one flag.
@@ -111,8 +112,8 @@ struct lib_infos_t
 	/* 
 	 * This allows for globally setting the used checksum algorithm
      * may be either
-	 * - mulp_CHECKSUM_ALGORITHM_MD5 (1,default)
-     * - mulp_CHECKSUM_ALGORITHM_CRC32C (2)
+	 * - MULP_CHECKSUM_ALGORITHM_MD5 (1,default)
+     * - MULP_CHECKSUM_ALGORITHM_CRC32C (2)
 	 */
     int checksum_algorithm;
 
@@ -292,7 +293,7 @@ struct connection_infos_t
   of the mulp instance to which it belongs. With the name of the mulp-
   instance its datastruct can be read from the list of mulp-instances.
   */
-struct applicaton_layer_cbs_t
+struct ulp_cbs_t
 {
 	/* @{ */
 	/**
@@ -404,15 +405,31 @@ struct applicaton_layer_cbs_t
  * (i.e. the function has already been called before), -2 for insufficient rights
  * (you need root-rights to open RAW sockets !).
  */
-int initialize(void);
+int initialize_library(void);
 
+/**
+ *  sctp_registerInstance is called to initialize one SCTP-instance.
+ *  Each Adaption-Layer of the ULP must create its own SCTP-instance, and
+ *  define and register appropriate callback functions.
+ *  An SCTP-instance may define an own port, or zero here ! Servers and clients
+ *  that care for their source port must chose a port, clients that do not really
+ *  care which source port they use, chose ZERO, and have the implementation chose
+ *  a free source port.
+ *
+ *  @param port                   wellknown port of this sctp-instance
+ *  @param noOfLocalAddresses     number of local addresses
+ *  @param localAddressList       local address list (pointer to a string-array)
+ *  @param ULPcallbackFunctions   call back functions for primitives passed from sctp to ULP
+ *  @return     instance name of this SCTP-instance or 0 in case of errors, or error code
+ */
 struct geco_instance_t;
-int mulp_register_geco_instnce(unsigned short localPort,
+geco_instance_t*
+mulp_register_geco_instnce(unsigned short localPort,
                           unsigned short noOfInStreams,
                           unsigned short noOfOutStreams,
                           unsigned int   noOfLocalAddresses,
                           unsigned char  localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
-                          applicaton_layer_cbs_t ULPcallbackFunctions);
+                          ulp_cbs_t ULPcallbackFunctions);
 int mulp_remove_geco_instnce(geco_instance_t* instance_name);
 
 unsigned int mulp_connect(unsigned int mulp_InstanceName,

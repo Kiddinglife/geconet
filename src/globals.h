@@ -259,7 +259,7 @@ const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 #endif
 
 #define USE_UDP_BUFSZ 65536 //RECV BUFFER IN POLLER
-#define DEFAULT_RWND_SIZE  10*USE_UDP_BUFSZ // 655350 bytes =
+#define DEFAULT_RWND_SIZE  8192
 
 /* src port + dest port + ver tag + checksum +
  chunk type + chunk flag + chunk length = 16 bytes*/
