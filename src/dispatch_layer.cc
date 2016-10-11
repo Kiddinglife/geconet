@@ -6582,6 +6582,7 @@ geco_instance_t* mulp_register_geco_instnce(
     unsigned int i;
     int adl_rscb_code, ret;
     union sockaddrunion su;
+    bzero(&su, sizeof(sockaddrunion));
     bool with_ipv4 = false;
     unsigned short result;
     bool with_ipv6 = false;
@@ -6608,6 +6609,11 @@ geco_instance_t* mulp_register_geco_instnce(
         ret = MULP_WRONG_ADDRESS;
         goto leave;
     }
+
+    bool is_inaddr_any = false;
+    bool is_in6addr_any = false;
+    uint mysupportedaddr = 0;
+
     //setup addrseslist
     for (i = 0; i < noOfLocalAddresses; i++)
     {
@@ -6620,11 +6626,24 @@ geco_instance_t* mulp_register_geco_instnce(
             ret = MULP_PARAMETER_PROBLEM;
             goto leave;
         }
-
         if (su.sa.sa_family == AF_INET)
+        {
             with_ipv4 = true;
+            mysupportedaddr |= SUPPORT_ADDRESS_TYPE_IPV4;
+            if (su.sin.sin_addr == INADDR_ANY)
+            {
+                is_inaddr_any = true;
+            }
+        }
         else if (su.sa.sa_family == AF_INET6)
+        {
             with_ipv6 = true;
+            mysupportedaddr |= SUPPORT_ADDRESS_TYPE_IPV6;
+            if (IN6_ADDR_EQUAL(&in6addr_any, &su.sin6.sin6_addr))
+            {
+                is_in6addr_any = true;
+            }
+        }
         else
         {
             ERRLOG1(MAJOR_ERROR, "af Error in sctp_registerInstance(%d)", su.sa.sa_family);
@@ -6633,8 +6652,8 @@ geco_instance_t* mulp_register_geco_instnce(
             goto leave;
         }
     }
-    EVENTLOG2(VERBOSE, "with_ipv4 =%d, with_ipv6 = %d ", with_ipv4,with_ipv6);
-    if(!with_ipv4 && !with_ipv6)
+    EVENTLOG2(VERBOSE, "with_ipv4 =%d, with_ipv6 = %d ", with_ipv4, with_ipv6);
+    if (!with_ipv4 && !with_ipv6)
     {
         ERRLOG(MAJOR_ERROR, "No valid address");
         freeport(localPort);
@@ -6643,7 +6662,7 @@ geco_instance_t* mulp_register_geco_instnce(
     }
 
     // alloc instance and init it
-    if((curr_geco_instance_ = (geco_instance_t*)malloc(sizeof(geco_instance_t))) == NULL)
+    if ((curr_geco_instance_ = (geco_instance_t*) malloc(sizeof(geco_instance_t))) == NULL)
     {
         ERRLOG(MAJOR_ERROR, "No valid address");
         curr_geco_instance_ = old_Instance;
@@ -6654,12 +6673,49 @@ geco_instance_t* mulp_register_geco_instnce(
     curr_geco_instance_->local_port = localPort;
     curr_geco_instance_->noOfInStreams = noOfInStreams;
     curr_geco_instance_->noOfOutStreams = noOfOutStreams;
-    curr_geco_instance_->is_inaddr_any = false;
-    curr_geco_instance_->is_in6addr_any = false;
+    curr_geco_instance_->is_inaddr_any = is_inaddr_any;
+    curr_geco_instance_->is_in6addr_any = is_in6addr_any;
     curr_geco_instance_->is_ip4 = with_ipv4;
     curr_geco_instance_->is_ip6 = with_ipv6;
+    curr_geco_instance_->supportedAddressTypes = mysupportedaddr;
     curr_geco_instance_->supportsPRSCTP = librarySupportsPRSCTP;
     curr_geco_instance_->supportsADDIP = supportADDIP;
+
+    //copy addrlist to curr geco inst
+    if (!is_inaddr_any && !is_in6addr_any)
+    {
+        bool found;
+        curr_geco_instance_->local_addres_list = malloc(noOfLocalAddresses * sizeof(sockaddrunion));
+        for (i = 0; i < noOfLocalAddresses; i++)
+        {
+            str2saddr(&curr_geco_instance_->local_addres_list[i], (const char*) localAddressList[i],
+                    localPort);
+            found = false;
+            for (int j = 0; j < defaultlocaladdrlistsize_; j++)
+            {
+                if (saddr_equals(&defaultlocaladdrlist_[j],
+                        &curr_geco_instance_->local_addres_list[i]))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+            {
+                ERRLOG(MAJOR_ERROR, "Not found addr from default local addrlist");
+                curr_geco_instance_ = old_Instance;
+                freeport(localPort);
+                free(curr_geco_instance_->local_addres_list);
+                free(curr_geco_instance_);
+                ret = MULP_PARAMETER_PROBLEM;
+                goto leave;
+            }
+        }
+        curr_geco_instance_->local_addres_size = noOfLocalAddresses;
+    }else
+    {
+        curr_geco_instance_->local_addres_list = NULL;
+        curr_geco_instance_->local_addres_size = 0;
+    }
 
     leave:
     EVENTLOG1(DEBUG,
