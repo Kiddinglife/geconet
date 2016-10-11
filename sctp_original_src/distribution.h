@@ -52,7 +52,7 @@
 #include  "messages.h"
 
 /* define some important constants */
-#define ASSOCIATION_MAX_RETRANS 10
+#define CONNECT_MAX_RETRANS 10
 #define MAX_INIT_RETRANSMITS    8
 #define MAX_PATH_RETRANSMITS    5
 #define VALID_COOKIE_LIFE_TIME  10000

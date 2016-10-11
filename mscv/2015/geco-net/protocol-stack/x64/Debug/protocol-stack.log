@@ -20,21 +20,217 @@ d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(277): warning C4244: 'initia
 d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(120): warning C4244: 'argument': conversion from 'SOCKET' to 'int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(212): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(209): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: see declaration of 'inet_addr'
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(281): warning C4312: 'type cast': conversion from 'NTSTATUS' to 'char *' of greater size
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(262): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(275): warning C4312: 'type cast': conversion from 'NTSTATUS' to 'char *' of greater size
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(256): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(346): note: see declaration of 'strncpy'
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(294): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(288): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(295): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(289): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(725): warning C4101: 'i': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1017): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1162): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1184): warning C4002: too many actual parameters for macro 'ERRLOG1'
-d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1389): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(696): warning C4101: 'i': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1010): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1155): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1177): warning C4002: too many actual parameters for macro 'ERRLOG1'
+d:\vs-workspace\geco-protocol-stack\src\transport_layer.cc(1382): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: see declaration of 'inet_ntoa'
+  dispatch_layer.cc
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(85): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(86): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(87): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(88): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\config.h(20): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(20): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(603): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\messages.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(277): warning C4244: 'initializing': conversion from 'time_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h(812): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1017): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1034): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1163): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1193): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1365): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2641): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2838): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2997): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2715): warning C4101: 'init_i_sent_cid': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3110): warning C4102: 'leave': unreferenced label
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3718): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3735): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3742): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3755): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3885): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3909): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3910): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3967): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3968): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3981): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3991): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4028): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4053): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4056): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4057): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3891): warning C4101: 'result': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3895): warning C4101: 'errorCID': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3893): warning C4101: 'idx': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3899): warning C4101: 'preferredPath': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3893): warning C4101: 'state': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3900): warning C4101: 'prefered_primary_addr': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4601): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4613): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4625): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4626): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4650): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4692): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4716): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4746): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4747): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4753): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4754): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4778): warning C4002: too many actual parameters for macro 'EVENTLOG2'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4794): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4795): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4858): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4859): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4866): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4867): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4917): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4918): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4925): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4926): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4957): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5394): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5425): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6443): warning C4102: 'SEND_ABORT': unreferenced label
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6698): warning C4305: '=': truncation from 'int' to 'uchar'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6698): warning C4309: '=': truncation of constant value
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6593): warning C4101: 'result': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6589): warning C4101: 'adl_rscb_code': unreferenced local variable
+  Generating Code...
+  Compiling...
+  globals.cc
+d:\vs-workspace\geco-protocol-stack\src\globals.cc : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(85): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(86): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(87): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(88): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\config.h(20): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(20): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(603): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\messages.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(46): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(52): warning C4996: 'fscanf': This function or variable may be unsafe. Consider using fscanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1193): note: see declaration of 'fscanf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(58): warning C4996: 'getpid': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _getpid. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\process.h(353): note: see declaration of 'getpid'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(60): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(61): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(113): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(125): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\time.h(505): note: see declaration of 'localtime'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(194): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(200): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(243): warning C4101: 'mi': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(324): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(330): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(286): warning C4101: 'mi': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(336): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(178): note: see declaration of 'strerror'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(428): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(421): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(460): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(453): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(618): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(813): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(824): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(831): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(853): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(874): warning C4305: 'return': truncation from 'int' to 'bool'
+d:\vs-workspace\geco-protocol-stack\src\globals.cc(864): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: see declaration of 'inet_addr'
+  gecotimer.cc
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(85): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(86): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(87): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(88): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\config.h(20): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(20): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(603): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\messages.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(277): warning C4244: 'initializing': conversion from 'time_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
+  chunk_factory.cpp
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(85): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(86): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(87): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(88): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\config.h(20): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(20): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h(603): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\messages.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
+d:\vs-workspace\geco-protocol-stack\src\chunk_factory.cpp(69): warning C4244: 'argument': conversion from 'unsigned __int64' to 'u_short', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\chunk_factory.cpp(300): warning C4101: 'digest': unreferenced local variable
+  auth.cc
+d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geco-protocol-stack\src\globals.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+c:\program files (x86)\windows kits\8.1\include\um\winnt.h(18582): warning C4005: 'KEY_READ': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\auth.h(81): note: see previous definition of 'KEY_READ'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(85): warning C4005: 'POLLIN': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(86): warning C4005: 'POLLPRI': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1618): note: see previous definition of 'POLLPRI'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(87): warning C4005: 'POLLOUT': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1621): note: see previous definition of 'POLLOUT'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(88): warning C4005: 'POLLERR': macro redefinition
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1624): note: see previous definition of 'POLLERR'
+d:\vs-workspace\geco-protocol-stack\src\config.h(20): warning C4005: '_DEBUG': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\config.h(20): note: command-line arguments:  see previous definition of '_DEBUG'
+d:\vs-workspace\geco-protocol-stack\src\globals.h(603): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+  d:\vs-workspace\geco-protocol-stack\src\messages.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
+d:\vs-workspace\geco-protocol-stack\src\auth.cc(277): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(1769): note: see declaration of 'sprintf'
+  Generating Code...
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-protocol-stack_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored

@@ -58,8 +58,8 @@ struct geco_instance_t
 	char* local_addres_str_list;
 	bool is_inaddr_any;
 	bool is_in6addr_any;
-	bool is_ip4;
-	bool is_ip6;
+	bool use_ip4;
+	bool use_ip6;
 
 	ulp_cbs_t applicaton_layer_cbs; /*setup by app layer*/
 

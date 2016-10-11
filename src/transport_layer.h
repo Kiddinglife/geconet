@@ -82,6 +82,9 @@ struct test_dummy_t
 extern int mtran_init(int * myRwnd);
 extern void mtra_free();
 
+extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type,
+	int event_mask, cbunion_t action, void* userData);
+
 extern int mtra_recv_udp_packet(int sfd, char *dest, int maxlen,
 	sockaddrunion *from, socklen_t *from_len);
 extern int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,

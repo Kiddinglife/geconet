@@ -715,9 +715,9 @@ extern bool get_local_addresses(union sockaddrunion **addresses,
 extern void mtra_add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
-#define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
-#define MAX_INIT_RETRANS_ATTEMPTS    8
-#define MAX_PATH_RETRANS_TIMES    5
+#define CONNECT_MAX_RETRANS 10
+#define MAX_INIT_RETRANSMITS    8
+#define MAX_PATH_RETRANSMITS    5
 #define VALID_COOKIE_LIFE_TIME  10000 //MS
 
 #define SACK_DELAY    200

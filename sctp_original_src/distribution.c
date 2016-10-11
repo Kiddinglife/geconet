@@ -1855,10 +1855,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     bool with_ipv4 = false;
     unsigned short result;
     GList* list_result = NULL;
-
-#ifdef HAVE_IPV6
     bool with_ipv6 = false;
-#endif
+
     SCTP_instance *old_Instance = curr_geco_instance_;
     Association *old_assoc = curr_channel_;
 
@@ -1910,10 +1908,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         else
         {
             if (su.sa.sa_family == AF_INET) with_ipv4 = true;
-
-#ifdef HAVE_IPV6
             if (su.sa.sa_family == AF_INET6) with_ipv6 = true;
-#endif
         }
     }
 
@@ -1921,14 +1916,10 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
             (with_ipv4 == true) ? "true" : "false");
     /* if not     event_logi(VERBOSE, "sctp_registerInstance : with_ipv4 : %s ",
             (with_ipv4 == true) ? "true" : "false");IPv6 callback must be registered too ! */
-#ifdef HAVE_IPV6
     event_logi(VERBOSE, "sctp_registerInstance : with_ipv6: %s ",(with_ipv6==true)?"true":"false" );
-#endif
 
     if ((with_ipv4 != true)
-#ifdef HAVE_IPV6
     && (with_ipv6 != true)
-#endif
     )
     {
         error_log(ERROR_MAJOR, "No valid address in sctp_registerInstance()");
@@ -1983,9 +1974,8 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
                 with_ipv4 = true;
             }
             break;
-#ifdef HAVE_IPV6
             case AF_INET6:
-#if defined (LINUX)
+#if defined (__linux__)
             if (IN6_IS_ADDR_UNSPECIFIED(sock2ip6(&su)))
             {
 #else
@@ -1997,7 +1987,6 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
                     curr_geco_instance_->has_IN6ADDR_ANY_set = true;
                 }
                 break;
-#endif
         default:
             releasePort(port);
             free(curr_geco_instance_);
@@ -2013,9 +2002,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     curr_geco_instance_->supportedAddressTypes = 0;
     if (with_ipv4) curr_geco_instance_->supportedAddressTypes |=
             SUPPORT_ADDRESS_TYPE_IPV4;
-#ifdef HAVE_IPV6
     if (with_ipv6) curr_geco_instance_->supportedAddressTypes |= SUPPORT_ADDRESS_TYPE_IPV6;
-#endif
 
     if (curr_geco_instance_->has_INADDR_ANY_set == false
             && curr_geco_instance_->has_IN6ADDR_ANY_set == false)
@@ -2062,7 +2049,6 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
         return 0;
     }
 
-#ifdef HAVE_IPV6
     if (with_ipv6 && ipv6_sctp_socket==0)
     {
         ipv6_sctp_socket = adl_get_sctpv6_socket();
@@ -2085,7 +2071,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
     {
         curr_geco_instance_->uses_IPv6 = false;
     }
-#endif
+
     if (with_ipv4 && sctp_socket == 0)
     {
         sctp_socket = adl_get_sctpv4_socket();
@@ -2122,7 +2108,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 
     curr_geco_instance_->default_rtoInitial = RTO_INITIAL;
     curr_geco_instance_->default_validCookieLife = VALID_COOKIE_LIFE_TIME;
-    curr_geco_instance_->default_assocMaxRetransmitsPerChannel = ASSOCIATION_MAX_RETRANS;
+    curr_geco_instance_->default_assocMaxRetransmitsPerChannel = CONNECT_MAX_RETRANS;
     curr_geco_instance_->default_pathMaxRetransmits = MAX_PATH_RETRANSMITS;
     curr_geco_instance_->default_maxInitRetransmits = MAX_INIT_RETRANSMITS;
     /* using the static variable defined after initialization of the adaptation layer */
