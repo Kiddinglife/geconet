@@ -428,9 +428,8 @@ int mulp_register_geco_instnce(unsigned short localPort,
                           unsigned short noOfOutStreams,
                           unsigned int   noOfLocalAddresses,
                           unsigned char  localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
-                          ulp_cbs_t ULPcallbackFunctions,
-	                     geco_instance_t** out);
-int mulp_remove_geco_instnce(geco_instance_t* instance_name);
+                          ulp_cbs_t ULPcallbackFunctions);
+int mulp_remove_geco_instnce(int instance_name);
 
 unsigned int mulp_connect(unsigned int mulp_InstanceName,
                             unsigned short noOfOutStreams,

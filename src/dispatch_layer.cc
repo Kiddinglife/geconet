@@ -6578,13 +6578,11 @@ int mulp_register_geco_instnce(
 	unsigned short noOfOutStreams,
 	unsigned int noOfLocalAddresses,
 	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
-	ulp_cbs_t ULPcallbackFunctions,
-	geco_instance_t** out)
+	ulp_cbs_t ULPcallbackFunctions)
 {
 	EVENTLOG(DEBUG, "- - - - - - - - - - Enter mulp_register_geco_instnce() - - - - - - - - - -\n");
 	ZERO_CHECK_LIBRARY;
 
-	*out = NULL;
 	unsigned int i;
 	int adl_rscb_code, ret;
 	union sockaddrunion su;
@@ -6755,9 +6753,8 @@ int mulp_register_geco_instnce(
 		mtra_set_expected_event_on_fd(mtra_ip6_socket_despt_, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
 	}
 
-	assert(out != NULL);
-	ret = MULP_SUCCESS;
-	*out = curr_geco_instance_;
+	ret = (int)geco_instances_.size();
+	geco_instances_.push_back(curr_geco_instance_);
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
 
@@ -6767,7 +6764,53 @@ leave:
 		ret);
 	return ret;
 }
-int mulp_remove_geco_instnce(geco_instance_t* instance_name)
+int mulp_remove_geco_instnce(int instance_idx)
 {
-	return 0;
+	CHECK_LIBRARY;
+	geco_instance_t* instance_name = geco_instances_[instance_idx];
+	if (instance_name == NULL) return MULP_INSTANCE_NOT_FOUND;
+
+	if (instance_name->use_ip4) ipv4_users--;
+	if (instance_name->use_ip6) ipv6_users--;
+
+	for (auto channel : channels_)
+	{
+		if (channel->geco_inst == instance_name)
+		{
+			return MULP_INSTANCE_IN_USE;
+		}
+	}
+
+	if (mtra_ip4_socket_despt_ > 0 && ipv4_users == 0)
+	{
+		mtra_remove_event_handler(mtra_ip4_socket_despt_);
+		mtra_ip4_socket_despt_ = 0;
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", mtra_ip4_socket_despt_);
+	}
+	if (mtra_ip6_socket_despt_ > 0 && ipv6_users == 0)
+	{
+		mtra_remove_event_handler(mtra_ip6_socket_despt_);
+		mtra_ip6_socket_despt_ = 0;
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 cb, registered FDs: %u ", mtra_ip6_socket_despt_);
+	}
+
+	if (instance_name->is_in6addr_any == false)
+	{
+		EVENTLOG(VVERBOSE, "sctp_unregisterInstance : IN6ADDR_ANY == false");
+	}
+	if (instance_name->is_inaddr_any == false)
+	{
+		EVENTLOG(VVERBOSE, "sctp_unregisterInstance : INADDR_ANY == false");
+	}
+
+	if (instance_name->local_addres_size > 0)
+	{
+		free(instance_name->local_addres_list);
+	}
+
+	freeport(instance_name->local_port);
+	free(instance_name);
+	geco_instances_[instance_idx] = geco_instances_.back();
+	geco_instances_.pop_back();
+	return MULP_SUCCESS;
 }
