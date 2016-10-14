@@ -1468,7 +1468,7 @@ int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,
         //        #ifdef USE_UDP
         //        len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from, &val);
         //        #else
-        len = recv(sfd, dest, maxlen, 0);
+        len = recv(sfd, dest, maxlen, 0); // recv a packet each time
         //#endif
         iph = (struct iphdr *) dest;
 

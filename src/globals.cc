@@ -886,6 +886,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	*max_mtu = 1500;
 #else
 #if defined (__linux__)
+	int i;
 	int addedNets;
 	char addrBuffer[256];
 	FILE *v6list;
@@ -1131,7 +1132,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 
 		if (flags & LoopBackAddrType)
 		{
-			if (this->typeofaddr((union sockaddrunion*) toUse,
+			if (typeofaddr((union sockaddrunion*) toUse,
 				LoopBackAddrType))
 			{
 				/* skip the loopback */
@@ -1139,7 +1140,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 				continue;
 			}
 		}
-		if (this->typeofaddr((union sockaddrunion*) toUse, ReservedAddrType))
+		if (typeofaddr((union sockaddrunion*) toUse, ReservedAddrType))
 		{
 			/* skip reserved */
 			EVENTLOG1(VERBOSE, "Interface %d, skipping reserved", ii);

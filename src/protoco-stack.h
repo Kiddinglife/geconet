@@ -93,6 +93,7 @@ const uint COMM_UP_RECEIVED_COOKIE_ACK = 2;
 const uint COMM_UP_RECEIVED_COOKIE_RESTART = 3;
 const uint MULP_CHECKSUM_ALGORITHM_MD5 = 1;
 const uint MULP_CHECKSUM_ALGORITHM_CRC32C = 2;
+
 /**
  * This struct contains parameters that may be set globally with
  * mulp_setLibraryParams(). For now, it only contains one flag.
@@ -116,11 +117,9 @@ struct lib_infos_t
      * - MULP_CHECKSUM_ALGORITHM_CRC32C (2)
 	 */
     int checksum_algorithm;
-
-	/* does the assoc support unreliable transfer*/
-	bool support_particial_reliability;
-	/* does the assoc support adding/deleting IP addresses*/
-    bool support_dynamic_addr_config;
+	bool support_particial_reliability; /* does the assoc support unreliable transfer*/
+    bool support_dynamic_addr_config;   /* does the assoc support adding/deleting IP addresses*/
+    uint delayed_ack_interval;
 };
 
 /**
@@ -298,7 +297,7 @@ struct ulp_cbs_t
 	/* @{ */
 	/**
 	 * indicates that new data arrived from peer (chapter 10.2.A).
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 streamID
 	 *  @param 3 length of data
 	 *  @param 4 stream sequence number
@@ -311,7 +310,7 @@ struct ulp_cbs_t
 		unsigned int, unsigned int, unsigned int, void*);
 	/**
 	 * indicates a send failure (chapter 10.2.B).
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 pointer to data not sent
 	 *  @param 3 dataLength
 	 *  @param 4 pointer to context from sendChunk
@@ -321,7 +320,7 @@ struct ulp_cbs_t
 		void*);
 	/**
 	 * indicates a change of network status (chapter 10.2.C).
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 destinationAddresses
 	 *  @param 3 newState
 	 *  @param 4 pointer to ULP data
@@ -329,7 +328,7 @@ struct ulp_cbs_t
 	void(*networkStatusChangeNotif)(unsigned int, short, unsigned short, void*);
 	/**
 	 * indicates that a association is established (chapter 10.2.D).
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 status, type of event
 	 *  @param 3 number of destination addresses
 	 *  @param 4 number input streamns
@@ -342,7 +341,7 @@ struct ulp_cbs_t
 		unsigned short, int, void*);
 	/**
 	 * indicates that communication was lost to peer (chapter 10.2.E).
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 status, type of event
 	 *  @param 3 pointer to ULP data
 	 */
@@ -350,14 +349,14 @@ struct ulp_cbs_t
 	/**
 	 * indicates that communication had an error. (chapter 10.2.F)
 	 * Currently not implemented !?
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 status, type of error
 	 *  @param 3 pointer to ULP data
 	 */
 	void(*communicationErrorNotif)(unsigned int, unsigned short, void*);
 	/**
 	 * indicates that a RESTART has occurred. (chapter 10.2.G)
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 pointer to ULP data
 	 */
 	void(*restartNotif)(unsigned int, void*);
@@ -365,21 +364,21 @@ struct ulp_cbs_t
 	 * indicates that a SHUTDOWN has been received by the peer. Tells the
 	 * application to stop sending new data.
 	 *  @param 0 instanceID
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 pointer to ULP data
 	 */
 	void(*peerShutdownReceivedNotif)(unsigned int, void*);
 	/**
 	 * indicates that a SHUTDOWN has been COMPLETED. (chapter 10.2.H)
 	 *  @param 0 instanceID
-	 *  @param 1 associationID
+	 *  @param 1 connectionid
 	 *  @param 2 pointer to ULP data
 	 */
 	void(*shutdownCompleteNotif)(unsigned int, void*);
 	/**
 	 * indicates that a queue length has exceeded (or length has dropped
 	 * below) a previously determined limit
-	 *  @param 0 associationID
+	 *  @param 0 connectionid
 	 *  @param 1 queue type (in-queue, out-queue, stream queue etc.)
 	 *  @param 2 queue identifier (maybe for streams ? 0 if not used)
 	 *  @param 3 queue length (either bytes or messages - depending on type)
@@ -388,7 +387,7 @@ struct ulp_cbs_t
 	void(*queueStatusChangeNotif)(unsigned int, int, int, int, void*);
 	/**
 	 * indicates that a ASCONF request from the ULP has succeeded or failed.
-	 *  @param 0 associationID
+	 *  @param 0 connectionid
 	 *  @param 1 correlation ID
 	 *  @param 2 result (int, negative for error)
 	 *  @param 3 pointer to a temporary, request specific structure (NULL if not needed)
@@ -422,7 +421,6 @@ int initialize_library(void);
  *  @param ULPcallbackFunctions   call back functions for primitives passed from sctp to ULP
  *  @return     instance name of this SCTP-instance or 0 in case of errors, or error code
  */
-struct geco_instance_t;
 int mulp_register_geco_instnce(unsigned short localPort,
                           unsigned short noOfInStreams,
                           unsigned short noOfOutStreams,
@@ -431,12 +429,12 @@ int mulp_register_geco_instnce(unsigned short localPort,
                           ulp_cbs_t ULPcallbackFunctions);
 int mulp_remove_geco_instnce(int instance_name);
 
-unsigned int mulp_connect(unsigned int mulp_InstanceName,
+unsigned int mulp_connect(unsigned int instanceid,
                             unsigned short noOfOutStreams,
                             unsigned char  destinationAddress[MAX_IPADDR_STR_LEN],
                             unsigned short destinationPort,
                             void* ulp_data);
-unsigned int mulp_connectx(geco_instance_t* mulp_InstanceName,
+unsigned int mulp_connectx(unsigned int instanceid,
                              unsigned short noOfOutStreams,
                              unsigned char  destinationAddresses[][MAX_IPADDR_STR_LEN],
                              unsigned int   noOfDestinationAddresses,
@@ -444,20 +442,19 @@ unsigned int mulp_connectx(geco_instance_t* mulp_InstanceName,
                              unsigned short destinationPort,
                              void* ulp_data);
 
-struct channel_t;
-int mulp_shutdown(channel_t* associationID);
-int mulp_abort(channel_t* associationID);
+int mulp_shutdown(unsigned int connectionid);
+int mulp_abort(unsigned int connectionid);
 
 /*----------------------------------------------------------------------------------------------*/
 /*  These are the new function for getting/setting parameters per instance, association or path */
 /*----------------------------------------------------------------------------------------------*/
 int mulp_set_lib_params(lib_infos_t *lib_params);
 int mulp_get_lib_params(lib_infos_t *lib_params);
-int mulp_setAssocDefaults(geco_instance_t* mulp_InstanceName, geco_instance_params_t* geco_instance_params);
-int mulp_getAssocDefaults(geco_instance_t* mulp_InstanceName, geco_instance_params_t* geco_instance_params);
-int mulp_getAssocStatus(channel_t* associationID, connection_infos_t* status);
-int mulp_setAssocStatus(channel_t* associationID, connection_infos_t* new_status);
-int mulp_getPathStatus(channel_t* associationID, short path_id, path_infos_t* status);
-int mulp_setPathStatus(channel_t* associationID, short path_id, path_infos_t *new_status);
+int mulp_set_connection_default_params(unsigned int instanceid, geco_instance_params_t* geco_instance_params);
+int mulp_get_connection_default_params(unsigned int instanceid, geco_instance_params_t* geco_instance_params);
+int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* status);
+int mulp_set_connection_params(unsigned int connectionid, connection_infos_t* new_status);
+int mulp_get_path_params(unsigned int connectionid, short path_id, path_infos_t* status);
+int mulp_set_path_params(unsigned int connectionid, short path_id, path_infos_t *new_status);
 /*----------------------------------------------------------------------------------------------*/
 #endif
