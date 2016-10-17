@@ -6898,7 +6898,6 @@ int mulp_get_lib_params(lib_infos_t *lib_params)
             delayed_ack_interval_ );
     return MULP_SUCCESS;
 }
-
 int mulp_set_connection_default_params(unsigned int instanceid,
         geco_instance_params_t* params)
 {
@@ -6973,10 +6972,29 @@ int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* st
 {
     CHECK_LIBRARY;
     if(status == NULL) return MULP_PARAMETER_PROBLEM;
-    ushort ret;
+    int ret = MULP_SUCCESS;
     geco_instance_t* old_Instance = curr_geco_instance_;
     channel_t* old_assoc = curr_channel_;
-    return MULP_SUCCESS;
+    curr_channel_ = channels_[connectionid];
+    if(curr_channel_ != NULL)
+    {
+        curr_geco_instance_ = curr_channel_->geco_inst;
+        status->state = curr_channel_->state_machine_control->channel_state;
+        status->numberOfAddresses = curr_channel_->remote_addres_size;
+        status->sourcePort = curr_channel_->local_port;
+        status->destPort = curr_channel_->remote_port;
+        status->primaryAddressIndex = get_primary_path();
+        saddr2str(&curr_channel_->remote_addres[status->primaryAddressIndex],
+                (char*)status->primaryDestinationAddress, MAX_IPADDR_STR_LEN, NULL);
+    }
+    else
+    {
+        ret = MULP_ASSOC_NOT_FOUND;
+        ERRLOG1(MAJOR_ERROR, "mulp_get_connection_params()::association %u does not exist!", connectionid);
+    }
+    curr_channel_ = old_assoc;
+    curr_geco_instance_ = old_Instance;
+    return ret;
 }
 int mulp_set_connection_params(unsigned int connectionid, connection_infos_t* new_status)
 {
