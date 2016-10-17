@@ -99,17 +99,17 @@ void chunk_list_debug(short event_log_level, GList * chunk_list);
 /**
  * function to return the last a_rwnd value we got from our peer
  */
-unsigned int rtx_read_remote_receiver_window(void);
+unsigned int rtx_get_peer_rwnd(void);
 
 /**
  * Function returns the number of chunks that are waiting in the queue to be acked
  */
-unsigned int rtx_readNumberOfUnackedChunks(void);
+unsigned int rtx_get_unacked_chunks_count(void);
 
 /**
  * function to set the a_rwnd value we got from our peer (from INIT/INIT ACK)
  */
-int rtx_set_peer_arwnd(unsigned int new_arwnd);
+int mrtx_set_peer_arwnd(unsigned int new_arwnd);
 
 
 /**

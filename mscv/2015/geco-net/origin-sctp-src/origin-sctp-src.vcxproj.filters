@@ -53,10 +53,10 @@
     <ClCompile Include="..\..\..\..\sctp_original_src\SCTP-control.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\sctp_original_src\streamengine.c">
+    <ClCompile Include="..\..\..\..\sctp_original_src\timer_list.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\sctp_original_src\timer_list.c">
+    <ClCompile Include="..\..\..\..\sctp_original_src\deliverman_controller_t.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -106,10 +106,10 @@
     <ClInclude Include="..\..\..\..\sctp_original_src\SCTP-control.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\sctp_original_src\streamengine.h">
+    <ClInclude Include="..\..\..\..\sctp_original_src\timer_list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\sctp_original_src\timer_list.h">
+    <ClInclude Include="..\..\..\..\sctp_original_src\deliverman_controller_t.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

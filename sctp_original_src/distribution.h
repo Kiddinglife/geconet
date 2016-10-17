@@ -196,7 +196,7 @@ int mdi_updateMyAddressList(void);
  * returns: pointer to the flow control data structure.
  *          null in case of error.
  */
-void *get_flowctrl(void);
+void *mfc_get_flowctrl(void);
 
 /*
  * returns: pointer to the reliable transfer data structure.

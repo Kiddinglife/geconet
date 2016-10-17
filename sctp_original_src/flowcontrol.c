@@ -179,7 +179,7 @@ void *fc_new_flowcontrol(unsigned int peer_rwnd,
     tmp->maxQueueLen = maxQueueLen;
     tmp->list_length = 0;
 
-    rtx_set_peer_arwnd(peer_rwnd);
+    mrtx_set_peer_arwnd(peer_rwnd);
 
     tmp->my_association = get_curr_channel_id();
     event_logi(VVERBOSE, "FlowControl : Association-ID== %d \n", tmp->my_association);
@@ -223,7 +223,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
     tmp->doing_retransmission = FALSE;
     tmp->current_tsn = iTSN;
     tmp->maxQueueLen = maxQueueLen;
-    rtx_set_peer_arwnd(new_rwnd);
+    mrtx_set_peer_arwnd(new_rwnd);
     if ((tmp->chunk_list) != NULL) {
         /* TODO : pass chunks in this list back up to the ULP ! */
         g_list_foreach(tmp->chunk_list, &free_list_element, GINT_TO_POINTER(1));
@@ -486,7 +486,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
     event_logi(INTERNAL_EVENT_0, "===============> fc_timer_cb_t3_timeout(address=%u) <========", ad_idx);
     fc->T3_timer[ad_idx] = 0;
 
-    num_of_chunks = rtx_readNumberOfUnackedChunks();
+    num_of_chunks = rtx_get_unacked_chunks_count();
     event_logii(INTERNAL_EVENT_0, "Address-Index : %u, Number of Chunks==%d", ad_idx, num_of_chunks);
 
     if (num_of_chunks <= 0) {
@@ -580,7 +580,7 @@ void fc_update_chunk_data(fc_data * fc, internal_data_chunk_t * dat, unsigned in
 {
     unsigned int rwnd;
 
-    rwnd = rtx_read_remote_receiver_window();
+    rwnd = rtx_get_peer_rwnd();
     dat->num_of_transmissions++;
 
     event_logiii(VERBOSE,
@@ -608,9 +608,9 @@ void fc_update_chunk_data(fc_data * fc, internal_data_chunk_t * dat, unsigned in
         /* outstanding byte counter has been decreased if chunks were scheduled for RTX, increase here ! */
         fc->outstanding_bytes += dat->chunk_len;
         if (dat->chunk_len >= rwnd)
-            rtx_set_peer_arwnd(0);
+            mrtx_set_peer_arwnd(0);
         else
-            rtx_set_peer_arwnd(rwnd - dat->chunk_len);
+            mrtx_set_peer_arwnd(rwnd - dat->chunk_len);
     }
 
     event_logi(VERBOSE, "outstanding_bytes overall: %u", fc->outstanding_bytes);
@@ -638,7 +638,7 @@ gboolean fc_send_okay(fc_data* fc,
     }
     if ((totalSize + obpa < (fc->cparams[destination].cwnd+fc->cparams[destination].mtu-1)) &&
         (
-         ((nextChunk->num_of_transmissions==0)&&(rtx_read_remote_receiver_window() > nextChunk->chunk_len)) ||
+         ((nextChunk->num_of_transmissions==0)&&(rtx_get_peer_rwnd() > nextChunk->chunk_len)) ||
          (fc->one_packet_inflight == FALSE) ||
          (nextChunk->num_of_transmissions > 0)) ) {
         event_logii(VERBOSE, "fc_send_okay --> TRUE (totalSize == %u, obpa == %u)",totalSize, obpa);
@@ -667,7 +667,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
     gboolean data_is_retransmitted = FALSE;
     gboolean lowest_tsn_is_retransmitted = FALSE;
     gboolean data_is_submitted = FALSE;
-    peer_rwnd = rtx_read_remote_receiver_window();
+    peer_rwnd = rtx_get_peer_rwnd();
 
     event_logi(INTERNAL_EVENT_0, "Entering fc_check_for_txmit(rwnd=%u)... ", peer_rwnd);
 
@@ -777,7 +777,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
             }
             event_logii(VERBOSE, "Called fc_select_destination == %d, obpa = %d \n", destination, obpa);
 
-            if ((rtx_read_remote_receiver_window() < dat->chunk_len) && data_is_retransmitted == FALSE) {
+            if ((rtx_get_peer_rwnd() < dat->chunk_len) && data_is_retransmitted == FALSE) {
                 break;
             }
 
@@ -1202,7 +1202,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
         peer_rwnd = 0;
     }
     /* section 6.2.1.C */
-    rtx_set_peer_arwnd(peer_rwnd);
+    mrtx_set_peer_arwnd(peer_rwnd);
 
     if (all_data_acked == TRUE) {
         fc->one_packet_inflight = FALSE;
@@ -1271,9 +1271,9 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
 
     /* section 6.2.1.C */
     if (arwnd > fc->outstanding_bytes)
-        rtx_set_peer_arwnd(arwnd - fc->outstanding_bytes);
+        mrtx_set_peer_arwnd(arwnd - fc->outstanding_bytes);
     else
-        rtx_set_peer_arwnd(0);
+        mrtx_set_peer_arwnd(0);
 
     if (fc->chunk_list != NULL) {
         fc_check_for_txmit(fc, oldListLen, FALSE);
@@ -1415,7 +1415,7 @@ int fc_readNumberOfUnsentChunks(void)
  * retransmitted.
  * @return size of the send queue of the current flowcontrol module
  */
-unsigned int fc_readNumberOfQueuedChunks(void)
+unsigned int fc_get_queued_chunks_count(void)
 {
     unsigned int queue_len;
     fc_data *fc;
@@ -1431,7 +1431,7 @@ unsigned int fc_readNumberOfQueuedChunks(void)
     else
         queue_len=0;
 
-    event_logi(VERBOSE, "fc_readNumberOfQueuedChunks() returns %u", queue_len);
+    event_logi(VERBOSE, "fc_get_queued_chunks_count() returns %u", queue_len);
     return queue_len;
 }
 
@@ -1551,7 +1551,7 @@ int fc_readPBA(short path_id)
  * Function returns the outstanding byte count value of this association.
  * @return current outstanding_bytes value, else -1
  */
-int fc_readOutstandingBytes(void)
+int fc_get_outstanding_bytes(void)
 {
     fc_data *fc;
     fc = (fc_data *) get_flowctrl();

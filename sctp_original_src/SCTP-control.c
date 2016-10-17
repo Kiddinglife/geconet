@@ -484,8 +484,8 @@ void scu_shutdown()
 	pm_disableAllHB();
 
 	/* stop reliable transfer and read its state */
-	readyForShutdown = (rtx_readNumberOfUnackedChunks() == 0) &&
-			   (fc_readNumberOfQueuedChunks() == 0);
+	readyForShutdown = (rtx_get_unacked_chunks_count() == 0) &&
+			   (fc_get_queued_chunks_count() == 0);
 
 	if (readyForShutdown)
 	{
@@ -1878,8 +1878,8 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 
 	rtx_rcv_shutdown_ctsna(ch_cummulativeTSNacked(shutdownCID));
 
-	readyForShutdown = (rtx_readNumberOfUnackedChunks() == 0) &&
-			   (fc_readNumberOfQueuedChunks() == 0);
+	readyForShutdown = (rtx_get_unacked_chunks_count() == 0) &&
+			   (fc_get_queued_chunks_count() == 0);
 
 	sendNotification = TRUE;
 
@@ -1911,8 +1911,8 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 
     case SHUTDOWNSENT:
 	/* check wether reliable transfer is ready for shutdown */
-	readyForShutdown = (rtx_readNumberOfUnackedChunks() == 0) &&
-			   (fc_readNumberOfQueuedChunks() == 0);
+	readyForShutdown = (rtx_get_unacked_chunks_count() == 0) &&
+			   (fc_get_queued_chunks_count() == 0);
 
 	sendNotification = TRUE;
 

@@ -85,7 +85,7 @@ typedef struct
 	gboolean        unreliable;
 
 	GList           *List;	 /* list for all packets */
-}StreamEngine;
+}deliverman_controller_t;
 
 /*
  * this stores all the data need to be delivered to the user
@@ -122,8 +122,8 @@ typedef struct _delivery_pdu
 
 
 /******************** Declarations *************************************************/
-int se_searchReadyPdu(StreamEngine* se);
-int se_deliverWaiting(StreamEngine* se, unsigned short sid);
+int se_searchReadyPdu(deliverman_controller_t* se);
+int se_deliverWaiting(deliverman_controller_t* se, unsigned short sid);
 
 void print_element(gpointer list_element, gpointer user_data)
 {
@@ -161,12 +161,12 @@ void* alloc_deliverman(unsigned int numberReceiveStreams,        /* max of strea
 	gboolean assocSupportsPRSCTP)
 {
 	unsigned int i;
-	StreamEngine* se;
+	deliverman_controller_t* se;
 
 	event_logiii(EXTERNAL_EVENT, "new_stream_engine: #inStreams=%d, #outStreams=%d, unreliable == %s",
 		numberReceiveStreams, numberSendStreams, (assocSupportsPRSCTP == TRUE) ? "TRUE" : "FALSE");
 
-	se = (StreamEngine*)malloc(sizeof(StreamEngine));
+	se = (deliverman_controller_t*)malloc(sizeof(deliverman_controller_t));
 
 	if (se == NULL) {
 		error_log(ERROR_FATAL, "Out of Memory in alloc_deliverman()");
@@ -243,9 +243,9 @@ static void free_delivery_pdu(gpointer list_element, gpointer user_data)
 void
 se_delete_stream_engine(void *septr)
 {
-	StreamEngine* se;
+	deliverman_controller_t* se;
 	unsigned int i;
-	se = (StreamEngine*)septr;
+	se = (deliverman_controller_t*)septr;
 
 	event_log(INTERNAL_EVENT_0, "delete streamengine: freeing send streams");
 	free(se->SendStreams);
@@ -271,7 +271,7 @@ se_delete_stream_engine(void *septr)
 int
 se_readNumberOfStreams(unsigned short *inStreams, unsigned short *outStreams)
 {
-	StreamEngine* se = (StreamEngine*)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t*)mdi_readStreamEngine();
 	if (se == NULL)
 	{
 		error_log(ERROR_MINOR, "Called se_readNumberOfStreams, but no Streamengine is there !");
@@ -298,7 +298,7 @@ se_ulpsend(unsigned short streamId, unsigned char *buffer,
 	short destAddressIndex, void *context, unsigned int lifetime,
 	gboolean unorderedDelivery, gboolean dontBundle)
 {
-	StreamEngine* se = NULL;
+	deliverman_controller_t* se = NULL;
 	guint32 state;
 	internal_data_chunk_t*  cdata = NULL;
 	SCTP_data_chunk* dchunk = NULL;
@@ -321,10 +321,10 @@ se_ulpsend(unsigned short streamId, unsigned char *buffer,
 
 	event_logii(EXTERNAL_EVENT, "se_ulpsend : %u bytes for stream %u", byteCount, streamId);
 
-	se = (StreamEngine*)mdi_readStreamEngine();
+	se = (deliverman_controller_t*)mdi_readStreamEngine();
 	if (se == NULL)
 	{
-		error_log(ERROR_MAJOR, "se_ulpsend: StreamEngine Instance doesn't exist....Returning !");
+		error_log(ERROR_MAJOR, "se_ulpsend: deliverman_controller_t Instance doesn't exist....Returning !");
 		return SCTP_MODULE_NOT_FOUND;
 	}
 
@@ -346,7 +346,7 @@ se_ulpsend(unsigned short streamId, unsigned char *buffer,
 	if (byteCount <= SCTP_MAXIMUM_DATA_LENGTH)
 	{
 		if (maxQueueLen > 0) {
-			if ((1 + fc_readNumberOfQueuedChunks()) > maxQueueLen) return SCTP_QUEUE_EXCEEDED;
+			if ((1 + fc_get_queued_chunks_count()) > maxQueueLen) return SCTP_QUEUE_EXCEEDED;
 		}
 
 		cdata = (internal_data_chunk_t*)malloc(sizeof(internal_data_chunk_t));
@@ -377,7 +377,7 @@ se_ulpsend(unsigned short streamId, unsigned char *buffer,
 		/* copy the data, but only once ! */
 		memcpy(dchunk->data, buffer, byteCount);
 
-		event_logii(EXTERNAL_EVENT, "=========> ulp sent a chunk (SSN=%u, SID=%u) to StreamEngine <=======",
+		event_logii(EXTERNAL_EVENT, "=========> ulp sent a chunk (SSN=%u, SID=%u) to deliverman_controller_t <=======",
 			ntohs(dchunk->stream_sn), ntohs(dchunk->stream_id));
 		if (!se->unreliable) lifetime = 0xFFFFFFFF;
 		result = fc_send_data_chunk(cdata, destAddressIndex, lifetime, dontBundle, context);
@@ -400,7 +400,7 @@ se_ulpsend(unsigned short streamId, unsigned char *buffer,
 		}
 
 		if (maxQueueLen > 0) {
-			if ((numberOfSegments + fc_readNumberOfQueuedChunks()) > maxQueueLen) return SCTP_QUEUE_EXCEEDED;
+			if ((numberOfSegments + fc_get_queued_chunks_count()) > maxQueueLen) return SCTP_QUEUE_EXCEEDED;
 		}
 
 		for (i = 1; i <= numberOfSegments; i++)
@@ -491,7 +491,7 @@ short se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 	guint32 r_pos, r_chunk, chunk_pos, oldQueueLen = 0;
 
 
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 
 
 	if (se == NULL)
@@ -611,7 +611,7 @@ int se_doNotifications(void)
 	int retVal;
 	unsigned short i;
 
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 
 	if (se == NULL) {
 		error_log(ERROR_MAJOR, "Could not retrieve SE instance ");
@@ -644,7 +644,7 @@ int se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount, unsign
 	guint16 datalength;
 	SCTP_InvalidStreamIdError error_info;
 	delivery_data_t* d_chunk;
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 	assert(se);
 
 	event_log(INTERNAL_EVENT_0, "SE_RECVDATACHUNK CALLED");
@@ -690,7 +690,7 @@ int se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount, unsign
 	return SCTP_SUCCESS;
 }
 
-int se_searchReadyPdu(StreamEngine* se)
+int se_searchReadyPdu(deliverman_controller_t* se)
 {
 	GList* tmp = g_list_first(se->List);
 	GList* firstItem = NULL;
@@ -879,7 +879,7 @@ int se_searchReadyPdu(StreamEngine* se)
 }
 
 
-int se_deliverWaiting(StreamEngine* se, unsigned short sid)
+int se_deliverWaiting(deliverman_controller_t* se, unsigned short sid)
 {
 	GList* waitingListItem = g_list_first(se->RecvStreams[sid].prePduList);
 	delivery_pdu_t* d_pdu;
@@ -904,14 +904,14 @@ int se_deliverWaiting(StreamEngine* se, unsigned short sid)
  * function to return the number of chunks that can be retrieved
  * by the ULP - this function may need to be refined !!!!!!
  */
-guint32 se_numOfQueuedChunks()
+guint32 se_get_queued_chunks_count()
 {
 	guint32 i, num_of_chunks = 0;
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 
 	if (se == NULL)
 	{
-		error_log(ERROR_MAJOR, "Could not read StreamEngine Instance !");
+		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return 0xFFFFFFFF;
 	}
 
@@ -932,10 +932,10 @@ guint32 se_numOfQueuedChunks()
 guint16
 se_numOfSendStreams()
 {
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 	if (se == NULL)
 	{
-		error_log(ERROR_MAJOR, "Could not read StreamEngine Instance !");
+		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return 0;
 	}
 	return (guint16)(se->numSendStreams);
@@ -949,10 +949,10 @@ se_numOfSendStreams()
 guint16
 se_numOfRecvStreams()
 {
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 	if (se == NULL)
 	{
-		error_log(ERROR_MAJOR, "Could not read StreamEngine Instance !");
+		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return 0;
 	}
 
@@ -970,9 +970,9 @@ int se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk)
 	GList* tmp;
 	delivery_data_t  *d_chunk = NULL;
 
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 	if (se == NULL) {
-		error_log(ERROR_MAJOR, "Could not read StreamEngine Instance !");
+		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return SCTP_MODULE_NOT_FOUND;
 	}
 
@@ -1009,9 +1009,9 @@ int se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk)
 
 int se_getQueuedBytes(void)
 {
-	StreamEngine* se = (StreamEngine *)mdi_readStreamEngine();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_readStreamEngine();
 	if (se == NULL) {
-		error_log(ERROR_MAJOR, "Could not read StreamEngine Instance !");
+		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return -1;
 	}
 	return (int)se->queuedBytes;

@@ -125,7 +125,7 @@ int se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount, unsign
  * function to return the number of chunks that can be retrieved
  * by the ULP - this function may need to be refined !!!!!!
  */
-guint32 se_numOfQueuedChunks(void);
+guint32 se_get_queued_chunks_count(void);
 
 /**
  * function to return the number of streams that we may

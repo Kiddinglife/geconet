@@ -90,7 +90,7 @@
     <ClCompile Include="..\..\..\..\sctp_original_src\reltransfer.c" />
     <ClCompile Include="..\..\..\..\sctp_original_src\sbundling.c" />
     <ClCompile Include="..\..\..\..\sctp_original_src\SCTP-control.c" />
-    <ClCompile Include="..\..\..\..\sctp_original_src\streamengine.c" />
+    <ClCompile Include="..\..\..\..\sctp_original_src\deliverman_controller_t.c" />
     <ClCompile Include="..\..\..\..\sctp_original_src\timer_list.c" />
   </ItemGroup>
   <ItemGroup>
@@ -109,7 +109,7 @@
     <ClInclude Include="..\..\..\..\sctp_original_src\reltransfer.h" />
     <ClInclude Include="..\..\..\..\sctp_original_src\SCTP-control.h" />
     <ClInclude Include="..\..\..\..\sctp_original_src\sctp.h" />
-    <ClInclude Include="..\..\..\..\sctp_original_src\streamengine.h" />
+    <ClInclude Include="..\..\..\..\sctp_original_src\deliverman_controller_t.h" />
     <ClInclude Include="..\..\..\..\sctp_original_src\timer_list.h" />
   </ItemGroup>
   <ItemGroup>

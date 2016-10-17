@@ -153,7 +153,7 @@ int fc_readNumberOfUnsentChunks(void);
  * but not yet been sent ! These are waiting in the transmission queue, not the
  * retransmission queue
  */
-unsigned int fc_readNumberOfQueuedChunks(void);
+unsigned int fc_get_queued_chunks_count(void);
 
 
 
@@ -202,7 +202,7 @@ int fc_readPBA(short path_id);
  * Function returns the outstanding byte count value of this association.
  * @return current outstanding_bytes value, else -1
  */
-int fc_readOutstandingBytes(void);
+int fc_get_outstanding_bytes(void);
 
 
 int fc_get_maxSendQueue(unsigned int * queueLen);
