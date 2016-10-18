@@ -4555,11 +4555,11 @@ unsigned int get_curr_channel_id(void)
  * @return   association-ID of the current association;
  *           0 means the association is not set (an error).
  */
-unsigned int mdi_readLocalTag(void)
+unsigned int mdis_get_local_tag(void)
 {
 	if (curr_channel_ == NULL)
 	{
-		error_log(ERROR_MINOR, "mdi_readLocalTag: association not set");
+		error_log(ERROR_MINOR, "mdis_get_local_tag: association not set");
 		return 0;
 	}
 	else
@@ -5196,12 +5196,12 @@ int mdi_getDefaultMaxInitRetransmits(void* sctpInstance)
 	if (sctpInstance == NULL) return -1;
 	else return ((SCTP_instance*)sctpInstance)->default_maxInitRetransmits;
 }
-int get_my_default_rwnd()
+int mdis_get_rwnd_from_curr_inst()
 {
 	if (curr_geco_instance_ == NULL) return -1;
 	else
 	{
-		event_logi(VVERBOSE, " get_my_default_rwnd is %u",
+		event_logi(VVERBOSE, " mdis_get_rwnd_from_curr_inst is %u",
 			curr_geco_instance_->default_myRwnd);
 		return ((SCTP_instance*)curr_geco_instance_)->default_myRwnd;
 	}
@@ -5624,7 +5624,7 @@ unsigned short mdi_restart_channel(unsigned short noOfInStreams,
 	curr_channel_->reliable_transfer_control = rtx_restart_reliable_transfer(
 		curr_channel_->reliable_transfer_control, noOfPaths, localInitialTSN);
 	fc_restart(new_rwnd, localInitialTSN, curr_channel_->maxSendQueue);
-	rxc_restart_receivecontrol(get_my_default_rwnd(), remoteInitialTSN);
+	rxc_restart_receivecontrol(mdis_get_rwnd_from_curr_inst(), remoteInitialTSN);
 
 	withPRSCTP = assocSupportsPRSCTP && curr_channel_->supportsPRSCTP;
 	curr_channel_->peerSupportsPRSCTP = withPRSCTP;

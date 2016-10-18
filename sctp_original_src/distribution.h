@@ -244,7 +244,7 @@ unsigned int get_curr_channel_id(void);
 unsigned int mdi_generateTag(void);
 
 unsigned int mdi_readTagRemote(void);
-unsigned int mdi_readLocalTag(void);
+unsigned int mdis_get_local_tag(void);
 
 /* returns: a the start TSN for new association */
 unsigned int mdi_generateStartTSN(void);
@@ -309,7 +309,7 @@ int mdi_getDefaultPathMaxRetransmits(void* sctpInstance);
 int mdi_getDefaultRtoMin(void* sctpInstance);
 int mdi_getDefaultRtoMax(void* sctpInstance);
 int mdi_getDefaultMaxInitRetransmits(void* sctpInstance);
-int get_my_default_rwnd(void);
+int mdis_get_rwnd_from_curr_inst(void);
 int get_default_delay(void* sctpInstance);
 int mdi_getDefaultIpTos(void* sctpInstance);
 int mdi_getDefaultMaxSendQueue(void* sctpInstance);
