@@ -3167,9 +3167,10 @@ int sctp_getAssocStatus(unsigned int associationID,
 		status->rtoInitial = pm_getRtoInitial();
 		status->rtoMin = pm_getRtoMin();
 		status->rtoMax = pm_getRtoMax();
+        status->pathMaxRetransmits = pm_getMaxPathRetransmisions();
+        
 		status->validCookieLife = sci_getCookieLifeTime();
 		status->assocMaxRetransmits = sci_getMaxAssocRetransmissions();
-		status->pathMaxRetransmits = pm_getMaxPathRetransmisions();
 		status->maxInitRetransmits = sci_getMaxInitRetransmissions();
 		status->myRwnd = rxc_get_local_receiver_window();
 		status->delay = rxc_get_sack_delay();

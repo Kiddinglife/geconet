@@ -379,7 +379,7 @@ extern int mtran_init(int * myRwnd, bool ip4);
 TEST(TRANSPORT_MODULE, test_get_local_addr)
 {
   int rcwnd = 512;
-  mtran_init(&rcwnd, true);
+  mtran_init(&rcwnd);
 
   sockaddrunion* saddr = 0;
   int num = 0;
@@ -444,7 +444,7 @@ timer_cb (timer_id_t& tid, void* a1, void* a2)
 TEST(TRANSPORT_MODULE, test_process_stdin)
 {
   int rcwnd = 512;
-  mtran_init(&rcwnd, true);(&rcwnd, true);
+  mtran_init(&rcwnd);
   cbunion_t cbunion;
   cbunion.socket_cb_fun = socket_cb;
   mtra_set_expected_event_on_fd (mtra_ip4_socket_despt_,

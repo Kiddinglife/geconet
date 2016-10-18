@@ -190,7 +190,7 @@ static uint udp_checksum(const void* ptr, size_t count)
     return (~sum);
 }
 
-int str2saddr(sockaddrunion *su, const char * str, ushort hs_port, bool ip4)
+int str2saddr(sockaddrunion *su, const char * str, ushort hs_port)
 {
     int ret;
     memset((void*) su, 0, sizeof(union sockaddrunion));
@@ -1221,20 +1221,20 @@ static int mtra_add_udpsock_ulpcb(const char* addr, ushort my_port, socket_cb_fu
 #endif
 
     sockaddrunion my_address;
-    str2saddr(&my_address, addr, my_port, mtra_ip4_socket_despt_ > 0);
+    str2saddr(&my_address, addr, my_port);
     if (mtra_ip4_socket_despt_ > 0)
     {
         EVENTLOG2(VERBOSE,
                 "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
                 my_port);
-        str2saddr(&my_address, addr, my_port, true);
+        str2saddr(&my_address, addr, my_port);
     }
     else if (mtra_ip6_socket_despt_ > 0)
     {
         EVENTLOG2(VERBOSE,
                 "Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
                 my_port);
-        str2saddr(&my_address, addr, my_port, false);
+        str2saddr(&my_address, addr, my_port);
     }
     else
     {
