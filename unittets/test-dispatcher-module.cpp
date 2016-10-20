@@ -65,10 +65,10 @@ extern uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len,
 extern  int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uchar * chunk, uint len, uint my_supported_addr_types,
 	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr);
-extern bool mdis_contain_local_addr(sockaddrunion* addr_list, uint addr_list_num);
-extern inline uint alloc_simple_chunk(uint chunk_type, uchar flag);
-extern inline simple_chunk_t *mdis_complete_simple_chunk(uint chunkID);
-extern  void free_simple_chunk(uint chunkID);
+extern bool mdis_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
+extern inline uint mch_make_simple_chunk(uint chunk_type, uchar flag);
+extern inline simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
+extern  void mch_free_simple_chunk(uint chunkID);
 extern void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
 extern uint get_bundle_total_size(bundle_controller_t* buf);
 
@@ -1044,26 +1044,26 @@ TEST(DISPATCHER_MODULE, test_contain_local_addr)
 	//////////////////////////////////////////////////////////////////////////////
 	//1) test branch 1 curr geco_inst and curr channel both NULL
 	//1.1) test no local addr presents
-	EXPECT_FALSE(mdis_contain_local_addr(local_addres, 3));
-	EXPECT_FALSE(mdis_contain_local_addr(local_addres6, 2));
+	EXPECT_FALSE(mdis_contain_localhost(local_addres, 3));
+	EXPECT_FALSE(mdis_contain_localhost(local_addres6, 2));
 	//1.2) test  local addr presents
 	tmpaddr = local_addres[1];
 	str2saddr(&local_addres[1], "127.0.0.1", 0);
-	EXPECT_TRUE(mdis_contain_local_addr(local_addres, 3));
+	EXPECT_TRUE(mdis_contain_localhost(local_addres, 3));
 	local_addres[1] = tmpaddr;
 	tmpaddr = local_addres6[1];
 	str2saddr(&local_addres6[1], "::1", 0);
-	EXPECT_TRUE(mdis_contain_local_addr(local_addres6, 2));
+	EXPECT_TRUE(mdis_contain_localhost(local_addres6, 2));
 	local_addres6[1] = tmpaddr;
 	//////////////////////////////////////////////////////////////////////////////
 	//2) test branch 2 curr_geco_instance_ NOT NULL
 	curr_geco_instance_ = &inst;
 	//2.1) test local addr in curr gecio inst local addres list
 	tmpaddr = local_addres[1];
-	EXPECT_TRUE(mdis_contain_local_addr(&tmpaddr, 1));
+	EXPECT_TRUE(mdis_contain_localhost(&tmpaddr, 1));
 	//2.1) test no local addr in curr gecio inst local addres list
 	str2saddr(&tmpaddr, "221.123.45.12", 0);
-	EXPECT_FALSE(mdis_contain_local_addr(&tmpaddr, 1));
+	EXPECT_FALSE(mdis_contain_localhost(&tmpaddr, 1));
 }
 // last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
@@ -1114,53 +1114,53 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
 	last_src_port_ = 456;
 	last_init_tag_ = 12345;
 	//////////////////////////////////////////////////////////////////////////////
-	uint cid = alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
+	uint cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_SET);
 	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_flags, 0x01);
 	curr_write_pos_[cid] += 24;
-	simple_chunk_t* simple_chunk_t_ptr_ = mdis_complete_simple_chunk(cid);
+	simple_chunk_t* simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_length, htons(28));
 	EXPECT_EQ(completed_chunks_[cid], true);
-	free_simple_chunk(cid);
+	mch_free_simple_chunk(cid);
 	default_bundle_ctrl_.reset();
 
-	cid = alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
+	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_UNSET);
 	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_flags, 0);
-	simple_chunk_t_ptr_ = mdis_complete_simple_chunk(cid);
+	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_length, htons(4));
 	EXPECT_EQ(completed_chunks_[cid], true);
-	free_simple_chunk(cid);
+	mch_free_simple_chunk(cid);
 	default_bundle_ctrl_.reset();
 	//////////////////////////////////////////////////////////////////////////////
 	//1) if packet length < max_geco_
-	cid = alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
+	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_UNSET);
-	simple_chunk_t_ptr_ = mdis_complete_simple_chunk(cid);
+	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	//  1.1) if dest_index == NULL
 	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, NULL);
 	//      1.1.1) got_send_address shoul be false && requested_destination should be zero
 	EXPECT_FALSE(default_bundle_ctrl_.got_send_address);
 	EXPECT_EQ(default_bundle_ctrl_.requested_destination, 0);
-	free_simple_chunk(cid);
+	mch_free_simple_chunk(cid);
 	default_bundle_ctrl_.reset();
 	//  1.2)if dest_index != NULL
 	int path = 6;
-	cid = alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
+	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_UNSET);
-	simple_chunk_t_ptr_ = mdis_complete_simple_chunk(cid);
+	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 	//      1.2.1) got_send_address shoul be true && requested_destination should be 6
 	EXPECT_TRUE(default_bundle_ctrl_.got_send_address);
 	EXPECT_EQ(default_bundle_ctrl_.requested_destination, path);
-	free_simple_chunk(cid);
+	mch_free_simple_chunk(cid);
 	default_bundle_ctrl_.reset();
 	//////////////////////////////////////////////////////////////////////////////
 	//2) if packet length == max_geco_packet_length
-	cid = alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
+	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_SET);
 	curr_write_pos_[cid] += MAX_NETWORK_PACKET_VALUE_SIZE - 4;
-	simple_chunk_t_ptr_ = mdis_complete_simple_chunk(cid);
+	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length),
 		MAX_NETWORK_PACKET_VALUE_SIZE);
 	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
@@ -1169,19 +1169,19 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
 	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 		MAX_GECO_PACKET_SIZE);
-	free_simple_chunk(cid);
+	mch_free_simple_chunk(cid);
 	//3) if packet length > max_geco_packet_length
-	cid = alloc_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
+	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_SET);
 	curr_write_pos_[cid] += 4;
-	simple_chunk_t_ptr_ = mdis_complete_simple_chunk(cid);
+	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 8);
 	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_), 1480);
 	//  3.1 should force send && get_bundle_total_size == UDP_GECO_PACKET_FIXED_SIZES+8
 	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 		UDP_GECO_PACKET_FIXED_SIZES + 8);
-	free_simple_chunk(cid);
+	mch_free_simple_chunk(cid);
 }
 // last run and passed on 26 Agu 2016
 TEST(DISPATCHER_MODULE, test_recv_geco_packet)

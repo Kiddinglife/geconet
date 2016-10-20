@@ -375,14 +375,14 @@ void scu_associate(unsigned short noOfOutStreams,
 
 		/* enter enter local addresses to message. I send an Init here, so
 				 * I will include all of my addresses !
-				 void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
+				 void mdi_validate_localaddrs_before_write_to_init(union sockunion laddresses[MAX_NUM_ADDRESSES],
 				 guint16 * noOfAddresses, 
 				 union sockunion *peerAddress,
 				 unsigned int numPeerAddresses, 
 				 unsigned int addressTypes,
 				 bool receivedFromPeer)
 				 */
-		mdi_readLocalAddresses(lAddresses,
+		mdi_validate_localaddrs_before_write_to_init(lAddresses,
 			&nlAddresses,
 			destinationList,
 			numDestAddresses,
@@ -393,14 +393,14 @@ void scu_associate(unsigned short noOfOutStreams,
 
 		if (withPRSCTP)
 		{
-			ch_addParameterToInitChunk(initCID, VLPARAM_UNRELIABILITY, 0, NULL);
+			ch_enter_init_vlp(initCID, VLPARAM_UNRELIABILITY, 0, NULL);
 		}
 
 #ifdef BAKEOFF
-		ch_addParameterToInitChunk(initCID, 0x8123, 17, (unsigned char *)smctrl);
-		ch_addParameterToInitChunk(initCID, 0x8343, 23, (unsigned char *)smctrl);
-		ch_addParameterToInitChunk(initCID, 0x8324, 1, (unsigned char *)smctrl);
-		ch_addParameterToInitChunk(initCID, 0xC123, 31, (unsigned char *)smctrl);
+		ch_enter_init_vlp(initCID, 0x8123, 17, (unsigned char *)smctrl);
+		ch_enter_init_vlp(initCID, 0x8343, 23, (unsigned char *)smctrl);
+		ch_enter_init_vlp(initCID, 0x8324, 1, (unsigned char *)smctrl);
+		ch_enter_init_vlp(initCID, 0xC123, 31, (unsigned char *)smctrl);
 #endif
 		if (supportedTypes == SUPPORT_ADDRESS_TYPE_IPV6)
 		{
@@ -710,7 +710,7 @@ int sctlr_init(SCTP_init *init)
 
 	event_log(EXTERNAL_EVENT, "sctlr_init() is executed");
 
-	initCID = alloc_simple_chunk((SCTP_simple_chunk *)init);
+	initCID = mch_make_simple_chunk((SCTP_simple_chunk *)init);
 
 	if (ch_chunkType(initCID) != CHUNK_INIT)
 	{
@@ -796,7 +796,7 @@ int sctlr_init(SCTP_init *init)
 			error_log(ERROR_FATAL, "BAKEOFF: Program error, no common address types in sctlr_init()");
 
 		/* enter variable length params initAck */
-		mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
+		mdi_validate_localaddrs_before_write_to_init(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
 		/* enter local addresses into initAck */
 		if (nlAddresses > 1)
 			ch_enterIPaddresses(initAckCID, lAddresses, nlAddresses);
@@ -879,7 +879,7 @@ int sctlr_init(SCTP_init *init)
 			inbound_streams = min(ch_noOutStreams(initCID), mdi_readLocalInStreams());
 
 			/* Set length of chunk to HBO !! */
-			initCID_local = alloc_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
+			initCID_local = mch_make_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 			/* section 5.2.1 : take original parameters from first INIT chunk */
 			initAckCID = ch_makeInitAck(ch_initiateTag(initCID_local),
 				ch_receiverWindow(initCID_local),
@@ -896,7 +896,7 @@ int sctlr_init(SCTP_init *init)
 
 			/* the initAck (and consequently the Cookie) will contain my assocID as my local
 					   tag, and the peers tag from the init we got here */
-			mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
+			mdi_validate_localaddrs_before_write_to_init(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
 			/* enter local addresses into initAck */
 			if (nlAddresses > 1)
 				ch_enterIPaddresses(initAckCID, lAddresses, nlAddresses);
@@ -959,7 +959,7 @@ int sctlr_init(SCTP_init *init)
 					   /* retreive remote source addresses from message */
 			nrAddresses = ch_IPaddresses(initCID, supportedTypes, rAddresses, &peerSupportedTypes, &last_source);
 
-			mdi_readLocalAddresses(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
+			mdi_validate_localaddrs_before_write_to_init(lAddresses, &nlAddresses, &last_source, 1, peerSupportedTypes, TRUE);
 
 			/* enter local addresses into initAck */
 			if (nlAddresses > 1)
@@ -1010,7 +1010,7 @@ int sctlr_init(SCTP_init *init)
 		}
 	}
 
-	/* was only treated with alloc_simple_chunk -- it is enough to "FORGET" it */
+	/* was only treated with mch_make_simple_chunk -- it is enough to "FORGET" it */
 	ch_forgetChunk(initCID);
 	return return_state;
 }
@@ -1056,7 +1056,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 	bool peerSupportsIPV6 = FALSE;
 	short preferredPath;
 
-	initAckCID = alloc_simple_chunk((SCTP_simple_chunk *)initAck);
+	initAckCID = mch_make_simple_chunk((SCTP_simple_chunk *)initAck);
 
 	if (ch_chunkType(initAckCID) != CHUNK_INIT_ACK)
 	{
@@ -1082,7 +1082,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 		event_log(EXTERNAL_EVENT, "event: initAck in state COOKIE_WAIT");
 
 		/* Set length of chunk to HBO !! */
-		initCID = alloc_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
+		initCID = mch_make_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 
 		/* FIXME: check also the noPeerOutStreams <= noLocalInStreams */
 		if (ch_noOutStreams(initAckCID) == 0 || ch_noInStreams(initAckCID) == 0 || ch_initiateTag(initAckCID) == 0)
@@ -1329,7 +1329,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 
 	event_log(INTERNAL_EVENT_0, "process_cookie_echo_chunk() is being executed");
 
-	cookieCID = alloc_simple_chunk((SCTP_simple_chunk *)cookie_echo);
+	cookieCID = mch_make_simple_chunk((SCTP_simple_chunk *)cookie_echo);
 
 	if (ch_chunkType(cookieCID) != CHUNK_COOKIE_ECHO)
 	{
@@ -1743,7 +1743,7 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 	ChunkID cookieAckCID;
 	int SendCommUpNotif = -1;
 
-	cookieAckCID = alloc_simple_chunk(cookieAck);
+	cookieAckCID = mch_make_simple_chunk(cookieAck);
 
 	if (ch_chunkType(cookieAckCID) != CHUNK_COOKIE_ACK)
 	{
@@ -1822,7 +1822,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	ChunkID shutdownAckCID;
 	ChunkID shutdownCID;
 
-	shutdownCID = alloc_simple_chunk(shutdown_chunk);
+	shutdownCID = mch_make_simple_chunk(shutdown_chunk);
 
 	if (ch_chunkType(shutdownCID) != CHUNK_SHUTDOWN)
 	{
@@ -2250,7 +2250,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	ChunkID errorCID;
 	ChunkID initCID;
 
-	errorCID = alloc_simple_chunk((SCTP_simple_chunk *)error_chunk);
+	errorCID = mch_make_simple_chunk((SCTP_simple_chunk *)error_chunk);
 
 	if (ch_chunkType(errorCID) != CHUNK_ERROR)
 	{
@@ -2274,7 +2274,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	case COOKIE_ECHOED:
 
 		/* make chunkHandler init chunk from stored init chunk string */
-		initCID = alloc_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
+		initCID = mch_make_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 
 		/* read staleness from error chunk and enter it into the cookie preserv. */
 		ch_enterCookiePreservative(initCID, ch_stalenessOfCookieError(errorCID));

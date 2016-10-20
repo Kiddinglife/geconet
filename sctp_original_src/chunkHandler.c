@@ -1085,7 +1085,7 @@ int ch_enterCookieVLP(ChunkID initCID, ChunkID initAckID,
         /* if both support PRSCTP, enter our PRSCTP parameter to INIT ACK chunk */
         if ((result >= 0) && (mdi_supportsPRSCTP() == TRUE))
         {
-            ch_addParameterToInitChunk(initAckID, VLPARAM_UNRELIABILITY, 0,
+            ch_enter_init_vlp(initAckID, VLPARAM_UNRELIABILITY, 0,
                     NULL);
         }
 
@@ -2448,7 +2448,7 @@ void ch_addUnrecognizedParameter(unsigned char* pos, ChunkID cid,
         writeCursor[cid]++;
 }
 
-void ch_addParameterToInitChunk(ChunkID initChunkID, unsigned short pCode,
+void ch_enter_init_vlp(ChunkID initChunkID, unsigned short pCode,
         unsigned short dataLength, unsigned char* data)
 {
     SCTP_UnrecognizedParams *vlPtr = NULL;
@@ -2711,7 +2711,7 @@ SCTP_simple_chunk *ch_chunkString(ChunkID chunkID)
  * swaps length INSIDE the packet !!!!!!!!!!! Phew ! and puts chunk pointer
  * into the current array of chunks -- does not need ch_deleteChunk !!
  */
-ChunkID alloc_simple_chunk(SCTP_simple_chunk * chunk)
+ChunkID mch_make_simple_chunk(SCTP_simple_chunk * chunk)
 {
 
     /*
@@ -2750,7 +2750,7 @@ void ch_deleteChunk(ChunkID chunkID)
  memory allocated for that chunk.
  This is used in the following cases:
  - the caller wants to keep the chunk for retransmissions.
- - the chunk was created with alloc_simple_chunk and the pointer to the chunk points
+ - the chunk was created with mch_make_simple_chunk and the pointer to the chunk points
  into an SCTP-message, which was allocated as a whole. In this case the chunk
  can not be freed here.
  */

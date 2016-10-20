@@ -204,7 +204,7 @@ unsigned int ch_HBpathID(ChunkID chunkID);
 ChunkID ch_makeSimpleChunk(unsigned char chunkType, unsigned char flag);
 
 void
-ch_addParameterToInitChunk(ChunkID initChunkID, unsigned short pCode,
+ch_enter_init_vlp(ChunkID initChunkID, unsigned short pCode,
         unsigned short dataLength, unsigned char* data);
 
 /* returns -1 if peer does not support PRSCTP, else 0 if it does, but doesn't use it
@@ -254,8 +254,8 @@ unsigned short ch_chunkLength(ChunkID chunkID);
 //get_simple_chunk() done
 SCTP_simple_chunk *ch_chunkString(ChunkID chunkID);
 
-/* alloc_simple_chunk makes a chunk from a simple chunk, which is nearly a byte string */
-ChunkID alloc_simple_chunk(SCTP_simple_chunk * chunk);
+/* mch_make_simple_chunk makes a chunk from a simple chunk, which is nearly a byte string */
+ChunkID mch_make_simple_chunk(SCTP_simple_chunk * chunk);
 
 /* ch_deleteChunk removes the chunk from the array of chunks and frees the
  memory allocated for that chunk.
@@ -266,7 +266,7 @@ void ch_deleteChunk(ChunkID chunkID);
  memory allocated for that chunk.
  This is used in the following cases:
  - the caller wants to keep the chunk for retransmissions.
- - the chunk was created with alloc_simple_chunk and the pointer to the chunk points
+ - the chunk was created with mch_make_simple_chunk and the pointer to the chunk points
  into an SCTP-message, which was allocated as a whole. In this case the chunk
  can not be freed here.
  */

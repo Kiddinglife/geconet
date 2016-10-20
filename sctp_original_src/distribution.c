@@ -4962,7 +4962,7 @@ unsigned short mdi_readLocalOutStreams(void)
  * @param addresses array that will hold the local host's addresses after returning
  * @param noOfAddresses number of addresses that local host/current association has
  */
-void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
+void mdi_validate_localaddrs_before_write_to_init(union sockunion laddresses[MAX_NUM_ADDRESSES],
 	guint16 * noOfAddresses, union sockunion *peerAddress,
 	unsigned int numPeerAddresses, unsigned int addressTypes,
 	bool receivedFromPeer)
@@ -4976,14 +4976,14 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 	if ((curr_channel_ == NULL) && (curr_geco_instance_ == NULL))
 	{
 		error_log(ERROR_FATAL,
-			"mdi_readLocalAddresses: neither assoc nor instance set - error !");
+			"mdi_validate_localaddrs_before_write_to_init: neither assoc nor instance set - error !");
 		*noOfAddresses = 0;
 		return;
 	}
 	if (curr_geco_instance_ == NULL)
 	{
 		error_log(ERROR_MAJOR,
-			"mdi_readLocalAddresses: instance not set - program error");
+			"mdi_validate_localaddrs_before_write_to_init: instance not set - program error");
 		curr_geco_instance_ = curr_channel_->sctpInstance;
 	}
 
@@ -5060,7 +5060,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 			}
 		}
 		event_logii(VERBOSE,
-			"mdi_readLocalAddresses: found %u local addresses from INADDR_ANY (from %u)",
+			"mdi_validate_localaddrs_before_write_to_init: found %u local addresses from INADDR_ANY (from %u)",
 			count, defaultlocaladdrlistsize_);
 	}
 	else if (curr_geco_instance_->has_IN6ADDR_ANY_set == true)
@@ -5098,7 +5098,7 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 			}
 		}
 		event_logii(VERBOSE,
-			"mdi_readLocalAddresses: found %u local addresses from IN6ADDR_ANY (from %u)",
+			"mdi_validate_localaddrs_before_write_to_init: found %u local addresses from IN6ADDR_ANY (from %u)",
 			count, defaultlocaladdrlistsize_);
 	}
 	else
@@ -5139,11 +5139,11 @@ void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
 			}
 		}
 		event_logii(VERBOSE,
-			"mdi_readLocalAddresses: found %u local addresses from instance (from %u)",
+			"mdi_validate_localaddrs_before_write_to_init: found %u local addresses from instance (from %u)",
 			count, curr_geco_instance_->noOfLocalAddresses);
 	}
 	event_logi(INTERNAL_EVENT_0,
-		"mdi_readLocalAddresses() : returning %u addresses !", count);
+		"mdi_validate_localaddrs_before_write_to_init() : returning %u addresses !", count);
 	/*
 	 if (count == 0) exit(-100);
 	 */

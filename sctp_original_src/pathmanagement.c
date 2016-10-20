@@ -97,7 +97,7 @@ typedef struct PATHDATA
     /** ID of path */
     unsigned int pathID;
     /*@} */
-} PathData;
+} path_params_t;
 
 
 /**
@@ -114,7 +114,7 @@ typedef struct PATHMANDATA
     /** Counter for all retransmissions over all paths */
     unsigned int peerRetranscount;
     /** pointer to path-specific data */
-    PathData *pathData;
+    path_params_t *pathData;
     /** association-ID */
     unsigned int associationID;
     /** maximum retransmissions per path parameter */
@@ -126,7 +126,7 @@ typedef struct PATHMANDATA
     /** maximum RTO, a configurable parameter */
     int rto_max;
     /*@} */
-} PathmanData;
+} mpath_t;
 
 
 /*----------------------Declares ----------------------------------------------------------------*/
@@ -135,7 +135,7 @@ typedef struct PATHMANDATA
  * this pointer is set to point to the current asssociation's path management struct
  * it becomes zero after we have treated an incoming/outgoing datagram
  */
-PathmanData *pmData;
+mpath_t *pmData;
 
 /*-------------------------- Function Implementations -------------------------------------------*/
 
@@ -173,7 +173,7 @@ static gboolean handleChunksRetransmitted(short pathID)
 {
     short pID;
     boolean allPathsInactive;
-    PathmanData *old_pmData;
+    mpath_t *old_pmData;
 
     if (!pmData->pathData) {
         error_logi(ERROR_MAJOR, "handleChunksRetransmitted(%d): Path Data Structures not initialized yet, returning !", pathID);
@@ -339,7 +339,7 @@ void pm_heartbeatTimer(TimerID timerID, void *associationIDvoid, void *pathIDvoi
                    "init timer expired association %08u does not exist", associationID);
         return;
     }
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_heartbeatTimer: mdi_readPathMan failed");
         mdi_clearAssociationData();
@@ -434,7 +434,7 @@ int pm_doHB(gshort pathID)
     ChunkID heartbeatCID;
     guint32 pid;
 
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_doHB: mdi_readPathMan failed");
@@ -471,10 +471,10 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
     unsigned int sendingTime;
     short pathID;
     ChunkID heartbeatCID;
-    PathmanData *old_pmData = NULL;
+    mpath_t *old_pmData = NULL;
     gboolean hbSignatureOkay = FALSE;
 
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_heartbeatAck: mdi_readPathMan failed");
@@ -485,7 +485,7 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
         return;
     }
 
-    heartbeatCID = alloc_simple_chunk((SCTP_simple_chunk *) heartbeatChunk);
+    heartbeatCID = mch_make_simple_chunk((SCTP_simple_chunk *) heartbeatChunk);
     pathID = ch_HBpathID(heartbeatCID);
     sendingTime = ch_HBsendingTime(heartbeatCID);
     roundtripTime = pm_getTime() - sendingTime;
@@ -545,7 +545,7 @@ void pm_chunksAcked(short pathID, unsigned int newRTT)
 {
     struct timeval now;
 
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_chunksAcked: mdi_readPathMan failed");
@@ -604,7 +604,7 @@ void pm_chunksAcked(short pathID, unsigned int newRTT)
  */
 void pm_chunksSentOn(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_chunksSentOn: mdi_readPathMan failed");
@@ -632,7 +632,7 @@ void pm_chunksSentOn(short pathID)
 gboolean pm_chunksRetransmitted(short pathID)
 {
     gboolean removed_association = FALSE;
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_chunksRetransmitted: mdi_readPathMan failed");
@@ -668,7 +668,7 @@ gboolean pm_chunksRetransmitted(short pathID)
 */
 void pm_rto_backoff(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_rto_backoff: mdi_readPathMan failed");
@@ -710,7 +710,7 @@ void pm_rto_backoff(short pathID)
 */
 int pm_enableHB(short pathID, unsigned int hearbeatIntervall)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_enableHB: mdi_readPathMan failed");
@@ -778,7 +778,7 @@ void pm_disableAllHB(void)
 {
     short pathID;
 
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_disableAllHB: mdi_readPathMan failed");
@@ -809,7 +809,7 @@ void pm_disableAllHB(void)
 */
 int pm_disableHB(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_disableHB: mdi_readPathMan failed");
@@ -844,7 +844,7 @@ int pm_disableHB(short pathID)
 */
 short pm_setPrimaryPath(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_setPrimaryPath: mdi_readPathMan failed");
@@ -882,7 +882,7 @@ short pm_setPrimaryPath(short pathID)
  */
 unsigned int pm_readRTO(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_logi(ERROR_MAJOR, "pm_readRTO(%d): mdi_readPathMan failed", pathID);
@@ -908,7 +908,7 @@ unsigned int pm_readRTO(short pathID)
 */
 unsigned int pm_readRttVar(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_logi(ERROR_MAJOR, "pm_readRttVar(%d): mdi_readPathMan failed", pathID);
@@ -935,7 +935,7 @@ unsigned int pm_readRttVar(short pathID)
 */
 unsigned int pm_readSRTT(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_readSRTT: mdi_readPathMan failed");
@@ -963,7 +963,7 @@ unsigned int pm_readSRTT(short pathID)
 */
 short pm_readState(short pathID)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_readState: mdi_readPathMan failed");
@@ -993,7 +993,7 @@ short pm_readState(short pathID)
 */
 unsigned short pm_readPrimaryPath(void)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_readPrimaryPath: pathmanagement-instance does not exist");
@@ -1010,7 +1010,7 @@ unsigned short pm_readPrimaryPath(void)
 */
 int  pm_getMaxPathRetransmisions(void)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_getMaxPathRetransmisions(): pathmanagement-instance does not exist");
@@ -1028,7 +1028,7 @@ int  pm_getMaxPathRetransmisions(void)
 */
 int  pm_setMaxPathRetransmisions(int new_max)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_setMaxPathRetransmisions(): pathmanagement-instance does not exist");
@@ -1045,7 +1045,7 @@ int  pm_setMaxPathRetransmisions(int new_max)
 */
 int  pm_getRtoInitial(void)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_getRtoInitial(): pathmanagement-instance does not exist");
@@ -1060,7 +1060,7 @@ int  pm_getRtoInitial(void)
 */
 int  pm_setRtoInitial(int new_rto_initial)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_setRtoInitial(): pathmanagement-instance does not exist");
@@ -1073,7 +1073,7 @@ int  pm_setRtoInitial(int new_rto_initial)
 
 int  pm_setRtoMin(int new_rto_min)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_setRtoMin(): pathmanagement-instance does not exist");
@@ -1085,7 +1085,7 @@ int  pm_setRtoMin(int new_rto_min)
 
 int  pm_getRtoMin(void)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_getRtoMin(): pathmanagement-instance does not exist");
@@ -1096,7 +1096,7 @@ int  pm_getRtoMin(void)
 
 int  pm_setRtoMax(int new_rto_max)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_setRtoMax(): pathmanagement-instance does not exist");
@@ -1108,7 +1108,7 @@ int  pm_setRtoMax(int new_rto_max)
 
 int  pm_getRtoMax(void)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_getRtoMax(): pathmanagement-instance does not exist");
@@ -1122,7 +1122,7 @@ int  pm_setHBInterval(unsigned int new_interval)
 {
     int count;
 
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_setHBInterval(): pathmanagement-instance does not exist");
@@ -1140,7 +1140,7 @@ int  pm_setHBInterval(unsigned int new_interval)
 
 int pm_getHBInterval(short pathID, unsigned int* current_interval)
 {
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         event_log(ERROR_MAJOR, "pm_getHBInterval(): pathmanagement-instance does not exist");
@@ -1173,17 +1173,17 @@ int pm_getHBInterval(short pathID, unsigned int* current_interval)
 */
 short pm_setPaths(short noOfPaths, short primaryPathID)
 {
-    PathmanData *pmData;
+    mpath_t *pmData;
     int b,i,j = 0;
 
-    pmData = (PathmanData *) mdi_readPathMan();
+    pmData = (mpath_t *) mdi_readPathMan();
 
     if (pmData == NULL) {
         error_log(ERROR_MAJOR, "pm_setPrimaryPath: mdi_readPathMan failed");
         return 1;
     }
 
-    pmData->pathData = (PathData *) malloc(noOfPaths * sizeof(PathData));
+    pmData->pathData = (path_params_t *) malloc(noOfPaths * sizeof(path_params_t));
 
     if (!pmData->pathData)
         error_log(ERROR_FATAL, "pm_setPaths: out of memory");
@@ -1270,9 +1270,9 @@ short pm_setPaths(short noOfPaths, short primaryPathID)
  */
 void *pm_new(short numberOfPaths, short primaryPath, void* sctpInstance)
 {
-    PathmanData *pmData;
+    mpath_t *pmData;
 
-    pmData = (PathmanData *) malloc(sizeof(PathmanData));
+    pmData = (mpath_t *) malloc(sizeof(mpath_t));
     if (!pmData)
         error_log(ERROR_FATAL, "pm_setPaths: out of memory");
     pmData->pathData = NULL;
@@ -1296,11 +1296,11 @@ void *pm_new(short numberOfPaths, short primaryPath, void* sctpInstance)
 void pm_deletePathman(void *pathmanPtr)
 {
     int i;
-    PathmanData *pmData;
+    mpath_t *pmData;
 
     event_log(INTERNAL_EVENT_0, "deleting pathmanagement");
 
-    pmData = (PathmanData *) pathmanPtr;
+    pmData = (mpath_t *) pathmanPtr;
 
     if (pmData != NULL && pmData->pathData != NULL) {
         for (i = 0; i < pmData->numberOfPaths; i++) {

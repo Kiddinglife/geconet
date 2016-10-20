@@ -35,135 +35,126 @@
  *
  */
 
-/*
- * geco-ds-type-traitor-ext.h
- *  Created on: 17 Aug 2016 Author: jakez
- *
- * all build_* functions will allocate memory for a chunk
- * may call add2chunklist() followed this function in callee's context
- *  to add this chunk to list for further processing
- *
- *  all put_* functions handle fills up particular field of a chunk or packet,
- *  chunk length value will NOT be transfomed into network order for future use
- *  they will return the written length that has been 4 bytes aligned for calee
- *  to update its current write position
- */
+ /*
+  * geco-ds-type-traitor-ext.h
+  *  Created on: 17 Aug 2016 Author: jakez
+  *
+  * all build_* functions will allocate memory for a chunk
+  * may call add2chunklist() followed this function in callee's context
+  *  to add this chunk to list for further processing
+  *
+  *  all put_* functions handle fills up particular field of a chunk or packet,
+  *  chunk length value will NOT be transfomed into network order for future use
+  *  they will return the written length that has been 4 bytes aligned for calee
+  *  to update its current write position
+  */
 
 # ifndef __INCLUDE_CHUNK_BUILDER_H
 # define __INCLUDE_CHUNK_BUILDER_H
+
 #include "globals.h"
 
-//- - - - - - - - - - - - - - Error Chunk - - - - - - - - - - - - - - - - - - 
-extern error_chunk_t* build_error_chunk();
-extern uint put_ec_unrecognized_chunk(error_cause_t*ecause, uchar* errdata, uint errdatalen);
-extern uint put_error_cause(error_cause_t*ecause, ushort errcode, uchar* errdata,
-        ushort errdatalen);
-//- - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - - - -
+  /**
+   *  check if this is a good cookie, i.e. verify HMAC signature
+   *  @return TRUE when signature is correct, else false
+   */
+bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk);
+int mch_validate_init_vlps(uint src_cid, uint dest_cid);
 
-/*
- @brief makes an init and initializes the the fixed part of init.
- @note: why we use malloc to allocate init on heap is because
- init may have large anounts of vlp,which may exceeds the default
- buffer inside itself.
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |   Type = 1    |  Chunk Flags  |      Chunk Length             |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                         Initiate Tag                          |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |           Advertised Receiver Window Credit (a_rwnd)          |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  Number of Outbound Streams   |  Number of Inbound Streams    |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                          Initial TSN                          |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- /              Optional/Variable-Length Parameters              /
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- refer to 3.3.2.  Initiation (INIT) (1)
- */
-extern init_chunk_t* build_init_chunk(unsigned int initTag, unsigned int arwnd,
-        unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN, uchar id =CHUNK_INIT);
-extern void put_init_chunk_fixed(init_chunk_t* init,unsigned int initTag, unsigned int arwnd,
-        unsigned short noOutStreams, unsigned short noInStreams, unsigned int initialTSN);
 
-/*
- @brief function to add supported address types variable parameter to init (ack) chunk.
- @ret the toal length of param including param type, param len and pram value
-
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |          Type = 12            |          Length               |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |        Address Type #1        |        Address Type #2        |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                            ......                             |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+
- Address Type: 16 bits (unsigned integer)
- This is filled with the type value of the corresponding address
- TLV (e.g., IPv4 = 5, IPv6 = 6, Host name = 11).
- */
-extern uint put_vlp_supported_addr_types(uchar* vlp_start, bool with_ipv4,
-        bool with_ipv6, bool with_dns);
-
-/*
- @brief function to add user supported addresses to init (ack) chunk.
- @ret the toal length of param including param type, param len and pram value
-
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |        Type = 5               |      Length = 8               |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                        IPv4 Address                           |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |            Type = 6           |          Length = 20          |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                                                               |
- |                         IPv6 Address                          |
- |                                                               |
- |                                                               |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
- Combined with the Source Port Number in the SCTP common header,
- the value passed in an IPv4 or IPv6 Address parameter indicates a
- transport address the sender of the INIT will support for the
- association being initiated.  That is, during the life time of
- this association, this IP address can appear in the source address
- field of an IP datagram sent from the sender of the INIT, and can
- be used as a destination address of an IP datagram sent from the
- receiver of the INIT.
-
- More than one IP Address parameter can be included in an INIT
- chunk when the INIT sender is multi-homed.  Moreover, a multi-
- homed endpoint may have access to different types of network;
- thus, more than one address type can be present in one INIT chunk,
- i.e., IPv4 and IPv6 addresses are allowed in the same INIT chunk.
-
- If the INIT contains at least one IP Address parameter, then the
- source address of the IP datagram containing the INIT chunk and
- any additional address(es) provided within the INIT can be used as
- destinations by the endpoint receiving the INIT.  If the INIT does
- not contain any IP Address parameters, the endpoint receiving the
- INIT MUST use the source address associated with the received IP
- datagram as its sole destination address for the association.
-
- Note that not using any IP Address parameters in the INIT and INIT
- ACK is an alternative to make an association more likely to work
- across a NAT box.
- */
-extern uint put_vlp_addrlist(uchar* vlp_start, sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
-        uint local_addreslist_size);
-extern int put_init_vlp(uchar *vlPtr,uint pCode, uchar* data=NULL, uint len = 0 );
-extern void put_vlp_cookie_fixed(cookie_param_t* cookie,
-        init_chunk_fixed_t* peer_init, init_chunk_fixed_t* local_initack,
-        uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
-        ushort last_dest_port, ushort last_src_port,
-        sockaddrunion local_Addresses[], uint num_local_Addresses,
-        sockaddrunion peer_Addresses[], uint num_peer_Addresses);
-extern uint put_vlp_cookie_life_span(cookie_preservative_t* vlp_start, unsigned int lifespanIncrement);
 
 /**
-*    check if this is a good cookie, i.e. verify HMAC signature
-*      @return TRUE when signature is correct, else false
+* @brief returns a pointer to the beginning of a simple chunk,
+* internally fillup chunk length.
 */
-extern bool verify_hmac(cookie_echo_chunk_t* cookie_chunk);
-extern int put_hmac(cookie_param_t* cookieString);
+simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
+/**
+* mch_free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
+* memory allocated for that chunk*/
+void mch_free_simple_chunk(uint chunkID);
+/**
+removes the chunk from the array of simple_chunks_ without freeing the
+memory allocated for that chunk.
+Used in the following 2 cases:
+1) the caller wants to keep the chunk for retransmissions.
+2) the chunk was created with uchar mch_make_simple_chunk(simple_chunk_t* chunk)
+and the pointer to the chunk points into an geco packet from recv_geco_packet(),
+which was allocated as a whole. In this case the chunk can not be freed here.*/
+inline void mch_remove_simple_chunk(uchar chunkID);
+chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL);
+
+
+
+// ch_receiverWindow reads the remote receiver window from an init or initAck 
+uint mch_read_rwnd(uint initcid);
+// ch_receiverWindow reads the remote receiver window from an init or initAck 
+uint mch_read_itsn(uint initcid);
+init_chunk_fixed_t* mch_read_init_fixed(uint initcid);
+/* reads the simple_chunks_ type of a chunk.*/
+uchar mch_read_chunkid(uchar chunkID);
+/*reads the number of output streams from an init or initAck */
+ushort mch_read_ostreams(uchar init_chunk_id);
+/*reads the number of input streams from an init or initAck */
+ushort mch_read_instreams(uchar init_chunk_id);
+uint mch_read_itag(uchar init_chunk_id);
+/**
+*  @brief returns the suggested cookie lifespan increment if a cookie
+*  preservative is present in a init chunk.
+*/
+uint mch_read_cookie_life(uint chunkID, bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife);
+/**
+* @brief scans for a parameter of a certain type in a message string.
+* The message string must point to a parameter header.
+* The function can also be used to find parameters within a parameter
+* (e.g. addresses within a cookie).
+* @param [in] vlp_type type of paramter to scan for,
+* @param [in]
+* vlp_fixed pointer to the first parameter header, from which we start scanning
+* @param [in] len    maximum length of parameter field, that may be scanned.
+* @return
+* position of first parameter occurence
+* i.e.  NULL returned  if not found !!!!!!!
+* supports all vlp type EXCEPT of
+* VLPARAM_ECN_CAPABLE andVLPARAM_HOST_NAME_ADDR)
+*/
+uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len);
+
+
+
+void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6, bool with_dns);
+void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode, uchar* data = 0, ushort dataLength = 0);
+int mch_write_vlp_setprimarypath(uint initAckCID, uint initCID); //TODO
+int mch_write_vlp_unreliability(uint initAckCID, uint initCID);
+int mch_write_vlp_addrlist(uint chunkid, sockaddrunion local_addreslist[MAX_NUM_ADDRESSES], uint local_addreslist_size);
+int mch_write_vlp_ecn(uint initAckID, uint initCID);//TODO
+void mch_write_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata = 0, uint errdatalen = 0);
+void mch_write_error_cause_unrecognized_chunk(chunk_id_t cid, error_cause_t*ecause, uchar* errdata, uint errdatalen);
+int mch_write_hmac(cookie_param_t* cookieString);
+void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_init,
+	init_chunk_fixed_t* local_initack, uint cookieLifetime, uint local_tie_tag,
+	uint peer_tie_tag, ushort last_dest_port, ushort last_src_port,
+	sockaddrunion local_Addresses[], uint num_local_Addresses,
+	bool local_support_unre,
+	sockaddrunion peer_Addresses[],
+	uint num_peer_Addresses);
+
+
+
+/*
+* swaps length INSIDE the packet and enters chunk into the current list
+* call  mch_remove_simple_chunk() to free
+*/
+uchar mch_make_simple_chunk(simple_chunk_t* chunk);
+/**
+* creates a simple chunk except of DATA chunk. It can be used for parameterless
+* chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
+* that have only variable length parameters like the error chunks*/
+uint mch_make_simple_chunk(uint chunk_type, uchar flag);
+/* makes an initAck and initializes the the fixed part of initAck */
+chunk_id_t mch_make_init_ack_chunk(uint initTag, uint rwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN);
+/* makes an initAck and initializes the the fixed part of initAck */
+chunk_id_t mch_make_init_chunk(uint initTag, uint rwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN);
+chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam);
+error_chunk_t* mch_make_error_chunk();
+
 #endif

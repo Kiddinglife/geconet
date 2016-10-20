@@ -324,7 +324,7 @@ bool mdi_peerSupportsPRSCTP(void);
 
 void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 
-void mdi_readLocalAddresses(union sockunion laddresses[MAX_NUM_ADDRESSES],
+void mdi_validate_localaddrs_before_write_to_init(union sockunion laddresses[MAX_NUM_ADDRESSES],
         guint16 * noOfAddresses,
         union sockunion *peerAddress,
         unsigned int numPeerAddresses,
