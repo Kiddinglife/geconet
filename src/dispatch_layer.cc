@@ -55,19 +55,27 @@ uint ipv6_users = 0;
 bool enable_test_;
 bool ignore_cookie_life_spn_from_init_chunk_;
 
+// --- add channel
+// channel_.transport_addrslist = new transport_addr[size] // size is determined when channel is created
+// for transport_addr in channel_.transport_addrslist: 
+//		channel_map_.insert(transport_addr, channels_.size());
+// channels_.push_back(channel_)
+// ----delete channel
+// for transport_addr in channel_.transport_addrslist: 
+//		channel_map_.remove(transport_addr)
+// channels_.fastdelete(channel_);
+// transport_addr -> channel_id ->channel pointer
 #ifdef _WIN32
-std::unordered_map<transport_addr_t, channel_t*,
-	transportaddr_hash_functor, transportaddr_cmp_functor>
-	channel_map_;
-std::unordered_map<sockaddrunion, geco_instance_t*,
-	sockaddr_hash_functor, sockaddr_cmp_functor>
-	instance_map_;
+std::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
+std::unordered_map<sockaddrunion, uint, sockaddr_hash_functor, sockaddr_cmp_functor> instance_map_;
 #else
-std::tr1::unordered_map<transport_addr_t, channel_t*, transportaddr_hash_functor,
-	transportaddr_cmp_functor> channel_map_;
-std::tr1::unordered_map<sockaddrunion, geco_instance_t*, sockaddr_hash_functor,
-	sockaddr_cmp_functor> instance_map_;
+std::tr1::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
+std::tr1::unordered_map<sockaddrunion, uint, sockaddr_hash_functor, sockaddr_cmp_functor> instance_map_;
 #endif
+
+/* many diferent channels belongs to a same geco instance*/
+std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
+std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
 
 /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
  * contain the addressed geco instance. This pointer must be reset to null after the event
@@ -77,10 +85,6 @@ geco_instance_t *curr_geco_instance_;
  * contain the addressed channel. This pointer must be reset to null after the event
  * has been handled.*/
 channel_t *curr_channel_;
-
-/* many diferent channels belongs to a same geco instance*/
-std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
-std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
 
 /* inits along with library inits*/
 int defaultlocaladdrlistsize_;
