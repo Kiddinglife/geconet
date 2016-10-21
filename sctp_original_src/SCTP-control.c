@@ -135,7 +135,7 @@ static smctrl_t *smctrl;
  *                              to identify the association, to which the timer function belongs
  * @param unused                pointer to param2 - timers have two params, by default. Not needed here.
  */
-static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *unused)
+static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *unused)
 {
 	unsigned int state;
 	ChunkID shutdownCID;
@@ -161,7 +161,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 	state = smctrl->association_state;
 	primary = pm_readPrimaryPath();
 
-	event_logiii(VERBOSE, "sci_timer_expired(AssocID=%u,  state=%u, Primary=%u",
+	event_logiii(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, Primary=%u",
 		(*(unsigned int *)associationIDvoid), state, primary);
 
 	switch (state)
@@ -181,7 +181,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 			event_logi(INTERNAL_EVENT_0, "init timer backedoff %d msecs",
 				smctrl->initTimerDuration);
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_INIT,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_INIT,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -215,7 +215,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 				smctrl->initTimerDuration);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_INIT,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_INIT,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -256,7 +256,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 				smctrl->initTimerDuration);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -298,7 +298,7 @@ static void sci_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 			event_logi(INTERNAL_EVENT_0, "shutdown timer backed off %d msecs",
 				smctrl->initTimerDuration);
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -444,7 +444,7 @@ void scu_associate(unsigned short noOfOutStreams,
 			sctp_stopTimer(smctrl->initTimer);
 
 		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
-			&sci_timer_expired,
+			&msm_timer_expired,
 			TIMER_TYPE_INIT,
 			(void *)&smctrl->associationID, NULL);
 
@@ -504,7 +504,7 @@ void scu_shutdown()
 				sctp_stopTimer(smctrl->initTimer);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 
 			smctrl->initRetransCounter = 0;
@@ -1254,7 +1254,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 		/* start cookie timer */
 		state = COOKIE_ECHOED;
 		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
-			&sci_timer_expired, TIMER_TYPE_INIT,
+			&msm_timer_expired, TIMER_TYPE_INIT,
 			(void *)&smctrl->associationID, NULL);
 		break;
 
@@ -1898,7 +1898,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 				sctp_stopTimer(smctrl->initTimer);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 			new_state = SHUTDOWNACKSENT;
 		}
@@ -1929,7 +1929,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 			if (smctrl->initTimer != 0)
 				sctp_stopTimer(smctrl->initTimer);
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 
 			new_state = SHUTDOWNACKSENT;
@@ -2393,7 +2393,7 @@ void sci_allChunksAcked()
 			sctp_stopTimer(smctrl->initTimer);
 
 		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
-			&sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+			&msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 			(void *)&smctrl->associationID, NULL);
 
 		smctrl->initRetransCounter = 0;
@@ -2420,7 +2420,7 @@ void sci_allChunksAcked()
 		if (smctrl->initTimer != 0)
 			sctp_stopTimer(smctrl->initTimer);
 
-		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration, &sci_timer_expired, TIMER_TYPE_SHUTDOWN,
+		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 			(void *)&smctrl->associationID, NULL);
 
 		state = SHUTDOWNACKSENT;

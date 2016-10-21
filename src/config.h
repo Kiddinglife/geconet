@@ -19,6 +19,12 @@
 //otherwise these functions will never be invoked
 #define _DEBUG //uncommnet this in release version
 #define ENABLE_UNIT_TEST 1
+#if ENABLE_UNIT_TEST == 1
+#define MYSTATIC
+#else
+#define MYSTATIC static
+#endif
+
 #define enable_mock_dispatch_send_geco_packet 0
 #define CURR_EVENT_LOG_LEVEL 10 // = VERBOSE;
 #endif /* MY_CONFIG_H_ */

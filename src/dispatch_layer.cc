@@ -1,17 +1,12 @@
 #include "dispatch_layer.h"
 #include "transport_layer.h"
-#include "chunk_factory.h"
+#include "module_chunk.h"
 #include "auth.h"
 #include "geco-ds-malloc.h"
 #include "protoco-stack.h"
 
 #define CHECK_LIBRARY           if(library_initiaized == false) return MULP_LIBRARY_NOT_INITIALIZED
 #define ZERO_CHECK_LIBRARY      if(library_initiaized == false) return 0
-
-// declare gmobals riables from transport module
-extern int mtra_ip4_socket_despt_; /* socket fd for standard SCTP port....      */
-extern int mtra_ip6_socket_despt_; /* socket fd for standard SCTP port....      */
-extern int mtra_icmp_socket_despt_; /* socket fd for ICMP messages */
 
 struct transportaddr_hash_functor  //hash 函数
 {
@@ -378,12 +373,23 @@ int mpath_get_rto(short pathID)
 	}
 	return -1;
 }
+int mpath_get_primary_path()
+{
+	path_controller_t* path_ctrl = mpath_get();
+	if (path_ctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
+		return -1;
+	}
+	return path_ctrl->primary_path;
+}
+
 ///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
 /**
 * function to return a pointer to the state machine controller of this association
 * @return pointer to the SCTP-control data structure, null in case of error.
 */
-inline smctrl_t* msm_get()
+inline smctrl_t* mdis_read_smctrl()
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->state_machine_control;
 }
@@ -393,7 +399,7 @@ inline smctrl_t* msm_get()
 */
 inline int msm_get_cookielife(void)
 {
-	smctrl_t* smctrl_ = msm_get();
+	smctrl_t* smctrl_ = mdis_read_smctrl();
 	if (smctrl_ == NULL)
 	{
 		EVENTLOG(DEBUG, "msm_get_cookielife():  get state machine ctrl is NULL -> use default timespan 10000ms !");
@@ -451,12 +457,17 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 *check if local addr is found, return  ip4or6 loopback if found,
 *  otherwise return  the ones same to stored in inst localaddrlist
 */
-bool mdis_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
-int mch_write_vlp_addrlist(uint chunkid, sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
-	uint local_addreslist_size);
+MYSTATIC bool mdis_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
 int mdis_send_bundled_chunks(int * ad_idx = NULL);
 void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
-
+/**
+* Defines the callback function that is called when an (INIT, COOKIE, SHUTDOWN etc.) timer expires.
+* @param timerID               ID of timer
+* @param associationIDvoid     pointer to param1, here to an Association ID value, it may be used
+*                              to identify the association, to which the timer function belongs
+* @param unused                pointer to param2 - timers have two geco_instance_params, by default. Not needed here.
+*/
+bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* unused);
 /**
 * This function is called to initiate the setup an association.
 * The local tag and the initial TSN are randomly generated.
@@ -570,6 +581,7 @@ bool mdis_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 	}
 	return ret;
 }
+
 
 int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
@@ -795,13 +807,53 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	return count;
 }
 
+MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* unused)
+{
+	// retrieve association from list 
+	curr_channel_ = channels_[*(int*)&associationID];
+	if (curr_channel_ == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "init timer expired but association %u does not exist -> return");
+		return false;
+	}
+	curr_geco_instance_ = curr_channel_->geco_inst;
+
+	smctrl_t* smctrl = mdis_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "no smctrl with channel presents -> return");
+		return false;
+	}
+
+	ushort primary_path = mpath_get_primary_path();
+	EVENTLOG3(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, PrimaryPath=%u",
+		(*(unsigned int *)associationID), smctrl->channel_state, primary_path);
+
+	switch (smctrl->channel_state) //TODO
+	{
+	case CookieWait:
+		break;
+	case CookieEchoed:
+		break;
+	case ShutdownSent:
+		break;
+	case ShutdownAckSent:
+		break;
+	default:
+		ERRLOG1(MAJOR_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
+		smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+		break;
+	}
+	return false;
+}
+
 void msm_connect(unsigned short noOfOutStreams,
 	unsigned short noOfInStreams,
 	union sockaddrunion *destinationList,
 	unsigned int numDestAddresses)
 {
 	smctrl_t* smctrl;
-	if ((smctrl = msm_get()) == NULL)
+	if ((smctrl = mdis_read_smctrl()) == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "read smctrl_ failed");
 		return;
@@ -836,12 +888,18 @@ void msm_connect(unsigned short noOfOutStreams,
 			mdis_send_bundled_chunks(&count);
 		}
 
+		// init smctrl
 		smctrl->cookieChunk = NULL;
 		smctrl->local_tie_tag = 0;
 		smctrl->peer_tie_tag = 0;
 
-		//TODO 		/* start init timer */
-
+		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+		{  // stop t1-init timer
+			mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+			smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+		}
+		// start T1 init timer 
+		smctrl->init_timer_id = mdis_timer_mgr_.add_timer(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, (void*)&smctrl->channel_id, NULL);
 		smctrl->channel_state = ChannelState::CookieWait;
 	}
 	else
@@ -931,16 +989,6 @@ inline void stop_sack_timer(void)
 	{
 		ERRLOG(MAJOR_ERROR, "stop_sack_timer()::recv_controller_t instance not set !");
 	}
-}
-int get_primary_path()
-{
-	path_controller_t* path_ctrl = mpath_get();
-	if (path_ctrl == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
-		return -1;
-	}
-	return path_ctrl->primary_path;
 }
 /**
  * function to return a pointer to the bundling module of this association
@@ -1043,7 +1091,7 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 			if (last_source_addr_ == NULL)
 			{
 				/*5) last src addr is NUll, we use primary path*/
-				primary_path = get_primary_path();
+				primary_path = mpath_get_primary_path();
 				EVENTLOG2(VERBOSE,
 					"dispatch_layer::send_geco_packet():sending to primary with index %u (with %u paths)",
 					primary_path, curr_channel_->remote_addres_size);
@@ -1102,12 +1150,10 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 	switch (saddr_family(dest_addr_ptr))
 	{
 	case AF_INET:
-		len = mtra_send_ip_packet(mtra_ip4_socket_despt_, geco_packet,
-			length, dest_addr_ptr, tos);
+		len = mtra_send_ip_packet(mtra_read_ip4_socket(), geco_packet, length, dest_addr_ptr, tos);
 		break;
 	case AF_INET6:
-		len = mtra_send_ip_packet(mtra_ip6_socket_despt_, geco_packet,
-			length, dest_addr_ptr, tos);
+		len = mtra_send_ip_packet(mtra_read_ip6_socket(), geco_packet, length, dest_addr_ptr, tos);
 		break;
 	default:
 		ERRLOG(MAJOR_ERROR, "dispatch_layer_t::send_geco_packet() : Unsupported AF_TYPE");
@@ -1420,7 +1466,7 @@ uint get_curr_channel_id(void)
 uint get_curr_channel_state()
 {
 	smctrl_t* smctrl =
-		(smctrl_t*)msm_get();
+		(smctrl_t*)mdis_read_smctrl();
 	if (smctrl == NULL)
 	{
 		/* error log */
@@ -2197,7 +2243,7 @@ int process_init_chunk(init_chunk_t * init)
 
 	/*2) validate init geco_instance_params*/
 	uchar abortcid;
-	smctrl_t* smctrl = msm_get();
+	smctrl_t* smctrl = mdis_read_smctrl();
 	if (!mch_read_ostreams(init_cid) || !mch_read_instreams(init_cid)
 		|| !mch_read_itag(init_cid))
 	{
@@ -2359,7 +2405,7 @@ int process_init_chunk(init_chunk_t * init)
 #endif
 
 		ChannelState channel_state = smctrl->channel_state;
-		int primary_path = get_primary_path();
+		int primary_path = mpath_get_primary_path();
 		uint init_i_sent_cid;
 
 		/* 5)
@@ -3354,18 +3400,7 @@ void free_deliverman(deliverman_controller_t* se)
 	geco_free_ext(se, __FILE__, __LINE__);
 	EVENTLOG(VERBOSE, "- - - Leave free_deliverman()");
 }
-/**
- * Defines the callback function that is called when an (INIT, COOKIE, SHUTDOWN etc.) timer expires.
- * @param timerID               ID of timer
- * @param associationIDvoid     pointer to param1, here to an Association ID value, it may be used
- *                              to identify the association, to which the timer function belongs
- * @param unused                pointer to param2 - timers have two geco_instance_params, by default. Not needed here.
- */
-bool sci_timer_expired(timer_id_t& timerID, void* associationIDvoid, void* unused)
-{
-	//TODO
-	return false;
-}
+
 /**
  * This is the second function needed to fully create and initialize an association (after
  * mdi_newAssociation()) THe association is created in two steps because data become available
@@ -3454,7 +3489,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 {
 	assert(initAck->chunk_header.chunk_id == CHUNK_INIT_ACK);
 	ChunkProcessResult return_state = ChunkProcessResult::Good;
-	smctrl_t* smctrl = msm_get();
+	smctrl_t* smctrl = mdis_read_smctrl();
 
 	//1) alloc chunk id for the received init ack
 	chunk_id_t initAckCID = mch_make_simple_chunk((simple_chunk_t*)initAck);
@@ -3462,7 +3497,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 	{
 		mch_remove_simple_chunk(initAckCID);
 		ERRLOG(MINOR_ERROR,
-			"process_init_ack_chunk(): msm_get() returned NULL!");
+			"process_init_ack_chunk(): mdis_read_smctrl() returned NULL!");
 		return return_state;
 	}
 
@@ -3651,7 +3686,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		//start cookie timer
 		channel_state = ChannelState::CookieEchoed;
 		smctrl->init_timer_id = mdis_timer_mgr_.add_timer(TIMER_TYPE_INIT,
-			smctrl->init_timer_interval, &sci_timer_expired, smctrl->channel_ptr,
+			smctrl->init_timer_interval, &msm_timer_expired, smctrl->channel_ptr,
 			NULL);
 		EVENTLOG(INFO,
 			"event: sent cookie echo to last src addr, stop init timer, starts cookie timer!");
@@ -3933,9 +3968,7 @@ bool alloc_new_channel(geco_instance_t* instance,
 	if (defaultlocaladdrlistsize_ == 0)
 	{  //expensicve call, only call it one time
 		get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
-			mtra_ip4_socket_despt_ == 0 ?
-			mtra_ip6_socket_despt_ :
-			mtra_ip4_socket_despt_,
+			mtra_read_ip4_socket() == 0 ? mtra_read_ip6_socket() : mtra_read_ip4_socket(),
 			true, &maxMTU, IPAddrType::AllCastAddrTypes);
 	}
 	int ii;
@@ -4269,11 +4302,11 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	}
 
 	assert(last_source_addr_ != NULL);
-	smctrl_t* smctrl = msm_get();
+	smctrl_t* smctrl = mdis_read_smctrl();
 	if (smctrl == NULL)
 	{
 		EVENTLOG(NOTICE,
-			"process_cookie_echo_chunk(): msm_get() returned NULL -> call alloc_new_channel() !");
+			"process_cookie_echo_chunk(): mdis_read_smctrl() returned NULL -> call alloc_new_channel() !");
 		if (alloc_new_channel(curr_geco_instance_,
 			last_dest_port_,
 			last_src_port_,
@@ -4288,7 +4321,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			mch_free_simple_chunk(initAckCID);
 			return;
 		}
-		smctrl = msm_get();
+		smctrl = mdis_read_smctrl();
 		assert(smctrl == NULL);
 	}
 
@@ -6068,7 +6101,7 @@ int initialize_library(void)
 
 	mdis_init();
 	int i, ret, sfd = -1, maxMTU = 0;
-	if ((ret = mtran_init(&myRWND)) < 0)
+	if ((ret = mtra_init(&myRWND)) < 0)
 		return MULP_SPECIFIC_FUNCTION_ERROR;
 	/* initialize ports seized */
 	for (i = 0; i < 0x10000; i++)
@@ -6079,7 +6112,8 @@ int initialize_library(void)
 	/* this block is to be executed only once for the lifetime of sctp-software */
 	get_secre_key(KEY_INIT);
 	if (!get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
-		mtra_ip4_socket_despt_, true, &maxMTU, IPAddrType::AllCastAddrTypes))
+		mtra_read_ip4_socket() != 0 ? mtra_read_ip4_socket() : mtra_read_ip6_socket(),
+		true, &maxMTU, IPAddrType::AllCastAddrTypes))
 		return MULP_SPECIFIC_FUNCTION_ERROR;
 	library_initiaized = true;
 	return MULP_SUCCESS;
@@ -6325,22 +6359,21 @@ int mulp_register_geco_instnce(
 		curr_geco_instance_->local_addres_size = 0;
 	}
 
-	assert(mtra_ip6_socket_despt_ > 0);
-	assert(mtra_ip4_socket_despt_ > 0);
+	assert(mtra_read_ip4_socket() > 0);
+	assert(mtra_read_ip6_socket() > 0);
+
 	cbunion_t cbunion;
 	if (with_ipv4)
 	{
 		ipv4_users++;
 		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_ip4_socket_despt_, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
-			cbunion, 0);
+		mtra_set_expected_event_on_fd(mtra_read_ip4_socket(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
 	}
 	if (with_ipv6)
 	{
 		ipv6_users++;
 		cbunion.socket_cb_fun = dummy_ip6_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_ip6_socket_despt_, EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
-			cbunion, 0);
+		mtra_set_expected_event_on_fd(mtra_read_ip6_socket(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
 	}
 
 	ret = (int)geco_instances_.size();
@@ -6370,17 +6403,17 @@ int mulp_remove_geco_instnce(int instance_idx)
 		}
 	}
 
-	if (mtra_ip4_socket_despt_ > 0 && ipv4_users == 0)
+	if (mtra_read_ip4_socket() > 0 && ipv4_users == 0)
 	{
-		mtra_remove_event_handler(mtra_ip4_socket_despt_);
-		mtra_ip4_socket_despt_ = 0;
-		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", mtra_ip4_socket_despt_);
+		mtra_remove_event_handler(mtra_read_ip4_socket());
+		mtra_zero_ip4_socket();
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", mtra_read_ip4_socket());
 	}
-	if (mtra_ip6_socket_despt_ > 0 && ipv6_users == 0)
+	if (mtra_read_ip6_socket() > 0 && ipv6_users == 0)
 	{
-		mtra_remove_event_handler(mtra_ip6_socket_despt_);
-		mtra_ip6_socket_despt_ = 0;
-		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 cb, registered FDs: %u ", mtra_ip6_socket_despt_);
+		mtra_remove_event_handler(mtra_read_ip6_socket());
+		mtra_zero_ip6_socket();
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 cb, registered FDs: %u ", mtra_read_ip6_socket());
 	}
 
 	if (instance_name->is_in6addr_any == false)
@@ -6626,7 +6659,7 @@ int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* st
 		status->numberOfAddresses = curr_channel_->remote_addres_size;
 		status->sourcePort = curr_channel_->local_port;
 		status->destPort = curr_channel_->remote_port;
-		status->primaryAddressIndex = get_primary_path();
+		status->primaryAddressIndex = mpath_get_primary_path();
 		saddr2str(&curr_channel_->remote_addres[status->primaryAddressIndex],
 			(char*)status->primaryDestinationAddress, MAX_IPADDR_STR_LEN, NULL);
 		status->inStreams = mdm_get_istreams();

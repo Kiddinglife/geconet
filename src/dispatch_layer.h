@@ -34,7 +34,7 @@
 #include "gecotimer.h"
 #include "protoco-stack.h"
 #include "auth.h"
-#include "chunk_factory.h"
+#include "module_chunk.h"
 
 /**
  * This struct stores data of geco_instance_t.

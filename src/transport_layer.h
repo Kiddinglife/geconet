@@ -12,9 +12,9 @@
  *
  */
 
-/**
- * Created on 22 April 2016 by Jake Zhang
- */
+ /**
+  * Created on 22 April 2016 by Jake Zhang
+  */
 
 #ifndef __INCLUDE_POLLER_H
 #define __INCLUDE_POLLER_H
@@ -29,10 +29,10 @@
 #include "dispatch_layer.h"
 
 
-/**
- * Structure for callback events. The function "action" is called by the event-handler,
- * when an event occurs on the file-descriptor.
- */
+  /**
+   * Structure for callback events. The function "action" is called by the event-handler,
+   * when an event occurs on the file-descriptor.
+   */
 struct event_handler_t
 {
 	//int used;
@@ -44,7 +44,7 @@ struct event_handler_t
 };
 struct stdin_data_t
 {
-	typedef void (*stdin_cb_func_t)(char* in, size_t datalen);
+	typedef void(*stdin_cb_func_t)(char* in, size_t datalen);
 	unsigned long len;
 	char buffer[1024];
 	stdin_cb_func_t stdin_cb_;
@@ -79,20 +79,23 @@ struct test_dummy_t
 	uchar out_tos_;
 };
 
-extern int mtran_init(int * myRwnd);
+extern int mtra_read_ip4_socket();
+extern int mtra_read_ip6_socket();
+extern int mtra_read_icmp_socket();
+extern void mtra_zero_ip4_socket();
+extern void mtra_zero_ip6_socket();
+extern void mtra_zero_icmp_socket();
+
+extern int mtra_init(int * myRwnd);
 extern void mtra_free();
 
-extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type,
-	int event_mask, cbunion_t action, void* userData);
+extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask, cbunion_t action, void* userData);
 extern int mtra_remove_event_handler(int sfd);
 
-extern int mtra_recv_udp_packet(int sfd, char *dest, int maxlen,
-	sockaddrunion *from, socklen_t *from_len);
-extern int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,
-	sockaddrunion *from, sockaddrunion *to);
+extern int mtra_recv_udp_packet(int sfd, char *dest, int maxlen, sockaddrunion *from, socklen_t *from_len);
+extern int mtra_recv_ip_packet(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
 
-extern int mtra_send_udp_packet(int sfd, char* buf, int length,sockaddrunion* destsu);
-extern int mtra_send_ip_packet(int sfd, char *buf, int len,
-        sockaddrunion *dest, uchar tos);
+extern int mtra_send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu);
+extern int mtra_send_ip_packet(int sfd, char *buf, int len, sockaddrunion *dest, uchar tos);
 
 #endif

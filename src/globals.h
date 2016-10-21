@@ -232,7 +232,6 @@ enum geco_return_enum
 };
 extern geco_return_enum global_ret_val;
 
-
 const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 
 /* ms default interval to timeout when no timers in poll
@@ -712,7 +711,7 @@ extern bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags);
 extern bool get_local_addresses(union sockaddrunion **addresses,
 	int *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
 	const IPAddrType flags);
-extern void mtra_add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
+extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10

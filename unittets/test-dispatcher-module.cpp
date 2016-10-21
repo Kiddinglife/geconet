@@ -1173,7 +1173,6 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
 	//3) if packet length > max_geco_packet_length
 	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 		FLAG_TBIT_SET);
-	curr_write_pos_[cid] += 4;
 	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 	EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 8);
 	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_), 1480);
@@ -1183,6 +1182,7 @@ TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
 		UDP_GECO_PACKET_FIXED_SIZES + 8);
 	mch_free_simple_chunk(cid);
 }
+
 // last run and passed on 26 Agu 2016
 TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 {
