@@ -648,8 +648,8 @@ union sockaddrunion
 // key of channel
 struct transport_addr_t
 {
-	sockaddrunion local_saddr;
-	sockaddrunion peer_saddr;
+	sockaddrunion* local_saddr;
+	sockaddrunion* peer_saddr;
 };
 
 /* converts address-string
@@ -660,7 +660,7 @@ struct transport_addr_t
  *  @return 0 for success, else -1.*/
 extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum = NULL);
-inline extern bool saddr_equals(sockaddrunion *a, sockaddrunion *b, bool ignore_port = false)
+inline extern bool saddr_equals(const sockaddrunion *a, const sockaddrunion *b, bool ignore_port = false)
 {
 	return saddr_family(a) == AF_INET ? (saddr_family(b) == AF_INET &&
 		s4addr(&a->sin) == s4addr(&b->sin) &&

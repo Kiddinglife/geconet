@@ -21,75 +21,78 @@ d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overfl
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h(812): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(253): warning C4267: 'return': conversion from 'size_t' to 'unsigned int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(278): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(376): warning C4002: too many actual parameters for macro 'ERRLOG'
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(556): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(573): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(704): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(734): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(878): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(886): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1531): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2326): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2340): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2446): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2536): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2592): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2693): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2745): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2413): warning C4101: 'init_i_sent_cid': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2806): warning C4102: 'leave': unreferenced label
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3346): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(246): warning C4267: 'return': conversion from 'size_t' to 'unsigned int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(271): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(369): warning C4002: too many actual parameters for macro 'ERRLOG'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(549): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(566): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(697): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(727): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(871): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(879): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1524): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2319): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2333): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2439): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2529): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2585): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2686): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2738): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2406): warning C4101: 'init_i_sent_cid': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2799): warning C4102: 'leave': unreferenced label
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3339): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3356): warning C4018: '<': signed/unsigned mismatch
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3363): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3370): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3383): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3502): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3526): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3527): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3584): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3585): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3596): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3605): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3642): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3667): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3670): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3671): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3508): warning C4101: 'result': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3512): warning C4101: 'errorCID': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3510): warning C4101: 'idx': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3516): warning C4101: 'preferredPath': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3510): warning C4101: 'state': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3517): warning C4101: 'prefered_primary_addr': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4061): warning C4267: '=': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4208): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4220): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4232): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4233): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4257): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4299): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4323): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4353): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4354): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4360): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4361): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4400): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4401): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4464): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4465): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4472): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4473): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4523): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4524): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4531): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4532): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4563): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5000): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5031): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6047): warning C4102: 'SEND_ABORT': unreferenced label
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6695): warning C4101: 'ret': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(882): warning C4700: uninitialized local variable 'nlAddresses' used
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1809): warning C4700: uninitialized local variable 'read_len' used
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3376): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3495): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3519): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3520): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3577): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3578): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3589): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3598): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3635): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3660): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3663): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3664): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3501): warning C4101: 'result': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3505): warning C4101: 'errorCID': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3503): warning C4101: 'idx': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3509): warning C4101: 'preferredPath': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3503): warning C4101: 'state': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3510): warning C4101: 'prefered_primary_addr': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4054): warning C4267: '=': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4057): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4060): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4212): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4224): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4236): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4237): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4261): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4303): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4327): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4357): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4358): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4364): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4365): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4404): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4405): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4468): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4469): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4476): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4477): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4527): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4528): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4535): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4536): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4567): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4888): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5049): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5080): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6082): warning C4102: 'SEND_ABORT': unreferenced label
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6730): warning C4101: 'ret': unreferenced local variable
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(875): warning C4700: uninitialized local variable 'nlAddresses' used
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1802): warning C4700: uninitialized local variable 'read_len' used
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-protocol-stack_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored

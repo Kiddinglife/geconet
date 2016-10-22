@@ -10,33 +10,32 @@
 
 struct transportaddr_hash_functor  //hash 函数
 {
-	size_t operator()(transport_addr_t &addr) const
+	size_t operator()(const transport_addr_t &addr) const
 	{
-		return transportaddr2hashcode(&(addr.local_saddr), &(addr.peer_saddr));
+		return transportaddr2hashcode(addr.local_saddr, addr.peer_saddr);
 	}
 };
 
 struct transportaddr_cmp_functor  //比较函数 ==
 {
-	bool operator()(transport_addr_t &addr1, transport_addr_t &addr2) const
+	bool operator()(const transport_addr_t& addr1, const transport_addr_t &addr2) const
 	{
-		return saddr_equals(&(addr1.local_saddr), &(addr2.local_saddr))
-			&& saddr_equals(&(addr1.peer_saddr), &(addr2.peer_saddr));
+		return saddr_equals(addr1.local_saddr, addr2.local_saddr) && saddr_equals(addr1.peer_saddr, addr2.peer_saddr);
 	}
 };
 struct sockaddr_hash_functor  //hash 函数
 {
-	size_t operator()(sockaddrunion &addr) const
+	size_t operator()(const sockaddrunion*& addr) const
 	{
-		return sockaddr2hashcode(&addr);
+		return sockaddr2hashcode(addr);
 	}
 };
 
 struct sockaddr_cmp_functor  //比较函数 ==
 {
-	bool operator()(sockaddrunion &a, sockaddrunion &b) const
+	bool operator()(const sockaddrunion*& a, const sockaddrunion*& b) const
 	{
-		return saddr_equals(&a, &b);
+		return saddr_equals(a, b);
 	}
 };
 
@@ -50,6 +49,9 @@ uint delayed_ack_interval_ = SACK_DELAY;  //ms
 bool send_abort_for_oob_packet_;
 uint ipv4_users = 0;
 uint ipv6_users = 0;
+// inits along with library inits
+int defaultlocaladdrlistsize_;
+sockaddrunion* defaultlocaladdrlist_;
 /////////////////////////////////////////////////////////////////////////////
 
 bool enable_test_;
@@ -67,12 +69,9 @@ bool ignore_cookie_life_spn_from_init_chunk_;
 // transport_addr -> channel_id ->channel pointer
 #ifdef _WIN32
 std::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
-std::unordered_map<sockaddrunion, uint, sockaddr_hash_functor, sockaddr_cmp_functor> instance_map_;
 #else
 std::tr1::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
-std::tr1::unordered_map<sockaddrunion, uint, sockaddr_hash_functor, sockaddr_cmp_functor> instance_map_;
 #endif
-
 /* many diferent channels belongs to a same geco instance*/
 std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
 std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
@@ -86,10 +85,6 @@ geco_instance_t *curr_geco_instance_;
  * has been handled.*/
 channel_t *curr_channel_;
 
-/* inits along with library inits*/
-int defaultlocaladdrlistsize_;
-sockaddrunion* defaultlocaladdrlist_;
-
 /* these one-shot state variables are so frequently used in recv_gco_packet()
  * to improve performances */
 geco_packet_fixed_t* curr_geco_packet_fixed_;
@@ -99,8 +94,7 @@ uchar* curr_uchar_init_chunk_;
 sockaddrunion *last_source_addr_;
 sockaddrunion *last_dest_addr_;
 sockaddrunion addr_from_init_or_ack_chunk_;
-// cmp_channel() will set last_src_path_ to the one found src's
-// index in channel's remote addr list
+// cmp_channel() will set last_src_path_ to the one found src's index in channel's remote addr list
 int last_src_path_;
 ushort last_src_port_;
 ushort last_dest_port_;
@@ -135,7 +129,7 @@ uint my_supported_addr_types_;
 sockaddrunion tmp_peer_addreslist_[MAX_NUM_ADDRESSES];
 int tmp_peer_addreslist_size_;
 uint tmp_peer_supported_types_;
-
+transport_addr_t curr_trans_addr_;
 
 /* used if no bundlecontroller has been allocated and initialized yet */
 bundle_controller_t* default_bundle_ctrl_;
@@ -1350,7 +1344,11 @@ leave:
  * the bundle() will interally force sending all chunks if the bundle are full.
  * then, excitely call send all bundled chunks;
  * finally, unlock_bundle_ctrl(dest addr);
- * will send all bundled chunks automatically to the specified dest addr*/
+ * will send all bundled chunks automatically to the specified dest addr
+ * ad_idx = -1, send to last_source_addr
+ * ad_idx = -2, send to primary path
+ * ad_idx >0, send to the specified path as dest addr
+ */
 void unlock_bundle_ctrl(int* ad_idx = NULL)
 {
 	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mbun_get(curr_channel_);
@@ -2208,6 +2206,8 @@ uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len, ushort
  * that is returned then. Returns -1 if unrecognized chunk forces termination of chunk parsing
  * without any further action, 1 for an error that stops chunk parsing, but returns error to
  * the peer and 0 for normal continuation */
+int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx = 0);
+
 int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
 	return 0;
@@ -3935,7 +3935,7 @@ smctrl_t* sm_new(void)
  *  @param  destinationAddressList      pointer to the array of peer's addresses
  *  @return true for success, else for failure
  */
-bool alloc_new_channel(geco_instance_t* instance,
+bool mdis_new_channel(geco_instance_t* instance,
 	ushort local_port,
 	ushort remote_port,
 	uint tagLocal,
@@ -3950,7 +3950,7 @@ bool alloc_new_channel(geco_instance_t* instance,
 	assert(primaryDestinitionAddress < noOfDestinationAddresses);
 
 	EVENTLOG5(VERBOSE,
-		" alloc_new_channel()::Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",
+		" mdis_new_channel()::Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",
 		instance->dispatcher_name, local_port, remote_port, tagLocal,
 		primaryDestinitionAddress);
 
@@ -3960,7 +3960,6 @@ bool alloc_new_channel(geco_instance_t* instance,
 	curr_channel_->local_port = local_port;
 	curr_channel_->remote_port = remote_port;
 	curr_channel_->local_tag = tagLocal;
-	//curr_channel_->channel_id = mdi_getUnusedAssocId();
 	curr_channel_->remote_tag = 0;
 	curr_channel_->deleted = false;
 	curr_channel_->application_layer_dataptr = NULL;
@@ -4032,15 +4031,15 @@ bool alloc_new_channel(geco_instance_t* instance,
 		if (cmp_channel(*curr_channel_, *channelptr))
 		{
 			EVENTLOG(NOTICE,
-				"alloc_new_channel()::tried to alloc an existing channel -> return false !");
+				"mdis_new_channel()::tried to alloc an existing channel -> return false !");
 			geco_free_ext(curr_channel_, __FILE__, __LINE__);
 			curr_channel_ = NULL;
 			return false;
 		}
 	}
+
 	curr_channel_->remote_addres =
-		(sockaddrunion*)geco_malloc_ext(noOfDestinationAddresses * sizeof(sockaddrunion),
-			__FILE__, __LINE__);
+		(sockaddrunion*)geco_malloc_ext(noOfDestinationAddresses * sizeof(sockaddrunion), __FILE__, __LINE__);
 	memcpy(curr_channel_->remote_addres, destinationAddressList, noOfDestinationAddresses);
 
 	curr_channel_->flow_control = NULL;
@@ -4058,9 +4057,21 @@ bool alloc_new_channel(geco_instance_t* instance,
 	curr_channel_->locally_supported_ADDIP = instance->supportsADDIP;
 	curr_channel_->remotely_supported_ADDIP = instance->supportsADDIP;
 
+	//insert channel pointer to vector
 	curr_channel_->channel_id = channels_.size();
 	channels_.push_back(curr_channel_);
-	EVENTLOG1(VERBOSE, "alloc_new_channel()::CHANNEL ID = %d !", curr_channel_->channel_id);
+	//insert channel id to map
+	for (int i = 0; i < curr_channel_->local_addres_size;i++)
+	{
+		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
+		for (int ii = 0; ii < curr_channel_->remote_addres_size;ii++)
+		{
+			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
+		}
+	}
+
+	EVENTLOG1(VERBOSE, "mdis_new_channel()::CHANNEL ID = %d !", curr_channel_->channel_id);
 	return true;
 }
 
@@ -4310,8 +4321,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	if (smctrl == NULL)
 	{
 		EVENTLOG(NOTICE,
-			"process_cookie_echo_chunk(): mdis_read_smctrl() returned NULL -> call alloc_new_channel() !");
-		if (alloc_new_channel(curr_geco_instance_,
+			"process_cookie_echo_chunk(): mdis_read_smctrl() returned NULL -> call mdis_new_channel() !");
+		if (mdis_new_channel(curr_geco_instance_,
 			last_dest_port_,
 			last_src_port_,
 			cookie_local_tag,/*local tag*/
@@ -4319,7 +4330,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			1, /*noOfDestinationAddresses*/
 			last_source_addr_) == false)
 		{
-			EVENTLOG(NOTICE, "alloc_new_channel() failed ! -> discard!");
+			EVENTLOG(NOTICE, "mdis_new_channel() failed ! -> discard!");
 			mch_remove_simple_chunk(cookie_echo_cid);
 			mch_free_simple_chunk(initCID);
 			mch_free_simple_chunk(initAckCID);
@@ -4599,7 +4610,7 @@ int mdis_disassemle_packet()
 		{
 			EVENTLOG(WARNNING_ERROR,
 				"dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
-			unlock_bundle_ctrl(&last_src_path_);
+			unlock_bundle_ctrl();
 			return -1;
 		}
 
@@ -4612,7 +4623,7 @@ int mdis_disassemle_packet()
 		{
 			EVENTLOG(WARNNING_ERROR,
 				"dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
-			unlock_bundle_ctrl(&last_src_path_);
+			unlock_bundle_ctrl();
 			return -1;
 		}
 
@@ -4628,7 +4639,7 @@ int mdis_disassemle_packet()
 		{
 		case CHUNK_DATA:
 			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_DATA");
-			handle_ret = process_data_chunk((data_chunk_t*)chunk, last_src_path_);
+			handle_ret = process_data_chunk((data_chunk_t*)chunk, -2);
 			data_chunk_received = true;
 			break;
 		case CHUNK_INIT:
@@ -4645,7 +4656,7 @@ int mdis_disassemle_packet()
 			break;
 		case CHUNK_SACK:
 			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_SACK");
-			handle_ret = process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
+			handle_ret = process_sack_chunk(-2, chunk, curr_geco_packet_value_len_);
 			break;
 		default:
 			/*
@@ -4703,10 +4714,9 @@ int mdis_disassemle_packet()
 		//TODO
 	}
 	return 0;
-}
+	}
 
-channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
-	ushort src_port, ushort dest_port)
+channel_t* mdis_find_channel(sockaddrunion * src_addr, ushort src_port, ushort dest_port)
 {
 	tmp_channel_.remote_addres_size = 1;
 	tmp_channel_.remote_addres = &tmp_addr_;
@@ -4732,7 +4742,7 @@ channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
 		break;
 	default:
 		EVENTLOG1(FALTAL_ERROR_EXIT,
-			"find_channel_by_transport_addr():Unsupported Address Family %d in find_channel_by_transport_addr()",
+			"mdis_find_channel():Unsupported Address Family %d in mdis_find_channel()",
 			saddr_family(src_addr));
 		break;
 	}
@@ -4753,22 +4763,42 @@ channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
 		if (result->deleted)
 		{
 			EVENTLOG1(VERBOSE,
-				"find_channel_by_transport_addr():Found channel that should be deleted, with id %u",
+				"mdis_find_channel():Found channel that should be deleted, with id %u",
 				result->channel_id);
 			result = NULL;
 		}
 		else
 		{
-			EVENTLOG1(VERBOSE, "find_channel_by_transport_addr():Found valid channel with id %u",
+			EVENTLOG1(VERBOSE, "mdis_find_channel():Found valid channel with id %u",
 				result->channel_id);
 		}
 	}
 	else
 	{
 		EVENTLOG(VERBOSE,
-			"find_channel_by_transport_addr()::channel indexed by transport address not in list");
+			"mdis_find_channel()::channel indexed by transport address not in list");
 	}
 
+	return result;
+}
+
+inline static channel_t* mdis_find_channel()
+{
+	/* search for this endpoint from list*/
+	channel_t* result = channels_[channel_map_[curr_trans_addr_]];
+	if (result != NULL)
+	{
+		if (result->deleted)
+		{
+			EVENTLOG1(VERBOSE,
+				"mdis_find_channel():Found channel that should be deleted, with id %u",
+				result->channel_id);
+			return NULL;
+		}
+		EVENTLOG1(VERBOSE, "mdis_find_channel():Found valid channel with id %u", result->channel_id);
+		return result;
+	}
+	EVENTLOG(VERBOSE, "mdis_find_channel()::channel indexed by transport address not in list");
 	return result;
 }
 uint find_chunk_types(uchar* packet_value, uint packet_val_len, uint* total_chunk_count)
@@ -4850,10 +4880,10 @@ uint find_chunk_types(uchar* packet_value, uint packet_val_len, uint* total_chun
 	}
 	return result;
 }
-bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b)
+bool cmp_geco_instance(const geco_instance_t& traget, const geco_instance_t& b)
 {
 	/* compare local port*/
-	if (a.local_port != b.local_port)
+	if (traget.local_port != b.local_port)
 	{
 		return false;
 	}
@@ -4862,36 +4892,66 @@ bool cmp_geco_instance(const geco_instance_t& a, const geco_instance_t& b)
 		is_there_at_least_one_equal_dest_port_ = true;
 	}
 
-	if (!a.is_in6addr_any && !b.is_in6addr_any && !a.is_inaddr_any && !b.is_inaddr_any)
+	uchar af = saddr_family(traget.local_addres_list);
+	if (b.is_inaddr_any && b.is_in6addr_any)
 	{
-		int i, j;
-		/*find if at least there is an ip addr thate quals*/
-		for (i = 0; i < a.local_addres_size; i++)
+		//we supports both of ip4and6
+		if (af == AF_INET || af == AF_INET6) return true;
+	}
+	else if (b.is_in6addr_any && !b.is_inaddr_any)
+	{
+		//we only supports ip6
+		if (af == AF_INET6) return true;
+	}
+	else if (!b.is_in6addr_any && b.is_inaddr_any)
+	{
+		//we only supports ip4
+		if (af == AF_INET) return true;
+	}
+	else  //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
+	{
+		// find if at least there is an ip addr thate quals
+		for (int i = 0; i < traget.local_addres_size; i++)
 		{
-			for (j = 0; j < b.local_addres_size; j++)
+			for (int j = 0; j < b.local_addres_size; j++)
 			{
-				if (saddr_equals(&(a.local_addres_list[i]), &(b.local_addres_list[j]), true))
+				if (saddr_equals(&(traget.local_addres_list[i]), &(b.local_addres_list[j]), true))
 				{
 					return true;
 				}
 			}
 		}
-		return false;
 	}
-	else
-	{
-		/* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
-		return true;
-	}
+	return false;
+
+	//if (!a.is_in6addr_any && !b.is_in6addr_any && !a.is_inaddr_any && !b.is_inaddr_any)
+	//{
+	//	int i, j;
+	//	/*find if at least there is an ip addr thate quals*/
+	//	for (i = 0; i < a.local_addres_size; i++)
+	//	{
+	//		for (j = 0; j < b.local_addres_size; j++)
+	//		{
+	//			if (saddr_equals(&(a.local_addres_list[i]), &(b.local_addres_list[j]), true))
+	//			{
+	//				return true;
+	//			}
+	//		}
+	//	}
+	//	return false;
+	//}
+	//else
+	//{
+	//	/* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
+	//	return true;
+	//}
 }
 
-geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
-	ushort dest_port)
+geco_instance_t* mdis_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port)
 {
 	if (geco_instances_.size() == 0)
 	{
-		ERRLOG(MAJOR_ERROR,
-			"dispatch_layer_t::find_geco_instance_by_transport_addr()::geco_instances_.size() == 0");
+		ERRLOG(MAJOR_ERROR, "dispatch_layer_t::mdis_find_geco_instance()::geco_instances_.size() == 0");
 		return NULL;
 	}
 
@@ -4901,9 +4961,6 @@ geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
 	tmp_geco_instance_.local_addres_list = dest_addr;
 	tmp_geco_instance_.is_in6addr_any = false;
 	tmp_geco_instance_.is_inaddr_any = false;
-	// as we use saddr_equals() to compare addr which internally compares addr type
-	// so it is not required actually can removed
-	//tmp_geco_instance_.supportedAddressTypes = address_type;
 
 	is_there_at_least_one_equal_dest_port_ = false;
 	geco_instance_t* result = NULL;
@@ -4915,7 +4972,6 @@ geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr,
 			break;
 		}
 	}
-
 	return result;
 }
 /**
@@ -5085,7 +5141,7 @@ void clear()
 int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	sockaddrunion * source_addr, sockaddrunion * dest_addr)
 {
-	EVENTLOG3(NOTICE,
+	EVENTLOG3(VERBOSE,
 		"- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
 		dctp_packet_len, dctp_packet, socket_fd);
 
@@ -5337,7 +5393,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 	// cmp_channel() will set last_src_path_ to the one found src's
 	// index in channel's remote addr list
 	last_src_path_ = 0;
-	curr_channel_ = find_channel_by_transport_addr(last_source_addr_, last_src_port_,
+	curr_channel_ = mdis_find_channel(last_source_addr_, last_src_port_,
 		last_dest_port_);
 	if (curr_channel_ != NULL)
 	{
@@ -5348,6 +5404,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 		{
 			ERRLOG(MAJOR_ERROR,
 				"Foundchannel, but no geo Instance -> abort app -> FIXME imple errors !");
+			clear();
 			return recv_geco_packet_but_found_channel_has_no_instance;
 		}
 		else
@@ -5362,18 +5419,12 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 	 */
 	else
 	{
-		curr_geco_instance_ = find_geco_instance_by_transport_addr(last_dest_addr_,
-			last_dest_port_);
+		curr_geco_instance_ = mdis_find_geco_instance(last_dest_addr_, last_dest_port_);
 		if (curr_geco_instance_ == NULL)
 		{
-			/* 7) actually this is special case see validate_dest_addr() for details
-			 *  basically, the only reason we cannot find inst at this context is
-			 *  unequal addr type where ip4 and ip6 addrs that pointer to the
-			 *  same machina dest port. handled by following codes at line 791->snd  ABORT
-			 */
+			// Possible Reasons: dest af not matched || dest addr not matched || dest port not matched
 			my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6;
-			EVENTLOG3(VERBOSE,
-				"Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !",
+			EVENTLOG3(VERBOSE, "Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !",
 				src_addr_str_, last_dest_port_, my_supported_addr_types_);
 		}
 		else
@@ -5386,19 +5437,10 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 		}
 	}
 
-	/* 8)now we can validate if dest_addr is in localaddress send ABORT + ECC_UNRESOLVED_ADDR */
-	if (validate_dest_addr(dest_addr) == false)
-	{
-		EVENTLOG(VERBOSE, "validate_dest_addr() failed -> discard it!");
-		clear();
-		return recv_geco_packet_but_dest_addr_check_failed;
-	}
-
 	/*9) fetch all chunk types contained in this packet value field for use in the folowing */
 	last_veri_tag_ = ntohl(curr_geco_packet_->pk_comm_hdr.verification_tag);
 	curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
-	chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
-		&total_chunks_count_);
+	chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk, curr_geco_packet_value_len_, &total_chunks_count_);
 	tmp_peer_addreslist_size_ = 0;
 	curr_uchar_init_chunk_ = NULL;
 	send_abort_ = false;
@@ -5459,7 +5501,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 					my_supported_addr_types_, NULL, true, false) - 1;
 				for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
 				{
-					if ((curr_channel_ = find_channel_by_transport_addr(
+					if ((curr_channel_ = mdis_find_channel(
 						&tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
 						last_dest_port_)) != NULL)
 					{
@@ -5486,7 +5528,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 						my_supported_addr_types_, NULL, true, false) - 1;
 					for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
 					{
-						if ((curr_channel_ = find_channel_by_transport_addr(
+						if ((curr_channel_ = mdis_find_channel(
 							&tmp_peer_addreslist_[tmp_peer_addreslist_size_], last_src_port_,
 							last_dest_port_)) != NULL)
 						{
@@ -6100,7 +6142,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+}
 #endif
 
 	mdis_init();
@@ -6498,7 +6540,7 @@ int mulp_connectx(unsigned int instanceid,
 		localPort = curr_geco_instance_->local_port;
 	EVENTLOG1(VERBOSE, "Chose local port %u for associate !", localPort);
 
-	if (alloc_new_channel(curr_geco_instance_,
+	if (mdis_new_channel(curr_geco_instance_,
 		localPort,/* local client port */
 		destinationPort,/* remote server port */
 		mdis_generate_init_tag(),

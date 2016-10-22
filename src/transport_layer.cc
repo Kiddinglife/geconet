@@ -1322,13 +1322,12 @@ int mtra_send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu)
 int mtra_send_ip_packet(int sfd, char *buf, int len,
 	sockaddrunion *dest, uchar tos)
 {
-	EVENTLOG(INFO,
-		"- - - - - -Enter network_interface_t::send_ip_packet()- - - - - - ");
+	EVENTLOG(VERBOSE, "- - - - - -Enter mtra_send_ip_packet()- - - - - - ");
 
-	int txmt_len = 0;
-	uchar old_tos;
-	socklen_t opt_len;
-	int tmp;
+	static int txmt_len = 0;
+	static uchar old_tos;
+	static socklen_t opt_len;
+	static int tmp;
 
 #ifdef USE_UDP
 	// len+GECO_PACKET_FIXED_SIZE is the length of the total packet
@@ -1386,19 +1385,30 @@ int mtra_send_ip_packet(int sfd, char *buf, int len,
 			return -1;
 #endif
 		}
-		EVENTLOG6(VERBOSE, "AF_INET::send_ip_packet:set IP_TOS %u,"
-			"result=%d,sfd:%d,len:%d,destination : %s::%u", tos, tmp, sfd,
-			len, inet_ntoa(dest->sin.sin_addr), ntohs(dest->sin.sin_port));
 
 #ifdef ENABLE_UNIT_TEST
 		if (test_dummy_.enable_stub_sendto_in_tspt_sendippacket_)
 			txmt_len = dummy_sendto(sfd, buf, len, dest, tos);
 		else
-			txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-				sizeof(struct sockaddr));
+		{
+			do
+			{
+				txmt_len = sendto(sfd, buf, len, 0, &(dest->sa), sizeof(struct sockaddr));
+				EVENTLOG6(VERBOSE,
+					"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
+					tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr), ntohs(dest->sin.sin_port));
+				if (txmt_len < 0) return txmt_len;
+			} while (txmt_len < len);
+		}
 #else
-		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-			sizeof(struct sockaddr));
+		do
+		{
+			txmt_len = sendto(sfd, buf, len, 0, &(dest->sa), sizeof(struct sockaddr));
+			EVENTLOG6(VERBOSE,
+				"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
+				tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr), ntohs(dest->sin.sin_port));
+			if (txmt_len < 0) return txmt_len;
+		} while (txmt_len < len);
 #endif
 
 #ifdef USE_UDP
@@ -1425,11 +1435,25 @@ int mtra_send_ip_packet(int sfd, char *buf, int len,
 		if (test_dummy_.enable_stub_sendto_in_tspt_sendippacket_)
 			txmt_len = dummy_sendto(sfd, buf, len, dest, tos);
 		else
-			txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-				sizeof(struct sockaddr));
+		{
+			do
+			{
+				txmt_len = sendto(sfd, buf, len, 0, &(dest->sa), sizeof(struct sockaddr));
+				EVENTLOG6(VERBOSE,
+					"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
+					tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr), ntohs(dest->sin.sin_port));
+				if (txmt_len < 0) return txmt_len;
+			} while (txmt_len < len);
+		}
 #else
-		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-			sizeof(struct sockaddr));
+		do
+		{
+			txmt_len = sendto(sfd, buf, len, 0, &(dest->sa), sizeof(struct sockaddr));
+			EVENTLOG6(VERBOSE,
+				"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
+				tos, tmp, sfd, len, inet_ntoa(dest->sin.sin_addr), ntohs(dest->sin.sin_port));
+			if (txmt_len < 0) return txmt_len;
+		} while (txmt_len < len);
 #endif
 
 #ifdef USE_UDP
@@ -1449,13 +1473,13 @@ int mtra_send_ip_packet(int sfd, char *buf, int len,
 
 	stat_send_event_size_++;
 	stat_send_bytes_ += txmt_len;
-	EVENTLOG3(INFO,
+
+	EVENTLOG3(VERBOSE,
 		"send times %u, send total bytes_ %u, packet len %u",
 		stat_send_event_size_, stat_send_bytes_,
 		len - UDP_PACKET_FIXED_SIZE);
 
-	EVENTLOG(INFO,
-		"- - - - - -Leave network_interface_t::send_ip_packet()- - - - - - ");
+	EVENTLOG(VERBOSE, "- - - - - -Leave mtra_send_ip_packet()- - - - - - ");
 	return txmt_len;
 }
 int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,

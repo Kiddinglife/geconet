@@ -53,8 +53,8 @@ extern uint last_veri_tag_;
 /* many diferent channels belongs to a same geco instance*/
 extern std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
 extern std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
-extern geco_instance_t* find_geco_instance_by_transport_addr(sockaddrunion* dest_addr, ushort dest_port);
-extern channel_t* find_channel_by_transport_addr(sockaddrunion * src_addr,
+extern geco_instance_t* mdis_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port);
+extern channel_t* mdis_find_channel(sockaddrunion * src_addr,
 	ushort src_port, ushort dest_port);
 extern bool validate_dest_addr(sockaddrunion * dest_addr);
 extern uint find_chunk_types(uchar* packet_value, uint packet_val_len, uint* total_chunk_count);
@@ -244,7 +244,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 	for (uint i = 0; i < inst.local_addres_size; i++)
 	{
 		last_dest_addr = &inst.local_addres_list[i];
-		ret = find_geco_instance_by_transport_addr(last_dest_addr,
+		ret = mdis_find_geco_instance(last_dest_addr,
 			last_dest_port);
 		//  1.1.1) should found this inst
 		EXPECT_EQ(ret, &inst);
@@ -254,7 +254,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 	for (uint i = 0; i < inst.local_addres_size; i++)
 	{
 		last_dest_addr = &inst.local_addres_list[i];
-		ret = find_geco_instance_by_transport_addr(last_dest_addr,
+		ret = mdis_find_geco_instance(last_dest_addr,
 			last_dest_port);
 		//  1.2.1) should NOT found this inst
 		EXPECT_EQ(ret, nullptr);
@@ -266,7 +266,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 		sockaddrunion tmp = inst.local_addres_list[i];
 		s4addr(&tmp) -= 1;  // just minus to make it different
 		last_dest_addr = &tmp;
-		ret = find_geco_instance_by_transport_addr(last_dest_addr,
+		ret = mdis_find_geco_instance(last_dest_addr,
 			last_dest_port);
 		//  1.3.1) should NOT found this inst
 		EXPECT_EQ(ret, nullptr);
@@ -280,7 +280,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 			saddr_family(&tmp) = AF_INET6 :
 			saddr_family(&tmp) = AF_INET;
 		last_dest_addr = &tmp;
-		ret = find_geco_instance_by_transport_addr(last_dest_addr,
+		ret = mdis_find_geco_instance(last_dest_addr,
 			last_dest_port);
 		//  1.4.1) should NOT found this inst
 		EXPECT_EQ(ret, nullptr);
@@ -296,7 +296,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance_by_transport_addr)
 			saddr_family(&tmp) = AF_INET6 :
 			saddr_family(&tmp) = AF_INET;
 		last_dest_addr = &tmp;
-		ret = find_geco_instance_by_transport_addr(last_dest_addr,
+		ret = mdis_find_geco_instance(last_dest_addr,
 			last_dest_port);
 		//  2.1.1) should still found this inst
 		EXPECT_EQ(ret, &inst);
@@ -338,7 +338,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 			last_src_addr = &channel.remote_addres[j];
 			last_src_port -= 1;  //just make it not equal to the one stored in channel
 			//1.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -352,7 +352,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 			last_src_addr = &channel.remote_addres[j];
 			last_dest_port -= 1; //just make it not equal to the one stored in channel
 			//2.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -366,7 +366,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 			last_src_addr = &channel.remote_addres[j];
 			last_dest_port -= 1; //just make it not equal to the one stored in channel
 			//2.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -381,7 +381,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 			last_dest_port -= 1; //just make it not equal to the one stored in channel
 			last_src_port -= 1;  //just make it not equal to the one stored in channel
 			//3.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -396,7 +396,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 		{
 			last_src_addr = &channel.remote_addres[j];
 			//3.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -411,7 +411,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 			s4addr(&tmp_addr) -= 1;  // just minus to make it different
 			last_src_addr = &tmp_addr;
 			//5.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -429,7 +429,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 			s4addr(&tmp_addr2) -= 1;  // just minus to make it different
 			last_src_addr = &tmp_addr2;
 			//6.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -446,7 +446,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 		{
 			last_src_addr = &channel.remote_addres[j];
 			//7.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -464,7 +464,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 				AF_INET;
 			last_src_addr = &tmp_addr;
 			//5.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
@@ -487,7 +487,7 @@ TEST(DISPATCHER_MODULE, test_find_channel_by_transport_addr)
 				AF_INET;
 			last_src_addr = &tmp_addr2;
 			//6.1) should not find channel
-			found = find_channel_by_transport_addr(last_src_addr, last_src_port,
+			found = mdis_find_channel(last_src_addr, last_src_port,
 				last_dest_port);
 			EXPECT_EQ(found, (channel_t*)NULL);
 		}
