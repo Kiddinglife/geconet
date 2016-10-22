@@ -160,13 +160,13 @@ bool enable_mock_dispatcher_process_init_chunk_;
 #endif
 
 /////////////////////////////////////////////////////  mfc  flow_controller_t /////////////////////////////////////////////////////
-inline flow_controller_t* mfc_get_flowctrl(void)
+inline flow_controller_t* mfc_get(void)
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->flow_control;
 }
 inline unsigned int mfc_get_queued_chunks_count(void)
 {
-	flow_controller_t* fc = mfc_get_flowctrl();
+	flow_controller_t* fc = mfc_get();
 	if (fc == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "mfc_readNumberOfQueuedChunks()::flow control instance not set !");
@@ -183,7 +183,7 @@ inline unsigned int mfc_get_queued_chunks_count(void)
  */
 inline int mfc_get_outstanding_bytes(void)
 {
-	flow_controller_t* fc = mfc_get_flowctrl();
+	flow_controller_t* fc = mfc_get();
 	if (fc == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "mfc_get_outstanding_bytes()::flow control instance not set !");
@@ -349,7 +349,7 @@ inline int mpath_get_max_retrans_per_path(void)
 * @param pathID    index of the address/path
 * @return  path's current RTO
 */
-int mpath_get_rto(short pathID)
+int mpath_read_rto(short pathID)
 {
 	path_controller_t* pmData = mpath_get();
 	if (pmData == NULL)
@@ -367,11 +367,11 @@ int mpath_get_rto(short pathID)
 	}
 	else
 	{
-		ERRLOG(MAJOR_ERROR, "mpath_get_rto(%d): invalid path ID", pathID);
+		ERRLOG(MAJOR_ERROR, "mpath_read_rto(%d): invalid path ID", pathID);
 	}
 	return -1;
 }
-int mpath_get_primary_path()
+int mpath_read_primary_path()
 {
 	path_controller_t* path_ctrl = mpath_get();
 	if (path_ctrl == NULL)
@@ -579,8 +579,6 @@ bool mdis_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 	}
 	return ret;
 }
-
-
 int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
 	bool receivedFromPeer)
@@ -804,7 +802,6 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	EVENTLOG(VERBOSE, "- - - Leave mdis_validate_localaddrs_before_write_to_init()");
 	return count;
 }
-
 MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* unused)
 {
 	// retrieve association from list 
@@ -823,7 +820,7 @@ MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* 
 		return false;
 	}
 
-	ushort primary_path = mpath_get_primary_path();
+	ushort primary_path = mpath_read_primary_path();
 	EVENTLOG3(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, PrimaryPath=%u",
 		(*(unsigned int *)associationID), smctrl->channel_state, primary_path);
 
@@ -844,7 +841,6 @@ MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* 
 	}
 	return false;
 }
-
 void msm_connect(unsigned short noOfOutStreams,
 	unsigned short noOfInStreams,
 	union sockaddrunion *destinationList,
@@ -890,6 +886,7 @@ void msm_connect(unsigned short noOfOutStreams,
 		smctrl->cookieChunk = NULL;
 		smctrl->local_tie_tag = 0;
 		smctrl->peer_tie_tag = 0;
+		smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
 
 		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
 		{  // stop t1-init timer
@@ -1089,7 +1086,7 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 			if (last_source_addr_ == NULL)
 			{
 				/*5) last src addr is NUll, we use primary path*/
-				primary_path = mpath_get_primary_path();
+				primary_path = mpath_read_primary_path();
 				EVENTLOG2(VERBOSE,
 					"dispatch_layer::send_geco_packet():sending to primary with index %u (with %u paths)",
 					primary_path, curr_channel_->remote_addres_size);
@@ -1669,7 +1666,7 @@ void delete_curr_channel(void)
 		{
 			stop_heart_beat_timer(path_id);
 		}
-		// fc_stop_timers();         // TODO
+		// mfc_stop_timers();         // TODO
 		stop_sack_timer();
 
 		/* mark channel as deleted, it will be deleted
@@ -1794,11 +1791,12 @@ inline ushort get_local_outbound_stream(uint * geco_inst_id = NULL)
 	}
 	return 0;
 }
-int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+
+int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uchar * chunk, uint len, uint my_supported_addr_types,
 	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr)
 {
-	EVENTLOG(DEBUG, "- - - Enter read_peer_addreslist()");
+	EVENTLOG(DEBUG, "- - - Enter mdis_read_peer_addreslist()");
 
 	/*1) validate method input geco_instance_params*/
 	uint read_len;
@@ -1807,7 +1805,7 @@ int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	if (chunk == NULL || peer_addreslist == NULL || len < read_len)
 	{
 		found_addr_number = -1;
-		EVENTLOG(DEBUG, "- - - Leave read_peer_addreslist()");
+		EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
 		return found_addr_number;
 	}
 
@@ -1825,7 +1823,7 @@ int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	else
 	{
 		found_addr_number = -1;
-		EVENTLOG(DEBUG, "- - - Leave read_peer_addreslist()");
+		EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
 		return found_addr_number;
 	}
 
@@ -1842,14 +1840,14 @@ int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	/*3) parse all vlparams in this chunk*/
 	while (read_len < len)
 	{
-		EVENTLOG2(VVERBOSE, "read_peer_addreslist() : len==%u, processed_len == %u", len, read_len);
+		EVENTLOG2(VVERBOSE, "mdis_read_peer_addreslist() : len==%u, processed_len == %u", len, read_len);
 
 		if (len - read_len < VLPARAM_FIXED_SIZE)
 		{
 			EVENTLOG(WARNNING_ERROR,
 				"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
 			found_addr_number = -1;
-			EVENTLOG(DEBUG, "- - - Leave read_peer_addreslist()");
+			EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
 			return found_addr_number;
 		}
 
@@ -1859,7 +1857,7 @@ int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
 		{
 			found_addr_number = -1;
-			EVENTLOG(DEBUG, "- - - Leave read_peer_addreslist()");
+			EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
 			return found_addr_number;
 		}
 
@@ -2118,12 +2116,12 @@ int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 		}
 	}
 
-	EVENTLOG(DEBUG, "- - - Leave read_peer_addreslist()");
+	EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
 	return found_addr_number;
 }
 
 
-bool support_unreliability(void)
+bool do_we_support_unreliability(void)
 {
 	if (curr_channel_ != NULL)
 	{
@@ -2137,68 +2135,6 @@ bool support_unreliability(void)
 	return (library_support_unreliability_);
 }
 
-
-/**
- * only used for finding some vlparam in init or init ack chunks
- * NULL no geco_instance_params, otherwise have geco_instance_params, return vlp fixed*/
-uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type)
-{
-	/*1) validate packet length*/
-	uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
-	if (setup_chunk == NULL || chunk_len < read_len)
-	{
-		return NULL;
-	}
-
-	/*2) validate chunk id inside this chunk*/
-	init_chunk_t* init_chunk = (init_chunk_t*)setup_chunk;
-	if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
-		&& init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
-	{
-		return NULL;
-	}
-
-	uint len = ntohs(init_chunk->chunk_header.chunk_length);
-	uchar* curr_pos = setup_chunk + read_len;
-
-	ushort vlp_len;
-	uint padding_len;
-	vlparam_fixed_t* vlp;
-
-	/*3) parse all vlparams in this chunk*/
-	while (read_len < len)
-	{
-		EVENTLOG2(VVERBOSE, "find_params_from_setup_chunk() : len==%u, processed_len == %u", len,
-			read_len);
-
-		if (len - read_len < VLPARAM_FIXED_SIZE)
-		{
-			return NULL;
-		}
-
-		vlp = (vlparam_fixed_t*)(curr_pos);
-		vlp_len = ntohs(vlp->param_length);
-		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
-		{
-			return NULL;
-		}
-
-		/*4) find param in this chunk*/
-		if (ntohs(vlp->param_type) == param_type)
-		{
-			EVENTLOG1(VERBOSE, "find_params_from_setup_chunk() : Founf chunk type %d-> return",
-				param_type);
-			return curr_pos;
-		}
-
-		read_len += vlp_len;
-		padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
-		read_len += padding_len;
-		curr_pos = setup_chunk + read_len;
-	}  // while
-
-	return NULL;
-}
 
 
 /**
@@ -2328,7 +2264,7 @@ int process_init_chunk(init_chunk_t * init)
 		/*4.3) read and validate peer addrlist carried in the received init chunk*/
 		assert(my_supported_addr_types_ != 0);
 		assert(curr_geco_packet_value_len_ == init->chunk_header.chunk_length);
-		tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_, (uchar*)init,
+		tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(tmp_peer_addreslist_, (uchar*)init,
 			curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_,
 			true, false);
 		if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
@@ -2366,7 +2302,7 @@ int process_init_chunk(init_chunk_t * init)
 			0,/*local tie tag*/
 			last_dest_port_, last_src_port_,
 			tmp_local_addreslist_, tmp_local_addreslist_size_,
-			support_unreliability(),
+			do_we_support_unreliability(),
 			tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 		/* 4.6) check unrecognized geco_instance_params*/
@@ -2409,7 +2345,7 @@ int process_init_chunk(init_chunk_t * init)
 #endif
 
 		ChannelState channel_state = smctrl->channel_state;
-		int primary_path = mpath_get_primary_path();
+		int primary_path = mpath_read_primary_path();
 		uint init_i_sent_cid;
 
 		/* 5)
@@ -2460,7 +2396,7 @@ int process_init_chunk(init_chunk_t * init)
 				 in other words, we are not connected to Z side although channel is not null*/
 				last_dest_port_, last_src_port_,
 				tmp_local_addreslist_, tmp_local_addreslist_size_,
-				support_unreliability(),
+				do_we_support_unreliability(),
 				tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 6.8) check unrecognized geco_instance_params*/
@@ -2523,7 +2459,7 @@ int process_init_chunk(init_chunk_t * init)
 			// read and validate peer addrlist carried in the received init chunk
 			assert(my_supported_addr_types_ != 0);
 			assert(curr_geco_packet_value_len_ == init->chunk_header.chunk_length);
-			tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
+			tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(tmp_peer_addreslist_,
 				(uchar*)init,
 				curr_geco_packet_value_len_, my_supported_addr_types_,
 				&tmp_peer_supported_types_, true, false);
@@ -2604,7 +2540,7 @@ int process_init_chunk(init_chunk_t * init)
 				smctrl->local_tie_tag, smctrl->peer_tie_tag,
 				last_dest_port_, last_src_port_,
 				tmp_local_addreslist_, tmp_local_addreslist_size_,
-				support_unreliability(),
+				do_we_support_unreliability(),
 				tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 5.8) check unrecognized geco_instance_params */
@@ -2680,7 +2616,7 @@ int process_init_chunk(init_chunk_t * init)
 			/* read and validate peer addrlist carried in the received init chunk*/
 			assert(my_supported_addr_types_ != 0);
 			assert(curr_geco_packet_value_len_ == init->chunk_header.chunk_length);
-			tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
+			tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(tmp_peer_addreslist_,
 				(uchar*)init,
 				curr_geco_packet_value_len_, my_supported_addr_types_,
 				&tmp_peer_supported_types_, true, false);
@@ -2757,7 +2693,7 @@ int process_init_chunk(init_chunk_t * init)
 				smctrl->local_tie_tag, smctrl->peer_tie_tag,
 				last_dest_port_, last_src_port_,
 				tmp_local_addreslist_, tmp_local_addreslist_size_,
-				support_unreliability(),
+				do_we_support_unreliability(),
 				tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 6.8) check unrecognized geco_instance_params*/
@@ -2881,8 +2817,7 @@ void abort_channel(short error_type, uchar* errordata,
 		clear_current_channel();
 	}
 }
-void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],
-	int noOfAddresses)
+void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],int noOfAddresses)
 {
 	if (curr_channel_ == NULL)
 	{
@@ -2893,7 +2828,7 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],
 		noOfAddresses * sizeof(sockaddrunion));
 	curr_channel_->remote_addres_size = noOfAddresses;
 }
-bool peer_supports_particial_reliability(init_chunk_t* initack)
+bool peer_supports_pr(init_chunk_t* initack)
 {
 	assert(initack != 0);
 	uchar* foundvlp = mch_read_vlparam(VLPARAM_UNRELIABILITY,
@@ -2948,11 +2883,11 @@ cookie_param_t* get_state_cookie_from_init_ack(init_chunk_t* initack)
 	}
 }
 
-bool peer_supports_particial_reliability(cookie_echo_chunk_t* cookie_echo)
+bool peer_supports_pr(cookie_echo_chunk_t* cookie_echo)
 {
 #ifdef _DEBUG
 	EVENTLOG(VERBOSE,
-		"- - - - - Enter peer_supports_particial_reliability(cookie_echo_chunk_t)");
+		"- - - - - Enter peer_supports_pr(cookie_echo_chunk_t)");
 #endif
 
 	assert(cookie_echo != 0);
@@ -2979,7 +2914,7 @@ bool peer_supports_particial_reliability(cookie_echo_chunk_t* cookie_echo)
 leave:
 #ifdef _DEBUG
 	EVENTLOG1(VERBOSE,
-		"- - - - - Enter peer_supports_particial_reliability(cookie_echo_chunk_t)::ret=%d",
+		"- - - - - Enter peer_supports_pr(cookie_echo_chunk_t)::ret=%d",
 		ret);
 #endif
 	return ret;
@@ -3040,9 +2975,9 @@ void reset_rtx_bytecounters(reltransfer_controller_t * rtx)
  * @param number of paths to the peer of the association
  * @return pointer to the newly created structure
  */
-reltransfer_controller_t* alloc_reliable_transfer(uint numofdestaddrlist, uint iTSN)
+reltransfer_controller_t* mrtx_new(uint numofdestaddrlist, uint iTSN)
 {
-	EVENTLOG(VERBOSE, "- - - Enter alloc_reliable_transfer()");
+	EVENTLOG(VERBOSE, "- - - Enter mrtx_new()");
 
 	reltransfer_controller_t* tmp = (reltransfer_controller_t*)geco_malloc_ext(
 		sizeof(reltransfer_controller_t), __FILE__, __LINE__);
@@ -3070,7 +3005,7 @@ reltransfer_controller_t* alloc_reliable_transfer(uint numofdestaddrlist, uint i
 			curr_channel_->local_tag);
 	reset_rtx_bytecounters(tmp);
 
-	EVENTLOG(VERBOSE, "- - - Leave alloc_reliable_transfer()");
+	EVENTLOG(VERBOSE, "- - - Leave mrtx_new()");
 	return tmp;
 }
 /**
@@ -3078,14 +3013,14 @@ reltransfer_controller_t* alloc_reliable_transfer(uint numofdestaddrlist, uint i
  * @param rtx_instance pointer to a retransmit_controller_t, that was previously created
  with rtx_new_reltransfer()
  */
-void free_reliable_transfer(reltransfer_controller_t* rtx_inst)
+void mrtx_free(reltransfer_controller_t* rtx_inst)
 {
-	EVENTLOG(VERBOSE, "- - - Enter free_reliable_transfer()");
+	EVENTLOG(VERBOSE, "- - - Enter mrtx_free()");
 
 	if (rtx_inst->chunk_list_tsn_ascended.size() > 0)
 	{
 		EVENTLOG(NOTICE,
-			"free_flow_control() : rtx_inst is deleted but chunk_list has size > 0, still queued ...");
+			"mfc_free() : rtx_inst is deleted but chunk_list has size > 0, still queued ...");
 		for (auto it = rtx_inst->chunk_list_tsn_ascended.begin();
 			it != rtx_inst->chunk_list_tsn_ascended.end();)
 		{
@@ -3101,17 +3036,17 @@ void free_reliable_transfer(reltransfer_controller_t* rtx_inst)
 	}
 	geco_free_ext(rtx_inst, __FILE__, __LINE__);
 
-	EVENTLOG(VERBOSE, "- - - Leave free_reliable_transfer()");
+	EVENTLOG(VERBOSE, "- - - Leave mrtx_free()");
 }
 /**
  * this function stops all currently running timers of the flowcontrol module
  * and may be called when the shutdown is imminent
  */
-void fc_stop_timers(void)
+void mfc_stop_timers(void)
 {
-	EVENTLOG(VERBOSE, "- - - Enter fc_stop_timers()");
+	EVENTLOG(VERBOSE, "- - - Enter mfc_stop_timers()");
 	flow_controller_t* fc;
-	if ((fc = mfc_get_flowctrl()) == NULL)
+	if ((fc = mfc_get()) == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "flow controller is NULL !");
 		return;
@@ -3128,23 +3063,23 @@ void fc_stop_timers(void)
 #endif
 		}
 	}
-	EVENTLOG(VERBOSE, "- - - Leave fc_stop_timers()");
+	EVENTLOG(VERBOSE, "- - - Leave mfc_stop_timers()");
 }
 /**
  * Deletes data occupied by a flow_control data structure
  * @param fc_instance pointer to the flow_control data structure
  */
-void free_flow_control(flow_controller_t* fctrl_inst)
+void mfc_free(flow_controller_t* fctrl_inst)
 {
-	EVENTLOG(VERBOSE, "- - - Enter free_flow_control()");
-	fc_stop_timers();
+	EVENTLOG(VERBOSE, "- - - Enter mfc_free()");
+	mfc_stop_timers();
 	geco_free_ext(fctrl_inst->cparams, __FILE__, __LINE__);
 	geco_free_ext(fctrl_inst->T3_timer, __FILE__, __LINE__);
 	geco_free_ext(fctrl_inst->addresses, __FILE__, __LINE__);
 	if (fctrl_inst->chunk_list.size() > 0)
 	{
 		EVENTLOG(NOTICE,
-			"free_flow_control() : fctrl_inst is deleted but chunk_list has size > 0 ...");
+			"mfc_free() : fctrl_inst is deleted but chunk_list has size > 0 ...");
 		for (auto it = fctrl_inst->chunk_list.begin(); it != fctrl_inst->chunk_list.end();)
 		{
 			free_flowctrl_data_chunk((*it));
@@ -3152,7 +3087,7 @@ void free_flow_control(flow_controller_t* fctrl_inst)
 		}
 	}
 	geco_free_ext(fctrl_inst, __FILE__, __LINE__);
-	EVENTLOG(VERBOSE, "- - - Leave free_flow_control()");
+	EVENTLOG(VERBOSE, "- - - Leave mfc_free()");
 }
 /**
  * Creates new instance of flowcontrol module and returns pointer to it
@@ -3162,13 +3097,13 @@ void free_flow_control(flow_controller_t* fctrl_inst)
  * @param  numofdestaddres the number of paths to the association peer
  * @return  pointer to the new fc_data instance
  */
-flow_controller_t* alloc_flowcontrol(uint peer_rwnd,
+flow_controller_t* mfc_new(uint peer_rwnd,
 	uint my_iTSN,
 	uint numofdestaddres,
 	uint maxQueueLen)
 {
 	EVENTLOG4(VERBOSE,
-		"- - - Enter alloc_flowcontrol(peer_rwnd=%d,numofdestaddres=%d,my_iTSN=%d,maxQueueLen=%d)",
+		"- - - Enter mfc_new(peer_rwnd=%d,numofdestaddres=%d,my_iTSN=%d,maxQueueLen=%d)",
 		peer_rwnd, numofdestaddres, my_iTSN, maxQueueLen);
 
 	flow_controller_t* tmp = (flow_controller_t*)geco_malloc_ext(sizeof(flow_controller_t),
@@ -3231,21 +3166,21 @@ flow_controller_t* alloc_flowcontrol(uint peer_rwnd,
 	tmp->list_length = 0;
 	if ((tmp->channel_id = get_curr_channel_id()) == 0)
 	{
-		free_flow_control(tmp);
+		mfc_free(tmp);
 		ERRLOG(FALTAL_ERROR_EXIT, "channel_id is zero !");
 	}
 	mrtx_set_peer_arwnd(peer_rwnd);
 
-	EVENTLOG1(VERBOSE, "- - - Leave alloc_flowcontrol(channel id=%d)", tmp->channel_id);
+	EVENTLOG1(VERBOSE, "- - - Leave mfc_new(channel id=%d)", tmp->channel_id);
 	return 0;
 }
 /**
  * function deletes a rxc_buffer structure (when it is not needed anymore)
  * @param rxc_instance pointer to a rxc_buffer, that was previously created
  */
-void free_recvctrl(recv_controller_t* rxc_inst)
+void mrecv_free(recv_controller_t* rxc_inst)
 {
-	EVENTLOG(VERBOSE, "- - - Enter free_recvctrl()");
+	EVENTLOG(VERBOSE, "- - - Enter mrecv_free()");
 	geco_free_ext(rxc_inst->sack_chunk, __FILE__, __LINE__);
 	if (rxc_inst->timer_running)
 	{
@@ -3266,7 +3201,7 @@ void free_recvctrl(recv_controller_t* rxc_inst)
 	}
 	geco_free_ext(rxc_inst, __FILE__, __LINE__);
 
-	EVENTLOG(VERBOSE, "- - - Leave free_recvctrl()");
+	EVENTLOG(VERBOSE, "- - - Leave mrecv_free()");
 }
 /**
  * function creates and allocs new rxc_buffer structure.
@@ -3274,10 +3209,10 @@ void free_recvctrl(recv_controller_t* rxc_inst)
  * @param  remote_initial_TSN initial tsn of the peer
  * @return pointer to the newly created structure
  */
-recv_controller_t* alloc_recvctrl(unsigned int remote_initial_TSN,
+recv_controller_t* mrecv_new(unsigned int remote_initial_TSN,
 	unsigned int number_of_destination_addresses, geco_instance_t* geco_instance)
 {
-	EVENTLOG(VERBOSE, "- - - Enter alloc_recvctrl()");
+	EVENTLOG(VERBOSE, "- - - Enter mrecv_new()");
 	recv_controller_t* tmp = (recv_controller_t*)geco_malloc_ext(sizeof(recv_controller_t),
 		__FILE__, __LINE__);
 	if (tmp == NULL)
@@ -3299,26 +3234,26 @@ recv_controller_t* alloc_recvctrl(unsigned int remote_initial_TSN,
 	tmp->delay = get_default_delay(geco_instance);
 	if ((tmp->channel_id = get_curr_channel_id()) == 0)
 	{
-		free_recvctrl(tmp);
+		mrecv_free(tmp);
 		ERRLOG(FALTAL_ERROR_EXIT, "channel_id is zero !");
 	}
 	else
 		EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id,
 			curr_channel_->local_tag);
 	return tmp;
-	EVENTLOG(VERBOSE, "- - - Leave alloc_recvctrl()");
+	EVENTLOG(VERBOSE, "- - - Leave mrecv_new()");
 }
 /**
  This function is called to instanciate one deliverman for an association.
  It creates and initializes the Lists for Sending and Receiving Data.
  It is called by dispatcher layer. returns: the pointer to the Stream Engine
  */
-deliverman_controller_t* alloc_deliverman(unsigned int numberReceiveStreams, /* max of streams to receive */
+deliverman_controller_t* mdlm_new(unsigned int numberReceiveStreams, /* max of streams to receive */
 	unsigned int numberSendStreams, /* max of streams to send */
 	bool assocSupportsPRSCTP)
 {
 	EVENTLOG3(VERBOSE,
-		"- - - Enter alloc_deliverman(new_stream_engine: #inStreams=%d, #outStreams=%d, unreliable == %s)",
+		"- - - Enter mdlm_new(new_stream_engine: #inStreams=%d, #outStreams=%d, unreliable == %s)",
 		numberReceiveStreams, numberSendStreams,
 		(assocSupportsPRSCTP == true) ? "TRUE" : "FALSE");
 
@@ -3373,16 +3308,16 @@ deliverman_controller_t* alloc_deliverman(unsigned int numberReceiveStreams, /* 
 	}
 	return (tmp);
 
-	EVENTLOG(VERBOSE, "- - - Leave alloc_deliverman()");
+	EVENTLOG(VERBOSE, "- - - Leave mdlm_new()");
 }
 /** Deletes the instance pointed to by streamengine.*/
-void free_deliverman(deliverman_controller_t* se)
+void mdlm_free(deliverman_controller_t* se)
 {
-	EVENTLOG(VERBOSE, "- - - Enter free_deliverman()");
+	EVENTLOG(VERBOSE, "- - - Enter mdlm_free()");
 	geco_free_ext(se->send_streams, __FILE__, __LINE__);
 	for (int i = 0; i < se->numReceiveStreams; i++)
 	{
-		EVENTLOG1(VERBOSE, "delete free_deliverman(): freeing data for receive stream %d",
+		EVENTLOG1(VERBOSE, "delete mdlm_free(): freeing data for receive stream %d",
 			i);
 		/* whatever is still in these lists, delete it before freeing the lists */
 		auto& pdulist = se->recv_streams[i].pduList;
@@ -3402,7 +3337,7 @@ void free_deliverman(deliverman_controller_t* se)
 	geco_free_ext(se->recvStreamActivated, __FILE__, __LINE__);
 	geco_free_ext(se->recv_streams, __FILE__, __LINE__);
 	geco_free_ext(se, __FILE__, __LINE__);
-	EVENTLOG(VERBOSE, "- - - Leave free_deliverman()");
+	EVENTLOG(VERBOSE, "- - - Leave mdlm_free()");
 }
 
 /**
@@ -3437,23 +3372,23 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow,
 	{
 		/* channel init was already completed */
 		EVENTLOG(INFO, "mdi_init_channel()::reset channel members!");
-		free_flow_control(curr_channel_->flow_control);
-		free_reliable_transfer(curr_channel_->reliable_transfer_control);
-		free_recvctrl(curr_channel_->receive_control);
-		free_deliverman(curr_channel_->deliverman_control);
+		mfc_free(curr_channel_->flow_control);
+		mrtx_free(curr_channel_->reliable_transfer_control);
+		mrecv_free(curr_channel_->receive_control);
+		mdlm_free(curr_channel_->deliverman_control);
 	}
 	curr_channel_->remote_tag = tagRemote;
 	bool with_pr = assocSupportsPRSCTP && curr_channel_->locally_supported_PRDCTP;
 	curr_channel_->locally_supported_PRDCTP = curr_channel_->remotely_supported_PRSCTP =
 		with_pr;
-	curr_channel_->flow_control = alloc_flowcontrol(remoteSideReceiverWindow,
+	curr_channel_->flow_control = mfc_new(remoteSideReceiverWindow,
 		localInitialTSN, curr_channel_->remote_addres_size,
 		curr_channel_->maxSendQueue);
-	curr_channel_->reliable_transfer_control = alloc_reliable_transfer(
+	curr_channel_->reliable_transfer_control = mrtx_new(
 		curr_channel_->remote_addres_size, localInitialTSN);
-	curr_channel_->receive_control = alloc_recvctrl(remoteInitialTSN,
+	curr_channel_->receive_control = mrecv_new(remoteInitialTSN,
 		curr_channel_->remote_addres_size, curr_channel_->geco_inst);
-	curr_channel_->deliverman_control = alloc_deliverman(
+	curr_channel_->deliverman_control = mdlm_new(
 		noOfInStreams, noOfOutStreams, with_pr);
 
 	EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id,
@@ -3587,7 +3522,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		/* read and validate peer addrlist carried in the received initack chunk */
 		assert(my_supported_addr_types_ != 0);
 		assert(curr_geco_packet_value_len_ == initAck->chunk_header.chunk_length);
-		tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_, (uchar*)initAck,
+		tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(tmp_peer_addreslist_, (uchar*)initAck,
 			curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_,
 			true, false);
 		if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
@@ -3604,7 +3539,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			inbound_stream, outbound_stream,
 			mch_read_itsn(initAckCID), mch_read_itag(initAckCID),
 			ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn),
-			peer_supports_particial_reliability(initAck),
+			peer_supports_pr(initAck),
 			peer_supports_addip(initAck));
 
 		EVENTLOG2(VERBOSE,
@@ -3713,7 +3648,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
  * function to put an error_chunk with type UNKNOWN PARAMETER
  * @return error value, 0 on success, -1 on error
  */
-int send_error_chunk_unrecognized_chunk_type(uchar* errdata, ushort length)
+int mdis_send_ecc_unrecognized_chunk(uchar* errdata, ushort length)
 {
 	// build chunk  and add it to chunklist
 	chunk_id_t   simple_chunk_index_ = add2chunklist((simple_chunk_t*)mch_make_error_chunk(), "add error chunk %u\n");
@@ -3726,36 +3661,6 @@ int send_error_chunk_unrecognized_chunk_type(uchar* errdata, ushort length)
 	unlock_bundle_ctrl();
 	mch_free_simple_chunk(simple_chunk_index_);
 	return mdis_send_bundled_chunks();
-}
-inline chunk_id_t build_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
-{
-	assert(cookie_echo_chunk != NULL);
-	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE,
-		__FILE__,
-		__LINE__);
-	if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
-	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
-	initChunk->chunk_header.chunk_id = CHUNK_INIT;
-	initChunk->chunk_header.chunk_flags = 0x00;
-	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
-	initChunk->init_fixed = cookie_echo_chunk->cookie.peer_init;
-	return add2chunklist((simple_chunk_t*)initChunk,
-		"add2chunklist()::created initChunk  from cookie %u");
-}
-inline chunk_id_t build_init_ack_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
-{
-	assert(cookie_echo_chunk != NULL);
-	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE,
-		__FILE__,
-		__LINE__);
-	if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
-	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
-	initChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
-	initChunk->chunk_header.chunk_flags = 0x00;
-	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
-	initChunk->init_fixed = cookie_echo_chunk->cookie.local_initack;
-	return add2chunklist((simple_chunk_t*)initChunk,
-		"add2chunklist()::created init ack chunk  from cookie %u");
 }
 bool cmp_channel(const channel_t& tmp_channel, const channel_t& b)
 {
@@ -3810,10 +3715,10 @@ bool cmp_channel(const channel_t& tmp_channel, const channel_t& b)
  * Creates a new bundling instance and returns a pointer to its data.
  * @return pointer to an instance of the bundling data
  */
-bundle_controller_t* bu_new(void)
+bundle_controller_t* mbu_new(void)
 {
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Enter bu_new()");
+	EVENTLOG(VERBOSE, "- - - - Enter mbu_new()");
 #endif
 
 	bundle_controller_t* bundle_ctrl = NULL;
@@ -3834,7 +3739,7 @@ bundle_controller_t* bu_new(void)
 	bundle_ctrl->sack_position = UDP_GECO_PACKET_FIXED_SIZES;
 
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Leave bu_new()");
+	EVENTLOG(VERBOSE, "- - - - Leave mbu_new()");
 #endif
 	return bundle_ctrl;
 }
@@ -3842,17 +3747,17 @@ bundle_controller_t* bu_new(void)
 
 /////////////////////////////////////////////// Path Management Moudle (pm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 /**
- * pm_new creates a new instance of path management. There is one path management instance per association.
+ * mpath_new creates a new instance of path management. There is one path management instance per association.
  * WATCH IT : this needs to be fixed ! pathData is NULL, but may accidentally be referenced !
  * @param numberOfPaths    number of paths of the association
  * @param primaryPath      initial primary path
  * @param  gecoInstance pointer to the geco instance
  * @return pointer to the newly created path management instance !
  */
-path_controller_t* pm_new(short numberOfPaths, short primaryPath)
+path_controller_t* mpath_new(short numberOfPaths, short primaryPath)
 {
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Enter bu_new()");
+	EVENTLOG(VERBOSE, "- - - - Enter mbu_new()");
 #endif
 
 	assert(curr_channel_ != NULL);
@@ -3874,17 +3779,17 @@ path_controller_t* pm_new(short numberOfPaths, short primaryPath)
 	pmData->rto_max = curr_geco_instance_->default_rtoMax;
 
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Leave bu_new()");
+	EVENTLOG(VERBOSE, "- - - - Leave mbu_new()");
 #endif
 	return pmData;
 }
 /////////////////////////////////////////////// Path Management Moudle (pm) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 
 /////////////////////////////////////////////// State Machina Moudle (sm) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
-smctrl_t* sm_new(void)
+smctrl_t* msm_new(void)
 {
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Enter sm_new()");
+	EVENTLOG(VERBOSE, "- - - - Enter msm_new()");
 #endif
 
 	assert(curr_channel_ != NULL);
@@ -3912,7 +3817,7 @@ smctrl_t* sm_new(void)
 	tmp->instance = curr_geco_instance_;
 	tmp->channel_ptr = curr_channel_;
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Leave sm_new()");
+	EVENTLOG(VERBOSE, "- - - - Leave msm_new()");
 #endif
 	return tmp;
 }
@@ -3935,7 +3840,7 @@ smctrl_t* sm_new(void)
  *  @param  destinationAddressList      pointer to the array of peer's addresses
  *  @return true for success, else for failure
  */
-bool mdis_new_channel(geco_instance_t* instance,
+bool mdi_new_channel(geco_instance_t* instance,
 	ushort local_port,
 	ushort remote_port,
 	uint tagLocal,
@@ -3950,7 +3855,7 @@ bool mdis_new_channel(geco_instance_t* instance,
 	assert(primaryDestinitionAddress < noOfDestinationAddresses);
 
 	EVENTLOG5(VERBOSE,
-		" mdis_new_channel()::Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",
+		" mdi_new_channel()::Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",
 		instance->dispatcher_name, local_port, remote_port, tagLocal,
 		primaryDestinitionAddress);
 
@@ -4031,7 +3936,7 @@ bool mdis_new_channel(geco_instance_t* instance,
 		if (cmp_channel(*curr_channel_, *channelptr))
 		{
 			EVENTLOG(NOTICE,
-				"mdis_new_channel()::tried to alloc an existing channel -> return false !");
+				"mdi_new_channel()::tried to alloc an existing channel -> return false !");
 			geco_free_ext(curr_channel_, __FILE__, __LINE__);
 			curr_channel_ = NULL;
 			return false;
@@ -4049,9 +3954,9 @@ bool mdis_new_channel(geco_instance_t* instance,
 
 	/* only pathman, bundling and sctp-control are created at this point, the rest is created
 	 with mdi_initAssociation */
-	curr_channel_->bundle_control = bu_new();
-	curr_channel_->path_control = pm_new(noOfDestinationAddresses, primaryDestinitionAddress);
-	curr_channel_->state_machine_control = sm_new();
+	curr_channel_->bundle_control = mbu_new();
+	curr_channel_->path_control = mpath_new(noOfDestinationAddresses, primaryDestinitionAddress);
+	curr_channel_->state_machine_control = msm_new();
 	curr_channel_->locally_supported_PRDCTP = instance->supportsPRSCTP;
 	curr_channel_->remotely_supported_PRSCTP = instance->supportsPRSCTP;
 	curr_channel_->locally_supported_ADDIP = instance->supportsADDIP;
@@ -4071,7 +3976,7 @@ bool mdis_new_channel(geco_instance_t* instance,
 		}
 	}
 
-	EVENTLOG1(VERBOSE, "mdis_new_channel()::CHANNEL ID = %d !", curr_channel_->channel_id);
+	EVENTLOG1(VERBOSE, "mdi_new_channel()::CHANNEL ID = %d !", curr_channel_->channel_id);
 	return true;
 }
 
@@ -4109,7 +4014,7 @@ int mch_read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk,
 		no_loc_ipv6_addresses, no_remote_ipv6_addresses);
 #endif
 
-	nAddresses = read_peer_addreslist(temp_addresses,
+	nAddresses = mdis_read_peer_addreslist(temp_addresses,
 		(uchar*)cookiechunk,
 		cookiechunk->chunk_header.chunk_length,
 		curr_geco_instance_->supportedAddressTypes,
@@ -4238,8 +4143,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	 * within the COOKIE ECHO chunk to the actual port numbers and the
 	 * Verification Tag within the SCTP common header of the received
 	 * packet.  If these values do not match, the packet MUST be silently discarded.*/
-	chunk_id_t initCID = build_init_chunk_from_cookie(cookie_echo);
-	chunk_id_t initAckCID = build_init_ack_chunk_from_cookie(cookie_echo);
+	chunk_id_t initCID = mch_make_init_chunk_from_cookie(cookie_echo);
+	chunk_id_t initAckCID = mch_make_init_ack_chunk_from_cookie(cookie_echo);
 	uint cookie_remote_tag = mch_read_itag(initCID);
 	uint cookie_local_tag = mch_read_itag(initAckCID);
 	uint local_tag = mdis_get_local_tag();
@@ -4321,8 +4226,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	if (smctrl == NULL)
 	{
 		EVENTLOG(NOTICE,
-			"process_cookie_echo_chunk(): mdis_read_smctrl() returned NULL -> call mdis_new_channel() !");
-		if (mdis_new_channel(curr_geco_instance_,
+			"process_cookie_echo_chunk(): mdis_read_smctrl() returned NULL -> call mdi_new_channel() !");
+		if (mdi_new_channel(curr_geco_instance_,
 			last_dest_port_,
 			last_src_port_,
 			cookie_local_tag,/*local tag*/
@@ -4330,7 +4235,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			1, /*noOfDestinationAddresses*/
 			last_source_addr_) == false)
 		{
-			EVENTLOG(NOTICE, "mdis_new_channel() failed ! -> discard!");
+			EVENTLOG(NOTICE, "mdi_new_channel() failed ! -> discard!");
 			mch_remove_simple_chunk(cookie_echo_cid);
 			mch_free_simple_chunk(initCID);
 			mch_free_simple_chunk(initAckCID);
@@ -4366,7 +4271,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			mch_read_itsn(initCID),
 			cookie_remote_tag,
 			mch_read_itsn(initAckCID),
-			peer_supports_particial_reliability(cookie_echo),
+			peer_supports_pr(cookie_echo),
 			peer_supports_addip(cookie_echo));
 		smctrl->outbound_stream = mch_read_ostreams(initAckCID);
 		smctrl->inbound_stream = mch_read_instreams(initAckCID);
@@ -4414,7 +4319,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 					mch_read_itsn(initAckCID), /*localInitialTSN*/
 					0,/*primaryAddress*/
 					tmp_peer_addreslist_size_, tmp_peer_addreslist_,
-					peer_supports_particial_reliability(cookie_echo),
+					peer_supports_pr(cookie_echo),
 					peer_supports_addip(cookie_echo)) == 0)
 				{
 					curr_channel_->remote_tag = cookie_remote_tag;
@@ -4477,7 +4382,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 				mch_read_itsn(initCID),
 				cookie_remote_tag,
 				mch_read_itsn(initAckCID),
-				peer_supports_particial_reliability(cookie_echo),
+				peer_supports_pr(cookie_echo),
 				peer_supports_addip(cookie_echo));
 
 			smctrl->outbound_stream = mch_read_ostreams(initAckCID);
@@ -4536,7 +4441,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 					mch_read_itsn(initCID),
 					cookie_remote_tag,
 					mch_read_itsn(initAckCID),
-					peer_supports_particial_reliability(cookie_echo),
+					peer_supports_pr(cookie_echo),
 					peer_supports_addip(cookie_echo));
 
 				smctrl->outbound_stream = mch_read_ostreams(initAckCID);
@@ -4681,7 +4586,7 @@ int mdis_disassemle_packet()
 			case 0x40:  //01
 				read_len = curr_geco_packet_value_len_;
 				//todo
-				handle_ret = send_error_chunk_unrecognized_chunk_type((uchar*)chunk,
+				handle_ret = mdis_send_ecc_unrecognized_chunk((uchar*)chunk,
 					chunk_len);
 #ifdef _DEBUG
 				EVENTLOG(DEBUG,
@@ -4695,7 +4600,7 @@ int mdis_disassemle_packet()
 			case 0xC0:  //11
 				EVENTLOG(DEBUG,
 					" Unknown chunktype -> 11 Skip this chunk and continue processing");
-				handle_ret = send_error_chunk_unrecognized_chunk_type((uchar*)chunk,
+				handle_ret = mdis_send_ecc_unrecognized_chunk((uchar*)chunk,
 					chunk_len);
 				break;
 			default:  // never reach here
@@ -4714,7 +4619,7 @@ int mdis_disassemle_packet()
 		//TODO
 	}
 	return 0;
-	}
+}
 
 channel_t* mdis_find_channel(sockaddrunion * src_addr, ushort src_port, ushort dest_port)
 {
@@ -5496,7 +5401,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 					curr_geco_packet_value_len_
 					== ntohs(
 					((init_chunk_t*)curr_uchar_init_chunk_)->chunk_header.chunk_length));
-				tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
+				tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(tmp_peer_addreslist_,
 					curr_uchar_init_chunk_, curr_geco_packet_value_len_,
 					my_supported_addr_types_, NULL, true, false) - 1;
 				for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
@@ -5523,7 +5428,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 						curr_geco_packet_value_len_
 						== ntohs(
 						((init_chunk_t*)curr_uchar_init_chunk_)->chunk_header.chunk_length));
-					tmp_peer_addreslist_size_ = read_peer_addreslist(tmp_peer_addreslist_,
+					tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(tmp_peer_addreslist_,
 						curr_uchar_init_chunk_, curr_geco_packet_value_len_,
 						my_supported_addr_types_, NULL, true, false) - 1;
 					for (; tmp_peer_addreslist_size_ >= 0; tmp_peer_addreslist_size_--)
@@ -5641,7 +5546,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 			last_init_tag_ = ntohl(init_chunk_fixed_->init_tag);
 			EVENTLOG1(VERBOSE, "Its initiation-tag is %u", last_init_tag_);
 
-			vlparam_fixed_ = (vlparam_fixed_t*)find_vlparam_from_setup_chunk(
+			vlparam_fixed_ = (vlparam_fixed_t*)mch_read_vlparam_init_chunk(
 				curr_uchar_init_chunk_, curr_geco_packet_value_len_,
 				VLPARAM_HOST_NAME_ADDR);
 			if (vlparam_fixed_ != NULL)
@@ -5826,7 +5731,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 				return recv_geco_packet_but_nootb_initack_otherthan_cookiew_state;
 			}
 
-			vlparam_fixed_ = (vlparam_fixed_t*)find_vlparam_from_setup_chunk(
+			vlparam_fixed_ = (vlparam_fixed_t*)mch_read_vlparam_init_chunk(
 				curr_uchar_init_chunk_, curr_geco_packet_value_len_,
 				VLPARAM_HOST_NAME_ADDR);
 			if (vlparam_fixed_ != NULL)
@@ -5988,7 +5893,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 				EVENTLOG(VERBOSE, "curr_geco_instance found -> processing!");
 #endif
 
-				vlparam_fixed_ = (vlparam_fixed_t*)find_vlparam_from_setup_chunk(
+				vlparam_fixed_ = (vlparam_fixed_t*)mch_read_vlparam_init_chunk(
 					curr_uchar_init_chunk_, curr_geco_packet_value_len_,
 					VLPARAM_HOST_NAME_ADDR);
 				if (vlparam_fixed_ != NULL)
@@ -6142,7 +6047,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-}
+	}
 #endif
 
 	mdis_init();
@@ -6154,7 +6059,7 @@ int initialize_library(void)
 		portsSeized[i] = 0;
 	numberOfSeizedPorts = 0x00000000;
 	/* initialize bundling, i.e. the common buffer for sending chunks when no association exists. */
-	default_bundle_ctrl_ = bu_new();
+	default_bundle_ctrl_ = mbu_new();
 	/* this block is to be executed only once for the lifetime of sctp-software */
 	get_secre_key(KEY_INIT);
 	if (!get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
@@ -6540,7 +6445,7 @@ int mulp_connectx(unsigned int instanceid,
 		localPort = curr_geco_instance_->local_port;
 	EVENTLOG1(VERBOSE, "Chose local port %u for associate !", localPort);
 
-	if (mdis_new_channel(curr_geco_instance_,
+	if (mdi_new_channel(curr_geco_instance_,
 		localPort,/* local client port */
 		destinationPort,/* remote server port */
 		mdis_generate_init_tag(),
@@ -6705,7 +6610,7 @@ int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* st
 		status->numberOfAddresses = curr_channel_->remote_addres_size;
 		status->sourcePort = curr_channel_->local_port;
 		status->destPort = curr_channel_->remote_port;
-		status->primaryAddressIndex = mpath_get_primary_path();
+		status->primaryAddressIndex = mpath_read_primary_path();
 		saddr2str(&curr_channel_->remote_addres[status->primaryAddressIndex],
 			(char*)status->primaryDestinationAddress, MAX_IPADDR_STR_LEN, NULL);
 		status->inStreams = mdm_get_istreams();

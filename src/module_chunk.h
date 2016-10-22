@@ -118,6 +118,10 @@ uint mch_read_cookie_life(uint chunkID, bool ignore_cookie_life_spn_from_init_ch
 * VLPARAM_ECN_CAPABLE andVLPARAM_HOST_NAME_ADDR)
 */
 uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len);
+/**
+* only used for finding some vlparam in init or init ack chunks
+* NULL no geco_instance_params, otherwise have geco_instance_params, return vlp fixed*/
+uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type);
 
 
 
@@ -141,14 +145,14 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 
 
 /*
-* swaps length INSIDE the packet and enters chunk into the current list
-* call  mch_remove_simple_chunk() to free
+* swaps length INSIDE the packet and enters chunk into the current list call  mch_remove_simple_chunk() to free
 */
 uchar mch_make_simple_chunk(simple_chunk_t* chunk);
 /**
 * creates a simple chunk except of DATA chunk. It can be used for parameterless
 * chunks like abort, cookieAck and shutdownAck. It can also be used for chunks
-* that have only variable length parameters like the error chunks*/
+* that have only variable length parameters like the error chunks
+*/
 uint mch_make_simple_chunk(uint chunk_type, uchar flag);
 /* makes an initAck and initializes the the fixed part of initAck */
 chunk_id_t mch_make_init_ack_chunk(uint initTag, uint rwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN);
@@ -156,5 +160,7 @@ chunk_id_t mch_make_init_ack_chunk(uint initTag, uint rwnd, ushort noOutStreams,
 chunk_id_t mch_make_init_chunk(uint initTag, uint rwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN);
 chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam);
 error_chunk_t* mch_make_error_chunk();
+chunk_id_t mch_make_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk);
+chunk_id_t mch_make_init_ack_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk);
 
 #endif

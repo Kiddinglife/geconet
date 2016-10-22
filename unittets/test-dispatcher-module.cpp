@@ -61,8 +61,8 @@ extern uint find_chunk_types(uchar* packet_value, uint packet_val_len, uint* tot
 extern int contains_chunk(uint chunk_type, uint chunk_types);
 extern uchar* find_first_chunk_of(uchar * packet_value, uint packet_val_len,
 	uint chunk_type);
-extern uchar* find_vlparam_from_setup_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type);
-extern  int read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+extern uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type);
+extern  int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uchar * chunk, uint len, uint my_supported_addr_types,
 	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr);
 extern bool mdis_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
@@ -963,7 +963,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 	//////////////////////////////////////////////////////////////////////////////
 	uint peersupportedtypes = 0;
 	str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0);
-	ret = read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+	ret = mdis_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
 		offset + INIT_CHUNK_FIXED_SIZES,
 		SUPPORT_ADDRESS_TYPE_IPV4,
 		&peersupportedtypes, true, false);
@@ -982,7 +982,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 	}
 	//////////////////////////////////////////////////////////////////////////////
 	str2saddr(&last_source_addr, "192.168.5.123", 0);
-	ret = read_peer_addreslist(
+	ret = mdis_read_peer_addreslist(
 		peer_addreslist, geco_packet.chunk, offset + INIT_CHUNK_FIXED_SIZES,
 		SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6, NULL, true, false);
 	EXPECT_EQ(ret, 6);
@@ -997,7 +997,7 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 	}
 	EXPECT_TRUE(saddr_equals(&peer_addreslist[5], &last_source_addr, true));
 	str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0);
-	ret = read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+	ret = mdis_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
 		offset + INIT_CHUNK_FIXED_SIZES,
 		SUPPORT_ADDRESS_TYPE_IPV6, NULL, true, false);
 	EXPECT_EQ(ret, 3);  //2 + last_source_addr_ = 3
@@ -1092,14 +1092,14 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 	init_chunk->chunk_header.chunk_length = htons(len);
 	while (len % 4)
 		++len;
-	uchar* ret = find_vlparam_from_setup_chunk(geco_packet.chunk, len,
+	uchar* ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
 		VLPARAM_HOST_NAME_ADDR);
 	EXPECT_EQ(ret, init_chunk->variableParams);
 	//////////////////////////////////////////////////////////////////////////////
-	ret = find_vlparam_from_setup_chunk(geco_packet.chunk, len,
+	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
 		VLPARAM_COOKIE);
 	EXPECT_EQ(ret, (uchar*)NULL);
-	ret = find_vlparam_from_setup_chunk(geco_packet.chunk, len,
+	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
 		VLPARAM_SUPPORTED_ADDR_TYPES);
 	EXPECT_EQ(ret, (uchar*)NULL);
 

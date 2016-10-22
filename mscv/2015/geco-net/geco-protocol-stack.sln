@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol-stack-dll", "proto
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit-tests-ps-lib", "unit-tests\unit-tests.vcxproj", "{1CDE268D-100B-4CE5-8373-F44F055CA9E8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "origin-sctp-src", "origin-sctp-src\origin-sctp-src.vcxproj", "{E2616A5D-DC71-4A51-8E3C-67D897999573}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -55,6 +57,16 @@ Global
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|Win32.Build.0 = Release|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|x64.ActiveCfg = Release|x64
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|x64.Build.0 = Release|x64
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Win32.Build.0 = Debug|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|x64.ActiveCfg = Debug|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Win32.ActiveCfg = Release|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Win32.Build.0 = Release|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

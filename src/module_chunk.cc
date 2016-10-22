@@ -11,6 +11,97 @@ uint simple_chunk_index_ = 0; /* current simple chunk index */
 simple_chunk_t* simple_chunk_t_ptr_ = NULL; /* current simple chunk ptr */
 
 
+
+uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type)
+{
+	/*1) validate packet length*/
+	uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
+	if (setup_chunk == NULL || chunk_len < read_len)
+	{
+		return NULL;
+	}
+
+	/*2) validate chunk id inside this chunk*/
+	init_chunk_t* init_chunk = (init_chunk_t*)setup_chunk;
+	if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
+		&& init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
+	{
+		return NULL;
+	}
+
+	uint len = ntohs(init_chunk->chunk_header.chunk_length);
+	uchar* curr_pos = setup_chunk + read_len;
+
+	ushort vlp_len;
+	uint padding_len;
+	vlparam_fixed_t* vlp;
+
+	/*3) parse all vlparams in this chunk*/
+	while (read_len < len)
+	{
+		EVENTLOG2(VVERBOSE, "find_params_from_setup_chunk() : len==%u, processed_len == %u", len,
+			read_len);
+
+		if (len - read_len < VLPARAM_FIXED_SIZE)
+		{
+			return NULL;
+		}
+
+		vlp = (vlparam_fixed_t*)(curr_pos);
+		vlp_len = ntohs(vlp->param_length);
+		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
+		{
+			return NULL;
+		}
+
+		/*4) find param in this chunk*/
+		if (ntohs(vlp->param_type) == param_type)
+		{
+			EVENTLOG1(VERBOSE, "find_params_from_setup_chunk() : Founf chunk type %d-> return",
+				param_type);
+			return curr_pos;
+		}
+
+		read_len += vlp_len;
+		padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
+		read_len += padding_len;
+		curr_pos = setup_chunk + read_len;
+	}  // while
+
+	return NULL;
+}
+
+inline chunk_id_t mch_make_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
+{
+	assert(cookie_echo_chunk != NULL);
+	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE,
+		__FILE__,
+		__LINE__);
+	if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
+	initChunk->chunk_header.chunk_id = CHUNK_INIT;
+	initChunk->chunk_header.chunk_flags = 0x00;
+	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
+	initChunk->init_fixed = cookie_echo_chunk->cookie.peer_init;
+	return add2chunklist((simple_chunk_t*)initChunk,
+		"add2chunklist()::created initChunk  from cookie %u");
+}
+inline chunk_id_t mch_make_init_ack_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk)
+{
+	assert(cookie_echo_chunk != NULL);
+	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(INIT_CHUNK_TOTAL_SIZE,
+		__FILE__,
+		__LINE__);
+	if (initChunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
+	initChunk->chunk_header.chunk_id = CHUNK_INIT_ACK;
+	initChunk->chunk_header.chunk_flags = 0x00;
+	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
+	initChunk->init_fixed = cookie_echo_chunk->cookie.local_initack;
+	return add2chunklist((simple_chunk_t*)initChunk,
+		"add2chunklist()::created init ack chunk  from cookie %u");
+}
+
 uint mch_read_rwnd(uint chunkID)
 {
 	if (simple_chunks_[chunkID] == NULL)
