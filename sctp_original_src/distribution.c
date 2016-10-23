@@ -4413,11 +4413,11 @@ void mdi_queueStatusChangeNotif(int queueType, int queueId, int queueLen)
    * function to return a pointer to the flow control module of this association
    * @return pointer to the flow control data structure,  null in case of error.
    */
-void* mfc_get(void)
+void* mdi_read_mfc(void)
 {
 	if (curr_channel_ == NULL)
 	{
-		event_log(VVERBOSE, "mfc_get: association not set");
+		event_log(VVERBOSE, "mdi_read_mfc: association not set");
 		return NULL;
 	}
 	else
@@ -4555,11 +4555,11 @@ unsigned int get_curr_channel_id(void)
  * @return   association-ID of the current association;
  *           0 means the association is not set (an error).
  */
-unsigned int mdis_get_local_tag(void)
+unsigned int mdi_read_local_tag(void)
 {
 	if (curr_channel_ == NULL)
 	{
-		error_log(ERROR_MINOR, "mdis_get_local_tag: association not set");
+		error_log(ERROR_MINOR, "mdi_read_local_tag: association not set");
 		return 0;
 	}
 	else
@@ -5196,12 +5196,12 @@ int mdi_getDefaultMaxInitRetransmits(void* sctpInstance)
 	if (sctpInstance == NULL) return -1;
 	else return ((SCTP_instance*)sctpInstance)->default_maxInitRetransmits;
 }
-int mdis_get_rwnd_from_curr_inst()
+int mdi_read_rwnd()
 {
 	if (curr_geco_instance_ == NULL) return -1;
 	else
 	{
-		event_logi(VVERBOSE, " mdis_get_rwnd_from_curr_inst is %u",
+		event_logi(VVERBOSE, " mdi_read_rwnd is %u",
 			curr_geco_instance_->default_myRwnd);
 		return ((SCTP_instance*)curr_geco_instance_)->default_myRwnd;
 	}
@@ -5225,7 +5225,7 @@ int mdi_getDefaultMaxBurst(void)
 	else return (curr_channel_->sctpInstance->default_maxBurst);
 }
 
-int get_default_delay(void* sctpInstance)
+int mdi_read_default_delay(void* sctpInstance)
 {
 	if (sctpInstance == NULL) return -1;
 	else return ((SCTP_instance*)sctpInstance)->default_delay;
@@ -5624,7 +5624,7 @@ unsigned short mdi_restart_channel(unsigned short noOfInStreams,
 	curr_channel_->reliable_transfer_control = rtx_restart_reliable_transfer(
 		curr_channel_->reliable_transfer_control, noOfPaths, localInitialTSN);
 	fc_restart(new_rwnd, localInitialTSN, curr_channel_->maxSendQueue);
-	rxc_restart_receivecontrol(mdis_get_rwnd_from_curr_inst(), remoteInitialTSN);
+	rxc_restart_receivecontrol(mdi_read_rwnd(), remoteInitialTSN);
 
 	withPRSCTP = assocSupportsPRSCTP && curr_channel_->supportsPRSCTP;
 	curr_channel_->peerSupportsPRSCTP = withPRSCTP;

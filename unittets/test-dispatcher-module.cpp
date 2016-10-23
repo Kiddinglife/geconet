@@ -65,7 +65,7 @@ extern uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, u
 extern  int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uchar * chunk, uint len, uint my_supported_addr_types,
 	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr);
-extern bool mdis_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
+extern bool mdi_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
 extern inline uint mch_make_simple_chunk(uint chunk_type, uchar flag);
 extern inline simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
 extern  void mch_free_simple_chunk(uint chunkID);
@@ -1044,26 +1044,26 @@ TEST(DISPATCHER_MODULE, test_contain_local_addr)
 	//////////////////////////////////////////////////////////////////////////////
 	//1) test branch 1 curr geco_inst and curr channel both NULL
 	//1.1) test no local addr presents
-	EXPECT_FALSE(mdis_contain_localhost(local_addres, 3));
-	EXPECT_FALSE(mdis_contain_localhost(local_addres6, 2));
+	EXPECT_FALSE(mdi_contain_localhost(local_addres, 3));
+	EXPECT_FALSE(mdi_contain_localhost(local_addres6, 2));
 	//1.2) test  local addr presents
 	tmpaddr = local_addres[1];
 	str2saddr(&local_addres[1], "127.0.0.1", 0);
-	EXPECT_TRUE(mdis_contain_localhost(local_addres, 3));
+	EXPECT_TRUE(mdi_contain_localhost(local_addres, 3));
 	local_addres[1] = tmpaddr;
 	tmpaddr = local_addres6[1];
 	str2saddr(&local_addres6[1], "::1", 0);
-	EXPECT_TRUE(mdis_contain_localhost(local_addres6, 2));
+	EXPECT_TRUE(mdi_contain_localhost(local_addres6, 2));
 	local_addres6[1] = tmpaddr;
 	//////////////////////////////////////////////////////////////////////////////
 	//2) test branch 2 curr_geco_instance_ NOT NULL
 	curr_geco_instance_ = &inst;
 	//2.1) test local addr in curr gecio inst local addres list
 	tmpaddr = local_addres[1];
-	EXPECT_TRUE(mdis_contain_localhost(&tmpaddr, 1));
+	EXPECT_TRUE(mdi_contain_localhost(&tmpaddr, 1));
 	//2.1) test no local addr in curr gecio inst local addres list
 	str2saddr(&tmpaddr, "221.123.45.12", 0);
-	EXPECT_FALSE(mdis_contain_localhost(&tmpaddr, 1));
+	EXPECT_FALSE(mdi_contain_localhost(&tmpaddr, 1));
 }
 // last run and passed on 22 Agu 2016
 TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)

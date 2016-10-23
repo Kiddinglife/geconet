@@ -159,287 +159,109 @@ bool enable_mock_dispatch_send_geco_packet_;
 bool enable_mock_dispatcher_process_init_chunk_;
 #endif
 
+
+
+/////////////////////////////////////////////////////  msm state machine module /////////////////////////////////////////////////////
+/** this function aborts this association. And optionally adds an error parameter to the ABORT chunk that is sent out. */
+void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen);
+/** get current parameter value for cookieLifeTime @return current value, -1 on erro*/
+int msm_get_cookielife(void);
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 /////////////////////////////////////////////////////  mfc  flow_controller_t /////////////////////////////////////////////////////
-inline flow_controller_t* mfc_get(void)
-{
-	return curr_channel_ == NULL ? NULL : curr_channel_->flow_control;
-}
-inline unsigned int mfc_get_queued_chunks_count(void)
-{
-	flow_controller_t* fc = mfc_get();
-	if (fc == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "mfc_readNumberOfQueuedChunks()::flow control instance not set !");
-		return 0;
-	}
-#ifdef _DEBUG
-	EVENTLOG1(VERBOSE, "mfc_readNumberOfQueuedChunks() returns %u", (uint)fc->chunk_list.size());
-#endif
-	return (uint)fc->chunk_list.size();
-}
 /**
  * Function returns the outstanding byte count value of this association.
  * @return current outstanding_bytes value, else -1
  */
-inline int mfc_get_outstanding_bytes(void)
-{
-	flow_controller_t* fc = mfc_get();
-	if (fc == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "mfc_get_outstanding_bytes()::flow control instance not set !");
-		return -1;
-	}
-	return (int)fc->outstanding_bytes;
-}
+int mfc_get_outstanding_bytes(void);
+unsigned int mfc_get_queued_chunks_count(void);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
 ///////////////////////////////////////////////////  mrtx  reltransfer /////////////////////////////////////////////////////
-inline reltransfer_controller_t* mrtx_get(void)
-{
-	return curr_channel_ == NULL ? NULL : curr_channel_->reliable_transfer_control;
-}
 /**
  * function to return the last a_rwnd value we got from our peer
  * @return  peers advertised receiver window
  */
-unsigned int mrtx_get_peer_rwnd()
-{
-	reltransfer_controller_t *rtx;
-	if ((rtx = mrtx_get()) == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "mrtx_get_peer_rwnd()::reltransfer_controller_t instance not set !");
-		return 0;
-	}
-	EVENTLOG1(VERBOSE, "mrtx_get_peer_rwnd() returns %u", rtx->peer_arwnd);
-	return rtx->peer_arwnd;
-}
+unsigned int mrtx_get_peer_rwnd();
 /**
  * function to set the a_rwnd value when we got it from our peer
  * @param  new_arwnd      peers newly advertised receiver window
  * @return  0 for success, -1 for error*/
-inline int mrtx_set_peer_arwnd(uint new_arwnd)
-{
-	reltransfer_controller_t *rtx;
-	if ((rtx = (reltransfer_controller_t *)mrtx_get()) == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "retransmit_controller_t instance not set !");
-		return -1;
-	}
-	else
-		rtx->peer_arwnd = new_arwnd;
-	EVENTLOG1(VERBOSE, "mrtx_set_peer_arwnd to %u", rtx->peer_arwnd);
-	return 0;
-}
+int mrtx_set_peer_arwnd(uint new_arwnd);
 /**
  * Function returns the number of chunks that are waiting in the queue to be acked
  * @return size of the retransmission queue
  */
-inline unsigned int rtx_get_unacked_chunks_count()
-{
-	reltransfer_controller_t *rtx;
-	if ((rtx = (reltransfer_controller_t *)mrtx_get()) == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "reltransfer_controller_t instance not set !");
-		return -1;
-	}
-	EVENTLOG1(VERBOSE, "rtx_get_unacked_chunks_count() returns %u",
-		rtx->chunk_list_tsn_ascended.size());
-	return rtx->chunk_list_tsn_ascended.size();
-}
+unsigned int rtx_get_unacked_chunks_count();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
 /////////////////////////////   mdm  deliverman_controller_t ///////////////////////////// 
-inline deliverman_controller_t* mdm_get(void)
-{
-	return curr_channel_ == NULL ? NULL : curr_channel_->deliverman_control;
-}
 /**
  * function to return the number of chunks that can be retrieved
  * by the ULP - this function may need to be refined !!!!!!
  */
-int mdm_get_queued_chunks_count()
-{
-	int i, num_of_chunks = 0;
-	deliverman_controller_t* se = (deliverman_controller_t *)mdm_get();
-	if (se == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return -1;
-	}
-	for (i = 0; i < (int)se->numReceiveStreams; i++)
-	{
-		/* Add number of all chunks (i.e. lengths of all pduList lists of all streams */
-		num_of_chunks += se->recv_streams[i].pduList.size();
-	}
-	return num_of_chunks;
-}
-
-inline ushort mdm_get_istreams(void)
-{
-	deliverman_controller_t* se = (deliverman_controller_t *)mdm_get();
-	if (se == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return 0;
-	}
-	return se->numReceiveStreams;
-}
-inline ushort mdm_get_ostreams(void)
-{
-	deliverman_controller_t* se = (deliverman_controller_t *)mdm_get();
-	if (se == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return 0;
-	}
-	return se->numSendStreams;
-}
+int mdm_get_queued_chunks_count();
+ushort mdm_get_istreams(void);
+ushort mdm_get_ostreams(void);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
 ///////////////////////////// mpath  path_controller_t module////////////////////////////////////////
-/**
- * function to return a pointer to the path management module of this association
- * @return  pointer to the pathmanagement data structure, null in case of error.*/
-inline path_controller_t* mpath_get()
-{
-	return curr_channel_ == NULL ? NULL : curr_channel_->path_control;
-}
-inline int mpath_get_rto_initial(void)
-{
-	path_controller_t* pmData = mpath_get();
-	if (pmData == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return -1;
-	}
-	return pmData->rto_initial;
-}
-inline int mpath_get_rto_min(void)
-{
-	path_controller_t* pmData = mpath_get();
-	if (pmData == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return -1;
-	}
-	return pmData->rto_min;
-}
-inline int mpath_get_rto_max(void)
-{
-	path_controller_t* pmData = mpath_get();
-	if (pmData == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return -1;
-	}
-	return pmData->rto_max;
-}
-inline int mpath_get_max_retrans_per_path(void)
-{
-	path_controller_t* pmData = mpath_get();
-	if (pmData == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
-		return -1;
-	}
-	return pmData->max_retrans_per_path;
-}
+int mpath_get_rto_initial(void);
+int mpath_get_rto_min(void);
+int mpath_get_rto_max(void);
+int mpath_get_max_retrans_per_path(void);
 /**
 * pm_readRTO returns the currently set RTO value in msecs for a certain path.
 * @param pathID    index of the address/path
 * @return  path's current RTO
 */
-int mpath_read_rto(short pathID)
-{
-	path_controller_t* pmData = mpath_get();
-	if (pmData == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "Could not get path_controller_t Instance !");
-		return -1;
-	}
+int mpath_read_rto(short pathID);
+int mpath_read_primary_path();
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	if (pathID >= 0 && pathID < pmData->path_num)
-	{
-		if (pmData->path_params == NULL)
-			return pmData->rto_initial;
-		else
-			return pmData->path_params[pathID].rto;
-	}
-	else
-	{
-		ERRLOG(MAJOR_ERROR, "mpath_read_rto(%d): invalid path ID", pathID);
-	}
-	return -1;
-}
-int mpath_read_primary_path()
-{
-	path_controller_t* path_ctrl = mpath_get();
-	if (path_ctrl == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
-		return -1;
-	}
-	return path_ctrl->primary_path;
-}
+
 
 ///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
+/**
+* function to return a pointer to the bundling module of this association
+* @return   pointer to the bundling data structure, null in case of error.*/
+bundle_controller_t* mdi_read_mbu(channel_t* channel = NULL);
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
+reltransfer_controller_t* mdi_read_mrtx(void);
+deliverman_controller_t* mdi_read_mdm(void);
+/**
+* function to return a pointer to the path management module of this association
+* @return  pointer to the pathmanagement data structure, null in case of error.*/
+path_controller_t* mdis_read_mpath();
+flow_controller_t* mdi_read_mfc(void);
 /**
 * function to return a pointer to the state machine controller of this association
 * @return pointer to the SCTP-control data structure, null in case of error.
 */
-inline smctrl_t* mdis_read_smctrl()
-{
-	return curr_channel_ == NULL ? NULL : curr_channel_->state_machine_control;
-}
-/**
-* get current parameter value for cookieLifeTime
-* @return current value, -1 on error
-*/
-inline int msm_get_cookielife(void)
-{
-	smctrl_t* smctrl_ = mdis_read_smctrl();
-	if (smctrl_ == NULL)
-	{
-		EVENTLOG(DEBUG, "msm_get_cookielife():  get state machine ctrl is NULL -> use default timespan 10000ms !");
-		return DEFAULT_COOKIE_LIFE_SPAN;
-	}
-	return smctrl_->cookie_lifetime;
-}
-inline uint mdis_get_local_tag()
-{
-	return curr_channel_ == NULL ? 0 : curr_channel_->local_tag;
-}
-inline uint mdis_get_remote_tag()
-{
-	return curr_channel_ == NULL ? 0 : curr_channel_->remote_tag;
-}
-inline unsigned int mdis_get_supported_addr_types(void)
-{
-	return curr_geco_instance_ == NULL ? 0 : curr_geco_instance_->supportedAddressTypes;
-}
+smctrl_t* mdi_read_smctrl();
+uint mdi_read_local_tag();
+uint mdi_read_remote_tag();
+unsigned int mdi_read_supported_addr_types(void);
 /**
 * @todo use safe random generator
 * generates a random tag value for a new association, but not 0
 * @return   generates a random tag value for a new association, but not 0
 */
-inline uint mdis_generate_init_tag(void)
-{
-	uint tag;
-	do
-	{
-		tag = generate_random_uint32();
-	} while (tag == 0);
-	return tag;
-}
-int mdis_get_rwnd_from_curr_inst()
-{
-	return (curr_geco_instance_ == NULL) ? -1 : curr_geco_instance_->default_myRwnd;
-}
-int get_default_delay(geco_instance_t* geco_instance)
-{
-	return (geco_instance == NULL) ? -1 : geco_instance->default_delay;
-}
-
+inline uint mdi_generate_itag(void);
+int mdi_read_rwnd();
+int mdi_read_default_delay(geco_instance_t* geco_instance);
 /**
 * @brief Copies local addresses of this instance into the array passed as parameter.
 * @param [out] local_addrlist
@@ -448,15 +270,15 @@ int get_default_delay(geco_instance_t* geco_instance)
 * number of addresses that local host/current channel has.
 * @pre either of current channel and current geco instance MUST present.
 */
-int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
+int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
 	bool receivedFromPeer);
 /**
 *check if local addr is found, return  ip4or6 loopback if found,
 *  otherwise return  the ones same to stored in inst localaddrlist
 */
-MYSTATIC bool mdis_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
-int mdis_send_bundled_chunks(int * ad_idx = NULL);
+MYSTATIC bool mdi_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
+int mdi_send_bundled_chunks(int * ad_idx = NULL);
 void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
 /**
 * Defines the callback function that is called when an (INIT, COOKIE, SHUTDOWN etc.) timer expires.
@@ -478,18 +300,771 @@ void msm_connect(unsigned short noOfOutStreams,
 	unsigned short noOfInStreams,
 	union sockaddrunion *destinationList,
 	unsigned int numDestAddresses);
+/**
+*  deletes the current chanel.
+*  The chanel will not be deleted at once, but is only marked for deletion. This is done in
+*  this way to allow other modules to finish their current activities. To prevent them to start
+*  new activities, the currentAssociation pointer is set to NULL.
+*/
+void mdi_delete_curr_channel();
+/**
+* Clear the global association data.
+*  This function must be called after the association retrieved from the list
+*  with setAssociationData is no longer needed. This is the case after a time
+*  event has been handled.
+*/
+void mdi_clear_current_channel();
+/**
+* indicates that communication was lost to peer (chapter 10.2.E).
+* Calls the respective ULP callback function.
+* @param  status  type of event, that has caused the association to be terminated
+*/
+void mdi_cb_connection_lost(uint status);
+/**
+* helper function, that simply sets the chunksSent flag of this path management instance to true
+* @param path_param_id  index of the address, where flag is set*/
+void mdi_data_chunk_set_sent_flag(int path_param_id);
+/**
+* function called by bundling when a SACK is actually sent, to stop
+* a possibly running  timer*/
+void mdi_stop_sack_timer(void);
+/**
+* Allow sender to send data right away
+* when all received chunks have been diassembled completely.
+* @example
+* firstly, lock_bundle_ctrl() when disassembling received chunks;
+* then, generate and bundle outging chunks like sack, data or ctrl chunks;
+* the bundle() will interally force sending all chunks if the bundle are full.
+* then, excitely call send all bundled chunks;
+* finally, mdi_unlock_bundle_ctrl(dest addr);
+* will send all bundled chunks automatically to the specified dest addr
+* ad_idx = -1, send to last_source_addr
+* ad_idx = -2, send to primary path
+* ad_idx >0, send to the specified path as dest addr
+*/
+void mdi_unlock_bundle_ctrl(int* ad_idx = NULL);
+/**
+pm_disableHB is called to disable heartbeat for one specific path id.
+@param  pathID index of  address, where HBs should not be sent anymore
+@return error code: 0 for success, 1 for error (i.e. pathID too large)
+*/
+int mdi_stop_hb_timer(short pathID);
 /////////////////////////////////////////  mdis  dispatcher module  /////////////////////////////////////////
 
 
 
 
-
-
-
-
-
 //\\ IMPLEMENTATIONS \\//
-bool mdis_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
+inline unsigned int mfc_get_queued_chunks_count(void)
+{
+	flow_controller_t* fc = mdi_read_mfc();
+	if (fc == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "mfc_readNumberOfQueuedChunks()::flow control instance not set !");
+		return 0;
+	}
+#ifdef _DEBUG
+	EVENTLOG1(VERBOSE, "mfc_readNumberOfQueuedChunks() returns %u", (uint)fc->chunk_list.size());
+#endif
+	return (uint)fc->chunk_list.size();
+}
+inline int mfc_get_outstanding_bytes(void)
+{
+	flow_controller_t* fc = mdi_read_mfc();
+	if (fc == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "mfc_get_outstanding_bytes()::flow control instance not set !");
+		return -1;
+	}
+	return (int)fc->outstanding_bytes;
+}
+
+
+
+inline unsigned int mrtx_get_peer_rwnd()
+{
+	reltransfer_controller_t *rtx;
+	if ((rtx = mdi_read_mrtx()) == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "mrtx_get_peer_rwnd()::reltransfer_controller_t instance not set !");
+		return 0;
+	}
+	EVENTLOG1(VERBOSE, "mrtx_get_peer_rwnd() returns %u", rtx->peer_arwnd);
+	return rtx->peer_arwnd;
+}
+inline int mrtx_set_peer_arwnd(uint new_arwnd)
+{
+	reltransfer_controller_t *rtx;
+	if ((rtx = (reltransfer_controller_t *)mdi_read_mrtx()) == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "retransmit_controller_t instance not set !");
+		return -1;
+	}
+	else
+		rtx->peer_arwnd = new_arwnd;
+	EVENTLOG1(VERBOSE, "mrtx_set_peer_arwnd to %u", rtx->peer_arwnd);
+	return 0;
+}
+inline unsigned int rtx_get_unacked_chunks_count()
+{
+	reltransfer_controller_t *rtx;
+	if ((rtx = (reltransfer_controller_t *)mdi_read_mrtx()) == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "reltransfer_controller_t instance not set !");
+		return -1;
+	}
+	EVENTLOG1(VERBOSE, "rtx_get_unacked_chunks_count() returns %u",
+		rtx->chunk_list_tsn_ascended.size());
+	return rtx->chunk_list_tsn_ascended.size();
+}
+
+
+
+inline int mdm_get_queued_chunks_count()
+{
+	int i, num_of_chunks = 0;
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdm();
+	if (se == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return -1;
+	}
+	for (i = 0; i < (int)se->numReceiveStreams; i++)
+	{
+		/* Add number of all chunks (i.e. lengths of all pduList lists of all streams */
+		num_of_chunks += se->recv_streams[i].pduList.size();
+	}
+	return num_of_chunks;
+}
+inline ushort mdm_get_istreams(void)
+{
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdm();
+	if (se == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return 0;
+	}
+	return se->numReceiveStreams;
+}
+inline ushort mdm_get_ostreams(void)
+{
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdm();
+	if (se == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return 0;
+	}
+	return se->numSendStreams;
+}
+
+
+
+inline int mpath_get_rto_initial(void)
+{
+	path_controller_t* pmData = mdis_read_mpath();
+	if (pmData == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return -1;
+	}
+	return pmData->rto_initial;
+}
+inline int mpath_get_rto_min(void)
+{
+	path_controller_t* pmData = mdis_read_mpath();
+	if (pmData == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return -1;
+	}
+	return pmData->rto_min;
+}
+inline int mpath_get_rto_max(void)
+{
+	path_controller_t* pmData = mdis_read_mpath();
+	if (pmData == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return -1;
+	}
+	return pmData->rto_max;
+}
+inline int mpath_get_max_retrans_per_path(void)
+{
+	path_controller_t* pmData = mdis_read_mpath();
+	if (pmData == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
+		return -1;
+	}
+	return pmData->max_retrans_per_path;
+}
+inline int mpath_read_rto(short pathID)
+{
+	path_controller_t* pmData = mdis_read_mpath();
+	if (pmData == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "Could not get path_controller_t Instance !");
+		return -1;
+	}
+
+	if (pathID >= 0 && pathID < pmData->path_num)
+	{
+		if (pmData->path_params == NULL)
+			return pmData->rto_initial;
+		else
+			return pmData->path_params[pathID].rto;
+	}
+	else
+	{
+		ERRLOG(MAJOR_ERROR, "mpath_read_rto(%d): invalid path ID", pathID);
+	}
+	return -1;
+}
+inline int mpath_read_primary_path()
+{
+	path_controller_t* path_ctrl = mdis_read_mpath();
+	if (path_ctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
+		return -1;
+	}
+	return path_ctrl->primary_path;
+}
+
+
+
+inline int msm_get_cookielife(void)
+{
+	smctrl_t* smctrl_ = mdi_read_smctrl();
+	if (smctrl_ == NULL)
+	{
+		EVENTLOG(DEBUG, "msm_get_cookielife():  get state machine ctrl is NULL -> use default timespan 10000ms !");
+		return DEFAULT_COOKIE_LIFE_SPAN;
+	}
+	return smctrl_->cookie_lifetime;
+}
+MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* unused)
+{
+	// retrieve association from list 
+	curr_channel_ = channels_[*(int*)&associationID];
+	if (curr_channel_ == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "init timer expired but association %u does not exist -> return");
+		return false;
+	}
+	curr_geco_instance_ = curr_channel_->geco_inst;
+
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "no smctrl with channel presents -> return");
+		return false;
+	}
+
+	ushort primary_path = mpath_read_primary_path();
+	EVENTLOG3(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, PrimaryPath=%u",
+		(*(unsigned int *)associationID), smctrl->channel_state, primary_path);
+
+	switch (smctrl->channel_state) //TODO
+	{
+	case CookieWait:
+		break;
+	case CookieEchoed:
+		break;
+	case ShutdownSent:
+		break;
+	case ShutdownAckSent:
+		break;
+	default:
+		ERRLOG1(MAJOR_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
+		smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+		break;
+	}
+	return false;
+}
+void msm_connect(unsigned short noOfOutStreams,
+	unsigned short noOfInStreams,
+	union sockaddrunion *destinationList,
+	unsigned int numDestAddresses)
+{
+	smctrl_t* smctrl;
+	if ((smctrl = mdi_read_smctrl()) == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "read smctrl_ failed");
+		return;
+	}
+	if (smctrl->channel_state == ChannelState::Closed)
+	{
+		EVENTLOG(VERBOSE, "event: msm_connect() in state CLOSED");
+		chunk_id_t initCID = (mdi_read_local_tag(), mdi_read_rwnd(),
+			noOfOutStreams, noOfInStreams, mdi_generate_itag());
+
+		/* store the number of streams */
+		smctrl->outbound_stream = noOfOutStreams;
+		smctrl->inbound_stream = noOfInStreams;
+
+		mch_write_vlp_of_init_chunk(initCID, VLPARAM_UNRELIABILITY);
+		my_supported_addr_types_ = mdi_read_supported_addr_types();
+		mch_write_vlp_supportedaddrtypes(initCID, my_supported_addr_types_ & SUPPORT_ADDRESS_TYPE_IPV4,
+			my_supported_addr_types_ & SUPPORT_ADDRESS_TYPE_IPV6, false);
+		ushort nlAddresses;
+		union sockaddrunion lAddresses[MAX_NUM_ADDRESSES];
+		mdi_validate_localaddrs_before_write_to_init(lAddresses, destinationList, numDestAddresses, my_supported_addr_types_, false);
+		mch_write_vlp_addrlist(initCID, lAddresses, nlAddresses);
+
+		simple_chunk_t* myinit = mch_complete_simple_chunk(initCID);
+		smctrl->my_init_chunk = (init_chunk_t*)myinit;
+		mch_remove_simple_chunk(initCID);
+
+		/* send init chunk */
+		for (int count = 0; count < (int)numDestAddresses; count++)
+		{
+			mdis_bundle_ctrl_chunk(myinit, &count);
+			mdi_send_bundled_chunks(&count);
+		}
+
+		// init smctrl
+		smctrl->cookieChunk = NULL;
+		smctrl->local_tie_tag = 0;
+		smctrl->peer_tie_tag = 0;
+		smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
+
+		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+		{  // stop t1-init timer
+			mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+			smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+		}
+		// start T1 init timer 
+		smctrl->init_timer_id = mdis_timer_mgr_.add_timer(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, (void*)&smctrl->channel_id, NULL);
+		smctrl->channel_state = ChannelState::CookieWait;
+	}
+	else
+	{
+		ERRLOG(MAJOR_ERROR, "msm_connect()::ChannelState::Closed !");
+		return;
+	}
+}
+void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
+{
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "msm_abort_channel()::smctrl failed");
+		return;
+	}
+
+	bool removed = false;
+	if (smctrl->channel_state == ChannelState::Closed)
+	{
+		EVENTLOG(DEBUG, "event: abort in state CLOSED");
+		mdi_delete_curr_channel();
+		mdi_clear_current_channel();
+		return;
+	}
+
+	chunk_id_t abortcid = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
+	if (error_type > 0) mch_write_error_cause(abortcid, error_type, errordata, errordattalen);
+	mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abortcid));
+	mch_free_simple_chunk(abortcid);
+	mdi_unlock_bundle_ctrl();
+	mdi_send_bundled_chunks();
+	if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+	{  //stop init timer
+		mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+		smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+	}
+	// delete all data of channel
+	mdi_delete_curr_channel();
+	removed = true;
+
+	if (removed)
+	{
+		mdi_cb_connection_lost(ConnectionLostReason::PeerAbortConnection);
+		mdi_clear_current_channel();
+	}
+}
+
+
+
+inline reltransfer_controller_t* mdi_read_mrtx(void)
+{
+	return curr_channel_ == NULL ? NULL : curr_channel_->reliable_transfer_control;
+}
+inline deliverman_controller_t* mdi_read_mdm(void)
+{
+	return curr_channel_ == NULL ? NULL : curr_channel_->deliverman_control;
+}
+inline path_controller_t* mdis_read_mpath()
+{
+	return curr_channel_ == NULL ? NULL : curr_channel_->path_control;
+}
+inline flow_controller_t* mdi_read_mfc(void)
+{
+	return curr_channel_ == NULL ? NULL : curr_channel_->flow_control;
+}
+inline smctrl_t* mdi_read_smctrl()
+{
+	return curr_channel_ == NULL ? NULL : curr_channel_->state_machine_control;
+}
+inline int mdi_read_rwnd()
+{
+	return (curr_geco_instance_ == NULL) ? -1 : curr_geco_instance_->default_myRwnd;
+}
+inline int mdi_read_default_delay(geco_instance_t* geco_instance)
+{
+	return (geco_instance == NULL) ? -1 : geco_instance->default_delay;
+}
+inline uint mdi_read_local_tag()
+{
+	return curr_channel_ == NULL ? 0 : curr_channel_->local_tag;
+}
+inline uint mdi_read_remote_tag()
+{
+	return curr_channel_ == NULL ? 0 : curr_channel_->remote_tag;
+}
+inline unsigned int mdi_read_supported_addr_types(void)
+{
+	return curr_geco_instance_ == NULL ? 0 : curr_geco_instance_->supportedAddressTypes;
+}
+int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+	uchar * chunk, uint len, uint my_supported_addr_types,
+	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr)
+{
+	EVENTLOG(DEBUG, "- - - Enter mdis_read_peer_addreslist()");
+
+	/*1) validate method input geco_instance_params*/
+	uint read_len;
+	int found_addr_number;
+	found_addr_number = 0;
+	if (chunk == NULL || peer_addreslist == NULL || len < read_len)
+	{
+		found_addr_number = -1;
+		EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
+		return found_addr_number;
+	}
+
+	/*2) validate chunk id inside this chunk*/
+	simple_chunk_t* init_chunk = (simple_chunk_t*)chunk;
+	if (init_chunk->chunk_header.chunk_id == CHUNK_INIT
+		|| init_chunk->chunk_header.chunk_id == CHUNK_INIT_ACK)
+	{
+		read_len = INIT_CHUNK_FIXED_SIZES;
+	}
+	else if (init_chunk->chunk_header.chunk_id == CHUNK_COOKIE_ECHO)
+	{
+		read_len = CHUNK_FIXED_SIZE + COOKIE_FIXED_SIZE;
+	}
+	else
+	{
+		found_addr_number = -1;
+		EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
+		return found_addr_number;
+	}
+
+	uchar* curr_pos;
+	curr_pos = chunk + read_len;
+
+	uint vlp_len;
+	vlparam_fixed_t* vlp;
+	ip_address_t* addres;
+	bool is_new_addr;
+	int idx;
+	IPAddrType flags;
+
+	/*3) parse all vlparams in this chunk*/
+	while (read_len < len)
+	{
+		EVENTLOG2(VVERBOSE, "mdis_read_peer_addreslist() : len==%u, processed_len == %u", len, read_len);
+
+		if (len - read_len < VLPARAM_FIXED_SIZE)
+		{
+			EVENTLOG(WARNNING_ERROR,
+				"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
+			found_addr_number = -1;
+			EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
+			return found_addr_number;
+		}
+
+		vlp = (vlparam_fixed_t*)curr_pos;
+		vlp_len = ntohs(vlp->param_length);
+		// vlp length too short or patial vlp problem
+		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
+		{
+			found_addr_number = -1;
+			EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
+			return found_addr_number;
+		}
+
+		ushort paratype = ntohs(vlp->param_type);
+		/* determine the falgs from last source addr
+		* then this falg will be used to validate other found addres*/
+		if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
+		{
+			bool b1, b2, b3;
+			if (!(b1 = mdi_contain_localhost(last_source_addr_, 1)))
+			{
+				/* this is from a normal address,
+				* furtherly filter out except loopbacks */
+				if ((b2 = typeofaddr(last_source_addr_, LinkLocalAddrType)))  //
+				{
+					flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
+				}
+				else if ((b3 = typeofaddr(last_source_addr_, SiteLocalAddrType)))  // filtered
+				{
+					flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType);
+				}
+				else
+				{
+					flags = (IPAddrType)(AllCastAddrTypes | AllLocalAddrTypes);
+				}
+			}
+			else
+			{
+				/* this is from a loopback, use default flag*/
+				flags = AllCastAddrTypes;
+			}
+			EVENTLOG3(DEBUG, "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d", b1, b2,
+				b3);
+		}
+
+		/*4) validate received addresses in this chunk*/
+		switch (paratype)
+		{
+		case VLPARAM_IPV4_ADDRESS:
+			if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4))
+			{  // use peer addrlist that we can support, ignoring unsupported addres
+			   // validate if exceed max num addres allowed
+				if (found_addr_number < MAX_NUM_ADDRESSES)
+				{
+					addres = (ip_address_t*)curr_pos;
+					// validate vlp type and length
+					if (IS_IPV4_ADDRESS_PTR_NBO(addres))
+					{
+						uint ip4_saddr = ntohl(addres->dest_addr_un.ipv4_addr);
+						// validate addr itself
+						if (!IN_CLASSD(ip4_saddr) && !IN_EXPERIMENTAL(ip4_saddr)
+							&& !IN_BADCLASS(ip4_saddr) && INADDR_ANY != ip4_saddr
+							&& INADDR_BROADCAST != ip4_saddr)
+						{
+							peer_addreslist[found_addr_number].sa.sa_family =
+								AF_INET;
+							peer_addreslist[found_addr_number].sin.sin_port = 0;
+							peer_addreslist[found_addr_number].sin.sin_addr.s_addr =
+								addres->dest_addr_un.ipv4_addr;
+
+							if (!typeofaddr(
+								&peer_addreslist[found_addr_number],
+								flags))  // NOT contains the addr type of [flags]
+							{
+								//current addr duplicated with a previous found addr?
+								is_new_addr = true;  // default as new addr
+								if (ignore_dups)
+								{
+									for (idx = 0; idx < found_addr_number; idx++)
+									{
+										if (saddr_equals(&peer_addreslist[found_addr_number],
+											&peer_addreslist[idx], true))
+										{
+											is_new_addr = false;
+										}
+									}
+								}
+
+								if (is_new_addr)
+								{
+									found_addr_number++;
+									if (peer_supported_addr_types != NULL) (*peer_supported_addr_types) |=
+										SUPPORT_ADDRESS_TYPE_IPV4;
+#ifdef _DEBUG
+									saddr2str(&peer_addreslist[found_addr_number - 1], hoststr_,
+										sizeof(hoststr_), 0);
+									EVENTLOG1(VERBOSE, "Found NEW IPv4 Address = %s", hoststr_);
+#endif
+								}
+								else
+								{
+									EVENTLOG(VERBOSE,
+										"IPv4 was in the INIT or INIT ACK chunk more than once");
+								}
+							}
+						}
+					}
+					else  // IS_IPV4_ADDRESS_PTR_HBO(addres) == false
+					{
+						ERRLOG(MAJOR_ERROR, "ip4 vlp has problem, stop read addresses");
+						break;
+					}
+				}
+			}
+			break;
+		case VLPARAM_IPV6_ADDRESS:
+			if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV6))
+			{  // use peer addrlist that we can support, ignoring unsupported addres
+			   /*6) pass by other validates*/
+				if (found_addr_number < MAX_NUM_ADDRESSES)
+				{
+					addres = (ip_address_t*)curr_pos;
+					if (IS_IPV6_ADDRESS_PTR_NBO(addres))
+					{
+#ifdef WIN32
+						if (!IN6_IS_ADDR_UNSPECIFIED(
+							&addres->dest_addr_un.ipv6_addr) && !IN6_IS_ADDR_MULTICAST(&addres->dest_addr_un.ipv6_addr)
+							&& !IN6_IS_ADDR_V4COMPAT(&addres->dest_addr_un.ipv6_addr))
+#else
+						if (!IN6_IS_ADDR_UNSPECIFIED(
+							addres->dest_addr_un.ipv6_addr.s6_addr) && !IN6_IS_ADDR_MULTICAST(addres->dest_addr_un.ipv6_addr.s6_addr)
+							&& !IN6_IS_ADDR_V4COMPAT(addres->dest_addr_un.ipv6_addr.s6_addr))
+#endif
+						{
+
+							// fillup addrr
+							peer_addreslist[found_addr_number].sa.sa_family =
+								AF_INET6;
+							peer_addreslist[found_addr_number].sin6.sin6_port = 0;
+							peer_addreslist[found_addr_number].sin6.sin6_flowinfo = 0;
+#ifdef HAVE_SIN6_SCOPE_ID
+							foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
+#endif
+							memcpy(peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr,
+								&(addres->dest_addr_un.ipv6_addr), sizeof(struct in6_addr));
+
+							if (!typeofaddr(
+								&peer_addreslist[found_addr_number],
+								flags))  // NOT contains the addr type of [flags]
+							{
+								// current addr duplicated with a previous found addr?
+								is_new_addr = true;  // default as new addr
+								if (ignore_dups)
+								{
+									for (idx = 0; idx < found_addr_number; idx++)
+									{
+										if (saddr_equals(&peer_addreslist[found_addr_number],
+											&peer_addreslist[idx], true))
+										{
+											is_new_addr = false;
+										}
+									}
+								}
+
+								if (is_new_addr)
+								{
+									found_addr_number++;
+									if (peer_supported_addr_types != NULL) (*peer_supported_addr_types) |=
+										SUPPORT_ADDRESS_TYPE_IPV6;
+#ifdef _DEBUG
+									saddr2str(&peer_addreslist[found_addr_number - 1], hoststr_,
+										sizeof(hoststr_), 0);
+									EVENTLOG1(VERBOSE, "Found NEW IPv6 Address = %s", hoststr_);
+#endif
+								}
+								else
+								{
+									EVENTLOG(VERBOSE,
+										"IPv6 was in the INIT or INIT ACK chunk more than once");
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					ERRLOG(WARNNING_ERROR, "Too many addresses found during IPv4 reading");
+				}
+			}
+			break;
+		case VLPARAM_SUPPORTED_ADDR_TYPES:
+			if (peer_supported_addr_types != NULL)
+			{
+				supported_address_types_t* sat = (supported_address_types_t*)curr_pos;
+				int size = ((vlp_len - VLPARAM_FIXED_SIZE) / sizeof(ushort)) - 1;
+				while (size >= 0)
+				{
+					*peer_supported_addr_types |=
+						ntohs(sat->address_type[size]) == VLPARAM_IPV4_ADDRESS ?
+						SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
+					size--;
+				}
+				EVENTLOG1(VERBOSE,
+					"Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
+					*peer_supported_addr_types);
+			}
+			break;
+		}
+		read_len += vlp_len;
+		while (read_len & 3)
+			++read_len;
+		curr_pos = chunk + read_len;
+	}  // while
+
+	   // we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
+	if (!ignore_last_src_addr)
+	{
+		is_new_addr = true;
+		for (idx = 0; idx < found_addr_number; idx++)
+		{
+			if (saddr_equals(last_source_addr_, &peer_addreslist[idx], true))
+			{
+				is_new_addr = false;
+			}
+		}
+
+		if (is_new_addr)
+		{
+			// always add last_source_addr as it is from received packet
+			// which means the path is active on that address
+			// if exceed MAX_NUM_ADDRESSES, we rewrite the last addr by last_source_addr
+			if (found_addr_number >= MAX_NUM_ADDRESSES)
+			{
+				found_addr_number = MAX_NUM_ADDRESSES - 1;
+
+			}
+			if (peer_supported_addr_types != NULL)
+			{
+				switch (saddr_family(last_source_addr_))
+				{
+				case AF_INET:
+					(*peer_supported_addr_types) |=
+						SUPPORT_ADDRESS_TYPE_IPV4;
+					break;
+				case AF_INET6:
+					(*peer_supported_addr_types) |=
+						SUPPORT_ADDRESS_TYPE_IPV6;
+					break;
+				default:
+					ERRLOG(FALTAL_ERROR_EXIT, "no such addr family!");
+					break;
+				}
+			}
+			if ((last_source_addr_->sa.sa_family == AF_INET ?
+				SUPPORT_ADDRESS_TYPE_IPV4 :
+				SUPPORT_ADDRESS_TYPE_IPV6)
+				& my_supported_addr_types)
+			{
+				memcpy(&peer_addreslist[found_addr_number], last_source_addr_,
+					sizeof(sockaddrunion));
+				EVENTLOG2(VERBOSE,
+					"Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",
+					found_addr_number, found_addr_number + 1);
+				found_addr_number++;
+			}
+		}
+	}
+
+	EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
+	return found_addr_number;
+}
+
+inline uint mdi_generate_itag(void)
+{
+	uint tag;
+	do
+	{
+		tag = generate_random_uint32();
+	} while (tag == 0);
+	return tag;
+}
+bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 {
 	bool ret = false;
 	uint ii;
@@ -579,24 +1154,24 @@ bool mdis_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 	}
 	return ret;
 }
-int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
+int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
 	bool receivedFromPeer)
 {
-	EVENTLOG(VERBOSE, "- - - Enter mdis_validate_localaddrs_before_write_to_init()");
+	EVENTLOG(VERBOSE, "- - - Enter mdi_validate_localaddrs_before_write_to_init()");
 
 	/*1) make sure either curr channel or curr geco instance presents */
 	if (curr_channel_ == NULL && curr_geco_instance_ == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"dispatch_layer_t::mdis_validate_localaddrs_before_write_to_init()::neither assoc nor instance set - error !");
+			"dispatch_layer_t::mdi_validate_localaddrs_before_write_to_init()::neither assoc nor instance set - error !");
 		return -1;
 	}
 
 	if (curr_geco_instance_ == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"mdis_validate_localaddrs_before_write_to_init():: curr_geco_instance_ not set - program error");
+			"mdi_validate_localaddrs_before_write_to_init():: curr_geco_instance_ not set - program error");
 		return -1;
 	}
 
@@ -613,7 +1188,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	bool localHostFound = false, linkLocalFound = false, siteLocalFound = false;
 	for (count = 0; count < numPeerAddresses; count++)
 	{
-		localHostFound = mdis_contain_localhost(peerAddress + count, 1);
+		localHostFound = mdi_contain_localhost(peerAddress + count, 1);
 		linkLocalFound = ::typeofaddr(peerAddress + count, LinkLocalAddrType);
 		siteLocalFound = ::typeofaddr(peerAddress + count, SiteLocalAddrType);
 	}
@@ -631,7 +1206,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 		filterFlags = AllCastAddrTypes;
 #ifdef _DEBUG
 		EVENTLOG(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init():: 3.1) I sent an INIT with my addresses to myself ->  filterFlags = AllCastAddrTypes;");
+			"mdi_validate_localaddrs_before_write_to_init():: 3.1) I sent an INIT with my addresses to myself ->  filterFlags = AllCastAddrTypes;");
 #endif
 	}
 	else if (receivedFromPeer == false && localHostFound == false)
@@ -645,7 +1220,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 		filterFlags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
 #ifdef _DEBUG
 		EVENTLOG(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init()::  3.2) I sent an INIT with my addresses to peer hosts other than myself - >  filterFlags = (IPAddrType) ( AllCastAddrTypes | LoopBackAddrType )");
+			"mdi_validate_localaddrs_before_write_to_init()::  3.2) I sent an INIT with my addresses to peer hosts other than myself - >  filterFlags = (IPAddrType) ( AllCastAddrTypes | LoopBackAddrType )");
 #endif
 	}
 	else if (receivedFromPeer == true && localHostFound == false)
@@ -668,7 +1243,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 		}
 #ifdef _DEBUG
 		EVENTLOG(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init():: 3.3) I received an INIT with addresses from others which is a normal case. -> unknwn");
+			"mdi_validate_localaddrs_before_write_to_init():: 3.3) I received an INIT with addresses from others which is a normal case. -> unknwn");
 #endif
 	}
 	else  // (receivedFromPeer == true && localHostFound == true)
@@ -681,7 +1256,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 		filterFlags = AllCastAddrTypes;
 #ifdef _DEBUG
 		EVENTLOG(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init():: 3.4) I received an INIT with addresses from myself -> filterFlags = AllCastAddrTypes");
+			"mdi_validate_localaddrs_before_write_to_init():: 3.4) I received an INIT with addresses from myself -> filterFlags = AllCastAddrTypes");
 #endif
 	}
 #ifdef _DEBUG
@@ -713,7 +1288,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 #ifdef _DEBUG
 		ip4count = count;
 		EVENTLOG2(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init(): picked up and copied %u local ip4 addresses from INADDR_ANY (defaultlocaladdrlistsize_ %u)",
+			"mdi_validate_localaddrs_before_write_to_init(): picked up and copied %u local ip4 addresses from INADDR_ANY (defaultlocaladdrlistsize_ %u)",
 			ip4count,
 			defaultlocaladdrlistsize_);
 #endif
@@ -742,7 +1317,7 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 		}
 #ifdef _DEBUG
 		EVENTLOG2(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init(): picked up and copied %u local ip6 addresses from INADDR6_ANY (defaultlocaladdrlistsize_ %u)",
+			"mdi_validate_localaddrs_before_write_to_init(): picked up and copied %u local ip6 addresses from INADDR6_ANY (defaultlocaladdrlistsize_ %u)",
 			count - ip4count,
 			defaultlocaladdrlistsize_);
 #endif
@@ -786,228 +1361,31 @@ int mdis_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 			}
 			else
 			{
-				ERRLOG(FALTAL_ERROR_EXIT, "mdis_validate_localaddrs_before_write_to_init(): no such af !");
+				ERRLOG(FALTAL_ERROR_EXIT, "mdi_validate_localaddrs_before_write_to_init(): no such af !");
 			}
 		}
 #ifdef _DEBUG
 		EVENTLOG2(DEBUG,
-			"mdis_validate_localaddrs_before_write_to_init(): found %u local addresses from inst local addr list (from %u)",
+			"mdi_validate_localaddrs_before_write_to_init(): found %u local addresses from inst local addr list (from %u)",
 			count, curr_geco_instance_->local_addres_size);
 #endif
 	}
 
 	if (count == 0)
-		ERRLOG(FALTAL_ERROR_EXIT, "mdis_validate_localaddrs_before_write_to_init(): found no addres!");
+		ERRLOG(FALTAL_ERROR_EXIT, "mdi_validate_localaddrs_before_write_to_init(): found no addres!");
 
-	EVENTLOG(VERBOSE, "- - - Leave mdis_validate_localaddrs_before_write_to_init()");
+	EVENTLOG(VERBOSE, "- - - Leave mdi_validate_localaddrs_before_write_to_init()");
 	return count;
 }
-MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* unused)
-{
-	// retrieve association from list 
-	curr_channel_ = channels_[*(int*)&associationID];
-	if (curr_channel_ == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "init timer expired but association %u does not exist -> return");
-		return false;
-	}
-	curr_geco_instance_ = curr_channel_->geco_inst;
 
-	smctrl_t* smctrl = mdis_read_smctrl();
-	if (smctrl == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "no smctrl with channel presents -> return");
-		return false;
-	}
-
-	ushort primary_path = mpath_read_primary_path();
-	EVENTLOG3(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, PrimaryPath=%u",
-		(*(unsigned int *)associationID), smctrl->channel_state, primary_path);
-
-	switch (smctrl->channel_state) //TODO
-	{
-	case CookieWait:
-		break;
-	case CookieEchoed:
-		break;
-	case ShutdownSent:
-		break;
-	case ShutdownAckSent:
-		break;
-	default:
-		ERRLOG1(MAJOR_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
-		smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
-		break;
-	}
-	return false;
-}
-void msm_connect(unsigned short noOfOutStreams,
-	unsigned short noOfInStreams,
-	union sockaddrunion *destinationList,
-	unsigned int numDestAddresses)
-{
-	smctrl_t* smctrl;
-	if ((smctrl = mdis_read_smctrl()) == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "read smctrl_ failed");
-		return;
-	}
-	if (smctrl->channel_state == ChannelState::Closed)
-	{
-		EVENTLOG(VERBOSE, "event: msm_connect() in state CLOSED");
-		chunk_id_t initCID = (mdis_get_local_tag(), mdis_get_rwnd_from_curr_inst(),
-			noOfOutStreams, noOfInStreams, mdis_generate_init_tag());
-
-		/* store the number of streams */
-		smctrl->outbound_stream = noOfOutStreams;
-		smctrl->inbound_stream = noOfInStreams;
-
-		mch_write_vlp_of_init_chunk(initCID, VLPARAM_UNRELIABILITY);
-		my_supported_addr_types_ = mdis_get_supported_addr_types();
-		mch_write_vlp_supportedaddrtypes(initCID, my_supported_addr_types_ & SUPPORT_ADDRESS_TYPE_IPV4,
-			my_supported_addr_types_ & SUPPORT_ADDRESS_TYPE_IPV6, false);
-		ushort nlAddresses;
-		union sockaddrunion lAddresses[MAX_NUM_ADDRESSES];
-		mdis_validate_localaddrs_before_write_to_init(lAddresses, destinationList, numDestAddresses, my_supported_addr_types_, false);
-		mch_write_vlp_addrlist(initCID, lAddresses, nlAddresses);
-
-		simple_chunk_t* myinit = mch_complete_simple_chunk(initCID);
-		smctrl->my_init_chunk = (init_chunk_t*)myinit;
-		mch_remove_simple_chunk(initCID);
-
-		/* send init chunk */
-		for (int count = 0; count < (int)numDestAddresses; count++)
-		{
-			mdis_bundle_ctrl_chunk(myinit, &count);
-			mdis_send_bundled_chunks(&count);
-		}
-
-		// init smctrl
-		smctrl->cookieChunk = NULL;
-		smctrl->local_tie_tag = 0;
-		smctrl->peer_tie_tag = 0;
-		smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
-
-		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
-		{  // stop t1-init timer
-			mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-			smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
-		}
-		// start T1 init timer 
-		smctrl->init_timer_id = mdis_timer_mgr_.add_timer(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, (void*)&smctrl->channel_id, NULL);
-		smctrl->channel_state = ChannelState::CookieWait;
-	}
-	else
-	{
-		ERRLOG(MAJOR_ERROR, "msm_connect()::ChannelState::Closed !");
-		return;
-	}
-}
-
-/**
- * helper function, that simply sets the chunksSent flag of this path management instance to true
- * @param path_param_id  index of the address, where flag is set*/
-inline void set_data_chunk_sent_flag(int path_param_id)
-{
-	path_controller_t* path_ctrl = mpath_get();
-	if (path_ctrl == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
-		return;
-	}
-	if (path_ctrl->path_params == NULL)
-	{
-		ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on(%d): path_params NULL !",
-			path_param_id);
-		return;
-	}
-	if (!(path_param_id >= 0 && path_param_id < path_ctrl->path_num))
-	{
-		ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on: invalid path ID: %d", path_param_id);
-		return;
-	}
-	EVENTLOG1(VERBOSE, "Calling set_path_chunk_sent_on(%d)", path_param_id);
-	path_ctrl->path_params[path_param_id].data_chunks_sent_in_last_rto = true;
-}
-
-/**
- pm_disableHB is called to disable heartbeat for one specific path id.
- @param  pathID index of  address, where HBs should not be sent anymore
- @return error code: 0 for success, 1 for error (i.e. pathID too large)
- */
-int stop_heart_beat_timer(short pathID)
-{
-	path_controller_t* pathctrl = mpath_get();
-	if (pathctrl == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "pm_disableHB: get_path_controller() failed");
-		return -1;
-	}
-	if (pathctrl->path_params == NULL)
-	{
-		ERRLOG1(MAJOR_ERROR, "pm_disableHB(%d): no paths set", pathID);
-		return -1;
-	}
-	if (!(pathID >= 0 && pathID < pathctrl->path_num))
-	{
-		ERRLOG1(MAJOR_ERROR, "pm_disableHB: invalid path ID %d", pathID);
-		return -1;
-	}
-	if (pathctrl->path_params[pathID].hb_enabled)
-	{
-		mdis_timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
-		pathctrl->path_params[pathID].hb_timer_id = mdis_timer_mgr_.timers.end();
-		pathctrl->path_params[pathID].hb_enabled = false;
-		EVENTLOG1(INTERNAL_TRACE, "stop_heart_beat_timer: path %d disabled", pathID);
-	}
-	return 0;
-}
-/**
- * function called by bundling when a SACK is actually sent, to stop
- * a possibly running  timer*/
-inline void stop_sack_timer(void)
-{
-	if (curr_channel_ != NULL && curr_channel_->receive_control != NULL)
-	{
-		/*also make sure free all received duplicated data chunks */
-		curr_channel_->receive_control->duplicated_data_chunks_list.clear();
-		/* stop running sack timer*/
-		if (curr_channel_->receive_control->timer_running)
-		{
-			mdis_timer_mgr_.delete_timer(curr_channel_->receive_control->sack_timer);
-			curr_channel_->receive_control->sack_timer = mdis_timer_mgr_.timers.end();
-			curr_channel_->receive_control->timer_running = false;
-			EVENTLOG(DEBUG, "stop_sack_timer()::Stopped Timer");
-		}
-	}
-	else
-	{
-		ERRLOG(MAJOR_ERROR, "stop_sack_timer()::recv_controller_t instance not set !");
-	}
-}
-/**
- * function to return a pointer to the bundling module of this association
- * @return   pointer to the bundling data structure, null in case of error.*/
-inline bundle_controller_t* mbun_get(channel_t* channel = NULL)
-{
-	if (channel == NULL)
-	{
-		ERRLOG(VERBOSE, "get_bundle_control: association not set");
-		return NULL;
-	}
-	else
-	{
-		return channel->bundle_control;
-	}
-}
-int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
+int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 {
 #ifdef _DEBUG
-	EVENTLOG(VERBOSE, "- - - - Enter send_geco_packet()");
+	EVENTLOG(VERBOSE, "- - - - Enter mdi_send_geco_packet()");
 #endif
 
 #if enable_mock_dispatch_send_geco_packet
-	EVENTLOG(DEBUG, "Mock::dispatch_layer_t::send_geco_packet() is called");
+	EVENTLOG(DEBUG, "Mock::dispatch_layer_t::mdi_send_geco_packet() is called");
 	return 0;
 #endif
 
@@ -1018,7 +1396,7 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 
 	//if( geco_packet == NULL || length == 0 )
 	//{
-	//	EVENTLOG(DEBUG, "dispatch_layer::send_geco_packet(): no message to send !!!");
+	//	EVENTLOG(DEBUG, "dispatch_layer::mdi_send_geco_packet(): no message to send !!!");
 	//	len = -1;
 	//	goto leave;
 	//}
@@ -1027,9 +1405,9 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 	simple_chunk_t* chunk = ((simple_chunk_t*)(geco_packet_ptr->chunk));
 
 	/*1)
-	 * when sending OOB chunk without channel found, we use last_source_addr_
-	 * carried in OOB packet as the sending dest addr
-	 * see recv_geco_packet() for details*/
+	* when sending OOB chunk without channel found, we use last_source_addr_
+	* carried in OOB packet as the sending dest addr
+	* see recv_geco_packet() for details*/
 	sockaddrunion dest_addr;
 	sockaddrunion* dest_addr_ptr;
 	uchar tos;
@@ -1045,7 +1423,7 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		//if( last_source_addr_ == NULL || last_init_tag_ == 0 || last_dest_port_ == 0
 		//	|| last_src_port_ == 0 )
 		//{
-		//EVENTLOG(NOTICE, "dispatch_layer::send_geco_packet(): invalid geco_instance_params ");
+		//EVENTLOG(NOTICE, "dispatch_layer::mdi_send_geco_packet(): invalid geco_instance_params ");
 		//len = -1;
 		//goto leave;
 		//}
@@ -1061,7 +1439,7 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 			tos = (uchar)IPTOS_DEFAULT :
 			tos = curr_geco_instance_->default_ipTos;
 		EVENTLOG4(VERBOSE,
-			"send_geco_packet() : currchannel is null, use last src addr as dest addr, tos = %u, tag = %x, src_port = %u , dest_port = %u",
+			"mdi_send_geco_packet() : currchannel is null, use last src addr as dest addr, tos = %u, tag = %x, src_port = %u , dest_port = %u",
 			tos, last_init_tag_, last_dest_port_, last_src_port_);
 	}  // curr_channel_ == NULL
 	else  // curr_channel_ != NULL
@@ -1070,7 +1448,7 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		if (destAddressIndex < -1 || destAddressIndex >= (int)curr_channel_->remote_addres_size)
 		{
 			EVENTLOG1(NOTICE,
-				"dispatch_layer::send_geco_packet(): invalid destAddressIndex (%d)!!!",
+				"dispatch_layer::mdi_send_geco_packet(): invalid destAddressIndex (%d)!!!",
 				destAddressIndex);
 			len = -1;
 			goto leave;
@@ -1088,12 +1466,12 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 				/*5) last src addr is NUll, we use primary path*/
 				primary_path = mpath_read_primary_path();
 				EVENTLOG2(VERBOSE,
-					"dispatch_layer::send_geco_packet():sending to primary with index %u (with %u paths)",
+					"dispatch_layer::mdi_send_geco_packet():sending to primary with index %u (with %u paths)",
 					primary_path, curr_channel_->remote_addres_size);
 				if (primary_path < 0 || primary_path >= (int)(curr_channel_->remote_addres_size))
 				{
 					EVENTLOG1(NOTICE,
-						"dispatch_layer::send_geco_packet(): could not get primary address (%d)",
+						"dispatch_layer::mdi_send_geco_packet(): could not get primary address (%d)",
 						primary_path);
 					len = -1;
 					goto leave;
@@ -1104,21 +1482,21 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 			{
 				/*6) use last src addr*/
 				EVENTLOG(VERBOSE,
-					"dispatch_layer::send_geco_packet(): : last_source_addr_ was not NULL");
+					"dispatch_layer::mdi_send_geco_packet(): : last_source_addr_ was not NULL");
 				memcpy(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
 				dest_addr_ptr = &dest_addr;
 			}
 		}
 
 		/*7) for INIT received when channel presents,
-		 * we need send INIT-ACK with init tag from INIT of peer*/
+		* we need send INIT-ACK with init tag from INIT of peer*/
 		if (is_init_ack_chunk(chunk))
 		{
 			assert(last_init_tag_ != 0);
 			//if( last_init_tag_ == 0 )
 			//{
 			//	EVENTLOG(NOTICE,
-			//		"dispatch_layer_t::send_geco_packet(): invalid last_init_tag_ 0 !");
+			//		"dispatch_layer_t::mdi_send_geco_packet(): invalid last_init_tag_ 0 !");
 			//	len = -1;
 			//	goto leave;
 			//}
@@ -1134,12 +1512,12 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		geco_packet_ptr->pk_comm_hdr.dest_port = htons(curr_channel_->remote_port);
 		tos = curr_channel_->ipTos;
 		EVENTLOG4(VERBOSE,
-			"dispatch_layer_t::send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
+			"dispatch_layer_t::mdi_send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
 			tos, curr_channel_->remote_tag, curr_channel_->local_port,
 			curr_channel_->remote_port);
 	}  // curr_channel_ != NULL
 
-	/*9) calc checksum and insert it MD5*/
+	   /*9) calc checksum and insert it MD5*/
 	gset_checksum((geco_packet + UDP_PACKET_FIXED_SIZE), length - UDP_PACKET_FIXED_SIZE);
 
 	switch (saddr_family(dest_addr_ptr))
@@ -1151,32 +1529,32 @@ int send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		len = mtra_send_ip_packet(mtra_read_ip6_socket(), geco_packet, length, dest_addr_ptr, tos);
 		break;
 	default:
-		ERRLOG(MAJOR_ERROR, "dispatch_layer_t::send_geco_packet() : Unsupported AF_TYPE");
+		ERRLOG(MAJOR_ERROR, "dispatch_layer_t::mdi_send_geco_packet() : Unsupported AF_TYPE");
 		break;
 	}
 
 #ifdef _DEBUG
 	ushort port;
 	saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, &port);
-	EVENTLOG4(VERBOSE, "send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d",
+	EVENTLOG4(VERBOSE, "mdi_send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d",
 		length, hoststr_, ntohs(geco_packet_ptr->pk_comm_hdr.dest_port), len);
 #endif
 
 leave:
 #ifdef _DEBUG
-	EVENTLOG1(VERBOSE, "- - - - Leave send_geco_packet(ret = %d)", len);
+	EVENTLOG1(VERBOSE, "- - - - Leave mdi_send_geco_packet(ret = %d)", len);
 #endif
 
 	return (len == (int)length) ? 0 : -1;
 }
-int mdis_send_bundled_chunks(int * ad_idx)
+int mdi_send_bundled_chunks(int * ad_idx)
 {
 #ifdef _DEBUG
 	EVENTLOG1(VERBOSE, "- -  - Enter send_bundled_chunks (%d)", ad_idx);
 #endif
 
 	int ret = 0;
-	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mbun_get(curr_channel_);
+	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mdi_read_mbu(curr_channel_);
 
 	// no channel exists, so we take the global bundling buffer
 	if (bundle_ctrl == NULL)
@@ -1199,8 +1577,8 @@ int mdis_send_bundled_chunks(int * ad_idx)
 	}
 
 	/* determine  path_param_id to use as dest addr
-	 * TODO - more intelligent path selection strategy
-	 * should take into account  eg. check path inactive or active */
+	* TODO - more intelligent path selection strategy
+	* should take into account  eg. check path inactive or active */
 	int path_param_id;
 	if (ad_idx != NULL)
 	{
@@ -1233,13 +1611,13 @@ int mdis_send_bundled_chunks(int * ad_idx)
 	int send_len;
 	if (bundle_ctrl->sack_in_buffer)
 	{
-		stop_sack_timer();
+		mdi_stop_sack_timer();
 		/* send sacks, by default they go to the last active address,
-		 * from which data arrived */
+		* from which data arrived */
 		send_buffer = bundle_ctrl->sack_buf;
 		/*
-		 * at least sizeof(geco_packet_fixed_t)
-		 * at most pointing to the end of SACK chunk */
+		* at least sizeof(geco_packet_fixed_t)
+		* at most pointing to the end of SACK chunk */
 		send_len = bundle_ctrl->sack_position;
 		EVENTLOG1(VERBOSE, "send_bundled_chunks(sack) : send_len == %d ", send_len);
 
@@ -1292,7 +1670,7 @@ int mdis_send_bundled_chunks(int * ad_idx)
 	EVENTLOG1(VERBOSE, "send_len == %d ", send_len);
 
 	/*this should not happen as bundle_xxx_chunk() internally detects
-	 * if exceeds MAX_GECO_PACKET_SIZE, if so, it will call */
+	* if exceeds MAX_GECO_PACKET_SIZE, if so, it will call */
 	if (send_len > MAX_GECO_PACKET_SIZE)
 	{
 		EVENTLOG5(FALTAL_ERROR_EXIT,
@@ -1305,14 +1683,14 @@ int mdis_send_bundled_chunks(int * ad_idx)
 
 	if (bundle_ctrl->data_in_buffer && path_param_id > 0)
 	{
-		set_data_chunk_sent_flag(path_param_id);
+		mdi_data_chunk_set_sent_flag(path_param_id);
 	}
 
 	EVENTLOG2(VERBOSE, "sending message len==%u to adress idx=%d", send_len,
 		path_param_id);
 
 	// send_len = udp hdr (if presents) + geco hdr + chunks
-	ret = send_geco_packet(send_buffer, send_len, path_param_id);
+	ret = mdi_send_geco_packet(send_buffer, send_len, path_param_id);
 
 	/* reset all positions */
 	bundle_ctrl->sack_in_buffer = false;
@@ -1330,55 +1708,6 @@ int mdis_send_bundled_chunks(int * ad_idx)
 
 leave:
 	return ret;
-}
-
-/**
- * Allow sender to send data right away
- * when all received chunks have been diassembled completely.
- * @example
- * firstly, lock_bundle_ctrl() when disassembling received chunks;
- * then, generate and bundle outging chunks like sack, data or ctrl chunks;
- * the bundle() will interally force sending all chunks if the bundle are full.
- * then, excitely call send all bundled chunks;
- * finally, unlock_bundle_ctrl(dest addr);
- * will send all bundled chunks automatically to the specified dest addr
- * ad_idx = -1, send to last_source_addr
- * ad_idx = -2, send to primary path
- * ad_idx >0, send to the specified path as dest addr
- */
-void unlock_bundle_ctrl(int* ad_idx = NULL)
-{
-	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mbun_get(curr_channel_);
-
-	/*1) no channel exists, it is NULL, so we take the global bundling buffer */
-	if (bundle_ctrl == NULL)
-	{
-		EVENTLOG(VERBOSE, "unlock_bundle_ctrl()::Setting global bundling buffer");
-		bundle_ctrl = default_bundle_ctrl_;
-	}
-
-	bundle_ctrl->locked = false;
-	if (bundle_ctrl->got_send_request) mdis_send_bundled_chunks(ad_idx);
-
-	EVENTLOG1(VERBOSE, "unlock_bundle_ctrl()::got %s send request",
-		(bundle_ctrl->got_send_request == true) ? "A" : "NO");
-}
-/**
- * disallow sender to send data right away when newly received chunks have
- * NOT been diassembled completely.*/
-void lock_bundle_ctrl()
-{
-	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mbun_get(curr_channel_);
-
-	/*1) no channel exists, it is NULL, so we take the global bundling buffer */
-	if (bundle_ctrl == NULL)
-	{
-		EVENTLOG(VERBOSE, "lock_bundle_ctrl()::Setting global bundling buffer");
-		bundle_ctrl = default_bundle_ctrl_;
-	}
-
-	bundle_ctrl->locked = true;
-	bundle_ctrl->got_send_request = false;
 }
 
 void mdis_init(void)
@@ -1448,6 +1777,164 @@ void mdis_init(void)
 	enable_mock_dispatcher_process_init_chunk_ = false;
 #endif
 }
+void mdi_delete_curr_channel(void)
+{
+	uint path_id;
+	if (curr_channel_ != NULL)
+	{
+		for (path_id = 0; path_id < curr_channel_->remote_addres_size; path_id++)
+		{
+			mdi_stop_hb_timer(path_id);
+		}
+		// mfc_stop_timers();         // TODO
+		mdi_stop_sack_timer();
+
+		/* mark channel as deleted, it will be deleted
+		when get_channel(..) encounters a "deleted" channel*/
+		curr_channel_->deleted = true;
+		EVENTLOG1(DEBUG, "channel ID %u marked for deletion", curr_channel_->channel_id);
+	}
+}
+
+void mdi_cb_connection_lost(uint status)
+{
+	geco_instance_t* old_ginst = curr_geco_instance_;
+	channel_t* old_channel = curr_channel_;
+	if (curr_channel_ != NULL)
+	{
+		EVENTLOG2(INTERNAL_TRACE, "mdi_cb_connection_lost(assoc %u, status %u)",
+			curr_channel_->channel_id, status);
+		if (curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif != NULL)
+		{
+			//ENTER_CALLBACK("communicationLostNotif");
+			curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif(
+				curr_channel_->channel_id, status, curr_channel_->application_layer_dataptr);
+			//LEAVE_CALLBACK("communicationLostNotif");
+		}
+	}
+	curr_geco_instance_ = old_ginst;
+	curr_channel_ = old_channel;
+}
+inline void mdi_data_chunk_set_sent_flag(int path_param_id)
+{
+	path_controller_t* path_ctrl = mdis_read_mpath();
+	if (path_ctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
+		return;
+	}
+	if (path_ctrl->path_params == NULL)
+	{
+		ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on(%d): path_params NULL !",
+			path_param_id);
+		return;
+	}
+	if (!(path_param_id >= 0 && path_param_id < path_ctrl->path_num))
+	{
+		ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on: invalid path ID: %d", path_param_id);
+		return;
+	}
+	EVENTLOG1(VERBOSE, "Calling set_path_chunk_sent_on(%d)", path_param_id);
+	path_ctrl->path_params[path_param_id].data_chunks_sent_in_last_rto = true;
+}
+
+int mdi_stop_hb_timer(short pathID)
+{
+	path_controller_t* pathctrl = mdis_read_mpath();
+	if (pathctrl == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "pm_disableHB: get_path_controller() failed");
+		return -1;
+	}
+	if (pathctrl->path_params == NULL)
+	{
+		ERRLOG1(MAJOR_ERROR, "pm_disableHB(%d): no paths set", pathID);
+		return -1;
+	}
+	if (!(pathID >= 0 && pathID < pathctrl->path_num))
+	{
+		ERRLOG1(MAJOR_ERROR, "pm_disableHB: invalid path ID %d", pathID);
+		return -1;
+	}
+	if (pathctrl->path_params[pathID].hb_enabled)
+	{
+		mdis_timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
+		pathctrl->path_params[pathID].hb_timer_id = mdis_timer_mgr_.timers.end();
+		pathctrl->path_params[pathID].hb_enabled = false;
+		EVENTLOG1(INTERNAL_TRACE, "mdi_stop_hb_timer: path %d disabled", pathID);
+	}
+	return 0;
+}
+
+inline void mdi_stop_sack_timer(void)
+{
+	if (curr_channel_ != NULL && curr_channel_->receive_control != NULL)
+	{
+		/*also make sure free all received duplicated data chunks */
+		curr_channel_->receive_control->duplicated_data_chunks_list.clear();
+		/* stop running sack timer*/
+		if (curr_channel_->receive_control->timer_running)
+		{
+			mdis_timer_mgr_.delete_timer(curr_channel_->receive_control->sack_timer);
+			curr_channel_->receive_control->sack_timer = mdis_timer_mgr_.timers.end();
+			curr_channel_->receive_control->timer_running = false;
+			EVENTLOG(DEBUG, "mdi_stop_sack_timer()::Stopped Timer");
+		}
+	}
+	else
+	{
+		ERRLOG(MAJOR_ERROR, "mdi_stop_sack_timer()::recv_controller_t instance not set !");
+	}
+}
+
+inline bundle_controller_t* mdi_read_mbu(channel_t* channel)
+{
+	if (channel == NULL)
+	{
+		ERRLOG(VERBOSE, "get_bundle_control: association not set");
+		return NULL;
+	}
+	else
+	{
+		return channel->bundle_control;
+	}
+}
+
+void mdi_unlock_bundle_ctrl(int* ad_idx)
+{
+	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mdi_read_mbu(curr_channel_);
+
+	/*1) no channel exists, it is NULL, so we take the global bundling buffer */
+	if (bundle_ctrl == NULL)
+	{
+		EVENTLOG(VERBOSE, "mdi_unlock_bundle_ctrl()::Setting global bundling buffer");
+		bundle_ctrl = default_bundle_ctrl_;
+	}
+
+	bundle_ctrl->locked = false;
+	if (bundle_ctrl->got_send_request) mdi_send_bundled_chunks(ad_idx);
+
+	EVENTLOG1(VERBOSE, "mdi_unlock_bundle_ctrl()::got %s send request",
+		(bundle_ctrl->got_send_request == true) ? "A" : "NO");
+}
+/**
+ * disallow sender to send data right away when newly received chunks have
+ * NOT been diassembled completely.*/
+void lock_bundle_ctrl()
+{
+	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mdi_read_mbu(curr_channel_);
+
+	/*1) no channel exists, it is NULL, so we take the global bundling buffer */
+	if (bundle_ctrl == NULL)
+	{
+		EVENTLOG(VERBOSE, "lock_bundle_ctrl()::Setting global bundling buffer");
+		bundle_ctrl = default_bundle_ctrl_;
+	}
+
+	bundle_ctrl->locked = true;
+	bundle_ctrl->got_send_request = false;
+}
+
 
 /**
  * function to read the association id of the current association
@@ -1465,7 +1952,7 @@ uint get_curr_channel_id(void)
 uint get_curr_channel_state()
 {
 	smctrl_t* smctrl =
-		(smctrl_t*)mdis_read_smctrl();
+		(smctrl_t*)mdi_read_smctrl();
 	if (smctrl == NULL)
 	{
 		/* error log */
@@ -1597,7 +2084,7 @@ inline uint get_bundle_sack_size(bundle_controller_t* buf)
 void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 {
 	EVENTLOG(VERBOSE, "- -  Enter mdis_bundle_ctrl_chunk()");
-	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mbun_get(curr_channel_);
+	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mdi_read_mbu(curr_channel_);
 
 	/*1) no channel exists, so we take the global bundling buffer */
 	if (bundle_ctrl == NULL)
@@ -1618,22 +2105,20 @@ void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 			(dest_index == NULL) ? 0 : *dest_index);
 
 		bundle_ctrl->locked = false;/* unlock to allow send bundle*/
-		mdis_send_bundled_chunks(dest_index);
+		mdi_send_bundled_chunks(dest_index);
 		bundle_ctrl->locked = true; /* lock it again to disable the next send*/
+	}
+
+	/*3) an packet CAN hold all data*/
+	if (dest_index != NULL)
+	{
+		bundle_ctrl->got_send_address = true;
+		bundle_ctrl->requested_destination = *dest_index;
 	}
 	else
 	{
-		/*3) an packet CAN hold all data*/
-		if (dest_index != NULL)
-		{
-			bundle_ctrl->got_send_address = true;
-			bundle_ctrl->requested_destination = *dest_index;
-		}
-		else
-		{
-			bundle_ctrl->got_send_address = false;
-			bundle_ctrl->requested_destination = 0;
-		}
+		bundle_ctrl->got_send_address = false;
+		bundle_ctrl->requested_destination = 0;
 	}
 
 	/*3) copy new chunk to bundle and insert padding, if necessary*/
@@ -1651,54 +2136,7 @@ void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 	EVENTLOG(VERBOSE, "- -  Leave mdis_bundle_ctrl_chunk()");
 }
 
-/**
- *  deletes the current chanel.
- *  The chanel will not be deleted at once, but is only marked for deletion. This is done in
- *  this way to allow other modules to finish their current activities. To prevent them to start
- *  new activities, the currentAssociation pointer is set to NULL.
- */
-void delete_curr_channel(void)
-{
-	uint path_id;
-	if (curr_channel_ != NULL)
-	{
-		for (path_id = 0; path_id < curr_channel_->remote_addres_size; path_id++)
-		{
-			stop_heart_beat_timer(path_id);
-		}
-		// mfc_stop_timers();         // TODO
-		stop_sack_timer();
 
-		/* mark channel as deleted, it will be deleted
-		 when get_channel(..) encounters a "deleted" channel*/
-		curr_channel_->deleted = true;
-		EVENTLOG1(DEBUG, "channel ID %u marked for deletion", curr_channel_->channel_id);
-	}
-}
-/**
- * indicates that communication was lost to peer (chapter 10.2.E).
- * Calls the respective ULP callback function.
- * @param  status  type of event, that has caused the association to be terminated
- */
-void on_connection_lost(uint status)
-{
-	geco_instance_t* old_ginst = curr_geco_instance_;
-	channel_t* old_channel = curr_channel_;
-	if (curr_channel_ != NULL)
-	{
-		EVENTLOG2(INTERNAL_TRACE, "on_connection_lost(assoc %u, status %u)",
-			curr_channel_->channel_id, status);
-		if (curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif != NULL)
-		{
-			//ENTER_CALLBACK("communicationLostNotif");
-			curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif(
-				curr_channel_->channel_id, status, curr_channel_->application_layer_dataptr);
-			//LEAVE_CALLBACK("communicationLostNotif");
-		}
-	}
-	curr_geco_instance_ = old_ginst;
-	curr_channel_ = old_channel;
-}
 /**
  * indicates that an association is established (chapter 10.2.D).
  * @param status     type of event that caused association to come up;
@@ -1717,13 +2155,7 @@ void on_peer_restart(void)
 {
 	//todo
 }
-/**
- * Clear the global association data.
- *  This function must be called after the association retrieved from the list
- *  with setAssociationData is no longer needed. This is the case after a time
- *  event has been handled.
- */
-inline void clear_current_channel(void)
+inline void mdi_clear_current_channel(void)
 {
 	curr_channel_ = NULL;
 	curr_geco_instance_ = NULL;
@@ -1792,333 +2224,6 @@ inline ushort get_local_outbound_stream(uint * geco_inst_id = NULL)
 	return 0;
 }
 
-int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
-	uchar * chunk, uint len, uint my_supported_addr_types,
-	uint* peer_supported_addr_types, bool ignore_dups, bool ignore_last_src_addr)
-{
-	EVENTLOG(DEBUG, "- - - Enter mdis_read_peer_addreslist()");
-
-	/*1) validate method input geco_instance_params*/
-	uint read_len;
-	int found_addr_number;
-	found_addr_number = 0;
-	if (chunk == NULL || peer_addreslist == NULL || len < read_len)
-	{
-		found_addr_number = -1;
-		EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
-		return found_addr_number;
-	}
-
-	/*2) validate chunk id inside this chunk*/
-	simple_chunk_t* init_chunk = (simple_chunk_t*)chunk;
-	if (init_chunk->chunk_header.chunk_id == CHUNK_INIT
-		|| init_chunk->chunk_header.chunk_id == CHUNK_INIT_ACK)
-	{
-		read_len = INIT_CHUNK_FIXED_SIZES;
-	}
-	else if (init_chunk->chunk_header.chunk_id == CHUNK_COOKIE_ECHO)
-	{
-		read_len = CHUNK_FIXED_SIZE + COOKIE_FIXED_SIZE;
-	}
-	else
-	{
-		found_addr_number = -1;
-		EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
-		return found_addr_number;
-	}
-
-	uchar* curr_pos;
-	curr_pos = chunk + read_len;
-
-	uint vlp_len;
-	vlparam_fixed_t* vlp;
-	ip_address_t* addres;
-	bool is_new_addr;
-	int idx;
-	IPAddrType flags;
-
-	/*3) parse all vlparams in this chunk*/
-	while (read_len < len)
-	{
-		EVENTLOG2(VVERBOSE, "mdis_read_peer_addreslist() : len==%u, processed_len == %u", len, read_len);
-
-		if (len - read_len < VLPARAM_FIXED_SIZE)
-		{
-			EVENTLOG(WARNNING_ERROR,
-				"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
-			found_addr_number = -1;
-			EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
-			return found_addr_number;
-		}
-
-		vlp = (vlparam_fixed_t*)curr_pos;
-		vlp_len = ntohs(vlp->param_length);
-		// vlp length too short or patial vlp problem
-		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
-		{
-			found_addr_number = -1;
-			EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
-			return found_addr_number;
-		}
-
-		ushort paratype = ntohs(vlp->param_type);
-		/* determine the falgs from last source addr
-		 * then this falg will be used to validate other found addres*/
-		if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
-		{
-			bool b1, b2, b3;
-			if (!(b1 = mdis_contain_localhost(last_source_addr_, 1)))
-			{
-				/* this is from a normal address,
-				 * furtherly filter out except loopbacks */
-				if ((b2 = typeofaddr(last_source_addr_, LinkLocalAddrType)))  //
-				{
-					flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
-				}
-				else if ((b3 = typeofaddr(last_source_addr_, SiteLocalAddrType)))  // filtered
-				{
-					flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType);
-				}
-				else
-				{
-					flags = (IPAddrType)(AllCastAddrTypes | AllLocalAddrTypes);
-				}
-			}
-			else
-			{
-				/* this is from a loopback, use default flag*/
-				flags = AllCastAddrTypes;
-			}
-			EVENTLOG3(DEBUG, "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d", b1, b2,
-				b3);
-		}
-
-		/*4) validate received addresses in this chunk*/
-		switch (paratype)
-		{
-		case VLPARAM_IPV4_ADDRESS:
-			if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV4))
-			{  // use peer addrlist that we can support, ignoring unsupported addres
-			   // validate if exceed max num addres allowed
-				if (found_addr_number < MAX_NUM_ADDRESSES)
-				{
-					addres = (ip_address_t*)curr_pos;
-					// validate vlp type and length
-					if (IS_IPV4_ADDRESS_PTR_NBO(addres))
-					{
-						uint ip4_saddr = ntohl(addres->dest_addr_un.ipv4_addr);
-						// validate addr itself
-						if (!IN_CLASSD(ip4_saddr) && !IN_EXPERIMENTAL(ip4_saddr)
-							&& !IN_BADCLASS(ip4_saddr) && INADDR_ANY != ip4_saddr
-							&& INADDR_BROADCAST != ip4_saddr)
-						{
-							peer_addreslist[found_addr_number].sa.sa_family =
-								AF_INET;
-							peer_addreslist[found_addr_number].sin.sin_port = 0;
-							peer_addreslist[found_addr_number].sin.sin_addr.s_addr =
-								addres->dest_addr_un.ipv4_addr;
-
-							if (!typeofaddr(
-								&peer_addreslist[found_addr_number],
-								flags))  // NOT contains the addr type of [flags]
-							{
-								//current addr duplicated with a previous found addr?
-								is_new_addr = true;  // default as new addr
-								if (ignore_dups)
-								{
-									for (idx = 0; idx < found_addr_number; idx++)
-									{
-										if (saddr_equals(&peer_addreslist[found_addr_number],
-											&peer_addreslist[idx], true))
-										{
-											is_new_addr = false;
-										}
-									}
-								}
-
-								if (is_new_addr)
-								{
-									found_addr_number++;
-									if (peer_supported_addr_types != NULL) (*peer_supported_addr_types) |=
-										SUPPORT_ADDRESS_TYPE_IPV4;
-#ifdef _DEBUG
-									saddr2str(&peer_addreslist[found_addr_number - 1], hoststr_,
-										sizeof(hoststr_), 0);
-									EVENTLOG1(VERBOSE, "Found NEW IPv4 Address = %s", hoststr_);
-#endif
-								}
-								else
-								{
-									EVENTLOG(VERBOSE,
-										"IPv4 was in the INIT or INIT ACK chunk more than once");
-								}
-							}
-						}
-					}
-					else  // IS_IPV4_ADDRESS_PTR_HBO(addres) == false
-					{
-						ERRLOG(MAJOR_ERROR, "ip4 vlp has problem, stop read addresses");
-						break;
-					}
-				}
-			}
-			break;
-		case VLPARAM_IPV6_ADDRESS:
-			if ((my_supported_addr_types & SUPPORT_ADDRESS_TYPE_IPV6))
-			{  // use peer addrlist that we can support, ignoring unsupported addres
-				/*6) pass by other validates*/
-				if (found_addr_number < MAX_NUM_ADDRESSES)
-				{
-					addres = (ip_address_t*)curr_pos;
-					if (IS_IPV6_ADDRESS_PTR_NBO(addres))
-					{
-#ifdef WIN32
-						if (!IN6_IS_ADDR_UNSPECIFIED(
-							&addres->dest_addr_un.ipv6_addr) && !IN6_IS_ADDR_MULTICAST(&addres->dest_addr_un.ipv6_addr)
-							&& !IN6_IS_ADDR_V4COMPAT(&addres->dest_addr_un.ipv6_addr))
-#else
-						if (!IN6_IS_ADDR_UNSPECIFIED(
-							addres->dest_addr_un.ipv6_addr.s6_addr) && !IN6_IS_ADDR_MULTICAST(addres->dest_addr_un.ipv6_addr.s6_addr)
-							&& !IN6_IS_ADDR_V4COMPAT(addres->dest_addr_un.ipv6_addr.s6_addr))
-#endif
-						{
-
-							// fillup addrr
-							peer_addreslist[found_addr_number].sa.sa_family =
-								AF_INET6;
-							peer_addreslist[found_addr_number].sin6.sin6_port = 0;
-							peer_addreslist[found_addr_number].sin6.sin6_flowinfo = 0;
-#ifdef HAVE_SIN6_SCOPE_ID
-							foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
-#endif
-							memcpy(peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr,
-								&(addres->dest_addr_un.ipv6_addr), sizeof(struct in6_addr));
-
-							if (!typeofaddr(
-								&peer_addreslist[found_addr_number],
-								flags))  // NOT contains the addr type of [flags]
-							{
-								// current addr duplicated with a previous found addr?
-								is_new_addr = true;  // default as new addr
-								if (ignore_dups)
-								{
-									for (idx = 0; idx < found_addr_number; idx++)
-									{
-										if (saddr_equals(&peer_addreslist[found_addr_number],
-											&peer_addreslist[idx], true))
-										{
-											is_new_addr = false;
-										}
-									}
-								}
-
-								if (is_new_addr)
-								{
-									found_addr_number++;
-									if (peer_supported_addr_types != NULL) (*peer_supported_addr_types) |=
-										SUPPORT_ADDRESS_TYPE_IPV6;
-#ifdef _DEBUG
-									saddr2str(&peer_addreslist[found_addr_number - 1], hoststr_,
-										sizeof(hoststr_), 0);
-									EVENTLOG1(VERBOSE, "Found NEW IPv6 Address = %s", hoststr_);
-#endif
-								}
-								else
-								{
-									EVENTLOG(VERBOSE,
-										"IPv6 was in the INIT or INIT ACK chunk more than once");
-								}
-							}
-						}
-					}
-				}
-				else
-				{
-					ERRLOG(WARNNING_ERROR, "Too many addresses found during IPv4 reading");
-				}
-			}
-			break;
-		case VLPARAM_SUPPORTED_ADDR_TYPES:
-			if (peer_supported_addr_types != NULL)
-			{
-				supported_address_types_t* sat = (supported_address_types_t*)curr_pos;
-				int size = ((vlp_len - VLPARAM_FIXED_SIZE) / sizeof(ushort)) - 1;
-				while (size >= 0)
-				{
-					*peer_supported_addr_types |=
-						ntohs(sat->address_type[size]) == VLPARAM_IPV4_ADDRESS ?
-						SUPPORT_ADDRESS_TYPE_IPV4 : SUPPORT_ADDRESS_TYPE_IPV6;
-					size--;
-				}
-				EVENTLOG1(VERBOSE,
-					"Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
-					*peer_supported_addr_types);
-			}
-			break;
-		}
-		read_len += vlp_len;
-		while (read_len & 3)
-			++read_len;
-		curr_pos = chunk + read_len;
-	}  // while
-
-	// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
-	if (!ignore_last_src_addr)
-	{
-		is_new_addr = true;
-		for (idx = 0; idx < found_addr_number; idx++)
-		{
-			if (saddr_equals(last_source_addr_, &peer_addreslist[idx], true))
-			{
-				is_new_addr = false;
-			}
-		}
-
-		if (is_new_addr)
-		{
-			// always add last_source_addr as it is from received packet
-			// which means the path is active on that address
-			// if exceed MAX_NUM_ADDRESSES, we rewrite the last addr by last_source_addr
-			if (found_addr_number >= MAX_NUM_ADDRESSES)
-			{
-				found_addr_number = MAX_NUM_ADDRESSES - 1;
-
-			}
-			if (peer_supported_addr_types != NULL)
-			{
-				switch (saddr_family(last_source_addr_))
-				{
-				case AF_INET:
-					(*peer_supported_addr_types) |=
-						SUPPORT_ADDRESS_TYPE_IPV4;
-					break;
-				case AF_INET6:
-					(*peer_supported_addr_types) |=
-						SUPPORT_ADDRESS_TYPE_IPV6;
-					break;
-				default:
-					ERRLOG(FALTAL_ERROR_EXIT, "no such addr family!");
-					break;
-				}
-			}
-			if ((last_source_addr_->sa.sa_family == AF_INET ?
-				SUPPORT_ADDRESS_TYPE_IPV4 :
-				SUPPORT_ADDRESS_TYPE_IPV6)
-				& my_supported_addr_types)
-			{
-				memcpy(&peer_addreslist[found_addr_number], last_source_addr_,
-					sizeof(sockaddrunion));
-				EVENTLOG2(VERBOSE,
-					"Added also last_source_addr_ to the addresslist at index %u,found_addr_number = %u!",
-					found_addr_number, found_addr_number + 1);
-				found_addr_number++;
-			}
-		}
-	}
-
-	EVENTLOG(DEBUG, "- - - Leave mdis_read_peer_addreslist()");
-	return found_addr_number;
-}
 
 
 bool do_we_support_unreliability(void)
@@ -2183,7 +2288,7 @@ int process_init_chunk(init_chunk_t * init)
 
 	/*2) validate init geco_instance_params*/
 	uchar abortcid;
-	smctrl_t* smctrl = mdis_read_smctrl();
+	smctrl_t* smctrl = mdi_read_smctrl();
 	if (!mch_read_ostreams(init_cid) || !mch_read_instreams(init_cid)
 		|| !mch_read_itag(init_cid))
 	{
@@ -2197,16 +2302,16 @@ int process_init_chunk(init_chunk_t * init)
 		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abortcid));
 		mch_free_simple_chunk(abortcid);
 
-		unlock_bundle_ctrl();
-		mdis_send_bundled_chunks();
+		mdi_unlock_bundle_ctrl();
+		mdi_send_bundled_chunks();
 
 		/*2.2) delete all data of this channel,
 		 * smctrl != NULL means current channel MUST exist at this moment */
 		if (smctrl != NULL)
 		{
-			delete_curr_channel();
-			on_connection_lost(ConnectionLostReason::invalid_param);
-			clear_current_channel();
+			mdi_delete_curr_channel();
+			mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+			mdi_clear_current_channel();
 		}
 		return STOP_PROCESS_CHUNK_FOR_INVALID_MANDORY_INIT_PARAMS;
 	}
@@ -2218,7 +2323,7 @@ int process_init_chunk(init_chunk_t * init)
 		 * smctrl != NULL means current channel MUST exist at this moment */
 		if (smctrl == NULL)
 		{
-			clear_current_channel();
+			mdi_clear_current_channel();
 			return STOP_PROCESS_CHUNK_FOR_NULL_CHANNEL;
 		}
 		else
@@ -2227,10 +2332,10 @@ int process_init_chunk(init_chunk_t * init)
 			{
 				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
 			}
-			unlock_bundle_ctrl();
-			delete_curr_channel();
-			on_connection_lost(ConnectionLostReason::invalid_param);
-			clear_current_channel();
+			mdi_unlock_bundle_ctrl();
+			mdi_delete_curr_channel();
+			mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+			mdi_clear_current_channel();
 			return STOP_PROCESS_CHUNK_FOR_NULL_SRC_ADDR;
 		}
 	}
@@ -2255,7 +2360,7 @@ int process_init_chunk(init_chunk_t * init)
 		outbound_stream = std::min(mch_read_instreams(init_cid), get_local_outbound_stream());
 
 		/* 4.2) alloc init ack chunk, init tag used as init tsn */
-		init_tag = mdis_generate_init_tag();
+		init_tag = mdi_generate_itag();
 		init_ack_cid = mch_make_init_ack_chunk(init_tag,
 			curr_geco_instance_->default_myRwnd,
 			outbound_stream, inbound_stream,
@@ -2278,13 +2383,13 @@ int process_init_chunk(init_chunk_t * init)
 			lock_bundle_ctrl();
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 			mch_free_simple_chunk(abort_cid);
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 			return discard;
 		}
 
 		/*4.4) get local addr list and append them to INIT ACK*/
-		tmp_local_addreslist_size_ = mdis_validate_localaddrs_before_write_to_init(tmp_local_addreslist_, last_source_addr_,
+		tmp_local_addreslist_size_ = mdi_validate_localaddrs_before_write_to_init(tmp_local_addreslist_, last_source_addr_,
 			1, tmp_peer_supported_types_, true);
 		if (tmp_local_addreslist_size_ > 1)
 		{
@@ -2322,12 +2427,12 @@ int process_init_chunk(init_chunk_t * init)
 			EVENTLOG(DEBUG,
 				"process_init_acke():: call send_bundled_chunks to ensure init ack is the only chunk sent in the whole geco packet ");
 #endif //  _DEBUG
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 
 			/* bundle INIT ACK if full will send, may empty bundle and copy init ack*/
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(init_ack_cid));
-			mdis_send_bundled_chunks();  // send init ack
+			mdi_send_bundled_chunks();  // send init ack
 			mch_free_simple_chunk(init_ack_cid);
 			EVENTLOG(INFO, "event: sent normal init ack chunk peer");
 		}
@@ -2382,7 +2487,7 @@ int process_init_chunk(init_chunk_t * init)
 				smctrl->my_init_chunk->init_fixed.initial_tsn);
 
 			// append localaddrlist to INIT_ACK
-			tmp_local_addreslist_size_ = mdis_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
+			tmp_local_addreslist_size_ = mdi_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
 				last_source_addr_, 1,
 				tmp_peer_supported_types_,
 				true /*receivedfrompeer*/);
@@ -2417,13 +2522,13 @@ int process_init_chunk(init_chunk_t * init)
 
 				 // send all bundled chunks to ensure init ack is the only chunk sent in the whole geco packet
 				EVENTLOG1(VERBOSE, "at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)",
-					get_bundle_total_size(mbun_get()));
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+					get_bundle_total_size(mdi_read_mbu()));
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 
 				// bundle INIT ACK if full will send and empty bundle then copy init ack
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(init_ack_cid));
-				mdis_send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
+				mdi_send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
 				mch_free_simple_chunk(init_ack_cid);
 				EVENTLOG(VERBOSE, "event: initAck sent at state of cookie wait");
 			}
@@ -2473,8 +2578,8 @@ int process_init_chunk(init_chunk_t * init)
 				lock_bundle_ctrl();
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 				mch_free_simple_chunk(abort_cid);
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 				return discard;
 			}
 
@@ -2493,8 +2598,8 @@ int process_init_chunk(init_chunk_t * init)
 							(uchar*)tmp_peer_addreslist_ + inner, sizeof(sockaddrunion));
 						lock_bundle_ctrl();
 						mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
-						unlock_bundle_ctrl();
-						mdis_send_bundled_chunks();
+						mdi_unlock_bundle_ctrl();
+						mdi_send_bundled_chunks();
 						mch_free_simple_chunk(abort_cid);
 						/* remove NOT free INIT CHUNK before return */
 						mch_remove_simple_chunk(init_cid);
@@ -2507,8 +2612,8 @@ int process_init_chunk(init_chunk_t * init)
 			 * For an endpoint that is in the COOKIE-ECHOED state it MUST populate
 			 * its Tie-Tags with random values so that possible attackers cannot guess
 			 * real tag values of the association (see Implementer's Guide > version 10)*/
-			smctrl->local_tie_tag = mdis_generate_init_tag();
-			smctrl->peer_tie_tag = mdis_generate_init_tag();
+			smctrl->local_tie_tag = mdi_generate_itag();
+			smctrl->peer_tie_tag = mdi_generate_itag();
 
 			/*5.4) get in out stream number*/
 			inbound_stream = std::min(mch_read_ostreams(init_cid),
@@ -2528,7 +2633,7 @@ int process_init_chunk(init_chunk_t * init)
 				smctrl->my_init_chunk->init_fixed.initial_tsn);
 
 			/*5.6) get local addr list and append them to INIT ACK*/
-			tmp_local_addreslist_size_ = mdis_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
+			tmp_local_addreslist_size_ = mdi_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
 				last_source_addr_, 1, tmp_peer_supported_types_, true);
 			mch_write_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
@@ -2561,11 +2666,11 @@ int process_init_chunk(init_chunk_t * init)
 
 				 /* send all bundled chunks to ensure init ack is the only chunk sent
 				  * in the whole geco packet*/
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 				// bundle INIT ACK if full will send and empty bundle then copy init ack
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(init_ack_cid));
-				mdis_send_bundled_chunks();  // send init ack
+				mdi_send_bundled_chunks();  // send init ack
 				mch_free_simple_chunk(init_ack_cid);
 				EVENTLOG(INTERNAL_EVENT, "event: initAck sent at state of cookie echoed");
 			}
@@ -2585,14 +2690,14 @@ int process_init_chunk(init_chunk_t * init)
 			 with a different port number indicates the initialization of a
 			 separate association.*/
 			EVENTLOG1(VERBOSE, "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)",
-				get_bundle_total_size(mbun_get()));
+				get_bundle_total_size(mdi_read_mbu()));
 			// send all bundled chunks to ensure init ack is the only chunk sent
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 			uint shutdownackcid = mch_make_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_TBIT_UNSET);
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownackcid));
 			mch_free_simple_chunk(shutdownackcid);
-			mdis_send_bundled_chunks();  //send init ack
+			mdi_send_bundled_chunks();  //send init ack
 			EVENTLOG(INTERNAL_EVENT, "event: initAck sent at state of ShutdownAckSent");
 		}
 		else
@@ -2631,8 +2736,8 @@ int process_init_chunk(init_chunk_t * init)
 				lock_bundle_ctrl();
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 				mch_free_simple_chunk(abort_cid);
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 				return discard;
 			}
 
@@ -2651,8 +2756,8 @@ int process_init_chunk(init_chunk_t * init)
 							(uchar*)tmp_peer_addreslist_ + inner, sizeof(sockaddrunion));
 						lock_bundle_ctrl();
 						mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
-						unlock_bundle_ctrl();
-						mdis_send_bundled_chunks();
+						mdi_unlock_bundle_ctrl();
+						mdi_send_bundled_chunks();
 						mch_free_simple_chunk(abort_cid);
 						/* remove NOT free INIT CHUNK before return */
 						mch_remove_simple_chunk(init_cid);
@@ -2673,7 +2778,7 @@ int process_init_chunk(init_chunk_t * init)
 			 -Other parameters for the endpoint SHOULD be copied from the existing
 			 parameters of the association (e.g., number of outbound streams) into
 			 the INIT ACK and cookie.*/
-			init_tag = mdis_generate_init_tag();  // todo use safe mdis_generate_init_tag
+			init_tag = mdi_generate_itag();  // todo use safe mdi_generate_itag
 			init_ack_cid = mch_make_init_ack_chunk(init_tag,
 				curr_channel_->receive_control->my_rwnd,
 				curr_channel_->deliverman_control->numSendStreams,
@@ -2681,7 +2786,7 @@ int process_init_chunk(init_chunk_t * init)
 				smctrl->my_init_chunk->init_fixed.initial_tsn);
 
 			/*7.4) get local addr list and append them to INIT ACK*/
-			tmp_local_addreslist_size_ = mdis_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
+			tmp_local_addreslist_size_ = mdi_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
 				last_source_addr_, 1, tmp_peer_supported_types_, true);
 			mch_write_vlp_addrlist(init_ack_cid, tmp_local_addreslist_, tmp_local_addreslist_size_);
 
@@ -2714,17 +2819,17 @@ int process_init_chunk(init_chunk_t * init)
 
 				 /*send all bundled chunks to ensure init ack is the only chunk sent*/
 				EVENTLOG1(VERBOSE, "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)",
-					get_bundle_total_size(mbun_get()));
+					get_bundle_total_size(mdi_read_mbu()));
 				assert(
-					get_bundle_total_size(mbun_get()) == UDP_GECO_PACKET_FIXED_SIZES);
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+					get_bundle_total_size(mdi_read_mbu()) == UDP_GECO_PACKET_FIXED_SIZES);
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 				// bundle INIT ACK if full will send and empty bundle then copy init ack
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(init_ack_cid));
 				/* trying to send bundle to become more responsive
 				 * unlock bundle to send init ack as single chunk in the
 				 * whole geco packet */
-				mdis_send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
+				mdi_send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
 				mch_free_simple_chunk(init_ack_cid);
 				EVENTLOG(INTERNAL_EVENT, "event: initAck sent at state of ShutdownSent");
 			}
@@ -2743,81 +2848,8 @@ leave:
 	EVENTLOG(VERBOSE, "Leave process_sack_chunk()");
 	return ret;
 }
-/**
- * this function aborts and clear this association and send abort to peer.
- * And optionally adds an error parameter to the ABORT chunk that is sent out.
- * this is for A-side to send abort  as it has channel presented
- */
-void abort_channel(short error_type, uchar* errordata,
-	ushort errordattalen)
-{
-	assert(curr_channel_->state_machine_control != NULL);
-	bool removed = false;
-	chunk_id_t abortcid;
-	switch (curr_channel_->state_machine_control->channel_state)
-	{
-	case ChannelState::Closed:
-		EVENTLOG(DEBUG, "event: abort in state CLOSED");
-		delete_curr_channel();
-		clear_current_channel();
-		break;
-	case ChannelState::CookieWait:
-	case ChannelState::CookieEchoed:
-	case ChannelState::ShutdownSent:
-	case ChannelState::ShutdownAckSent:
-		EVENTLOG(DEBUG, "event: abort in ShutdownAckSent --> send abort");
-		abortcid = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
-		if (error_type > 0)
-		{
-			mch_write_error_cause(abortcid, error_type, errordata, errordattalen);
-		}
-		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abortcid));
-		mch_free_simple_chunk(abortcid);
-		unlock_bundle_ctrl();
-		mdis_send_bundled_chunks();
-		//stop init timer
-		if (curr_channel_->state_machine_control->init_timer_id !=
-			mdis_timer_mgr_.timers.end())
-		{
-			mdis_timer_mgr_.delete_timer(curr_channel_->state_machine_control->init_timer_id);
-			curr_channel_->state_machine_control->init_timer_id = mdis_timer_mgr_.timers.end();
-		}
-		// delete all data of channel
-		delete_curr_channel();
-		removed = true;
-		break;
-	case ChannelState::ShutdownPending:
-	case ChannelState::Connected:
-	case ChannelState::ShutdownReceived:
-		EVENTLOG(DEBUG, "event: abort in ShutdownReceived --> send abort");
-		abortcid = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
-		if (error_type > 0)
-		{
-			mch_write_error_cause(abortcid, error_type, errordata, errordattalen);
-		}
-		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abortcid));
-		mch_free_simple_chunk(abortcid);
-		unlock_bundle_ctrl();
-		mdis_send_bundled_chunks();
-		// delete all data of channel
-		delete_curr_channel();
-		removed = true;
-		break;
-	default:
-		/* error logging */
-		EVENTLOG1(NOTICE,
-			"dispatch_layer_t:: abort() in state %02d: unexpected event",
-			curr_channel_->state_machine_control->channel_state);
-		break;
-	}
 
-	if (removed)
-	{
-		on_connection_lost(ConnectionLostReason::PeerAbortConnection);
-		clear_current_channel();
-	}
-}
-void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],int noOfAddresses)
+void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], int noOfAddresses)
 {
 	if (curr_channel_ == NULL)
 	{
@@ -3046,7 +3078,7 @@ void mfc_stop_timers(void)
 {
 	EVENTLOG(VERBOSE, "- - - Enter mfc_stop_timers()");
 	flow_controller_t* fc;
-	if ((fc = mfc_get()) == NULL)
+	if ((fc = mdi_read_mfc()) == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "flow controller is NULL !");
 		return;
@@ -3230,8 +3262,8 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN,
 	tmp->datagrams_received = -1;
 	tmp->sack_flag = 2;
 	tmp->last_address = 0;
-	tmp->my_rwnd = mdis_get_rwnd_from_curr_inst();
-	tmp->delay = get_default_delay(geco_instance);
+	tmp->my_rwnd = mdi_read_rwnd();
+	tmp->delay = mdi_read_default_delay(geco_instance);
 	if ((tmp->channel_id = get_curr_channel_id()) == 0)
 	{
 		mrecv_free(tmp);
@@ -3428,7 +3460,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 {
 	assert(initAck->chunk_header.chunk_id == CHUNK_INIT_ACK);
 	ChunkProcessResult return_state = ChunkProcessResult::Good;
-	smctrl_t* smctrl = mdis_read_smctrl();
+	smctrl_t* smctrl = mdi_read_smctrl();
 
 	//1) alloc chunk id for the received init ack
 	chunk_id_t initAckCID = mch_make_simple_chunk((simple_chunk_t*)initAck);
@@ -3436,7 +3468,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 	{
 		mch_remove_simple_chunk(initAckCID);
 		ERRLOG(MINOR_ERROR,
-			"process_init_ack_chunk(): mdis_read_smctrl() returned NULL!");
+			"process_init_ack_chunk(): mdi_read_smctrl() returned NULL!");
 		return return_state;
 	}
 
@@ -3471,16 +3503,16 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abortcid));
 			mch_free_simple_chunk(abortcid);
 
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 
 			/*2.2) delete all data of this channel,
 			 * smctrl != NULL means current channel MUST exist at this moment */
 			if (smctrl != NULL)
 			{
-				delete_curr_channel();
-				on_connection_lost(ConnectionLostReason::invalid_param);
-				clear_current_channel();
+				mdi_delete_curr_channel();
+				mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+				mdi_clear_current_channel();
 			}
 			return_state = ChunkProcessResult::StopAndDeleteChannel_ValidateInitParamFailedError;
 			return return_state;
@@ -3492,7 +3524,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			 smctrl != NULL means current channel MUST exist at this moment */
 			if (smctrl == NULL)
 			{
-				clear_current_channel();
+				mdi_clear_current_channel();
 				return_state = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
 				return return_state;
 			}
@@ -3502,10 +3534,10 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 				{
 					mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
 				}
-				unlock_bundle_ctrl();
-				delete_curr_channel();
-				on_connection_lost(ConnectionLostReason::invalid_param);
-				clear_current_channel();
+				mdi_unlock_bundle_ctrl();
+				mdi_delete_curr_channel();
+				mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+				mdi_clear_current_channel();
 				return_state = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
 				return return_state;
 			}
@@ -3528,7 +3560,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
 		{
 			char* errstr = "peer does not supports your adress types !";
-			abort_channel(ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*)errstr, strlen(errstr) + 1);
+			msm_abort_channel(ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*)errstr, strlen(errstr) + 1);
 		}
 		ERRLOG(FALTAL_ERROR_EXIT,
 			"BAKEOFF: Program error, no common address types in process_init_chunk()");
@@ -3560,10 +3592,10 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			missing_mandaory_params_err_t missing_mandaory_params_err;
 			missing_mandaory_params_err.numberOfParams = htonl(1);
 			missing_mandaory_params_err.params[0] = htons(VLPARAM_COOKIE);
-			abort_channel(ECC_MISSING_MANDATORY_PARAM, (uchar*)&missing_mandaory_params_err,
+			msm_abort_channel(ECC_MISSING_MANDATORY_PARAM, (uchar*)&missing_mandaory_params_err,
 				1 * (sizeof(ushort) + sizeof(uint)));
 
-			unlock_bundle_ctrl();
+			mdi_unlock_bundle_ctrl();
 			smctrl->channel_state = ChannelState::Closed;
 			return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
 			return return_state;
@@ -3583,10 +3615,10 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
 				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
 			}
-			unlock_bundle_ctrl();
-			delete_curr_channel();
-			on_connection_lost(ConnectionLostReason::unknown_param);
-			clear_current_channel();
+			mdi_unlock_bundle_ctrl();
+			mdi_delete_curr_channel();
+			mdi_cb_connection_lost(ConnectionLostReason::unknown_param);
+			mdi_clear_current_channel();
 			smctrl->channel_state = ChannelState::Closed;
 			return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
 			return return_state;
@@ -3612,8 +3644,8 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(errorCID));
 			mch_free_simple_chunk(errorCID);
 		}
-		unlock_bundle_ctrl();
-		mdis_send_bundled_chunks();
+		mdi_unlock_bundle_ctrl();
+		mdi_send_bundled_chunks();
 
 		// stop init timer
 		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
@@ -3658,9 +3690,9 @@ int mdis_send_ecc_unrecognized_chunk(uchar* errdata, ushort length)
 	simple_chunk_t* simple_chunk_t_ptr_ = mch_complete_simple_chunk(simple_chunk_index_);
 	lock_bundle_ctrl();
 	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_);
-	unlock_bundle_ctrl();
+	mdi_unlock_bundle_ctrl();
 	mch_free_simple_chunk(simple_chunk_index_);
-	return mdis_send_bundled_chunks();
+	return mdi_send_bundled_chunks();
 }
 bool cmp_channel(const channel_t& tmp_channel, const channel_t& b)
 {
@@ -4147,8 +4179,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	chunk_id_t initAckCID = mch_make_init_ack_chunk_from_cookie(cookie_echo);
 	uint cookie_remote_tag = mch_read_itag(initCID);
 	uint cookie_local_tag = mch_read_itag(initAckCID);
-	uint local_tag = mdis_get_local_tag();
-	uint remote_tag = mdis_get_remote_tag();
+	uint local_tag = mdi_read_local_tag();
+	uint remote_tag = mdi_read_remote_tag();
 	bool valid = true;
 	if (last_veri_tag_ != cookie_local_tag)
 	{
@@ -4215,18 +4247,18 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			mch_remove_simple_chunk(cookie_echo_cid);
 			mch_free_simple_chunk(initCID);
 			mch_free_simple_chunk(initAckCID);
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 			return;
 		}
 	}
 
 	assert(last_source_addr_ != NULL);
-	smctrl_t* smctrl = mdis_read_smctrl();
+	smctrl_t* smctrl = mdi_read_smctrl();
 	if (smctrl == NULL)
 	{
 		EVENTLOG(NOTICE,
-			"process_cookie_echo_chunk(): mdis_read_smctrl() returned NULL -> call mdi_new_channel() !");
+			"process_cookie_echo_chunk(): mdi_read_smctrl() returned NULL -> call mdi_new_channel() !");
 		if (mdi_new_channel(curr_geco_instance_,
 			last_dest_port_,
 			last_src_port_,
@@ -4241,7 +4273,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			mch_free_simple_chunk(initAckCID);
 			return;
 		}
-		smctrl = mdis_read_smctrl();
+		smctrl = mdi_read_smctrl();
 		assert(smctrl == NULL);
 	}
 
@@ -4282,8 +4314,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
 		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(cookie_ack_cid_));
 		mch_free_simple_chunk(cookie_ack_cid_);
-		unlock_bundle_ctrl();
-		mdis_send_bundled_chunks();
+		mdi_unlock_bundle_ctrl();
+		mdi_send_bundled_chunks();
 
 		// notification to ULP
 		SendCommUpNotification = COMM_UP_RECEIVED_VALID_COOKIE;
@@ -4330,8 +4362,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 					cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
 					mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(cookie_ack_cid_));
 					mch_free_simple_chunk(cookie_ack_cid_);
-					unlock_bundle_ctrl();
-					mdis_send_bundled_chunks();
+					mdi_unlock_bundle_ctrl();
+					mdi_send_bundled_chunks();
 					EVENTLOG(INFO,
 						"event: recv COOKIE-ECHO, sick case peer restarts, take action 5.2.4.A -> connected!");
 				}
@@ -4357,8 +4389,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(errorCID));
 				mch_free_simple_chunk(errorCID);
 
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 			}
 		}
 		//MXAA, ACTION 5.2.4.B
@@ -4406,8 +4438,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(cookie_ack_cid_));
 			mch_free_simple_chunk(cookie_ack_cid_);
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 		}
 #ifdef _DEBUG
 		//XM00->ACTION 5.2.4.C
@@ -4462,8 +4494,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 				cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(cookie_ack_cid_));
 				mch_free_simple_chunk(cookie_ack_cid_);
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 			}
 		}
 #ifdef _DEBUG
@@ -4515,7 +4547,7 @@ int mdis_disassemle_packet()
 		{
 			EVENTLOG(WARNNING_ERROR,
 				"dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
-			unlock_bundle_ctrl();
+			mdi_unlock_bundle_ctrl();
 			return -1;
 		}
 
@@ -4528,7 +4560,7 @@ int mdis_disassemle_packet()
 		{
 			EVENTLOG(WARNNING_ERROR,
 				"dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
-			unlock_bundle_ctrl();
+			mdi_unlock_bundle_ctrl();
 			return -1;
 		}
 
@@ -5687,8 +5719,8 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 				// this method will internally send all bundled chunks if exceeding packet max
 				lock_bundle_ctrl();
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdown_complete_cid));
-				unlock_bundle_ctrl();
-				mdis_send_bundled_chunks();
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
 				mch_free_simple_chunk(shutdown_complete_cid);
 				clear();
 				return discard;
@@ -5800,8 +5832,8 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 				CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
 			lock_bundle_ctrl();
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdown_complete_cid));
-			unlock_bundle_ctrl();
-			mdis_send_bundled_chunks();
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 			printf("sinple chunk id %u\n", shutdown_complete_cid);
 			mch_free_simple_chunk(shutdown_complete_cid);
 			printf("sinple chunk id %u\n", shutdown_complete_cid);
@@ -6016,8 +6048,8 @@ SEND_ABORT:
 		lock_bundle_ctrl();
 		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 		mch_free_simple_chunk(abort_cid);
-		unlock_bundle_ctrl();
-		mdis_send_bundled_chunks();
+		mdi_unlock_bundle_ctrl();
+		mdi_send_bundled_chunks();
 		clear();
 		return reply_abort;
 	}  // 23 send_abort_ == true
@@ -6448,7 +6480,7 @@ int mulp_connectx(unsigned int instanceid,
 	if (mdi_new_channel(curr_geco_instance_,
 		localPort,/* local client port */
 		destinationPort,/* remote server port */
-		mdis_generate_init_tag(),
+		mdi_generate_itag(),
 		0, noOfDestinationAddresses, dest_su) == false)
 	{
 		ERRLOG(MAJOR_ERROR, "Creation of association failed !");

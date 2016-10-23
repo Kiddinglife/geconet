@@ -363,8 +363,8 @@ void msm_associate(unsigned short noOfOutStreams,
 	case CLOSED:
 		event_log(EXTERNAL_EVENT, "event: scu_assocatiate in state CLOSED");
 		/* create init chunk and write data to it -- take AssocID as tag !!! */
-		initCID = ch_makeInit(mdis_get_local_tag(),
-			mdis_get_rwnd_from_curr_inst(),
+		initCID = ch_makeInit(mdi_read_local_tag(),
+			mdi_read_rwnd(),
 			noOfOutStreams, noOfInStreams, mdi_generateStartTSN());
 
 		/* store the number of streams */
@@ -783,7 +783,7 @@ int sctlr_init(SCTP_init *init)
 		outbound_streams = min(ch_noInStreams(initCID), mdi_readLocalOutStreams());
 		/* fire back an InitAck with a Cookie */
 		initAckCID = ch_makeInitAck(mdi_generateTag(),
-			mdis_get_rwnd_from_curr_inst(),
+			mdi_read_rwnd(),
 			outbound_streams,
 			inbound_streams, mdi_generateStartTSN());
 
@@ -1214,7 +1214,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 
 		smctrl->cookieChunk = (cookie_echo_chunk_t *)ch_chunkString(cookieCID);
 		/* populate tie tags -> section 5.2.1/5.2.2 */
-		smctrl->local_tie_tag = mdis_get_local_tag();
+		smctrl->local_tie_tag = mdi_read_local_tag();
 		smctrl->peer_tie_tag = ch_initiateTag(initAckCID);
 
 		smctrl->outbound_stream = outbound_streams;
@@ -1352,7 +1352,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	cookie_local_tag = ch_initiateTag(initAckCID);
 
 	/* these two will be zero, if association is not up yet */
-	local_tag = mdis_get_local_tag();
+	local_tag = mdi_read_local_tag();
 	remote_tag = mdi_readTagRemote();
 
 	if ((mdi_readLastInitiateTag() != cookie_local_tag) &&

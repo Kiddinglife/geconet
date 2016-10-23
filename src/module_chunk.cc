@@ -11,6 +11,14 @@ uint simple_chunk_index_ = 0; /* current simple chunk index */
 simple_chunk_t* simple_chunk_t_ptr_ = NULL; /* current simple chunk ptr */
 
 
+simple_chunk_t* mch_read_simple_chunk(uint chunkID) 
+{
+	return simple_chunks_[chunkID];
+}
+simple_chunk_t** mch_read_simple_chunks()
+{
+	return simple_chunks_;
+}
 
 uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type)
 {

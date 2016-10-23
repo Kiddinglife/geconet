@@ -196,7 +196,7 @@ int mdi_updateMyAddressList(void);
  * returns: pointer to the flow control data structure.
  *          null in case of error.
  */
-void *mfc_get(void);
+void *mdi_read_mfc(void);
 
 /*
  * returns: pointer to the reliable transfer data structure.
@@ -244,7 +244,7 @@ unsigned int get_curr_channel_id(void);
 unsigned int mdi_generateTag(void);
 
 unsigned int mdi_readTagRemote(void);
-unsigned int mdis_get_local_tag(void);
+unsigned int mdi_read_local_tag(void);
 
 /* returns: a the start TSN for new association */
 unsigned int mdi_generateStartTSN(void);
@@ -309,8 +309,8 @@ int mdi_getDefaultPathMaxRetransmits(void* sctpInstance);
 int mdi_getDefaultRtoMin(void* sctpInstance);
 int mdi_getDefaultRtoMax(void* sctpInstance);
 int mdi_getDefaultMaxInitRetransmits(void* sctpInstance);
-int mdis_get_rwnd_from_curr_inst(void);
-int get_default_delay(void* sctpInstance);
+int mdi_read_rwnd(void);
+int mdi_read_default_delay(void* sctpInstance);
 int mdi_getDefaultIpTos(void* sctpInstance);
 int mdi_getDefaultMaxSendQueue(void* sctpInstance);
 int mdi_getDefaultMaxRecvQueue(void* sctpInstance);

@@ -122,8 +122,8 @@ void *mrecv_new(unsigned int remote_initial_TSN, unsigned int number_of_destinat
     tmp->datagrams_received = -1;
     tmp->sack_flag = 2;
     tmp->last_address = 0;
-    tmp->my_rwnd =  mdis_get_rwnd_from_curr_inst();
-    tmp->delay =    get_default_delay(sctpInstance);
+    tmp->my_rwnd =  mdi_read_rwnd();
+    tmp->delay =    mdi_read_default_delay(sctpInstance);
     tmp->channel_id = get_curr_channel_id();
     event_logi(VVERBOSE, "RecvControl : Association-ID== %d ", tmp->channel_id);
     if (tmp->channel_id == 0)

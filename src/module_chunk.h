@@ -84,7 +84,7 @@ inline void mch_remove_simple_chunk(uchar chunkID);
 chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL);
 
 
-
+simple_chunk_t *mch_read_simple_chunk(uint chunkID);
 // ch_receiverWindow reads the remote receiver window from an init or initAck 
 uint mch_read_rwnd(uint initcid);
 // ch_receiverWindow reads the remote receiver window from an init or initAck 
