@@ -941,11 +941,11 @@ TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 	init_addrlist(false, 0, addres6, 2, local_addres6);
 	//////////////////////////////////////////////////////////////////////////////
 	uint offset = 0;
-	offset += put_vlp_supported_addr_types(init_chunk->variableParams, true,
+	offset += mch_write_vlp_supportedaddrtypes(init_chunk->variableParams, true,
 		false, false);
-	offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres,
+	offset += mch_write_vlp_addrlist(init_chunk->variableParams + offset, local_addres,
 		3);
-	offset += put_vlp_addrlist(init_chunk->variableParams + offset, local_addres6, 2);
+	offset += mch_write_vlp_addrlist(init_chunk->variableParams + offset, local_addres6, 2);
 	//////////////////////////////////////////////////////////////////////////////
 	EXPECT_EQ(offset, 72);
 	init_chunk->chunk_header.chunk_length = htons(
@@ -1268,7 +1268,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 		unsigned short noOutStreams = 5;
 		unsigned short noInStreams = 5;
 		unsigned int initialTSN = initTag;
-		init_chunk_t* init_chunk = build_init_chunk(initTag, rwnd, noOutStreams,
+		init_chunk_t* init_chunk = mch_make_init_chunk(initTag, rwnd, noOutStreams,
 			noInStreams, initialTSN);
 
 		for (i = 0; i < all_cannot_found_size; i++)
@@ -1279,11 +1279,11 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 				last_dest_addr = &channel.local_addres[j];
 				//1.2) but there is matched src addres in INIT chunk
 				//1.2.1) fills up init with matched addrlist
-				written = put_vlp_addrlist(init_chunk->variableParams, src_addres,
+				written = mch_write_vlp_addrlist(init_chunk->variableParams, src_addres,
 					srcaddr4_size);
-				written += put_vlp_addrlist(&init_chunk->variableParams[written],
+				written += mch_write_vlp_addrlist(&init_chunk->variableParams[written],
 					src_addres6, srcaddr6_size);
-				written += put_vlp_supported_addr_types(
+				written += mch_write_vlp_supportedaddrtypes(
 					&init_chunk->variableParams[written], true, true, false);
 				dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES
 					+ GECO_PACKET_FIXED_SIZE;
@@ -1303,7 +1303,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 				//  1.3.1) fills up init with unmatched addrlist
 				written = 0;
 				dctp_packet_len = 0;
-				written += put_vlp_supported_addr_types(init_chunk->variableParams,
+				written += mch_write_vlp_supportedaddrtypes(init_chunk->variableParams,
 					true, true, false);
 				dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES
 					+ GECO_PACKET_FIXED_SIZE;
@@ -1492,7 +1492,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 	unsigned short noOutStreams = 5;
 	unsigned short noInStreams = 5;
 	unsigned int initialTSN = initTag;
-	init_chunk_t* init_chunk = build_init_chunk(initTag, rwnd, noOutStreams,
+	init_chunk_t* init_chunk = mch_make_init_chunk(initTag, rwnd, noOutStreams,
 		noInStreams, initialTSN);
 
 	if (enable_6_processinit_chunk)
@@ -1512,7 +1512,7 @@ TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 		dctp_packet_len = 0;
 		//    written = put_vlp_addrlist(init_chunk->variableParams, all_cannot_found_addres,
 		//            all_cannot_found_size);
-		written += put_vlp_supported_addr_types(
+		written += mch_write_vlp_supportedaddrtypes(
 			&init_chunk->variableParams[written], true, true, false);
 		dctp_packet_len = written + INIT_CHUNK_FIXED_SIZES + GECO_PACKET_FIXED_SIZE;
 		init_chunk->chunk_header.chunk_length = htons(

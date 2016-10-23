@@ -12,7 +12,7 @@ d:\vs-workspace\geco-protocol-stack\src\globals.h(88): warning C4005: 'POLLERR':
 d:\vs-workspace\geco-protocol-stack\src\config.h(20): warning C4005: '_DEBUG': macro redefinition
   d:\vs-workspace\geco-protocol-stack\src\config.h(20): note: command-line arguments:  see previous definition of '_DEBUG'
 d:\vs-workspace\geco-protocol-stack\src\auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geco-protocol-stack\src\globals.h(602): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+d:\vs-workspace\geco-protocol-stack\src\globals.h(609): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
   d:\vs-workspace\geco-protocol-stack\src\messages.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
 d:\vs-workspace\geco-protocol-stack\src\gecotimer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
@@ -21,80 +21,169 @@ d:\vs-workspace\geco-protocol-stack\src\gecotimer.h(282): warning C4101: 'overfl
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geco-protocol-stack\src\geco-ds-malloc.h(812): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(418): warning C4267: 'return': conversion from 'size_t' to 'unsigned int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(435): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(520): warning C4002: too many actual parameters for macro 'ERRLOG'
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(610): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(618): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1125): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1142): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1271): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1301): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2013): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2367): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2381): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2487): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2577): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2633): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2734): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2786): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2454): warning C4101: 'init_i_sent_cid': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2847): warning C4102: 'leave': unreferenced label
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3313): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3330): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(426): warning C4267: 'return': conversion from 'size_t' to 'unsigned int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(443): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(528): warning C4002: too many actual parameters for macro 'ERRLOG'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(618): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(626): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(679): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(289): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(679): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1133): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1150): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1279): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1309): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2313): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2313): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2374): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2388): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2394): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2394): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2438): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2438): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2442): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2442): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2494): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2534): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2534): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2584): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2589): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2589): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2609): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2609): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2640): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2677): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2677): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2680): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2680): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2703): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2703): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2707): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2707): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2741): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2747): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2747): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2767): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2767): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2793): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2833): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(2833): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3320): warning C4018: '<': signed/unsigned mismatch
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3337): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3350): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3469): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3493): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3494): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3551): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3552): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3563): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3572): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3609): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3634): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3637): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3638): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3475): warning C4101: 'result': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3479): warning C4101: 'errorCID': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3477): warning C4101: 'idx': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3483): warning C4101: 'preferredPath': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3477): warning C4101: 'state': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3484): warning C4101: 'prefered_primary_addr': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3998): warning C4267: '=': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4001): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4004): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4156): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4168): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4180): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4181): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4205): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4247): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4271): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4301): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4302): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3344): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3357): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3476): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3500): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3501): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3514): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3514): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3558): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3559): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3570): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3579): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3616): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3641): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3644): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3645): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3655): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3655): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3702): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(3702): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4005): warning C4267: '=': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4008): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4011): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4163): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4175): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4187): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4188): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4212): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4254): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4258): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4258): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4278): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4308): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4309): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4348): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4349): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4412): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4413): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4315): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4316): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4325): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4325): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4355): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4356): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4373): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4373): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4400): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4400): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4419): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4420): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4421): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4471): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4472): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4427): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4428): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4449): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4449): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4478): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4479): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4480): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4511): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4832): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4993): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5024): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6026): warning C4102: 'SEND_ABORT': unreferenced label
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6674): warning C4101: 'ret': unreferenced local variable
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(614): warning C4700: uninitialized local variable 'nlAddresses' used
-d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(740): warning C4700: uninitialized local variable 'read_len' used
-C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\geco-protocol-stack_protocol-stack-lib_Debugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
-C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(protocol-stack-lib) does not match the Library's OutputFile property value (geco-protocol-stack_protocol-stack-lib_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
-Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored
-Ws2_32.lib(WS2_32.dll) : warning LNK4221: This object file does not define any previously undefined public symbols, so it will not be used by any link operation that consumes this library
-  protocol-stack.vcxproj -> D:\vs-workspace\geco-protocol-stack\mscv\2015\geco-net\x64\Debug\protocol-stack-lib.lib
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4486): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4487): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4505): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4505): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4518): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(4866): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5027): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5756): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5756): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5869): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(5869): note: while trying to match the argument list '()'
+d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6085): error C2668: 'mdi_send_bundled_chunks': ambiguous call to overloaded function
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(1558): note: could be 'int mdi_send_bundled_chunks(int *)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(287): note: or       'int mdi_send_bundled_chunks(void)'
+  d:\vs-workspace\geco-protocol-stack\src\dispatch_layer.cc(6085): note: while trying to match the argument list '()'

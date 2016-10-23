@@ -588,7 +588,7 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
             if (send_it == TRUE) bu_sendAllChunks(&address_index);
         }
         /* if the association has already been removed, we cannot unlock it anymore */
-        bu_u１lock_sender(&address_index);
+		bu_unlock_sender(&address_index);
     }
 
     return 0;

@@ -159,14 +159,14 @@ bool enable_mock_dispatch_send_geco_packet_;
 bool enable_mock_dispatcher_process_init_chunk_;
 #endif
 
-
+int* curr_bundle_chunks_send_addr_ = 0;
 
 /////////////////////////////////////////////////////  msm state machine module /////////////////////////////////////////////////////
 /** this function aborts this association. And optionally adds an error parameter to the ABORT chunk that is sent out. */
 void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen);
 /** get current parameter value for cookieLifeTime @return current value, -1 on erro*/
 int msm_get_cookielife(void);
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -278,6 +278,16 @@ int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 *  otherwise return  the ones same to stored in inst localaddrlist
 */
 MYSTATIC bool mdi_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
+
+// NULL means use last src addr , NOT_NULL means use primary addr or specified addr 
+// @CAUTION  the 3 functions below MUST be used together to send bundled chunks
+void mdi_set_bundle_dest_addr(int * ad_idx = NULL)
+{
+	curr_bundle_chunks_send_addr_ = ad_idx;
+}
+void mdi_bundle_ctrl_chunk1(simple_chunk_t * chunk);
+int mdi_send_bundled_chunks1();
+
 int mdi_send_bundled_chunks(int * ad_idx = NULL);
 void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
 /**
@@ -332,7 +342,7 @@ void mdi_stop_sack_timer(void);
 * Allow sender to send data right away
 * when all received chunks have been diassembled completely.
 * @example
-* firstly, lock_bundle_ctrl() when disassembling received chunks;
+* firstly, mdi_lock_bundle_ctrl() when disassembling received chunks;
 * then, generate and bundle outging chunks like sack, data or ctrl chunks;
 * the bundle() will interally force sending all chunks if the bundle are full.
 * then, excitely call send all bundled chunks;
@@ -1612,8 +1622,7 @@ int mdi_send_bundled_chunks(int * ad_idx)
 	if (bundle_ctrl->sack_in_buffer)
 	{
 		mdi_stop_sack_timer();
-		/* send sacks, by default they go to the last active address,
-		* from which data arrived */
+		/* send sacks, by default they go to the last active address,from which data arrived */
 		send_buffer = bundle_ctrl->sack_buf;
 		/*
 		* at least sizeof(geco_packet_fixed_t)
@@ -1920,14 +1929,14 @@ void mdi_unlock_bundle_ctrl(int* ad_idx)
 /**
  * disallow sender to send data right away when newly received chunks have
  * NOT been diassembled completely.*/
-void lock_bundle_ctrl()
+void mdi_lock_bundle_ctrl()
 {
 	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mdi_read_mbu(curr_channel_);
 
 	/*1) no channel exists, it is NULL, so we take the global bundling buffer */
 	if (bundle_ctrl == NULL)
 	{
-		EVENTLOG(VERBOSE, "lock_bundle_ctrl()::Setting global bundling buffer");
+		EVENTLOG(VERBOSE, "mdi_lock_bundle_ctrl()::Setting global bundling buffer");
 		bundle_ctrl = default_bundle_ctrl_;
 	}
 
@@ -2380,7 +2389,7 @@ int process_init_chunk(init_chunk_t * init)
 			char* errstr = "peer does not supports your adress types !";
 			mch_write_error_cause(abort_cid, ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*)errstr, strlen(errstr) + 1);
 
-			lock_bundle_ctrl();
+			mdi_lock_bundle_ctrl();
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 			mch_free_simple_chunk(abort_cid);
 			mdi_unlock_bundle_ctrl();
@@ -2575,7 +2584,7 @@ int process_init_chunk(init_chunk_t * init)
 				chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
 				char* errstr = "peer does not supports your adress types !";
 				mch_write_error_cause(abort_cid, ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*)errstr, strlen(errstr) + 1);
-				lock_bundle_ctrl();
+				mdi_lock_bundle_ctrl();
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 				mch_free_simple_chunk(abort_cid);
 				mdi_unlock_bundle_ctrl();
@@ -2596,7 +2605,7 @@ int process_init_chunk(init_chunk_t * init)
 						chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
 						mch_write_error_cause(abort_cid, ECC_RESTART_WITH_NEW_ADDRESSES,
 							(uchar*)tmp_peer_addreslist_ + inner, sizeof(sockaddrunion));
-						lock_bundle_ctrl();
+						mdi_lock_bundle_ctrl();
 						mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 						mdi_unlock_bundle_ctrl();
 						mdi_send_bundled_chunks();
@@ -2733,7 +2742,7 @@ int process_init_chunk(init_chunk_t * init)
 				char* errstr = "peer does not supports your adress types !";
 				mch_write_error_cause(abort_cid, ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*)errstr, strlen(errstr) + 1);
 
-				lock_bundle_ctrl();
+				mdi_lock_bundle_ctrl();
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 				mch_free_simple_chunk(abort_cid);
 				mdi_unlock_bundle_ctrl();
@@ -2754,7 +2763,7 @@ int process_init_chunk(init_chunk_t * init)
 						chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_UNSET);
 						mch_write_error_cause(abort_cid, ECC_RESTART_WITH_NEW_ADDRESSES,
 							(uchar*)tmp_peer_addreslist_ + inner, sizeof(sockaddrunion));
-						lock_bundle_ctrl();
+						mdi_lock_bundle_ctrl();
 						mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 						mdi_unlock_bundle_ctrl();
 						mdi_send_bundled_chunks();
@@ -3688,7 +3697,7 @@ int mdis_send_ecc_unrecognized_chunk(uchar* errdata, ushort length)
 	mch_write_error_cause(simple_chunk_index_, ECC_UNRECOGNIZED_CHUNKTYPE, errdata, length);
 	// send it
 	simple_chunk_t* simple_chunk_t_ptr_ = mch_complete_simple_chunk(simple_chunk_index_);
-	lock_bundle_ctrl();
+	mdi_lock_bundle_ctrl();
 	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_);
 	mdi_unlock_bundle_ctrl();
 	mch_free_simple_chunk(simple_chunk_index_);
@@ -4520,27 +4529,35 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 
 	EVENTLOG(VERBOSE, "Leave process_cookie_echo_chunk()");
 }
+
 int mdis_disassemle_packet()
 {
 #if defined(_DEBUG)
-#if ENABLE_UNIT_TEST
-	if (enable_mock_dispatcher_disassemle_curr_geco_packet_)
-	{
-		EVENTLOG(DEBUG, "Mock::dispatch_layer_t::disassemle_curr_geco_packet() is called");
-		return 0;
-	}
-#else
+	//#if ENABLE_UNIT_TEST
+	//	if (enable_mock_dispatcher_disassemle_curr_geco_packet_)
+	//	{
+	//		EVENTLOG(DEBUG, "Mock::dispatch_layer_t::disassemle_curr_geco_packet() is called");
+	//		return 0;
+	//	}
+	//#else
+	//	EVENTLOG2(DEBUG,
+	//		"- - - ENTER dispatch_layer_t::disassemle_curr_geco_packet():last_src_path_ %u,packetvallen %u",
+	//		last_src_path_, curr_geco_packet_value_len_);
+	//#endif
 	EVENTLOG2(DEBUG,
 		"- - - ENTER dispatch_layer_t::disassemle_curr_geco_packet():last_src_path_ %u,packetvallen %u",
 		last_src_path_, curr_geco_packet_value_len_);
 #endif
-#endif
+
 
 	uchar* curr_pos = curr_geco_packet_->chunk; /* points to the first chunk in this pdu */
 	uint read_len = 0, chunk_len;
 	simple_chunk_t* chunk;
+	bool data_chunk_received = false;
+	int handle_ret = ChunkProcessResult::Good;
 
-	lock_bundle_ctrl();
+	mdi_lock_bundle_ctrl();
+
 	while (read_len < curr_geco_packet_value_len_)
 	{
 		if (curr_geco_packet_value_len_ - read_len < CHUNK_FIXED_SIZE)
@@ -4553,13 +4570,11 @@ int mdis_disassemle_packet()
 
 		chunk = (simple_chunk_t *)curr_pos;
 		chunk_len = ntohs(chunk->chunk_header.chunk_length);
-		EVENTLOG2(VERBOSE, "starts process chunk with read_len %u,chunk_len %u", read_len,
-			chunk_len);
+		EVENTLOG2(VERBOSE, "starts process chunk with read_len %u,chunk_len %u", read_len, chunk_len);
 
 		if (chunk_len < CHUNK_FIXED_SIZE || chunk_len + read_len > curr_geco_packet_value_len_)
 		{
-			EVENTLOG(WARNNING_ERROR,
-				"dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
+			EVENTLOG(WARNNING_ERROR, "dispatch_layer_t::disassemle_curr_geco_packet()::chunk_len illegal !-> return -1 !");
 			mdi_unlock_bundle_ctrl();
 			return -1;
 		}
@@ -4570,8 +4585,6 @@ int mdis_disassemle_packet()
 		 * to do with the rest of the datagram (i.e. DISCARD after stale COOKIE_ECHO
 		 * with tie tags that do not match the current ones)
 		 */
-		bool data_chunk_received = false;
-		int handle_ret = ChunkProcessResult::Good;
 		switch (chunk->chunk_header.chunk_id)
 		{
 		case CHUNK_DATA:
@@ -4642,13 +4655,36 @@ int mdis_disassemle_packet()
 			break;
 		}
 		read_len += chunk_len;
-		while (read_len & 3)
-			++read_len;
+		while (read_len & 3) ++read_len;
 		curr_pos = curr_geco_packet_->chunk + read_len;
 		if (handle_ret != ChunkProcessResult::Good)  // to break whileloop
 			read_len = curr_geco_packet_value_len_;
 		EVENTLOG2(VERBOSE, "end process chunk with read_len %u,chunk_len %u", read_len, chunk_len);
-		//TODO
+	}
+
+	if (handle_ret != ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError &&
+		handle_ret != ChunkProcessResult::StopAndDeleteChannel_ValidateInitParamFailedError)
+	{
+		if (data_chunk_received)
+		{
+			/* update SACK structure and start SACK timer */
+			//rxc_all_chunks_processed(TRUE);
+		}
+		else
+		{
+			/* update SACK structure and datagram counter */
+		   // rxc_all_chunks_processed(FALSE);
+		}
+
+		// optionally also add a SACK chunk, at least for every second datagram 
+		// see section 6.2, second paragraph
+		if (data_chunk_received)
+		{
+			//bool send_it = rxc_create_sack(&address_index, FALSE);
+			//se_doNotifications();
+			//if (send_it == TRUE) bu_sendAllChunks(&address_index);
+		}
+		mdi_unlock_bundle_ctrl();
 	}
 	return 0;
 }
@@ -5075,8 +5111,7 @@ void clear()
 	chunkflag2use_ = -1;
 }
 
-int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
-	sockaddrunion * source_addr, sockaddrunion * dest_addr)
+int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len, sockaddrunion * source_addr, sockaddrunion * dest_addr)
 {
 	EVENTLOG3(VERBOSE,
 		"- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
@@ -5717,7 +5752,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 				uint shutdown_complete_cid = mch_make_simple_chunk(
 					CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
 				// this method will internally send all bundled chunks if exceeding packet max
-				lock_bundle_ctrl();
+				mdi_lock_bundle_ctrl();
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdown_complete_cid));
 				mdi_unlock_bundle_ctrl();
 				mdi_send_bundled_chunks();
@@ -5830,7 +5865,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 
 			uint shutdown_complete_cid = mch_make_simple_chunk(
 				CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
-			lock_bundle_ctrl();
+			mdi_lock_bundle_ctrl();
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdown_complete_cid));
 			mdi_unlock_bundle_ctrl();
 			mdi_send_bundled_chunks();
@@ -6045,7 +6080,7 @@ SEND_ABORT:
 		chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT, chunkflag2use_);
 		mch_write_error_cause(abort_cid, curr_ecc_code_, curr_ecc_reason_, curr_ecc_len_ - 4);
 
-		lock_bundle_ctrl();
+		mdi_lock_bundle_ctrl();
 		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
 		mch_free_simple_chunk(abort_cid);
 		mdi_unlock_bundle_ctrl();

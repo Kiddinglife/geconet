@@ -234,6 +234,13 @@ extern geco_return_enum global_ret_val;
 
 const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 
+enum SENDING_DEST_ADDR_TYPE : int
+{
+	PRIMARY_ADDR = -1,
+	LAST_SOURCE_ADDR = -2,
+	RESET_VALUE = -3
+};
+
 /* ms default interval to timeout when no timers in poll
  * it is alos the resolution of wheel-timer*/
 #define GRANULARITY 1
