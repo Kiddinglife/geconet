@@ -46,7 +46,7 @@ int checksum_algorithm_ = MULP_CHECKSUM_ALGORITHM_MD5;
 bool support_pr_ = true;
 bool support_addip_ = true;
 uint delayed_ack_interval_ = SACK_DELAY;  //ms
-bool send_abort_for_oob_packet_;
+bool send_abort_for_oob_packet_ = true;
 uint ipv4_users = 0;
 uint ipv6_users = 0;
 // inits along with library inits
@@ -527,7 +527,7 @@ inline int mpath_read_rto(short pathID)
 	}
 	else
 	{
-		ERRLOG(MAJOR_ERROR, "mpath_read_rto(%d): invalid path ID", pathID);
+		ERRLOG1(MAJOR_ERROR, "mpath_read_rto(%d): invalid path ID", pathID);
 	}
 	return -1;
 }
@@ -1726,16 +1726,13 @@ void mdis_init(void)
 	is_found_abort_chunk_ = false;
 	is_found_cookie_echo_ = false;
 	is_found_init_chunk_ = false;
-	library_support_unreliability_ = true;
 	is_there_at_least_one_equal_dest_port_ = false;
 	should_discard_curr_geco_packet_ = false;
 	do_dns_query_for_host_name_ = false;
 	// uncomment as we never send abort to a unconnected peer
-	send_abort_for_oob_packet_ = true;
 	send_abort_ = false;
 	enable_test_ = false;
 	ignore_cookie_life_spn_from_init_chunk_ = false;
-	send_abort_for_oob_packet_ = true;
 
 	curr_channel_ = NULL;
 	curr_geco_instance_ = NULL;
@@ -3778,7 +3775,8 @@ bundle_controller_t* mbu_new(void)
 	bundle_ctrl->data_position = UDP_GECO_PACKET_FIXED_SIZES;
 	bundle_ctrl->ctrl_position = UDP_GECO_PACKET_FIXED_SIZES;
 	bundle_ctrl->sack_position = UDP_GECO_PACKET_FIXED_SIZES;
-
+	bundle_ctrl->requested_destination = 0;
+	bundle_ctrl->got_shutdown = false;
 #ifdef _DEBUG
 	EVENTLOG(VERBOSE, "- - - - Leave mbu_new()");
 #endif
@@ -6107,32 +6105,53 @@ unsigned int numberOfSeizedPorts;
 int initialize_library(void)
 {
 	if (library_initiaized == true) return MULP_LIBRARY_ALREADY_INITIALIZED;
+
 	read_trace_levels();
+
 #if !defined(WIN32) && !defined(USE_UDP)
-	/* check privileges. Must be root or setuid-root for now ! */
-	if (geteuid() != 0)
-	{
-		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
-		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+#if ENABLE_UNIT_TEST == 0
+    /* check privileges. Must be root or setuid-root for now ! */
+    if (geteuid() != 0)
+    {
+        EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
+        return MULP_INSUFFICIENT_PRIVILEGES;
+    }
+#else
+    EVENTLOG(VERBOSE, "mocked:: you are root user ");
+#endif
 #endif
 
-	mdis_init();
 	int i, ret, sfd = -1, maxMTU = 0;
-	if ((ret = mtra_init(&myRWND)) < 0)
-		return MULP_SPECIFIC_FUNCTION_ERROR;
+
+#if ENABLE_UNIT_TEST == 0
+    if ((ret = mtra_init(&myRWND)) < 0)
+        return MULP_SPECIFIC_FUNCTION_ERROR;
+#else
+    EVENTLOG(VERBOSE, "mocked::mtra_init()::nothing to mock");
+#endif
+
+    mdis_init();
+
 	/* initialize ports seized */
 	for (i = 0; i < 0x10000; i++)
 		portsSeized[i] = 0;
 	numberOfSeizedPorts = 0x00000000;
+
 	/* initialize bundling, i.e. the common buffer for sending chunks when no association exists. */
 	default_bundle_ctrl_ = mbu_new();
+
 	/* this block is to be executed only once for the lifetime of sctp-software */
 	get_secre_key(KEY_INIT);
-	if (!get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
-		mtra_read_ip4_socket() != 0 ? mtra_read_ip4_socket() : mtra_read_ip6_socket(),
-		true, &maxMTU, IPAddrType::AllCastAddrTypes))
-		return MULP_SPECIFIC_FUNCTION_ERROR;
+
+#if ENABLE_UNIT_TEST == 0
+    if (!get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
+        mtra_read_ip4_socket() != 0 ? mtra_read_ip4_socket() : mtra_read_ip6_socket(),
+        true, &maxMTU, IPAddrType::AllCastAddrTypes))
+        return MULP_SPECIFIC_FUNCTION_ERROR;
+#else
+    EVENTLOG(VERBOSE, "mocked::get_local_addresses()::you must mock defaultlocaladdrlist_ and defaultlocaladdrlistsize_!!!");
+#endif
+
 	library_initiaized = true;
 	return MULP_SUCCESS;
 }
@@ -6575,15 +6594,15 @@ int mulp_set_lib_params(lib_infos_t *lib_params)
 }
 int mulp_get_lib_params(lib_infos_t *lib_params)
 {
-	CHECK_LIBRARY;
-	if (lib_params == NULL) return MULP_PARAMETER_PROBLEM;
+    CHECK_LIBRARY;
+    if (lib_params == NULL) return MULP_PARAMETER_PROBLEM;
 	lib_params->send_ootb_aborts = send_abort_for_oob_packet_;
 	lib_params->checksum_algorithm = checksum_algorithm_;
 	lib_params->support_dynamic_addr_config = support_addip_;
 	lib_params->support_particial_reliability = support_pr_;
 	lib_params->delayed_ack_interval = delayed_ack_interval_;
 	EVENTLOG5(VERBOSE,
-		"mulp_get_lib_params():: send_ootb_aborts %d, checksum_algorithm %s,support_dynamic_addr_config %s,support_particial_reliability %s,"
+		"mulp_get_lib_params():: send_ootb_aborts %s, checksum_algorithm %s,support_dynamic_addr_config %s,support_particial_reliability %s,"
 		"delayed_ack_interval %d",
 		(send_abort_for_oob_packet_ == true) ? "TRUE" : "FALSE",
 		(checksum_algorithm_ == MULP_CHECKSUM_ALGORITHM_CRC32C) ? "CRC32C" : "MD5",

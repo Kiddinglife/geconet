@@ -67,11 +67,11 @@ int mch_validate_init_vlps(uint src_cid, uint dest_cid);
 * @brief returns a pointer to the beginning of a simple chunk,
 * internally fillup chunk length.
 */
-simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
+extern simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
 /**
 * mch_free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
 * memory allocated for that chunk*/
-void mch_free_simple_chunk(uint chunkID);
+extern void mch_free_simple_chunk(uint chunkID);
 /**
 removes the chunk from the array of simple_chunks_ without freeing the
 memory allocated for that chunk.
@@ -80,8 +80,8 @@ Used in the following 2 cases:
 2) the chunk was created with uchar mch_make_simple_chunk(simple_chunk_t* chunk)
 and the pointer to the chunk points into an geco packet from recv_geco_packet(),
 which was allocated as a whole. In this case the chunk can not be freed here.*/
-inline void mch_remove_simple_chunk(uchar chunkID);
-chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL);
+extern void mch_remove_simple_chunk(uchar chunkID);
+extern chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL);
 
 
 simple_chunk_t *mch_read_simple_chunk(uint chunkID);

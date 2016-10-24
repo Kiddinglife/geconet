@@ -8,8 +8,6 @@
 using namespace geco::ds;
 
 extern timer_mgr mtra_timer_mgr_;
-extern int mtra_ip4_socket_despt_; /* socket fd for standard SCTP port....      */
-extern int mtra_ip6_socket_despt_; /* socket fd for standard SCTP port....      */
 extern int mtra_icmp_socket_despt_; /* socket fd for ICMP messages */
 extern int socket_despts_size_;
 extern socket_despt_t socket_despts[MAX_FD_SIZE];
@@ -22,6 +20,9 @@ extern void mtra_add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb);
 extern int mtra_poll(void(*lock)(void* data), void(*unlock)(void* data), void* data);
 extern int mtra_remove_stdin_cb();
 extern int mtra_remove_event_handler(int sfd);
+extern int mtra_read_ip4_socket();
+extern int mtra_read_ip6_socket();
+extern int mtra_read_icmp_socket();
 
 struct alloc_t
 {
@@ -380,14 +381,13 @@ TEST(TRANSPORT_MODULE, test_get_local_addr)
 {
 	int rcwnd = 512;
 	mtra_init(&rcwnd);
-
 	sockaddrunion* saddr = 0;
 	int num = 0;
 	int maxmtu = 0;
 	ushort port = 0;
 	char addr[MAX_IPADDR_STR_LEN];
 	IPAddrType t = (IPAddrType)(AllLocalAddrTypes | AllCastAddrTypes);
-	get_local_addresses(&saddr, &num, mtra_ip4_socket_despt_, true, &maxmtu, t);
+	get_local_addresses(&saddr, &num, mtra_read_ip4_socket(), true, &maxmtu, t);
 
 	EVENTLOG1(VERBOSE, "max mtu  %d\n", maxmtu);
 
@@ -417,7 +417,7 @@ process_stdin(char* data, size_t datalen)
 	int sampledata = 27;
 	uchar tos = IPTOS_DEFAULT;
 	int sentsize =
-		mtra_send_ip_packet(mtra_ip4_socket_despt_, data, datalen, &saddr, tos);
+		mtra_send_ip_packet(mtra_read_ip4_socket(), data, datalen, &saddr, tos);
 	assert(sentsize == datalen);
 }
 static void
@@ -447,7 +447,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	mtra_init(&rcwnd);
 	cbunion_t cbunion;
 	cbunion.socket_cb_fun = socket_cb;
-	mtra_set_expected_event_on_fd(mtra_ip4_socket_despt_,
+	mtra_set_expected_event_on_fd(mtra_read_ip4_socket(),
 		EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
 	// you have to put stdin as last because we test it
 	mtra_add_stdin_cb(process_stdin);
@@ -456,7 +456,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 		mtra_poll(0, 0, 0);
 	mtra_timer_mgr_.timers.clear();
 	mtra_remove_stdin_cb();
-	mtra_remove_event_handler(mtra_ip4_socket_despt_);
+	mtra_remove_event_handler(mtra_read_ip4_socket());
 }
 static void
 fd_action_sctp(int sfd, char* data, int datalen, const char* addr, ushort port)
