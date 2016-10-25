@@ -1037,9 +1037,9 @@ static int open_ipproto_geco_socket(int af, int* rwnd)
     if (sockdespt < 0)
     {
         ERRLOG1(MINOR_ERROR, "socket()  return  %d!\n", sockdespt);
-        errorno(MAJOR_ERROR);
         return sockdespt;
     }
+    EVENTLOG1(DEBUG, "socket()  return  %d\n", sockdespt);
 
     sockaddrunion me;
     memset((void *) &me, 0, sizeof(me));
@@ -1058,10 +1058,19 @@ static int open_ipproto_geco_socket(int af, int* rwnd)
     }
     else
     {
+        int on = 1;
+        if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) < 0)
+        {
+            perror("setsockopt");
+            return -1;
+        }
+        //str2saddr(&me, "::1", 0);
         /* binding to INADDR_ANY to make Windows happy... */
         me.sin6.sin6_family = AF_INET6;
         // bind any can recv all  ip packets
-        memset(me.sin6.sin6_addr.s6_addr, 0, sizeof(struct in6_addr));
+        //me.sin6.sin6_addr = IN6ADDR_ANY_INIT;
+        me.sin6.sin6_addr = in6addr_any;
+        //memset(me.sin6.sin6_addr.in6_addr, in6addr_any, sizeof(struct in6_addr));
 #ifdef USE_UDP
         me.sin.sin_port = htons(USED_UDP_PORT);
 #endif
@@ -1071,8 +1080,7 @@ static int open_ipproto_geco_socket(int af, int* rwnd)
     }
     if (bind(sockdespt, &me.sa, sizeof(struct sockaddr)) < 0)
     {
-        ERRLOG1(MAJOR_ERROR, "Try to bind sockdespt {%d} but failed !",
-                sockdespt);
+           ERRLOG2(MAJOR_ERROR, "bind  sockdespt %d but failed %d!",sockdespt,errno);
     }
     //setup recv buffer option
     *rwnd = mtra_set_sockdespt_recvbuffer_size(sockdespt, *rwnd);  // 655360 bytes

@@ -11,16 +11,16 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
   main (int argc, char** argv)
   {
 #endif  // GTEST_OS_WINDOWS_MOBILE
-    std::cout << "Running main() from gmock_main.cc\n";
+
     // Since Google Mock depends on Google Test, InitGoogleMock() is
     // also responsible for initializing Google Test.  Therefore there's
     // no need for calling testing::InitGoogleTest() separately.
     testing::InitGoogleMock (&argc, argv);
 
-    ::testing::GTEST_FLAG(filter) = "MULP.*";
-//    ::testing::GTEST_FLAG(filter) = "MULP.test_initialize_library";
-//    ::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
-//    ::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
+    //::testing::GTEST_FLAG(filter) = "MULP.*";
+    ::testing::GTEST_FLAG(filter) = "MULP.test_initialize_library";
+   // ::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
+    //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
 
     //::testing::GTEST_FLAG(filter) = "MBU.*";
     //::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
