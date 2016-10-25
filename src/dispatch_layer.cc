@@ -6129,7 +6129,7 @@ int initialize_library(void)
     mdis_init();
 
     /* initialize ports seized */
-    for (i = 0; i < 0x10000; i++)
+    for (i = 0; i < 65536; i++)
         portsSeized[i] = 0;
     numberOfSeizedPorts = 0x00000000;
 

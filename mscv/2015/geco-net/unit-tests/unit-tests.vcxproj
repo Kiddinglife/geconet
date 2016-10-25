@@ -195,6 +195,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\unittets\test-dispatcher-module.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
+    <ClCompile Include="..\..\..\..\unittets\test-mbu.cc" />
+    <ClCompile Include="..\..\..\..\unittets\test-mulp.cc" />
     <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
   </ItemGroup>
   <ItemGroup>

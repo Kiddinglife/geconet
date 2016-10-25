@@ -51,5 +51,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_geco_instance";
     // ::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_channel";
 
-    return RUN_ALL_TESTS ();
+   int ret =  RUN_ALL_TESTS ();
+  // std::cin.get();
+   return ret;
   }

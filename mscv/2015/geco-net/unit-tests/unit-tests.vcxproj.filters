@@ -24,6 +24,12 @@
     <ClCompile Include="..\..\..\..\unittets\test-dispatcher-module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-mulp.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-mbu.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\unittets\readme.md">

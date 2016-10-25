@@ -44,51 +44,52 @@ void read_trace_levels(void)
 	// this will be relative path  to project dir if you run it by ctrl_F5 in vs studio
 	// if you want to run relative path to the exutable, you have to manually click it and run it,
 	FILE* fptr = fopen("../../tracelevels.in", "r");
-	if( fptr != NULL )
+	if (fptr != NULL)
 	{
 		globalTrace = true;
-		for( i = 0; i < TRACE_MUDULE_SIZE; i++ )
+		for (i = 0; i < TRACE_MUDULE_SIZE; i++)
 		{
 			ret = fscanf(fptr, "%s%d%d", traced_modules[i], &error_trace_levels[i],
 				&event_trace_levels[i]);
-			if( ret >= 1 )
+			if (ret >= 1)
 			{
-				if( strcmp(traced_modules[i], "LOGFILE") == 0 )
+				if (strcmp(traced_modules[i], "LOGFILE") == 0)
 				{
-					printf("Logging all errors and events to file ./tmp%d.log\n", (int) getpid());
+					printf("Logging all errors and events to file ./tmp%d.log\n", (int)getpid());
 					fileTrace = true;
-					sprintf(filename, "./tmp%d.log", (int) getpid());
+					sprintf(filename, "./tmp%d.log", (int)getpid());
 					logfile = fopen(filename, "w+");
 					return;
 				}
 			}
 
-			if( ferror(fptr) ) abort();
+			if (ferror(fptr)) abort();
 
 			//if we have less than TRACE_MUDULE_SIZE mudlues to trace, this will break loop
-			if( feof(fptr) ) break;
+			if (feof(fptr)) break;
 
 			globalTrace = false;
 		}
 		noOftracedModules = i;
-		if( i <= 1 ) globalTrace = true;
+		if (i <= 1) globalTrace = true;
 		printf("  globalTrace = %s \n", globalTrace ? "TRUE" : "FALSE");
-	} else
+	}
+	else
 	{
 		globalTrace = true;
 	}
 	printf("globalTrace '%s', modules size '%d'\n", globalTrace ? "TRUE" : "FALSE",
 		noOftracedModules);
-	for( i = 0; i < noOftracedModules; i++ )
+	for (i = 0; i < noOftracedModules; i++)
 		printf("%20s %2d %2d\n", traced_modules[i], error_trace_levels[i], event_trace_levels[i]);
 }
 
 // -1 not found, >0 = module index
 static int is_module_traced(const char* modulename)
 {
-	for( int i = 0; i < TRACE_MUDULE_SIZE; i++ )
+	for (int i = 0; i < TRACE_MUDULE_SIZE; i++)
 	{
-		if( !strcmp(traced_modules[i], modulename) )
+		if (!strcmp(traced_modules[i], modulename))
 		{
 			return i;
 		}
@@ -101,7 +102,7 @@ uint get_safe_time_ms(void)
 	struct timeval cur_tval;
 	gettimenow(&cur_tval);
 	/* modulo overflows every every 15 days*/
-	return ( ( cur_tval.tv_sec % OVERFLOW_SECS ) * 1000 + cur_tval.tv_usec );
+	return ((cur_tval.tv_sec % OVERFLOW_SECS) * 1000 + cur_tval.tv_usec);
 }
 
 //int adl_gettime(struct timeval *tv)
@@ -110,21 +111,22 @@ int gettimenow(struct timeval *tv)
 #ifdef WIN32
 	struct timeb tb;
 	ftime(&tb);
-	( tv )->tv_sec = tb.time;
-	( tv )->tv_usec = (time_t) tb.millitm * 1000;
+	(tv)->tv_sec = tb.time;
+	(tv)->tv_usec = (time_t)tb.millitm * 1000;
 	return 0;
 #else
-	return ( gettimeofday(tv, ( struct timezone * ) NULL) );
+	return (gettimeofday(tv, (struct timezone *) NULL));
 #endif
 }
 int gettimenow(struct timeval *tv, struct tm *the_time)
 {
-	if( gettimenow(tv) > -1 )
+	if (gettimenow(tv) > -1)
 	{
-		time_t tt = (time_t) tv->tv_sec;
-		*the_time = *( localtime(&tt) );
+		time_t tt = (time_t)tv->tv_sec;
+		*the_time = *(localtime(&tt));
 		return 0;
-	} else
+	}
+	else
 	{
 		return -1;
 	}
@@ -132,12 +134,13 @@ int gettimenow(struct timeval *tv, struct tm *the_time)
 int gettimenow_ms(time_t* ret)
 {
 	struct timeval now;
-	if( gettimenow(&now) > -1 )
+	if (gettimenow(&now) > -1)
 	{
 		EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
-		*ret = ( (time_t) now.tv_sec ) * 1000 + ( (time_t) now.tv_usec ) / 1000;
+		*ret = ((time_t)now.tv_sec) * 1000 + ((time_t)now.tv_usec) / 1000;
 		return 0;
-	} else
+	}
+	else
 	{
 		return -1;
 	}
@@ -145,12 +148,13 @@ int gettimenow_ms(time_t* ret)
 int gettimenow_us(time_t* ret)
 {
 	struct timeval now;
-	if( gettimenow(&now) > -1 )
+	if (gettimenow(&now) > -1)
 	{
 		EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
-		*ret = ( (time_t) now.tv_sec ) * 1000000 + (time_t) now.tv_usec;
+		*ret = ((time_t)now.tv_sec) * 1000000 + (time_t)now.tv_usec;
 		return 0;
-	} else
+	}
+	else
 	{
 		return -1;
 	}
@@ -159,9 +163,9 @@ int gettimenow_us(time_t* ret)
 void sum_time(timeval* a, timeval* b, timeval* result)
 {
 
-	result->tv_sec = ( a )->tv_sec + ( b )->tv_sec;
-	result->tv_usec = ( a )->tv_usec + ( b )->tv_usec;
-	if( result->tv_usec >= 1000000 )
+	result->tv_sec = (a)->tv_sec + (b)->tv_sec;
+	result->tv_usec = (a)->tv_usec + (b)->tv_usec;
+	if (result->tv_usec >= 1000000)
 	{
 		++result->tv_sec;
 		result->tv_usec -= 1000000;
@@ -169,9 +173,9 @@ void sum_time(timeval* a, timeval* b, timeval* result)
 }
 void subtract_time(timeval* a, timeval* b, timeval* result)
 {
-	result->tv_sec = ( a )->tv_sec - ( b )->tv_sec;
-	result->tv_usec = ( a )->tv_usec - ( b )->tv_usec;
-	if( result->tv_usec < 0 )
+	result->tv_sec = (a)->tv_sec - (b)->tv_sec;
+	result->tv_usec = (a)->tv_usec - (b)->tv_usec;
+	if (result->tv_usec < 0)
 	{
 		--result->tv_sec;
 		result->tv_usec += 1000000;
@@ -185,7 +189,7 @@ int subtract_time(timeval* a, timeval* b)
 	subtract_time(a, b, &result);
 	int retval = result.tv_sec * 1000 + result.tv_usec / 1000;
 	EVENTLOG1(VERBOSE, "Computed Time Difference : %d msecs\n", retval);
-	return ( ( retval < 0 ) ? -1 : retval );
+	return ((retval < 0) ? -1 : retval);
 }
 
 void sum_time(timeval* a, time_t inteval, timeval* result)
@@ -215,16 +219,17 @@ static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
 {
 	struct timeval tv;  // this is used for get usec
 	struct tm the_time;  // only contains data infos, no ms and us
-	if( !gettimenow(&tv, &the_time) )
+	if (!gettimenow(&tv, &the_time))
 	{
 		// write fixed log header
-		if( fprintf(fd, "%02d:%02d:%02d.%03d - ", the_time.tm_hour, the_time.tm_min,
-			the_time.tm_sec, (int) ( tv.tv_usec / 1000 )) < 1 )  // change to  ms
+		if (fprintf(fd, "%02d:%02d:%02d.%03d - ", the_time.tm_hour, the_time.tm_min,
+			the_time.tm_sec, (int)(tv.tv_usec / 1000)) < 1)  // change to  ms
 			return -1;
 		// then write log msg
-		if( vfprintf(fd, formate, ap) < 1 ) return -1;
+		if (vfprintf(fd, formate, ap) < 1) return -1;
 		return 0;
-	} else
+	}
+	else
 	{
 		return -1;
 	}
@@ -250,30 +255,32 @@ void event_log1(short event_log_level, const char *module_name, int line, const 
 	int moduleindex = is_module_traced(module_name);
 	bool f2 = globalTrace == false && moduleindex > 0
 		&& event_log_level <= event_trace_levels[moduleindex];
-	if( f1 || f2 )
+	if (f1 || f2)
 	{
-		if( event_log_level < NOTICE )
+		if (event_log_level < NOTICE)
 		{
-			if( fileTrace == true )
+			if (fileTrace == true)
 			{
 				debug_print(logfile, "Event in Module: %s............\n", module_name);
-			} else
+			}
+			else
 			{
 				debug_print(stdout, "Event in Module: %s............\n", module_name);
 			}
 		}
 		gettimenow(&tv, &the_time);
-		if( fileTrace == true )
+		if (fileTrace == true)
 		{
 			fprintf(logfile, "%02d:%02d:%02d.%03d:%d ", the_time.tm_hour, the_time.tm_min,
-				the_time.tm_sec, (int) ( tv.tv_usec / 1000 ), line);
+				the_time.tm_sec, (int)(tv.tv_usec / 1000), line);
 			vfprintf(logfile, log_info, va);
 			fprintf(logfile, "\n");
 			fflush(logfile);
-		} else
+		}
+		else
 		{
 			fprintf(stdout, "%02d:%02d:%02d.%03d:%d ", the_time.tm_hour, the_time.tm_min,
-				the_time.tm_sec, (int) ( tv.tv_usec / 1000 ), line);
+				the_time.tm_sec, (int)(tv.tv_usec / 1000), line);
 			vfprintf(stdout, log_info, va);
 			fprintf(stdout, "\n");
 			fflush(stdout);
@@ -291,16 +298,17 @@ void error_log1(short error_loglvl, const char *module_name, int line_no, const 
 	int moduleindex = is_module_traced(module_name);
 	bool f2 = globalTrace == false && moduleindex > 0
 		&& error_loglvl <= event_trace_levels[moduleindex];
-	if( f1 || f2 )
+	if (f1 || f2)
 	{
-		if( fileTrace == true )
+		if (fileTrace == true)
 		{
 			debug_print(logfile, "Error[%2d,%s] in %s at line %d\n", error_loglvl,
 				error_loglvls_str[error_loglvl - 1], module_name, line_no);
 			/*   fprintf(logfile, "Error Info: ");*/
 			vfprintf(logfile, log_info, va);
 			fprintf(logfile, "\n");
-		} else
+		}
+		else
 		{
 			debug_print(stderr, "Error[%2d,%s] in %s at line %d, ", error_loglvl,
 				error_loglvls_str[error_loglvl - 1], module_name, line_no);
@@ -311,20 +319,21 @@ void error_log1(short error_loglvl, const char *module_name, int line_no, const 
 	}
 	va_end(va);
 
-	if( fileTrace == true )
+	if (fileTrace == true)
 	{
 		fflush(logfile);
-	} else
+	}
+	else
 	{
 		fflush(stderr);
 	}
-	if( error_loglvl == FALTAL_ERROR_EXIT )
+	if (error_loglvl == FALTAL_ERROR_EXIT)
 	{
 		char str[32];
 		sprintf(str, "%s exits at line %d", module_name, line_no);
 		perr_exit(str);
 	}
-	if( error_loglvl == MAJOR_ERROR )
+	if (error_loglvl == MAJOR_ERROR)
 	{
 		char str[32];
 		sprintf(str, "%s aborts at line %d", module_name, line_no);
@@ -359,19 +368,19 @@ bool safe_before(uint seq1, uint seq2)
 	// Ҳ����С��0�� �������ǵ���Ҫ
 	// ʵ�������ǻ����Է���һ���ȱȽϵ����͸�������ͣ���֯�������Ĳ���
 	// ����   return (uint64) (seq1 - seq2) < 0;
-	return ( (int) ( seq1 - seq2 ) ) < 0;
+	return ((int)(seq1 - seq2)) < 0;
 }
 bool safe_after(uint seq1, uint seq2)
 {
-	return ( (int) ( seq2 - seq1 ) ) < 0;
+	return ((int)(seq2 - seq1)) < 0;
 }
 bool safe_before(ushort seq1, ushort seq2)
 {
-	return ( (short) ( seq1 - seq2 ) ) < 0;
+	return ((short)(seq1 - seq2)) < 0;
 }
 bool safe_after(ushort seq1, ushort seq2)
 {
-	return ( (short) ( seq2 - seq1 ) ) < 0;
+	return ((short)(seq2 - seq1)) < 0;
 }
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
@@ -392,22 +401,24 @@ bool unsafe_between(uint seq1, uint seq2, uint seq3)
  */
 int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two)
 {
-	if( safe_before(one.chunk_tsn, two.chunk_tsn) ) return -1;
-	else if( safe_after(one.chunk_tsn, two.chunk_tsn) ) return 1;
+	if (safe_before(one.chunk_tsn, two.chunk_tsn)) return -1;
+	else if (safe_after(one.chunk_tsn, two.chunk_tsn)) return 1;
 	else return 0; /* one==two */
 }
 int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two)
 {
-	if( one.stream_id < two.stream_id )
+	if (one.stream_id < two.stream_id)
 	{
 		return -1;
-	} else if( one.stream_id > two.stream_id )
+	}
+	else if (one.stream_id > two.stream_id)
 	{
 		return 1;
-	} else /* one.sid==two.sid */
+	}
+	else /* one.sid==two.sid */
 	{
-		if( safe_before(one.stream_sn, two.stream_sn) ) return -1;
-		else if( safe_after(one.stream_sn, two.stream_sn) ) return 1;
+		if (safe_before(one.stream_sn, two.stream_sn)) return -1;
+		else if (safe_after(one.stream_sn, two.stream_sn)) return 1;
 	}
 	return 0;
 }
@@ -416,7 +427,7 @@ char* Bitify(size_t mWritePosBits, char* mBuffer)
 {
 	static char out[1024 * 1024];
 
-	if( mWritePosBits <= 0 )
+	if (mWritePosBits <= 0)
 	{
 		strcpy(out, "no bits to print\n");
 		return NULL;
@@ -427,14 +438,14 @@ char* Bitify(size_t mWritePosBits, char* mBuffer)
 	int outter;
 	int len = BITS_TO_BYTES(mWritePosBits);
 
-	for( outter = 0; outter < len; outter++ )
+	for (outter = 0; outter < len; outter++)
 	{
-		if( outter == len - 1 ) stopPos = 8 - ( ( ( mWritePosBits - 1 ) & 7 ) + 1 );
+		if (outter == len - 1) stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
 		else stopPos = 0;
 
-		for( inner = 7; inner >= stopPos; inner-- )
+		for (inner = 7; inner >= stopPos; inner--)
 		{
-			if( ( mBuffer[outter] >> inner ) & 1 ) out[strIndex++] = '1';
+			if ((mBuffer[outter] >> inner) & 1) out[strIndex++] = '1';
 			else out[strIndex++] = '0';
 		}
 		//out[strIndex++] = '\n';
@@ -448,7 +459,7 @@ char* Bitify(size_t mWritePosBits, char* mBuffer)
 }
 void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 {
-	if( mWritePosBits <= 0 )
+	if (mWritePosBits <= 0)
 	{
 		strcpy(out, "no bits to print\n");
 		return;
@@ -459,14 +470,14 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 	int outter;
 	int len = BITS_TO_BYTES(mWritePosBits);
 
-	for( outter = 0; outter < len; outter++ )
+	for (outter = 0; outter < len; outter++)
 	{
-		if( outter == len - 1 ) stopPos = 8 - ( ( ( mWritePosBits - 1 ) & 7 ) + 1 );
+		if (outter == len - 1) stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
 		else stopPos = 0;
 
-		for( inner = 7; inner >= stopPos; inner-- )
+		for (inner = 7; inner >= stopPos; inner--)
 		{
-			if( ( mBuffer[outter] >> inner ) & 1 ) out[strIndex++] = '1';
+			if ((mBuffer[outter] >> inner) & 1) out[strIndex++] = '1';
 			else out[strIndex++] = '0';
 		}
 		//out[strIndex++] = '\n';
@@ -480,17 +491,19 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 unsigned int sockaddr2hashcode(const sockaddrunion* sa)
 {
 	ushort local_saaf = saddr_family(sa);
-	unsigned int lastHash = SuperFastHashIncremental((const char*) &sa->sin.sin_port,
+	unsigned int lastHash = SuperFastHashIncremental((const char*)&sa->sin.sin_port,
 		sizeof(sa->sin.sin_port), local_saaf);
-	if( local_saaf == AF_INET )
+	if (local_saaf == AF_INET)
 	{
-		lastHash = SuperFastHashIncremental((const char*) &sa->sin.sin_addr.s_addr, sizeof(in_addr),
+		lastHash = SuperFastHashIncremental((const char*)&sa->sin.sin_addr.s_addr, sizeof(in_addr),
 			lastHash);
-	} else if( local_saaf == AF_INET6 )
+	}
+	else if (local_saaf == AF_INET6)
 	{
-		lastHash = SuperFastHashIncremental((const char*) &sa->sin6.sin6_addr.s6_addr,
+		lastHash = SuperFastHashIncremental((const char*)&sa->sin6.sin6_addr.s6_addr,
 			sizeof(in6_addr), lastHash);
-	} else
+	}
+	else
 	{
 		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", local_saaf);
 	}
@@ -499,32 +512,36 @@ unsigned int sockaddr2hashcode(const sockaddrunion* sa)
 unsigned int transportaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunion* peer_sa)
 {
 	ushort local_saaf = saddr_family(local_sa);
-	unsigned int lastHash = SuperFastHashIncremental((const char*) &local_sa->sin.sin_port,
+	unsigned int lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_port,
 		sizeof(local_sa->sin.sin_port), local_saaf);
-	if( local_saaf == AF_INET )
+	if (local_saaf == AF_INET)
 	{
-		lastHash = SuperFastHashIncremental((const char*) &local_sa->sin.sin_addr.s_addr,
+		lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_addr.s_addr,
 			sizeof(in_addr), lastHash);
-	} else if( local_saaf == AF_INET6 )
+	}
+	else if (local_saaf == AF_INET6)
 	{
-		lastHash = SuperFastHashIncremental((const char*) &local_sa->sin6.sin6_addr.s6_addr,
+		lastHash = SuperFastHashIncremental((const char*)&local_sa->sin6.sin6_addr.s6_addr,
 			sizeof(in6_addr), lastHash);
-	} else
+	}
+	else
 	{
 		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", local_saaf);
 	}
 	ushort peer_saaf = saddr_family(peer_sa);
-	lastHash = SuperFastHashIncremental((const char*) &peer_sa->sin.sin_port,
+	lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin.sin_port,
 		sizeof(peer_sa->sin.sin_port), lastHash);
-	if( peer_saaf == AF_INET )
+	if (peer_saaf == AF_INET)
 	{
-		lastHash = SuperFastHashIncremental((const char*) &peer_sa->sin.sin_addr.s_addr,
+		lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin.sin_addr.s_addr,
 			sizeof(in_addr), lastHash);
-	} else if( peer_saaf == AF_INET6 )
+	}
+	else if (peer_saaf == AF_INET6)
 	{
-		lastHash = SuperFastHashIncremental((const char*) &peer_sa->sin6.sin6_addr.s6_addr,
+		lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin6.sin6_addr.s6_addr,
 			sizeof(in6_addr), lastHash);
-	} else
+	}
+	else
 	{
 		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", peer_saaf);
 	}
@@ -547,13 +564,13 @@ unsigned long SuperFastHash(const char * data, int length)
 	int bytesRemaining = length;
 	unsigned int lastHash = length;
 	int offset = 0;
-	while( bytesRemaining >= INCREMENTAL_READ_BLOCK )
+	while (bytesRemaining >= INCREMENTAL_READ_BLOCK)
 	{
 		lastHash = SuperFastHashIncremental(data + offset, INCREMENTAL_READ_BLOCK, lastHash);
 		bytesRemaining -= INCREMENTAL_READ_BLOCK;
 		offset += INCREMENTAL_READ_BLOCK;
 	}
-	if( bytesRemaining > 0 )
+	if (bytesRemaining > 0)
 	{
 		lastHash = SuperFastHashIncremental(data + offset, bytesRemaining, lastHash);
 	}
@@ -563,43 +580,43 @@ unsigned long SuperFastHash(const char * data, int length)
 }
 unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int lastHash)
 {
-	unsigned int hash = (unsigned int) lastHash;
+	unsigned int hash = (unsigned int)lastHash;
 	unsigned int tmp;
 	int rem;
 
-	if( len <= 0 || data == NULL ) return 0;
+	if (len <= 0 || data == NULL) return 0;
 
 	rem = len & 3;
 	len >>= 2;
 
 	/* Main loop */
-	for( ; len > 0; len-- )
+	for (; len > 0; len--)
 	{
 		hash += get16bits(data);
-		tmp = ( get16bits(data + 2) << 11 ) ^ hash;
-		hash = ( hash << 16 ) ^ tmp;
+		tmp = (get16bits(data + 2) << 11) ^ hash;
+		hash = (hash << 16) ^ tmp;
 		data += 2 * sizeof(unsigned short);
 		hash += hash >> 11;
 	}
 
 	/* Handle end cases */
-	switch( rem )
+	switch (rem)
 	{
-		case 3:
-			hash += get16bits(data);
-			hash ^= hash << 16;
-			hash ^= data[sizeof(unsigned short)] << 18;
-			hash += hash >> 11;
-			break;
-		case 2:
-			hash += get16bits(data);
-			hash ^= hash << 11;
-			hash += hash >> 17;
-			break;
-		case 1:
-			hash += *data;
-			hash ^= hash << 10;
-			hash += hash >> 1;
+	case 3:
+		hash += get16bits(data);
+		hash ^= hash << 16;
+		hash ^= data[sizeof(unsigned short)] << 18;
+		hash += hash >> 11;
+		break;
+	case 2:
+		hash += get16bits(data);
+		hash ^= hash << 11;
+		hash += hash >> 17;
+		break;
+	case 1:
+		hash += *data;
+		hash ^= hash << 10;
+		hash += hash >> 1;
 	}
 
 	/* Force "avalanching" of final 127 bits */
@@ -610,13 +627,13 @@ unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int 
 	hash ^= hash << 25;
 	hash += hash >> 6;
 
-	return (unsigned int) hash;
+	return (unsigned int)hash;
 
 }
 unsigned long SuperFastHashFile(const char * filename)
 {
 	FILE *fp = fopen(filename, "rb");
-	if( fp == 0 ) return 0;
+	if (fp == 0) return 0;
 	unsigned int hash = SuperFastHashFilePtr(fp);
 	fclose(fp);
 	return hash;
@@ -629,13 +646,13 @@ unsigned long SuperFastHashFilePtr(FILE *fp)
 	int bytesRemaining = length;
 	unsigned int lastHash = length;
 	char readBlock[INCREMENTAL_READ_BLOCK];
-	while( bytesRemaining >= ( int ) sizeof(readBlock) )
+	while (bytesRemaining >= (int) sizeof(readBlock))
 	{
 		fread(readBlock, sizeof(readBlock), 1, fp);
-		lastHash = SuperFastHashIncremental(readBlock, ( int ) sizeof(readBlock), lastHash);
-		bytesRemaining -= ( int ) sizeof(readBlock);
+		lastHash = SuperFastHashIncremental(readBlock, (int) sizeof(readBlock), lastHash);
+		bytesRemaining -= (int) sizeof(readBlock);
 	}
-	if( bytesRemaining > 0 )
+	if (bytesRemaining > 0)
 	{
 		fread(readBlock, bytesRemaining, 1, fp);
 		lastHash = SuperFastHashIncremental(readBlock, bytesRemaining, lastHash);
@@ -646,7 +663,7 @@ unsigned long SuperFastHashFilePtr(FILE *fp)
 char* Itoa(int value, char* result, int base)
 {
 	// check that the base if valid
-	if( base < 2 || base > 16 )
+	if (base < 2 || base > 16)
 	{
 		*result = 0;
 		return result;
@@ -661,17 +678,17 @@ char* Itoa(int value, char* result, int base)
 		// KevinJ - get rid of this dependency
 		//*out = "0123456789abcdef"[ std::abs( quotient % base ) ];
 		absQModB = quotient % base;
-		if( absQModB < 0 )
+		if (absQModB < 0)
 		{
 			absQModB = -absQModB;
 		}
 		*out = "0123456789abcdef"[absQModB];
 		++out;
 		quotient /= base;
-	} while( quotient );
+	} while (quotient);
 
 	// Only apply negative sign for base 10
-	if( value < 0 && base == 10 ) *out++ = '-';
+	if (value < 0 && base == 10) *out++ = '-';
 
 	// KevinJ - get rid of this dependency
 	// std::reverse( result, out );
@@ -681,7 +698,7 @@ char* Itoa(int value, char* result, int base)
 	char *start = result;
 	char temp;
 	out--;
-	while( start < out )
+	while (start < out)
 	{
 		temp = *start;
 		*start = *out;
@@ -782,7 +799,9 @@ bool get_local_addresses(union sockaddrunion **addresses,
 {
 #ifdef WIN32
 	union sockaddrunion *localAddresses = NULL;
-
+	union sockaddrunion *localAddresses4 = NULL;
+	union sockaddrunion * localAddresses6 = NULL;
+	int ip4addrsize = 0, ip6addrsize = 0;
 	SOCKET s[MAXIMUM_WAIT_OBJECTS];
 	WSAEVENT hEvent[MAXIMUM_WAIT_OBJECTS];
 	WSAOVERLAPPED ol[MAXIMUM_WAIT_OBJECTS];
@@ -795,10 +814,100 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		addrbuflen = ADDRESS_LIST_BUFFER_SIZE,
 		rc, i, j, hostlen = NI_MAXHOST, servlen = NI_MAXSERV;
 	struct sockaddr_in Addr;
+	struct sockaddr_in6 Addr6;
 
 	/* Enumerate the local bind addresses - to wait for changes we only need
 	one socket but to enumerate the addresses for a particular address
 	family, we need a socket of that type  */
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_protocol = IPPROTO_UDP;
+
+	if ((rc = getaddrinfo(NULL, "0", &hints, &local)) != 0)
+	{
+		local = NULL;
+		fprintf(stderr, "Unable to resolve the bind address!\n");
+		return -1;
+	}
+
+	/* Create a socket and event for each address returned*/
+	ptr = local;
+	while (ptr)
+	{
+		s[socketcount] = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (s[socketcount] == INVALID_SOCKET)
+		{
+			fprintf(stderr, "socket failed: %d\n", WSAGetLastError());
+			return -1;
+		}
+
+		hEvent[socketcount] = WSACreateEvent();
+		if (hEvent == NULL)
+		{
+			fprintf(stderr, "WSACreateEvent failed: %d\n", WSAGetLastError());
+			return -1;
+		}
+
+		socketcount++;
+
+		ptr = ptr->ai_next;
+
+		if (ptr && (socketcount > MAXIMUM_WAIT_OBJECTS))
+		{
+			printf("Too many address families returned!\n");
+			break;
+		}
+	}
+
+	for (i = 0; i < socketcount; i++)
+	{
+		memset(&ol[i], 0, sizeof(WSAOVERLAPPED));
+		ol[i].hEvent = hEvent[i];
+		if ((rc = WSAIoctl(s[i], SIO_ADDRESS_LIST_QUERY, NULL, 0, addrbuf, addrbuflen,
+			&bytes, NULL, NULL)) == SOCKET_ERROR)
+		{
+			fprintf(stderr, "WSAIoctl: SIO_ADDRESS_LIST_QUERY failed: %d\n", WSAGetLastError());
+			return -1;
+		}
+
+		slist = (SOCKET_ADDRESS_LIST *)addrbuf;
+		localAddresses6 = (sockaddrunion*)calloc(slist->iAddressCount, sizeof(union sockaddrunion));
+		ip6addrsize = slist->iAddressCount;
+		for (j = 0; j < slist->iAddressCount; j++)
+		{
+			if ((rc = getnameinfo(slist->Address[j].lpSockaddr, slist->Address[j].iSockaddrLength,
+				host, hostlen, serv, servlen, NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
+				fprintf(stderr, "%s: getnameinfo failed: %d\n", __FILE__, rc);
+			Addr6.sin6_family = slist->Address[j].lpSockaddr->sa_family;
+			inet_pton(AF_INET6, (const char *)host, &Addr6.sin6_addr);
+			memcpy(&((localAddresses6)[j].sin6), &Addr6, sizeof(Addr6));
+		}
+
+		/* Register for change notification*/
+		if ((rc = WSAIoctl(s[i], SIO_ADDRESS_LIST_CHANGE, NULL, 0, NULL, 0, &bytes, &ol[i], NULL)) == SOCKET_ERROR)
+		{
+			if (WSAGetLastError() != WSA_IO_PENDING)
+			{
+				fprintf(stderr, "WSAIoctl: SIO_ADDRESS_LIST_CHANGE failed: %d\n", WSAGetLastError());
+				return -1;
+			}
+		}
+	}
+
+	freeaddrinfo(local);
+	for (i = 0; i < socketcount; i++)
+		closesocket(s[i]);
+
+	local = NULL;
+	ptr = NULL;
+	slist = NULL;
+	socketcount = 0;
+	addrbuflen = ADDRESS_LIST_BUFFER_SIZE;
+	hostlen = NI_MAXHOST;
+	servlen = NI_MAXSERV;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
@@ -854,7 +963,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		}
 
 		slist = (SOCKET_ADDRESS_LIST *)addrbuf;
-		localAddresses = (sockaddrunion*)calloc(slist->iAddressCount, sizeof(union sockaddrunion));
+		localAddresses4 = (sockaddrunion*)calloc(slist->iAddressCount, sizeof(union sockaddrunion));
+		ip4addrsize = slist->iAddressCount;
 		for (j = 0; j < slist->iAddressCount; j++)
 		{
 			if ((rc = getnameinfo(slist->Address[j].lpSockaddr, slist->Address[j].iSockaddrLength,
@@ -862,7 +972,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 				fprintf(stderr, "%s: getnameinfo failed: %d\n", __FILE__, rc);
 			Addr.sin_family = slist->Address[j].lpSockaddr->sa_family;
 			Addr.sin_addr.s_addr = inet_addr(host);
-			memcpy(&((localAddresses)[j]), &Addr, sizeof(Addr));
+			memcpy(&((localAddresses4)[j].sin), &Addr, sizeof(Addr));
 		}
 
 		/* Register for change notification*/
@@ -877,13 +987,22 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	}
 
 	freeaddrinfo(local);
-
 	for (i = 0; i < socketcount; i++)
 		closesocket(s[i]);
 
-	*addresses = localAddresses;
-	*numberOfNets = slist->iAddressCount;
+
+	*numberOfNets = ip4addrsize + ip6addrsize;
 	*max_mtu = 1500;
+	localAddresses = (sockaddrunion*)calloc(*numberOfNets, sizeof(union sockaddrunion));
+	for (j = 0; j < ip4addrsize; j++)
+	{
+		memcpy(&localAddresses[j], &localAddresses4[j], sizeof(sockaddrunion));
+	}
+	for (; j < (*numberOfNets); j++)
+	{
+		memcpy(&localAddresses[j], &localAddresses6[j - ip4addrsize], sizeof(sockaddrunion));
+	}
+	*addresses = localAddresses;
 #else
 #if defined (__linux__)
 	int i;
@@ -1231,27 +1350,19 @@ bool get_local_addresses(union sockaddrunion **addresses,
 
 	// reorder addres to put ip4 addr together and ip6 addres together
 	sockaddrunion* buf = (sockaddrunion*)calloc(*numberOfNets, sizeof(sockaddrunion));
-	int count = 0;
-	//copy ip4
 	for (i = 0; i < *numberOfNets; i++)
 	{
-		if (saddr_family(addresses[i]) == AF_INET)
-		{
-			memcpy(buf + count, addresses[i], sizeof(sockaddrunion));
-			count++;
-		}
-	}
-	//copy ip6
-	count = 0;
-	for (i = 0; i < *numberOfNets; i++)
-	{
-		if (saddr_family(addresses[i]) == AF_INET6)
-		{
-			memcpy(buf + count, addresses[i], sizeof(sockaddrunion));
-			count++;
-		}
+		memcpy(&buf[i], &(*addresses)[i], sizeof(sockaddrunion));
 	}
 	free(*addresses);
 	*addresses = buf;
-	return (true);
+#ifdef _DEBUG
+	char addrdebug[MAX_IPADDR_STR_LEN];
+	for (j = 0; j < *numberOfNets; j++)
+	{
+		saddr2str(&(*addresses)[j], addrdebug, MAX_IPADDR_STR_LEN, 0);
+		EVENTLOG3(DEBUG, "numberOfNets %d, local addr indexed %d = %s", (*numberOfNets), j, addrdebug);
 	}
+#endif
+	return (true);
+}
