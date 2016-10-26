@@ -7,6 +7,12 @@
 #include "geco-malloc.h"
 using namespace geco::ds;
 
+#ifdef _WIN32
+#define mysleep Sleep
+#else
+#define mysleep sleep
+#endif
+
 extern timer_mgr mtra_timer_mgr_;
 extern int mtra_icmp_socket_despt_; /* socket fd for ICMP messages */
 extern int socket_despts_size_;
@@ -23,6 +29,7 @@ extern int mtra_remove_event_handler(int sfd);
 extern int mtra_read_ip4_socket();
 extern int mtra_read_ip6_socket();
 extern int mtra_read_icmp_socket();
+extern int mtra_init(int * myRwnd);
 
 struct alloc_t
 {
@@ -41,15 +48,22 @@ action(timer_id_t& id, void*, void*)
 	EVENTLOG(VERBOSE, "timer triggered\n");
 	return NOT_RESET_TIMER_FROM_CB;
 }
+
 TEST(TIMER_MODULE, test_timer_mgr)
 {
 	timer_mgr tm;
 	timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
-	timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
 	timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
+	timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
 	tm.print(VERBOSE);
-	tm.delete_timer(ret1);
+
+	mysleep(20);
+	EVENTLOG1(VERBOSE, "timeouts %d", tm.timeouts());
+	tm.delete_timer(ret3);
 	tm.delete_timer(ret2);
+	tm.delete_timer(ret1);
+	EVENTLOG1(VERBOSE, "timeouts %d", tm.timeouts());
+
 	tm.print(VERBOSE);
 }
 TEST(TIMER_MODULE, test_operations_on_time)
@@ -186,7 +200,6 @@ TEST(MALLOC_MODULE, test_geco_new_delete)
 	EXPECT_EQ(alloccnt, deallcnt);
 	EXPECT_EQ(allos.size(), 0);
 }
-// last run on 21 Agu 2016 and passed
 TEST(MALLOC_MODULE, test_geco_alloc_dealloc)
 {
 	int j;
@@ -303,7 +316,7 @@ TEST(MALLOC_MODULE, test_alloc_dealloc)
 		alloccnt - less_than_max_byte_cnt, zero_alloc_cnt);
 }
 
-// AUTH_MODULE.* -> last run on 21 Agu 2016 and all passed
+// last pass on 26 Oct 2016
 TEST(AUTH_MODULE, test_md5)
 {
 	unsigned char digest[HMAC_LEN];
@@ -376,35 +389,13 @@ TEST(AUTH_MODULE, test_crc32_checksum)
 	}
 }
 
-extern int mtra_init(int * myRwnd);
-TEST(TRANSPORT_MODULE, test_get_local_addr)
-{
-	int rcwnd = 512;
-	mtra_init(&rcwnd);
-	sockaddrunion* saddr = 0;
-	int num = 0;
-	int maxmtu = 0;
-	ushort port = 0;
-	char addr[MAX_IPADDR_STR_LEN];
-	IPAddrType t = (IPAddrType)(AllLocalAddrTypes | AllCastAddrTypes);
-	get_local_addresses(&saddr, &num, mtra_read_ip4_socket(), true, &maxmtu, t);
-
-	EVENTLOG1(VERBOSE, "max mtu  %d\n", maxmtu);
-
-	if (saddr != NULL)
-		for (int i = 0; i < num; i++)
-		{
-			saddr2str(saddr + i, addr, MAX_IPADDR_STR_LEN, &port);
-			EVENTLOG2(VERBOSE, "ip address %s port %d\n", addr, port);
-		}
-}
 
 static bool flag = true;
+static timer_id_t tid;
 static void
 process_stdin(char* data, size_t datalen)
 {
-	EVENTLOG2(VERBOSE, "process_stdin()::recvied %d bytes of %s data  from stdin",
-		datalen, data);
+	EVENTLOG2(DEBUG, "process_stdin()::%d bytes : %s",datalen, data);
 
 	if (strcmp(data, "q") == 0)
 	{
@@ -412,32 +403,28 @@ process_stdin(char* data, size_t datalen)
 		return;
 	}
 
+	mtra_timer_mgr_.reset_timer(tid, 300000);
+
 	sockaddrunion saddr;
-	str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
-	int sampledata = 27;
+	str2saddr(&saddr, "::1", 0);
 	uchar tos = IPTOS_DEFAULT;
-	int sentsize =
-		mtra_send_ip_packet(mtra_read_ip4_socket(), data, datalen, &saddr, tos);
+	int sentsize = mtra_send_ip_packet(mtra_read_ip6_socket(), data, datalen, &saddr, tos);
+	assert(sentsize == datalen);
+
+	str2saddr(&saddr, "127.0.0.1", 0);
+	sentsize = mtra_send_ip_packet(mtra_read_ip4_socket(), data, datalen, &saddr, tos);
 	assert(sentsize == datalen);
 }
 static void
 socket_cb(int sfd, char* data, int datalen, const char* addr, ushort port)
 {
-	EVENTLOG3(VERBOSE,
-		"socket_cb()::recvied  %d bytes of data %s from dctp fd %d\n",
-		datalen, data, sfd);
+	EVENTLOG4(DEBUG,"socket_cb(ip%d fd=%d)::%d bytes : %s", mtra_read_ip4_socket() == sfd ? 4 : 6,sfd,datalen, data);
 }
-static int timercb_cnt = 0;
 static bool
 timer_cb(timer_id_t& tid, void* a1, void* a2)
 {
-	EVENTLOG2(VERBOSE, "timer_cb(id %d, type->%d)::\n", tid->timer_id,
-		tid->timer_type);
-	if (timercb_cnt < 5)
-		mtra_timer_mgr_.reset_timer(tid, 10000);
-	else
-		flag = false;
-	timercb_cnt++;
+	EVENTLOG2(DEBUG, "timeouts, BYE!", tid->timer_id,tid->timer_type);
+	flag = false;
 	return true;
 }
 
@@ -449,14 +436,17 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	cbunion.socket_cb_fun = socket_cb;
 	mtra_set_expected_event_on_fd(mtra_read_ip4_socket(),
 		EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
+	mtra_set_expected_event_on_fd(mtra_read_ip6_socket(),
+		EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
 	// you have to put stdin as last because we test it
 	mtra_add_stdin_cb(process_stdin);
-	mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 10000, timer_cb, 0, 0);
+	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 300000, timer_cb, 0, 0);
 	while (flag)
 		mtra_poll(0, 0, 0);
 	mtra_timer_mgr_.timers.clear();
 	mtra_remove_stdin_cb();
 	mtra_remove_event_handler(mtra_read_ip4_socket());
+	mtra_remove_event_handler(mtra_read_ip6_socket());
 }
 static void
 fd_action_sctp(int sfd, char* data, int datalen, const char* addr, ushort port)

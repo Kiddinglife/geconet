@@ -18,16 +18,16 @@
     <ClCompile Include="..\..\..\..\unittets\test-main.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\unittets\test-dispatcher-module.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\unittets\test-mulp.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\unittets\test-mbu.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-mtra.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-mdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

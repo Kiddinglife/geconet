@@ -208,11 +208,11 @@ void print_time_now(ushort level)
 {
 	struct timeval now;
 	gettimenow(&now);
-	EVENTLOG2(level, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
+	EVENTLOG2(level, "Time now: %ld sec, %ld usec", now.tv_sec, now.tv_usec);
 }
 void print_timeval(timeval* tv)
 {
-	EVENTLOG2(INTERNAL_TRACE, "timeval {%ld, %ld}\n", tv->tv_sec, tv->tv_usec);
+	EVENTLOG2(INTERNAL_TRACE, "timeval {%ld, %ld}", tv->tv_sec, tv->tv_usec);
 }
 
 static int debug_vwrite(FILE* fd, const char* formate, va_list ap)

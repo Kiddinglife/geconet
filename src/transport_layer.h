@@ -28,7 +28,6 @@
 #include "gecotimer.h"
 #include "dispatch_layer.h"
 
-
   /**
    * Structure for callback events. The function "action" is called by the event-handler,
    * when an event occurs on the file-descriptor.

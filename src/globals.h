@@ -97,13 +97,30 @@
 #define    EVENTCB_TYPE_ROUTING    4
 #define    EVENTCB_TYPE_STDIN          5
 
-#define GECO_CMSG_ALIGN(len) ( ((len)+sizeof(long)-1) & ~(sizeof(long)-1) )
-#define GECO_CMSG_SPACE(len) \
-(GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + GECO_CMSG_ALIGN(len))
-#define GECO_CMSG_LEN(len) (GECO_CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
-#define GECO_CMSG_DATA(cmsg) \
-((unsigned char*)(cmsg)+GECO_CMSG_ALIGN(sizeof(struct cmsghdr)))
 
+
+
+#ifndef CMSG_ALIGN
+#ifdef ALIGN
+#define CMSG_ALIGN ALIGN
+#else
+#define CMSG_ALIGN(len) ( ((len)+sizeof(long)-1) & ~(sizeof(long)-1) )
+#endif
+#endif
+
+#ifndef CMSG_SPACE
+#define CMSG_SPACE(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(len))
+#endif
+
+#ifndef CMSG_LEN
+#define CMSG_LEN(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
+#endif
+
+#ifdef _WIN32
+#define MY_CMSG_DATA WSA_CMSG_DATA
+#else
+#define MY_CMSG_DATA CMSG_DATA
+#endif
 
 #ifndef _WIN32
 #define LINUX_PROC_IPV6_FILE "/proc/net/if_inet6"

@@ -176,7 +176,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).exe</OutputFile>
       <AdditionalDependencies>gmock_Releasex64.lib;ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)/$(Configuration)/;../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>../../../../thirdparty/googlemock/libs/;</AdditionalLibraryDirectories>
@@ -193,11 +193,11 @@
     <None Include="..\..\..\..\unittets\readme.md" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\unittets\test-dispatcher-module.cpp" />
+    <ClCompile Include="..\..\..\..\unittets\test-mdi.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mbu.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mulp.cc" />
-    <ClCompile Include="..\..\..\..\unittets\unit_tests.cpp" />
+    <ClCompile Include="..\..\..\..\unittets\test-mtra.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\..\..\docx\  Security Attacks Found Against.txt" />
