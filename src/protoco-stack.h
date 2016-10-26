@@ -407,6 +407,7 @@ struct ulp_cbs_t
  * (you need root-rights to open RAW sockets !).
  */
 int initialize_library(void);
+void free_library(void);
 
 /**
  *  sctp_registerInstance is called to initialize one SCTP-instance.

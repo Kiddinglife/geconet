@@ -17,9 +17,9 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // no need for calling testing::InitGoogleTest() separately.
     testing::InitGoogleMock (&argc, argv);
 
-    //::testing::GTEST_FLAG(filter) = "MULP.*";
-    ::testing::GTEST_FLAG(filter) = "MULP.test_initialize_library";
-   // ::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
+    ::testing::GTEST_FLAG(filter) = "MULP.*";
+   //::testing::GTEST_FLAG(filter) = "MULP.test_initialize_and_free_library";
+   //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
 
     //::testing::GTEST_FLAG(filter) = "MBU.*";

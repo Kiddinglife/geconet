@@ -982,6 +982,8 @@ void mtra_dtor()
 {
     free(internal_udp_buffer_);
     free(internal_dctp_buffer);
+    safe_close_soket(mtra_ip4_socket_despt_);
+    safe_close_soket(mtra_ip6_socket_despt_);
 }
 
 static int mtra_set_sockdespt_recvbuffer_size(int sfd, int new_size)

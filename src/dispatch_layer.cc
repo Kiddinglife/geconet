@@ -6147,7 +6147,12 @@ int initialize_library(void)
     library_initiaized = true;
     return MULP_SUCCESS;
 }
-
+void free_library(void)
+{
+    mtra_free();
+    library_initiaized = false;
+    geco_free_ext(default_bundle_ctrl_, __FILE__, __LINE__);
+}
 /**
  * allocatePort Allocate a given port.
  * @return Allocated port or 0 if port is occupied.
