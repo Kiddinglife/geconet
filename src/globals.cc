@@ -1358,10 +1358,10 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	*addresses = buf;
 #ifdef _DEBUG
 	char addrdebug[MAX_IPADDR_STR_LEN];
-	for (j = 0; j < *numberOfNets; j++)
+	for (i = 0; i < *numberOfNets; i++)
 	{
-		saddr2str(&(*addresses)[j], addrdebug, MAX_IPADDR_STR_LEN, 0);
-		EVENTLOG3(DEBUG, "numberOfNets %d, local addr indexed %d = %s", (*numberOfNets), j, addrdebug);
+		saddr2str(&(*addresses)[i], addrdebug, MAX_IPADDR_STR_LEN, 0);
+		EVENTLOG2(DEBUG, "local addr indexed %d = %s", i, addrdebug);
 	}
 #endif
 	return (true);
