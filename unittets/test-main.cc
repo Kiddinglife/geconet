@@ -45,7 +45,8 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
     ::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
-
+	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_add_remove_fd";
+	
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_bundle_ctrl_chunk";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
@@ -59,7 +60,5 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_geco_instance";
     // ::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_channel";
 
-    int ret = RUN_ALL_TESTS ();
-    // std::cin.get();
-    return ret;
+    return  RUN_ALL_TESTS ();
   }

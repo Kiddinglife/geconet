@@ -6148,7 +6148,7 @@ int initialize_library(void)
 }
 void free_library(void)
 {
-	mtra_free();
+	mtra_destroy();
 	library_initiaized = false;
 	geco_free_ext(default_bundle_ctrl_, __FILE__, __LINE__);
 }

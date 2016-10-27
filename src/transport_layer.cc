@@ -968,8 +968,10 @@ void mtra_dtor()
 {
 	free(internal_udp_buffer_);
 	free(internal_dctp_buffer);
-	safe_close_soket(mtra_ip4_socket_despt_);
-	safe_close_soket(mtra_ip6_socket_despt_);
+	mtra_timer_mgr_.timers.clear();
+	mtra_remove_stdin_cb();
+	mtra_remove_event_handler(mtra_read_ip4_socket());
+	mtra_remove_event_handler(mtra_read_ip6_socket());
 }
 
 static int mtra_set_sockdespt_recvbuffer_size(int sfd, int new_size)
@@ -1025,7 +1027,7 @@ static int open_ipproto_geco_socket(int af, int* rwnd)
 	}
 
 #ifdef USE_UDP  //must be admin user in windows or root in linux
-	sockdespt = socket(af, SOCK_RAW, IPPROTO_UDP);  // do we really need this?
+	sockdespt = socket(af, SOCK_RAW, IPPROTO_UDP);
 #else
 	sockdespt = socket(af, SOCK_RAW, IPPROTO_GECO);
 #endif
@@ -1352,8 +1354,7 @@ int mtra_send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu)
 
 	if (sfd == mtra_ip4_socket_despt_ || sfd == mtra_ip6_socket_despt_)
 	{
-		ERRLOG(MAJOR_ERROR, "cannot send UDP msg on a geco socket!\n");
-		return -1;
+		ERRLOG(MINOR_ERROR, "cannot send udp msg on a geco socket!\n");
 	}
 
 	//int destlen;
@@ -1362,13 +1363,11 @@ int mtra_send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu)
 	{
 	case AF_INET:
 		//destsu.sin.sin_port = htons(dest_port);
-		result = sendto(sfd, buf, length, 0, (struct sockaddr *) &(destsu->sin),
-			sizeof(struct sockaddr_in));
+		result = sendto(sfd, buf, length, 0, &(destsu->sa),sizeof(struct sockaddr_in));
 		break;
 	case AF_INET6:
 		//destsu.sin6.sin6_port = htons(dest_port);
-		result = sendto(sfd, buf, length, 0,
-			(struct sockaddr *) &(destsu->sin6),
+		result = sendto(sfd, buf, length, 0,&(destsu->sa),
 			sizeof(struct sockaddr_in6));
 		break;
 	default:
@@ -1376,7 +1375,7 @@ int mtra_send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu)
 		result = -1;
 		break;
 	}
-	EVENTLOG1(VERBOSE, "send_udp_msg(%d bytes data)", result);
+	EVENTLOG2(VERBOSE, "send_udp_msg(%d bytes data) to sfd (%d)", result, sfd);
 	return result;
 }
 int mtra_send_ip_packet(int sfd, char *buf, int len,
@@ -1521,15 +1520,16 @@ int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,
 	}
 
 	int len = -1;
-	struct iphdr *iph;
+	static struct iphdr *iph;
 
 	if (sfd == mtra_ip4_socket_despt_)
 	{
-		//        #ifdef USE_UDP
-		//        len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from, &val);
-		//        #else
+#ifdef USE_UDP
+		int fromaddrsize = sizeof(sockaddr_in);
+		len = recvfrom(sfd, dest, maxlen, 0, (struct sockaddr *) from, &fromaddrsize);
+#else
 		len = recv(sfd, dest, maxlen, 0);        // recv a packet each time
-		//#endif
+#endif
 		iph = (struct iphdr *) dest;
 
 		to->sa.sa_family = AF_INET;
@@ -1601,31 +1601,29 @@ int mtra_recv_ip_packet(int sfd, char *dest, int maxlen,
 	}
 	else
 	{
-		ERRLOG(MAJOR_ERROR, "recv_geco_msg()::no such AF!\n");
+		ERRLOG(MAJOR_ERROR, "recv_geco_msg()::no such AF!");
 		return -1;
 	}
 
 #ifdef USE_UDP
-	int ip_pk_hdr_len = (int) sizeof(struct iphdr)
-		+ (int)GECO_PACKET_FIXED_SIZE;
+	static int ip_pk_hdr_len = (int) sizeof(struct iphdr)+ (int)GECO_PACKET_FIXED_SIZE;
 	if (len < ip_pk_hdr_len)
 	{
-		ERRLOG(WARNNING_ERROR, "recv_geco_msg():: ip_pk_hdr_len illegal!\n");
+		ERRLOG(WARNNING_ERROR, "recv_geco_msg():: ip_pk_hdr_len illegal!");
 		return -1;
 	}
 
 	// check dest_port legal
-	geco_packet_fixed_t* udp_packet_fixed = (geco_packet_fixed_t*)((char*)dest
-		+ sizeof(struct iphdr));
+	// nat only changes src addr and src port, never changing dest port
+	geco_packet_fixed_t* udp_packet_fixed = (geco_packet_fixed_t*)((char*)dest + sizeof(struct iphdr));
 	if (ntohs(udp_packet_fixed->dest_port) != USED_UDP_PORT)
 	{
-		ERRLOG(WARNNING_ERROR, "recv_geco_msg()::dest_port illegal !\n");
+		ERRLOG(WARNNING_ERROR, "recv_geco_msg()::dest_port != USED_UDP_PORT !");
 		return -1;
 	}
 
-	// currently it is [iphdr] + [udphdr] + [data]
-	// now we need move the data to the next of iphdr, skipping all bytes in updhdr
-	// as if udphdr never exists
+	// currently it is [iphdr] + [udphdr] + [data], now we need move the data to the next of iphdr, 
+	// skipping all bytes in updhdr as if udphdr never exists
 	char* ptr = (char*)udp_packet_fixed;
 	memmove(ptr, &ptr[GECO_PACKET_FIXED_SIZE], (len - ip_pk_hdr_len));
 	len -= (int)GECO_PACKET_FIXED_SIZE;
@@ -1644,7 +1642,7 @@ int mtra_recv_udp_packet(int sfd, char *dest, int maxlen,
 	return len;
 }
 
-void mtra_free()
+void mtra_destroy()
 {
 	mtra_dtor();
 }
@@ -1691,32 +1689,28 @@ int mtra_init(int * myRwnd)
 
 //open udp socket despt binf to dummy sadress 0.0.0.0 to recv all datagrams
 // destinated to any adress with matched port
-#ifdef USE_UDP
-	sockaddrunion su;
-	str2saddr(&su, NULL, USED_UDP_PORT, ip4);
-	if (ip4)
-	{
-		dummy_ipv4_udp_despt_ = open_ipproto_udp_socket(&su, myRwnd);
-		if (dummy_ipv4_udp_despt_ < 0)
-		{
-			ERRLOG(MAJOR_ERROR, "Could not open UDP dummy socket !\n");
-			return dummy_ipv4_udp_despt_;
-		}
-		EVENTLOG1(VERBOSE, "init()::dummy_ipv4_udp_despt_(%u)",
-			dummy_ipv4_udp_despt_);
-	}
-	else
-	{
-		dummy_ipv6_udp_despt_ = open_ipproto_udp_socket(&su, myRwnd);
-		if (dummy_ipv6_udp_despt_ < 0)
-		{
-			ERRLOG(MAJOR_ERROR, "Could not open UDP dummy socket !\n");
-			return dummy_ipv6_udp_despt_;
-		}
-		EVENTLOG1(VERBOSE, "init()::dummy_ipv6_udp_despt_(%u)",
-			dummy_ipv6_udp_despt_);
-	}
-#endif
+
+//@FIXME we do not need this because we use raw udp socket
+//#ifdef USE_UDP
+//	sockaddrunion su;
+//	str2saddr(&su, NULL, USED_UDP_PORT);
+//	dummy_ipv4_udp_despt_ = mtra_open_ipproto_udp_socket(&su, myRwnd);
+//	if (dummy_ipv4_udp_despt_ < 0)
+//	{
+//		ERRLOG(MAJOR_ERROR, "Could not open UDP dummy socket !\n");
+//		return dummy_ipv4_udp_despt_;
+//	}
+//	EVENTLOG1(VERBOSE, "init()::dummy_ipv4_udp_despt_(%u)",
+//		dummy_ipv4_udp_despt_);
+//	dummy_ipv6_udp_despt_ = mtra_open_ipproto_udp_socket(&su, myRwnd);
+//	if (dummy_ipv6_udp_despt_ < 0)
+//	{
+//		ERRLOG(MAJOR_ERROR, "Could not open UDP dummy socket !\n");
+//		return dummy_ipv6_udp_despt_;
+//	}
+//	EVENTLOG1(VERBOSE, "init()::dummy_ipv6_udp_despt_(%u)",
+//		dummy_ipv6_udp_despt_);
+//#endif
 
 	// FIXME
 	/* we should - in a later revision - add back the a function that opens

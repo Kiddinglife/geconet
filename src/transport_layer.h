@@ -86,7 +86,7 @@ extern void mtra_zero_ip6_socket();
 extern void mtra_zero_icmp_socket();
 
 extern int mtra_init(int * myRwnd);
-extern void mtra_free();
+extern void mtra_destroy();
 
 extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask, cbunion_t action, void* userData);
 extern int mtra_remove_event_handler(int sfd);

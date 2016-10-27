@@ -9,10 +9,8 @@
 #define MY_CONFIG_H_
 
 #define HAVE_GETEUID //dispathcehr.cc at line 4698 int initialize(void)
-//#define USED_UDP_PORT 9899
-//#define HAVE_SIN_LEN
-//#define HAVE_IPV6_RECVPKTINFO
-//#define USE_UDP
+#define USED_UDP_PORT 9899
+#define USE_UDP
 
 //comment those macros before running unit tests
 //uncomment those macros after running unit tests
@@ -26,5 +24,5 @@
 #endif
 
 #define enable_mock_dispatch_send_geco_packet 0
-#define CURR_EVENT_LOG_LEVEL  DEBUG  //VVERBOSE 
+#define CURR_EVENT_LOG_LEVEL  VERBOSE  //DEBUG  VVERBOSE 
 #endif /* MY_CONFIG_H_ */

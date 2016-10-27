@@ -395,7 +395,7 @@ static timer_id_t tid;
 static void
 process_stdin(char* data, size_t datalen)
 {
-	EVENTLOG2(DEBUG, "process_stdin()::%d bytes : %s",datalen, data);
+	EVENTLOG2(DEBUG, "process_stdin()::%d bytes : %s", datalen, data);
 
 	if (strcmp(data, "q") == 0)
 	{
@@ -406,24 +406,26 @@ process_stdin(char* data, size_t datalen)
 	mtra_timer_mgr_.reset_timer(tid, 1000000);
 
 	sockaddrunion saddr;
-	str2saddr(&saddr, "::1", 0);
+	str2saddr(&saddr, "::1", USED_UDP_PORT);
 	uchar tos = IPTOS_DEFAULT;
-	int sentsize = mtra_send_ip_packet(mtra_read_ip6_socket(), data, datalen, &saddr, tos);
+	int sentsize;
+
+	sentsize = mtra_send_ip_packet(mtra_read_ip6_socket(), data, datalen, &saddr, tos);
 	assert(sentsize == datalen);
 
-	str2saddr(&saddr, "127.0.0.1", 0);
+	str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
 	sentsize = mtra_send_ip_packet(mtra_read_ip4_socket(), data, datalen, &saddr, tos);
 	assert(sentsize == datalen);
 }
 static void
 socket_cb(int sfd, char* data, int datalen, const char* addr, ushort port)
 {
-	EVENTLOG4(DEBUG,"socket_cb(ip%d fd=%d)::%d bytes : %s", mtra_read_ip4_socket() == sfd ? 4 : 6,sfd,datalen, data);
+	EVENTLOG4(DEBUG, "socket_cb(ip%d fd=%d)::%d bytes : %s", mtra_read_ip4_socket() == sfd ? 4 : 6, sfd, datalen, data);
 }
 static bool
 timer_cb(timer_id_t& tid, void* a1, void* a2)
 {
-	EVENTLOG2(DEBUG, "timeouts, BYE!", tid->timer_id,tid->timer_type);
+	EVENTLOG2(DEBUG, "timeouts, BYE!", tid->timer_id, tid->timer_type);
 	flag = false;
 	return true;
 }
@@ -442,10 +444,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	mtra_add_stdin_cb(process_stdin);
 	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 30000, timer_cb, 0, 0);
 	while (flag) mtra_poll(0, 0, 0);
-	mtra_timer_mgr_.timers.clear();
-	mtra_remove_stdin_cb();
-	mtra_remove_event_handler(mtra_read_ip4_socket());
-	mtra_remove_event_handler(mtra_read_ip6_socket());
+	mtra_destroy();
 }
 static void
 fd_action_sctp(int sfd, char* data, int datalen, const char* addr, ushort port)
