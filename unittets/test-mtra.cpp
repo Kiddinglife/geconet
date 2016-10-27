@@ -403,7 +403,7 @@ process_stdin(char* data, size_t datalen)
 		return;
 	}
 
-	mtra_timer_mgr_.reset_timer(tid, 100000);
+	mtra_timer_mgr_.reset_timer(tid, 1000000);
 
 	sockaddrunion saddr;
 	str2saddr(&saddr, "::1", 0);
@@ -441,8 +441,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	// you have to put stdin as last because we test it
 	mtra_add_stdin_cb(process_stdin);
 	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 30000, timer_cb, 0, 0);
-	while (flag)
-		mtra_poll(0, 0, 0);
+	while (flag) mtra_poll(0, 0, 0);
 	mtra_timer_mgr_.timers.clear();
 	mtra_remove_stdin_cb();
 	mtra_remove_event_handler(mtra_read_ip4_socket());
