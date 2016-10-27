@@ -403,7 +403,7 @@ process_stdin(char* data, size_t datalen)
 		return;
 	}
 
-	mtra_timer_mgr_.reset_timer(tid, 300000);
+	mtra_timer_mgr_.reset_timer(tid, 100000);
 
 	sockaddrunion saddr;
 	str2saddr(&saddr, "::1", 0);
@@ -440,7 +440,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 		EVENTCB_TYPE_SCTP, POLLIN | POLLPRI, cbunion, 0);
 	// you have to put stdin as last because we test it
 	mtra_add_stdin_cb(process_stdin);
-	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 300000, timer_cb, 0, 0);
+	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 30000, timer_cb, 0, 0);
 	while (flag)
 		mtra_poll(0, 0, 0);
 	mtra_timer_mgr_.timers.clear();
