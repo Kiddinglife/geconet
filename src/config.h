@@ -8,7 +8,6 @@
 #ifndef MY_CONFIG_H_
 #define MY_CONFIG_H_
 
-#define HAVE_GETEUID //dispathcehr.cc at line 4698 int initialize(void)
 #define USED_UDP_PORT 9899
 #define USE_UDP
 
@@ -24,5 +23,5 @@
 #endif
 
 #define enable_mock_dispatch_send_geco_packet 0
-#define CURR_EVENT_LOG_LEVEL  VERBOSE  //DEBUG  VVERBOSE 
+#define CURR_EVENT_LOG_LEVEL   DEBUG  // VVERBOSE
 #endif /* MY_CONFIG_H_ */

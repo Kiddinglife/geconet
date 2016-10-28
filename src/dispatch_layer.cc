@@ -5123,7 +5123,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 		|| dctp_packet_len > MAX_GECO_PACKET_SIZE
 		|| !gvalidate_checksum(dctp_packet, dctp_packet_len))
 	{
-		EVENTLOG(NOTICE, "mdis_recv_geco_packet()::received corrupted datagramm -> discard");
+	    EVENTLOG(NOTICE, "mdis_recv_geco_packet()::received corrupted datagramm -> discard");
 		return recv_geco_packet_but_integrity_check_failed;
 	}
 
