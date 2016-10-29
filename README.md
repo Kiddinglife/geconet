@@ -40,8 +40,8 @@ implements a procedure to avoid or at least make it more diffcult for an attacke
 of service attack (4-way connection setup with cookie).  
 
 - **againest blind attacks**  
-the connection setup of TCP allows blind attacks, particularly in applications that indentify users with their IP addreses.
+the connection setup of TCP allows blind attacks, particularly in applications that indentify users with their IP addreses.  
 TCP receiver and sender initialize a SYN for setting up a new connection with use of tick-based random number generator.  
-There is a high possibilty for an attacker to guess the right value of SYN so that he can proof an user connecting and running 
+There is a high possibilty for an attacker to guess the right value of SYN so that he can proof an user connecting and running  
 commands in peer's machine. **geconet** carefully choose a time-unrelated verification number for each established connection  
 in order to avoid or at least make it more diffcult for an attacker to lauch blind or proofing attacks.
