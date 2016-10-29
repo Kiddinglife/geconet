@@ -1518,11 +1518,11 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 	switch (saddr_family(dest_addr_ptr))
 	{
 	case AF_INET:
-		len = mtra_send_ip_packet(mtra_read_ip4_socket(), geco_packet, length, dest_addr_ptr,
+		len = mtra_send_rawsocks(mtra_read_ip4rawsock(), geco_packet, length, dest_addr_ptr,
 			tos);
 		break;
 	case AF_INET6:
-		len = mtra_send_ip_packet(mtra_read_ip6_socket(), geco_packet, length, dest_addr_ptr,
+		len = mtra_send_rawsocks(mtra_read_ip6rawsock(), geco_packet, length, dest_addr_ptr,
 			tos);
 		break;
 	default:
@@ -3910,7 +3910,7 @@ bool mdi_new_channel(geco_instance_t* instance,
 	if (defaultlocaladdrlistsize_ == 0)
 	{  //expensicve call, only call it one time
 		get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
-			mtra_read_ip4_socket() == 0 ? mtra_read_ip6_socket() : mtra_read_ip4_socket(),
+			mtra_read_ip4rawsock() == 0 ? mtra_read_ip6rawsock() : mtra_read_ip4rawsock(),
 			true, &maxMTU, IPAddrType::AllCastAddrTypes);
 	}
 	int ii;
@@ -5123,7 +5123,7 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len
 		|| dctp_packet_len > MAX_GECO_PACKET_SIZE
 		|| !gvalidate_checksum(dctp_packet, dctp_packet_len))
 	{
-	    EVENTLOG(NOTICE, "mdis_recv_geco_packet()::received corrupted datagramm -> discard");
+		EVENTLOG(NOTICE, "mdis_recv_geco_packet()::received corrupted datagramm -> discard");
 		return recv_geco_packet_but_integrity_check_failed;
 	}
 
@@ -6139,7 +6139,7 @@ int initialize_library(void)
 	get_secre_key(KEY_INIT);
 
 	if (!get_local_addresses(&defaultlocaladdrlist_, &defaultlocaladdrlistsize_,
-		mtra_read_ip4_socket() != 0 ? mtra_read_ip4_socket() : mtra_read_ip6_socket(),
+		mtra_read_ip4rawsock() != 0 ? mtra_read_ip4rawsock() : mtra_read_ip6rawsock(),
 		true, &maxMTU, IPAddrType::AllCastAddrTypes))
 		return MULP_SPECIFIC_FUNCTION_ERROR;
 
@@ -6199,11 +6199,11 @@ void freeport(unsigned short portSeized)
 	portsSeized[portSeized] = 0;
 }
 
-void dummy_ip6_socket_cb(int sfd, char* data, int datalen, const char* addr, ushort port)
+void dummy_ip6_socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to)
 {
 	EVENTLOG3(VERBOSE, "dummy_ip6_socket_cb() should never be called!\n", datalen, data, sfd);
 }
-void dummy_ip4_socket_cb(int sfd, char* data, int datalen, const char* addr, ushort port)
+void dummy_ip4_socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to)
 {
 	EVENTLOG3(VERBOSE, "dummy_ip4_socket_cb() should never be called!\n", datalen, data, sfd);
 }
@@ -6325,6 +6325,7 @@ int mulp_register_geco_instnce(
 			ret);
 		return ret;
 	}
+
 	curr_geco_instance_->local_port = localPort;
 	curr_geco_instance_->noOfInStreams = noOfInStreams;
 	curr_geco_instance_->noOfOutStreams = noOfOutStreams;
@@ -6392,22 +6393,28 @@ int mulp_register_geco_instnce(
 		curr_geco_instance_->local_addres_size = 0;
 	}
 
-	assert(mtra_read_ip4_socket() > 0);
-	assert(mtra_read_ip6_socket() > 0);
+	assert(mtra_read_ip4rawsock() > 0);
+	assert(mtra_read_ip6rawsock() > 0);
 
 	cbunion_t cbunion;
 	if (with_ipv4)
 	{
 		ipv4_users++;
 		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_read_ip4_socket(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
+		mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
+			cbunion, 0);
+		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
+		mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
 			cbunion, 0);
 	}
 	if (with_ipv6)
 	{
 		ipv6_users++;
 		cbunion.socket_cb_fun = dummy_ip6_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_read_ip6_socket(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
+		mtra_set_expected_event_on_fd(mtra_read_ip6rawsock(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
+			cbunion, 0);
+		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
+		mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
 			cbunion, 0);
 	}
 
@@ -6438,17 +6445,17 @@ int mulp_remove_geco_instnce(int instance_idx)
 		}
 	}
 
-	if (mtra_read_ip4_socket() > 0 && ipv4_users == 0)
+	if (mtra_read_ip4rawsock() > 0 && ipv4_users == 0)
 	{
-		mtra_remove_event_handler(mtra_read_ip4_socket());
-		mtra_zero_ip4_socket();
-		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", mtra_read_ip4_socket());
+		mtra_remove_event_handler(mtra_read_ip4rawsock());
+		mtra_zero_ip4rawsock();
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", mtra_read_ip4rawsock());
 	}
-	if (mtra_read_ip6_socket() > 0 && ipv6_users == 0)
+	if (mtra_read_ip6rawsock() > 0 && ipv6_users == 0)
 	{
-		mtra_remove_event_handler(mtra_read_ip6_socket());
-		mtra_zero_ip6_socket();
-		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 cb, registered FDs: %u ", mtra_read_ip6_socket());
+		mtra_remove_event_handler(mtra_read_ip6rawsock());
+		mtra_zero_ip6rawsock();
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 cb, registered FDs: %u ", mtra_read_ip6rawsock());
 	}
 
 	if (instance_name->is_in6addr_any == false)
@@ -6554,6 +6561,7 @@ int mulp_set_lib_params(lib_infos_t *lib_params)
 	CHECK_LIBRARY;
 	if (lib_params == NULL) return MULP_PARAMETER_PROBLEM;
 	int ret;
+	mtra_write_udp_local_bind_port(lib_params->udp_bind_port);
 	send_abort_for_oob_packet_ = lib_params->send_ootb_aborts;
 	support_addip_ = lib_params->support_dynamic_addr_config;
 	support_pr_ = lib_params->support_particial_reliability;
@@ -6588,7 +6596,7 @@ int mulp_set_lib_params(lib_infos_t *lib_params)
 		(checksum_algorithm_ == MULP_CHECKSUM_ALGORITHM_CRC32C) ? "CRC32C" : "MD5",
 		(support_addip_ == true) ? "TRUE" : "FALSE",
 		(support_pr_ == true) ? "TRUE" : "FALSE",
-		delayed_ack_interval_);
+		delayed_ack_interval_, mtra_read_udp_local_bind_port());
 	return MULP_SUCCESS;
 }
 int mulp_get_lib_params(lib_infos_t *lib_params)
@@ -6600,14 +6608,15 @@ int mulp_get_lib_params(lib_infos_t *lib_params)
 	lib_params->support_dynamic_addr_config = support_addip_;
 	lib_params->support_particial_reliability = support_pr_;
 	lib_params->delayed_ack_interval = delayed_ack_interval_;
+	lib_params->udp_bind_port = mtra_read_udp_local_bind_port();
 	EVENTLOG5(VERBOSE,
 		"mulp_get_lib_params():: \nsend_ootb_aborts %s,\nchecksum_algorithm %s,\nsupport_dynamic_addr_config %s,\nsupport_particial_reliability %s,\n"
-		"delayed_ack_interval %d",
+		"delayed_ack_interval %d,udp_bind_port %d",
 		(send_abort_for_oob_packet_ == true) ? "TRUE" : "FALSE",
 		(checksum_algorithm_ == MULP_CHECKSUM_ALGORITHM_CRC32C) ? "CRC32C" : "MD5",
 		(support_addip_ == true) ? "TRUE" : "FALSE",
 		(support_pr_ == true) ? "TRUE" : "FALSE",
-		delayed_ack_interval_);
+		delayed_ack_interval_, mtra_read_udp_local_bind_port());
 	return MULP_SUCCESS;
 }
 int mulp_set_connection_default_params(unsigned int instanceid,

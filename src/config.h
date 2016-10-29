@@ -9,7 +9,7 @@
 #define MY_CONFIG_H_
 
 #define USED_UDP_PORT 9899
-#define USE_UDP
+//#define USE_UDP
 
 //comment those macros before running unit tests
 //uncomment those macros after running unit tests
@@ -23,5 +23,5 @@
 #endif
 
 #define enable_mock_dispatch_send_geco_packet 0
-#define CURR_EVENT_LOG_LEVEL   DEBUG  // VVERBOSE
+#define CURR_EVENT_LOG_LEVEL   DEBUG // VVERBOSE
 #endif /* MY_CONFIG_H_ */

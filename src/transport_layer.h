@@ -34,7 +34,6 @@
    */
 struct event_handler_t
 {
-	//int used;
 	int sfd;
 	int eventcb_type;
 	/* pointer to possible arguments, associations etc. */
@@ -78,23 +77,31 @@ struct test_dummy_t
 	uchar out_tos_;
 };
 
-extern int mtra_read_ip4_socket();
-extern int mtra_read_ip6_socket();
+extern int mtra_read_ip4rawsock();
+extern int mtra_read_ip6rawsock();
+extern int mtra_read_ip4udpsock();
+extern int mtra_read_ip6udpsock();
 extern int mtra_read_icmp_socket();
-extern void mtra_zero_ip4_socket();
-extern void mtra_zero_ip6_socket();
+extern void mtra_zero_ip4rawsock();
+extern void mtra_zero_ip6rawsock();
 extern void mtra_zero_icmp_socket();
+
+extern void mtra_write_udp_local_bind_port(ushort newport);
+extern ushort mtra_read_udp_local_bind_port();
 
 extern int mtra_init(int * myRwnd);
 extern void mtra_destroy();
 
 extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask, cbunion_t action, void* userData);
 extern int mtra_remove_event_handler(int sfd);
+// cb will be called each tick 10ms
+extern void mtra_set_tick_task_cb(task_cb_fun_t taskcb, void* userdata);
 
-extern int mtra_recv_udp_packet(int sfd, char *dest, int maxlen, sockaddrunion *from, socklen_t *from_len);
-extern int mtra_recv_ip_packet(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
+//@pre  to->sin.sin_port MUST be assigned by caller with our well-knwon local port
+extern int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
+extern int mtra_recv_rawsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
 
-extern int mtra_send_udp_packet(int sfd, char* buf, int length, sockaddrunion* destsu);
-extern int mtra_send_ip_packet(int sfd, char *buf, int len, sockaddrunion *dest, uchar tos);
+extern int mtra_send_udpscoks(int sfd, char* buf, int length, sockaddrunion* destsu, uchar tos);
+extern int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest, uchar tos);
 
 #endif

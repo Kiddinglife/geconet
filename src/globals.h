@@ -215,7 +215,7 @@
 #define    EVENTCB_TYPE_USER       3
 #define    EVENTCB_TYPE_ROUTING    4
 #define    EVENTCB_TYPE_STDIN          5
-
+#define    EVENTCB_TYPE_TASK       6
 
 
 
@@ -379,7 +379,7 @@ enum SENDING_DEST_ADDR_TYPE : int
 
 /* ms default interval to timeout when no timers in poll
  * it is alos the resolution of wheel-timer*/
-#define GRANULARITY 1
+#define GRANULARITY 10
 
  /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
  /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
@@ -833,8 +833,8 @@ Params: 1. file-descriptor of the socket
 4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
 5. source port number for UDP sockets, 0 for SCTP raw sockets
 */
-typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen,
-	const char* addr, ushort port);
+typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to);
+
 /* Defines the callback function that is called when an event occurs
 on a user file-descriptor
 Params: 1. file-descriptor
@@ -843,12 +843,16 @@ Params: 3. pointer to registered events mask.
 It may be changed by the callback function.
 Params: 4. user data
 */
-typedef void(*user_cb_fun_t)(int, short int revents, 
-	int* settled_events,void* usrdata);
+typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events,void* usrdata);
+
+// function THAT WILL BE CALLED IN EACH TICK
+typedef void (*task_cb_fun_t)(void* usrdata);
+
 union cbunion_t
 {
 	socket_cb_fun_t socket_cb_fun;
 	user_cb_fun_t user_cb_fun;
+	task_cb_fun_t task_cb_fun;
 };
 extern bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags);
 extern bool get_local_addresses(union sockaddrunion **addresses,
