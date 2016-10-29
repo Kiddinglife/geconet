@@ -214,9 +214,9 @@ static SCTP_instance *curr_geco_instance_;
  * Keyed list of SCTP instances with the instance name as key
  */
 static GList* InstanceList = NULL;
-static unsigned int ipv4_users = 0;
+static unsigned int ipv4_sockets_geco_instance_users = 0;
 #ifdef HAVE_IPV6
-static unsigned int ipv6_users = 0;
+static unsigned int ipv6_sockets_geco_instance_users = 0;
 #endif
 /**
  * Whenever an external event (ULP-call, socket-event or timer-event) this variable must
@@ -271,7 +271,7 @@ unsigned short mdi_getUnusedInstanceName(void);
 
 /*------------------- Internal Functions ---------------------------------------------------------*/
 
-#define CHECK_LIBRARY           if(sctpLibraryInitialized == false) return SCTP_LIBRARY_NOT_INITIALIZED
+#define EXIT_CHECK_LIBRARY           if(sctpLibraryInitialized == false) return SCTP_LIBRARY_NOT_INITIALIZED
 #define ZERO_CHECK_LIBRARY      if(sctpLibraryInitialized == false) return 0
 
 #ifdef LIBRARY_DEBUG
@@ -2064,7 +2064,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 	}
 	if (with_ipv6 == true)
 	{
-		ipv6_users++;
+		ipv6_sockets_geco_instance_users++;
 		curr_geco_instance_->uses_IPv6 = true;
 	}
 	else
@@ -2086,7 +2086,7 @@ int sctp_registerInstance(unsigned short port, unsigned short noOfInStreams,
 	}
 	if (with_ipv4 == true)
 	{
-		ipv4_users++;
+		ipv4_sockets_geco_instance_users++;
 		curr_geco_instance_->uses_IPv4 = true;
 	}
 	else
@@ -2150,7 +2150,7 @@ int sctp_unregisterInstance(unsigned short instance_name)
 
 	ENTER_LIBRARY("sctp_unregisterInstance");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	event_logi(INTERNAL_EVENT_0, "Removing SCTP Instance %u from list",
 		instance_name);
@@ -2170,14 +2170,14 @@ int sctp_unregisterInstance(unsigned short instance_name)
 			instance_name);
 #ifdef HAVE_IPV6
 		event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv6: %s ", (with_ipv6 == true) ? "true" : "false");
-		if (with_ipv6 == true) ipv6_users--;
-		event_logi(VERBOSE, "sctp_unregisterInstance : ipv6_users: %u ", ipv6_users);
+		if (with_ipv6 == true) ipv6_sockets_geco_instance_users--;
+		event_logi(VERBOSE, "sctp_unregisterInstance : ipv6_sockets_geco_instance_users: %u ", ipv6_sockets_geco_instance_users);
 #endif
-		if (with_ipv4 == true) ipv4_users--;
+		if (with_ipv4 == true) ipv4_sockets_geco_instance_users--;
 		event_logi(VERBOSE, "sctp_unregisterInstance : with_ipv4: %s ",
 			(with_ipv4 == true) ? "true" : "false");
-		event_logi(VERBOSE, "sctp_unregisterInstance : ipv4_users: %u ",
-			ipv4_users);
+		event_logi(VERBOSE, "sctp_unregisterInstance : ipv4_sockets_geco_instance_users: %u ",
+			ipv4_sockets_geco_instance_users);
 
 		assocIterator = g_list_first(AssociationList);
 		while (assocIterator)
@@ -2193,21 +2193,21 @@ int sctp_unregisterInstance(unsigned short instance_name)
 			assocIterator = g_list_next(assocIterator);
 		}
 
-		if (sctp_socket != 0 && ipv4_users == 0)
+		if (sctp_socket != 0 && ipv4_sockets_geco_instance_users == 0)
 		{
 			fds = adl_remove_poll_fd(sctp_socket);
 			event_logi(VVERBOSE,
 				"sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ",
 				fds);
-			/* if there are no ipv4_users, deregister callback for ipv4-socket, if it was registered ! */
+			/* if there are no ipv4_sockets_geco_instance_users, deregister callback for ipv4-socket, if it was registered ! */
 			sctp_socket = 0;
 		}
 
 #ifdef HAVE_IPV6
-		if (ipv6_sctp_socket != 0 && ipv6_users == 0)
+		if (ipv6_sctp_socket != 0 && ipv6_sockets_geco_instance_users == 0)
 		{
 			fds = adl_remove_poll_fd(ipv6_sctp_socket);
-			/* if there are no ipv6_users, deregister callback for ipv6-socket, if it was registered ! */
+			/* if there are no ipv6_sockets_geco_instance_users, deregister callback for ipv6-socket, if it was registered ! */
 			event_logi(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", fds);
 			ipv6_sctp_socket = 0;
 		}
@@ -2264,7 +2264,7 @@ int sctp_deleteAssociation(unsigned int associationID)
 
 	ENTER_LIBRARY("sctp_deleteAssociation");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	event_logi(INTERNAL_EVENT_0,
 		"sctp_deleteAssociation: getting assoc %08x from list",
@@ -2455,7 +2455,7 @@ int sctp_shutdown(unsigned int associationID)
 
 	ENTER_LIBRARY("sctp_shutdown");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	/* Retrieve association from list  */
 	curr_channel_ = retrieveAssociation(associationID);
@@ -2495,7 +2495,7 @@ int sctp_abort(unsigned int associationID)
 	/* Retrieve association from list  */
 	ENTER_LIBRARY("sctp_abort");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	curr_channel_ = retrieveAssociation(associationID);
 
@@ -2551,7 +2551,7 @@ int sctp_send_private(unsigned int associationID, unsigned short streamID,
 	Association *old_assoc = curr_channel_;
 	ENTER_LIBRARY("sctp_send");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	/* Retrieve association from list  */
 	curr_channel_ = retrieveAssociation(associationID);
@@ -2604,7 +2604,7 @@ short sctp_setPrimary(unsigned int associationID, short path_id)
 
 	ENTER_LIBRARY("sctp_setPrimary");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	/* Retrieve association from list  */
 	curr_channel_ = retrieveAssociation(associationID);
 
@@ -2679,7 +2679,7 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID,
 
 	ENTER_LIBRARY("sctp_receive");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	if (buffer == NULL)
 	{
@@ -2751,7 +2751,7 @@ int sctp_changeHeartBeat(unsigned int associationID, short path_id,
 	Association *old_assoc = curr_channel_;
 	ENTER_LIBRARY("sctp_changeHeartbeat");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	/* Retrieve association from list  */
 	curr_channel_ = retrieveAssociation(associationID);
@@ -2798,7 +2798,7 @@ int sctp_requestHeartbeat(unsigned int associationID, short path_id)
 
 	ENTER_LIBRARY("sctp_requestHeartbeat");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	/* Retrieve association from list  */
 	curr_channel_ = retrieveAssociation(associationID);
@@ -2836,7 +2836,7 @@ int sctp_getSrttReport(unsigned int associationID, short path_id)
 
 	ENTER_LIBRARY("sctp_getSrttReport");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	/* Retrieve association from list  */
 	curr_channel_ = retrieveAssociation(associationID);
@@ -2891,7 +2891,7 @@ int sctp_setFailureThreshold(unsigned int associationID,
 
 	ENTER_LIBRARY("sctp_setFailureThreshold");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	event_logii(VERBOSE,
 		"sctp_setFailureThreshold: Association %u, pathMaxRetr. %u",
@@ -2938,7 +2938,7 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
 
 	ENTER_LIBRARY("sctp_getPathStatus");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	event_logii(VERBOSE, "sctp_getPathStatus: Association %u, Path %u",
 		associationID, path_id);
@@ -3006,7 +3006,7 @@ int sctp_getPathStatus(unsigned int associationID, short path_id,
 int sctp_setPathStatus(unsigned int associationID, short path_id,
 	SCTP_PathStatus* new_status)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	ENTER_LIBRARY("sctp_setPathStatus");
 
 	error_log(ERROR_MAJOR, "sctp_setPathStatus : unimplemented function");
@@ -3033,7 +3033,7 @@ int sctp_setAssocStatus(unsigned int associationID,
 
 	ENTER_LIBRARY("sctp_setAssocStatus");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	if (new_status == NULL)
 	{
@@ -3134,7 +3134,7 @@ int sctp_getAssocStatus(unsigned int associationID,
 
 	ENTER_LIBRARY("sctp_getAssocStatus");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	if (status == NULL)
 	{
@@ -3210,7 +3210,7 @@ int sctp_setAssocDefaults(unsigned short SCTP_InstanceName,
 
 	ENTER_LIBRARY("sctp_setAssocDefaults");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	event_logi(VERBOSE, "sctp_setInstanceParams: Instance %u",
 		SCTP_InstanceName);
@@ -3271,7 +3271,7 @@ int sctp_getAssocDefaults(unsigned short SCTP_InstanceName,
 
 	ENTER_LIBRARY("sctp_getAssocDefaults");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	event_logi(VERBOSE, "sctp_getInstanceParams: Instance %u",
 		SCTP_InstanceName);
@@ -3340,7 +3340,7 @@ int sctp_setLibraryParameters(SCTP_LibraryParameters *params)
 {
 	ENTER_LIBRARY("sctp_setLibraryParameters");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (params == NULL)
 	{
 		LEAVE_LIBRARY("sctp_setLibraryParameters");
@@ -3427,7 +3427,7 @@ int sctp_getLibraryParameters(SCTP_LibraryParameters *params)
 {
 	ENTER_LIBRARY("sctp_getLibraryParameters");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (params == NULL)
 	{
 		LEAVE_LIBRARY("sctp_getLibraryParameters");
@@ -3475,7 +3475,7 @@ int sctp_receiveUnsent(unsigned int associationID, unsigned char *buffer,
 
 	ENTER_LIBRARY("sctp_receiveUnsent");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	if (buffer == NULL || length == NULL || tsn == NULL || streamID == NULL
 		|| streamSN == NULL || protocolId == NULL)
@@ -3540,7 +3540,7 @@ int sctp_receiveUnacked(unsigned int associationID, unsigned char *buffer,
 
 	ENTER_LIBRARY("sctp_receiveUnacked");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	if (buffer == NULL || length == NULL || tsn == NULL || streamID == NULL
 		|| streamSN == NULL || protocolId == NULL)
@@ -3593,7 +3593,7 @@ short sctp_getPrimary(unsigned int associationID)
 
 	ENTER_LIBRARY("sctp_getPrimary");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 
 	curr_channel_ = retrieveAssociation(associationID);
 
@@ -3625,7 +3625,7 @@ int sctp_getInstanceID(unsigned int associationID, unsigned short* instanceID)
 
 	ENTER_LIBRARY("sctp_getInstanceID");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (instanceID == NULL)
 	{
 		LEAVE_LIBRARY("sctp_getInstanceID");
@@ -3664,7 +3664,7 @@ int sctp_registerUdpCallback(unsigned char me[], unsigned short my_port,
 
 	ENTER_LIBRARY("sctp_registerUdpCallback");
 
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_registerUdpCallback(me, my_port, scf);
 
 	LEAVE_LIBRARY("sctp_registerUdpCallback");
@@ -3676,7 +3676,7 @@ int sctp_unregisterUdpCallback(int udp_sfd)
 	int result;
 
 	ENTER_LIBRARY("sctp_unregisterUdpCallback");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_unregisterUdpCallback(udp_sfd);
 	LEAVE_LIBRARY("sctp_unregisterUdpCallback");
 	return result;
@@ -3688,7 +3688,7 @@ int sctp_sendUdpData(int sfd, unsigned char* buf, int length,
 	int result;
 
 	ENTER_LIBRARY("sctp_sendUdpData");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_sendUdpData(sfd, buf, length, destination, dest_port);
 	LEAVE_LIBRARY("sctp_sendUdpData");
 	return result;
@@ -3700,7 +3700,7 @@ int sctp_registerStdinCallback(sctp_StdinCallback sdf, char* buffer, int length)
 	int result;
 
 	ENTER_LIBRARY("sctp_registerStdinCallback");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_registerStdinCallback(sdf, buffer, length);
 	LEAVE_LIBRARY("sctp_registerStdinCallback");
 	return result;
@@ -3711,7 +3711,7 @@ int sctp_unregisterStdinCallback()
 	int result;
 
 	ENTER_LIBRARY("sctp_unregisterStdinCallback");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_unregisterStdinCallback();
 	LEAVE_LIBRARY("sctp_registerStdinCallback");
 	return result;
@@ -3725,7 +3725,7 @@ int sctp_registerUserCallback(int fd, sctp_userCallback sdf, void* userData,
 	int result;
 
 	ENTER_LIBRARY("sctp_registerUserCallback");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_registerUserCallback(fd, sdf, userData, eventMask);
 	LEAVE_LIBRARY("sctp_registerUserCallback");
 	return result;
@@ -3736,7 +3736,7 @@ int sctp_unregisterUserCallback(int fd)
 	int result;
 
 	ENTER_LIBRARY("sctp_unregisterUserCallback");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_unregisterUserCallback(fd);
 	LEAVE_LIBRARY("sctp_registerUserCallback");
 	return result;
@@ -3750,7 +3750,7 @@ unsigned int sctp_startTimer(unsigned int seconds, unsigned int microseconds,
 	unsigned int result;
 
 	ENTER_LIBRARY("sctp_startTimer");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_startMicroTimer(seconds, microseconds, timer_cb,
 		TIMER_TYPE_USER, param1, param2);
 	LEAVE_LIBRARY("sctp_startTimer");
@@ -3762,7 +3762,7 @@ int sctp_stopTimer(unsigned int tid)
 	int result;
 
 	ENTER_LIBRARY("sctp_stopTimer");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_stopTimer(tid);
 	LEAVE_LIBRARY("sctp_stopTimer");
 	return result;
@@ -3775,7 +3775,7 @@ unsigned int sctp_restartTimer(unsigned int timer_id, unsigned int seconds,
 	int result;
 
 	ENTER_LIBRARY("sctp_restartTimer");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_restartMicroTimer(timer_id, seconds, microseconds);
 	LEAVE_LIBRARY("sctp_restartTimer");
 	return result;
@@ -3786,7 +3786,7 @@ int sctp_getEvents(void)
 	int result;
 
 	ENTER_LIBRARY("sctp_getEvents");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_getEvents();
 	LEAVE_LIBRARY("sctp_getEvents");
 	return result;
@@ -3797,7 +3797,7 @@ int sctp_eventLoop(void)
 	int result;
 
 	ENTER_LIBRARY("sctp_eventLoop");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_eventLoop();
 	LEAVE_LIBRARY("sctp_eventLoop");
 	return result;
@@ -3809,7 +3809,7 @@ int sctp_extendedEventLoop(void(*lock)(void* data), void(*unlock)(void* data),
 	int result;
 
 	ENTER_LIBRARY("sctp_extendedEventLoop");
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	result = adl_extendedEventLoop(lock, unlock, data);
 	LEAVE_LIBRARY("sctp_extendedEventLoop");
 	return result;

@@ -50,6 +50,11 @@ static HANDLE stdin_thread_handle;
 static HANDLE win32events_[MAX_FD_SIZE];
 #endif
 
+timer_mgr* mtra_read_timer()
+{
+	return &mtra_timer_mgr_;
+}
+
 int mtra_read_ip4rawsock()
 {
 	return mtra_ip4rawsock_;
@@ -510,6 +515,12 @@ static int mtra_remove_socket_despt(int sfd)
 			}
 		}
 	}
+
+	if (sfd == mtra_ip4rawsock_) mtra_ip4rawsock_ = -1;
+	if (sfd == mtra_ip6rawsock_) mtra_ip6rawsock_ = -1;
+	if (sfd == mtra_ip4udpsock_) mtra_ip4udpsock_ = -1;
+	if (sfd == mtra_ip6udpsock_) mtra_ip6udpsock_ = -1;
+
 	EVENTLOG2(VERBOSE, "remove sfd(%d), remaining socks size(%d)", sfd, socket_despts_size_);
 	return counter;
 }
@@ -1039,8 +1050,7 @@ void mtra_dtor()
 	mtra_remove_event_handler(mtra_read_ip6udpsock());
 	mtra_remove_event_handler(mtra_read_ip4rawsock());
 	mtra_remove_event_handler(mtra_read_ip6rawsock());
-	mtra_ip6rawsock_ = mtra_ip4rawsock_ = -1;
-	mtra_ip6udpsock_ = mtra_ip4udpsock_ = -1;
+	mtra_ctor();
 }
 
 static int mtra_set_sockdespt_recvbuffer_size(int sfd, int new_size)
@@ -2134,3 +2144,4 @@ int mtra_init(int * myRwnd)
 
 	return 0;
 }
+

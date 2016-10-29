@@ -5,8 +5,7 @@
 #include "geco-ds-malloc.h"
 #include "protoco-stack.h"
 
-#define CHECK_LIBRARY           if(library_initiaized == false) return MULP_LIBRARY_NOT_INITIALIZED
-#define ZERO_CHECK_LIBRARY      if(library_initiaized == false) return 0
+#define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
 struct transportaddr_hash_functor  //hash 函数
 {
@@ -48,8 +47,8 @@ bool support_pr_ = true;
 bool support_addip_ = true;
 uint delayed_ack_interval_ = SACK_DELAY;  //ms
 bool send_abort_for_oob_packet_ = true;
-uint ipv4_users = 0;
-uint ipv6_users = 0;
+uint ipv4_sockets_geco_instance_users = 0;
+uint ipv6_sockets_geco_instance_users = 0;
 // inits along with library inits
 int defaultlocaladdrlistsize_;
 sockaddrunion* defaultlocaladdrlist_;
@@ -6105,7 +6104,24 @@ SEND_ABORT:
 /* port management array */
 unsigned char portsSeized[65536];
 unsigned int numberOfSeizedPorts;
-
+static void dummy_tick_task_cb(void* userdata)
+{
+	static int counter = 0;
+	counter++;
+	if (counter > 300)
+	{
+		EVENTLOG1(DEBUG, "task_cb called 300 times with tick of 10ms(userdata = %s) should never be called", (char*)userdata);
+		counter = 0;
+	}
+}
+static void dummy_ip6_socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to)
+{
+	EVENTLOG3(VERBOSE, "dummy_ip6_socket_cb() should never be called!\n", datalen, data, sfd);
+}
+static void dummy_ip4_socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to)
+{
+	EVENTLOG3(VERBOSE, "dummy_ip4_socket_cb() should never be called!\n", datalen, data, sfd);
+}
 int initialize_library(void)
 {
 	if (library_initiaized == true) return MULP_LIBRARY_ALREADY_INITIALIZED;
@@ -6123,7 +6139,22 @@ int initialize_library(void)
 	int i, ret, sfd = -1, maxMTU = 0;
 
 	if ((ret = mtra_init(&myRWND)) < 0)
-		return MULP_SPECIFIC_FUNCTION_ERROR;
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "initialize transport module failed !!!");
+	}
+
+	cbunion_t cbunion;
+	cbunion.socket_cb_fun = dummy_ip4_socket_cb;
+	mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
+		cbunion, 0);
+	mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
+		cbunion, 0);
+	cbunion.socket_cb_fun = dummy_ip6_socket_cb;
+	mtra_set_expected_event_on_fd(mtra_read_ip6rawsock(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
+		cbunion, 0);
+	mtra_set_expected_event_on_fd(mtra_read_ip6udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
+		cbunion, 0);
+	mtra_set_tick_task_cb(dummy_tick_task_cb, "dummy_user_data");
 
 	mdis_init();
 
@@ -6199,15 +6230,7 @@ void freeport(unsigned short portSeized)
 	portsSeized[portSeized] = 0;
 }
 
-void dummy_ip6_socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to)
-{
-	EVENTLOG3(VERBOSE, "dummy_ip6_socket_cb() should never be called!\n", datalen, data, sfd);
-}
-void dummy_ip4_socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to)
-{
-	EVENTLOG3(VERBOSE, "dummy_ip4_socket_cb() should never be called!\n", datalen, data, sfd);
-}
-int mulp_register_geco_instnce(
+int mulp_new_geco_instance(
 	unsigned short localPort,
 	unsigned short noOfInStreams,
 	unsigned short noOfOutStreams,
@@ -6215,8 +6238,8 @@ int mulp_register_geco_instnce(
 	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
 	ulp_cbs_t ULPcallbackFunctions)
 {
-	EVENTLOG(DEBUG, "- - - - - - - - - - Enter mulp_register_geco_instnce() - - - - - - - - - -\n");
-	ZERO_CHECK_LIBRARY;
+	EVENTLOG(DEBUG, "- - - - - - - - - - Enter mulp_new_geco_instance() - - - - - - - - - -");
+	EXIT_CHECK_LIBRARY;
 
 	unsigned int i;
 	int ret;
@@ -6234,23 +6257,14 @@ int mulp_register_geco_instnce(
 		(noOfLocalAddresses == 0) ||
 		(localAddressList == NULL))
 	{
-		ERRLOG(MAJOR_ERROR, "Parameter Problem in mulp_register_geco_instnce - Error !");
-		ret = MULP_PARAMETER_PROBLEM;
-		EVENTLOG1(DEBUG,
-			"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-			ret);
-		return ret;
+		ERRLOG(FALTAL_ERROR_EXIT, "invalid parameters !");
 	}
+
 	// alloc port number
 	localPort = localPort > 0 ? unused(localPort) : allocport();
 	if (localPort == 0)
 	{
-		ERRLOG(MAJOR_ERROR, "Parameter Problem in mulp_register_geco_instnce - Error !");
-		ret = MULP_WRONG_ADDRESS;
-		EVENTLOG1(DEBUG,
-			"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-			ret);
-		return ret;
+		ERRLOG(FALTAL_ERROR_EXIT, "Parameter Problem in mulp_new_geco_instance - local port has been used !");
 	}
 
 	bool is_inaddr_any = false;
@@ -6262,15 +6276,8 @@ int mulp_register_geco_instnce(
 	{
 		if (str2saddr(&su, (const char*)localAddressList[i], localPort) < 0)
 		{
-			ERRLOG1(MAJOR_ERROR,
-				"Address Error in sctp_registerInstance(%s)",
-				(localAddressList[i]));
 			freeport(localPort);
-			ret = MULP_PARAMETER_PROBLEM;
-			EVENTLOG1(DEBUG,
-				"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-				ret);
-			return ret;
+			ERRLOG1(FALTAL_ERROR_EXIT, "illegal local Address (%s) !!!", localAddressList[i]);
 		}
 		if (su.sa.sa_family == AF_INET)
 		{
@@ -6292,38 +6299,24 @@ int mulp_register_geco_instnce(
 		}
 		else
 		{
-			ERRLOG1(MAJOR_ERROR, "af Error in sctp_registerInstance(%d)", su.sa.sa_family);
 			freeport(localPort);
-			ret = MULP_PARAMETER_PROBLEM;
-			EVENTLOG1(DEBUG,
-				"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-				ret);
-			return ret;
+			ERRLOG1(FALTAL_ERROR_EXIT, "illegal address family (%d) !!!", su.sa.sa_family);
 		}
 	}
+
 	EVENTLOG2(VERBOSE, "with_ipv4 =%d, with_ipv6 = %d ", with_ipv4, with_ipv6);
 	if (!with_ipv4 && !with_ipv6)
 	{
-		ERRLOG(MAJOR_ERROR, "No valid address");
 		freeport(localPort);
-		ret = MULP_PARAMETER_PROBLEM;
-		EVENTLOG1(DEBUG,
-			"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-			ret);
-		return ret;
+		ERRLOG(FALTAL_ERROR_EXIT, "No valid address");
 	}
 
 	// alloc instance and init it
 	if ((curr_geco_instance_ = (geco_instance_t*)malloc(sizeof(geco_instance_t))) == NULL)
 	{
-		ERRLOG(MAJOR_ERROR, "No valid address");
 		curr_geco_instance_ = old_Instance;
 		freeport(localPort);
-		ret = MULP_OUT_OF_RESOURCES;
-		EVENTLOG1(DEBUG,
-			"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-			ret);
-		return ret;
+		ERRLOG(FALTAL_ERROR_EXIT, "malloc geco instace failed!!!");
 	}
 
 	curr_geco_instance_->local_port = localPort;
@@ -6373,16 +6366,11 @@ int mulp_register_geco_instnce(
 			}
 			if (!found)
 			{
-				ERRLOG(MAJOR_ERROR, "Not found addr from default local addrlist");
-				curr_geco_instance_ = old_Instance;
 				freeport(localPort);
 				free(curr_geco_instance_->local_addres_list);
 				free(curr_geco_instance_);
-				ret = MULP_PARAMETER_PROBLEM;
-				EVENTLOG1(DEBUG,
-					"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-					ret);
-				return ret;
+				curr_geco_instance_ = old_Instance;
+				ERRLOG(FALTAL_ERROR_EXIT, "Not found addr from default local addrlist");
 			}
 		}
 		curr_geco_instance_->local_addres_size = noOfLocalAddresses;
@@ -6393,69 +6381,60 @@ int mulp_register_geco_instnce(
 		curr_geco_instance_->local_addres_size = 0;
 	}
 
-	assert(mtra_read_ip4rawsock() > 0);
-	assert(mtra_read_ip6rawsock() > 0);
-
-	cbunion_t cbunion;
-	if (with_ipv4)
-	{
-		ipv4_users++;
-		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
-			cbunion, 0);
-		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
-			cbunion, 0);
-	}
-	if (with_ipv6)
-	{
-		ipv6_users++;
-		cbunion.socket_cb_fun = dummy_ip6_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_read_ip6rawsock(), EVENTCB_TYPE_SCTP, POLLIN | POLLPRI,
-			cbunion, 0);
-		cbunion.socket_cb_fun = dummy_ip4_socket_cb;
-		mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
-			cbunion, 0);
-	}
+	if (with_ipv4) ipv4_sockets_geco_instance_users++;
+	if (with_ipv6) ipv6_sockets_geco_instance_users++;
 
 	ret = (int)geco_instances_.size();
 	geco_instances_.push_back(curr_geco_instance_);
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
 
-	EVENTLOG1(DEBUG,
-		"- - - - - - - - - - Leave mulp_register_geco_instnce(ret = %d) - - - - - - - - - -\n",
-		ret);
+	EVENTLOG1(DEBUG, "- - - - - - - - - - Leave mulp_new_geco_instance (instance_idx=%d)- - - - - - - - - -", ret);
 	return ret;
 }
-int mulp_remove_geco_instnce(int instance_idx)
+int mulp_delete_geco_instance(int instance_idx)
 {
-	CHECK_LIBRARY;
-	geco_instance_t* instance_name = geco_instances_[instance_idx];
-	if (instance_name == NULL) return MULP_INSTANCE_NOT_FOUND;
+	EVENTLOG1(DEBUG, "- - - - - - - - - - Enter mulp_delete_geco_instance(instance_idx=%d) - - - - - - - - - -", instance_idx);
 
-	if (instance_name->use_ip4) ipv4_users--;
-	if (instance_name->use_ip6) ipv6_users--;
+	EXIT_CHECK_LIBRARY;
+	geco_instance_t* instance_name = geco_instances_[instance_idx];
+	if (instance_name == NULL)
+	{
+		EVENTLOG(WARNNING_ERROR, "mulp_delete_geco_instance()::MULP_INSTANCE_NOT_FOUND!!!");
+		return MULP_INSTANCE_NOT_FOUND;
+	}
+
+	if (instance_name->use_ip4) ipv4_sockets_geco_instance_users--;
+	if (instance_name->use_ip6) ipv6_sockets_geco_instance_users--;
 
 	for (auto channel : channels_)
 	{
 		if (channel->geco_inst == instance_name)
 		{
+			EVENTLOG(WARNNING_ERROR, "mulp_delete_geco_instance()::MULP_INSTANCE_IN_USE, CANNOT BE REMOVED!!!");
 			return MULP_INSTANCE_IN_USE;
 		}
 	}
 
-	if (mtra_read_ip4rawsock() > 0 && ipv4_users == 0)
+	if (mtra_read_ip4rawsock() > 0 && ipv4_sockets_geco_instance_users == 0)
 	{
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 RAW SOCKET, registered FDs: %u ", mtra_read_ip4rawsock());
 		mtra_remove_event_handler(mtra_read_ip4rawsock());
-		mtra_zero_ip4rawsock();
-		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 cb, registered FDs: %u ", mtra_read_ip4rawsock());
 	}
-	if (mtra_read_ip6rawsock() > 0 && ipv6_users == 0)
+	if (mtra_read_ip6rawsock() > 0 && ipv6_sockets_geco_instance_users == 0)
 	{
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 RAW SOCKET, registered FDs: %u ", mtra_read_ip6rawsock());
 		mtra_remove_event_handler(mtra_read_ip6rawsock());
-		mtra_zero_ip6rawsock();
-		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 cb, registered FDs: %u ", mtra_read_ip6rawsock());
+	}
+	if (mtra_read_ip4udpsock() > 0 && ipv4_sockets_geco_instance_users == 0)
+	{
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 UDP SOCKET, registered FDs: %u ", mtra_read_ip4udpsock());
+		mtra_remove_event_handler(mtra_read_ip4udpsock());
+	}
+	if (mtra_read_ip6udpsock() > 0 && ipv6_sockets_geco_instance_users == 0)
+	{
+		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 UDP SOCKET", mtra_read_ip6udpsock());
+		mtra_remove_event_handler(mtra_read_ip6udpsock());
 	}
 
 	if (instance_name->is_in6addr_any == false)
@@ -6476,6 +6455,8 @@ int mulp_remove_geco_instnce(int instance_idx)
 	free(instance_name);
 	geco_instances_[instance_idx] = geco_instances_.back();
 	geco_instances_.pop_back();
+
+	EVENTLOG1(DEBUG, "- - - - - - - - - - Leave mulp_delete_geco_instance(ret=%d) - - - - - - - - - -", MULP_SUCCESS);
 	return MULP_SUCCESS;
 }
 
@@ -6497,8 +6478,9 @@ int mulp_connectx(unsigned int instanceid,
 	unsigned short destinationPort,
 	void* ulp_data)
 {
-	EVENTLOG(VVERBOSE, "mulp_connectx() called ");
-	ZERO_CHECK_LIBRARY;
+	EVENTLOG1(DEBUG, "Enter mulp_connectx(instanceid=%d)", instanceid);
+	EXIT_CHECK_LIBRARY;
+
 	if (destinationPort == 0)
 	{
 		ERRLOG(MAJOR_ERROR, "destination port is zero....this is not allowed !");
@@ -6553,12 +6535,14 @@ int mulp_connectx(unsigned int instanceid,
 		noOfDestinationAddresses);
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
+
+	EVENTLOG1(DEBUG, "Leave mulp_connectx(curr_channel_id=%d)", curr_channel_->channel_id);
 	return curr_channel_->channel_id;
 }
 
-int mulp_set_lib_params(lib_infos_t *lib_params)
+int mulp_set_lib_params(lib_params_t *lib_params)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (lib_params == NULL) return MULP_PARAMETER_PROBLEM;
 	int ret;
 	mtra_write_udp_local_bind_port(lib_params->udp_bind_port);
@@ -6599,9 +6583,9 @@ int mulp_set_lib_params(lib_infos_t *lib_params)
 		delayed_ack_interval_, mtra_read_udp_local_bind_port());
 	return MULP_SUCCESS;
 }
-int mulp_get_lib_params(lib_infos_t *lib_params)
+int mulp_get_lib_params(lib_params_t *lib_params)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (lib_params == NULL) return MULP_PARAMETER_PROBLEM;
 	lib_params->send_ootb_aborts = send_abort_for_oob_packet_;
 	lib_params->checksum_algorithm = checksum_algorithm_;
@@ -6622,7 +6606,7 @@ int mulp_get_lib_params(lib_infos_t *lib_params)
 int mulp_set_connection_default_params(unsigned int instanceid,
 	geco_instance_params_t* params)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (params == NULL) return MULP_PARAMETER_PROBLEM;
 	geco_instance_t* instance = geco_instances_[instanceid];
 	instance->default_rtoInitial = params->rtoInitial;
@@ -6644,7 +6628,7 @@ int mulp_set_connection_default_params(unsigned int instanceid,
 int mulp_get_connection_default_params(unsigned int instanceid,
 	geco_instance_params_t* geco_instance_params)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (geco_instance_params == NULL) return MULP_PARAMETER_PROBLEM;
 	geco_instance_t* instance = geco_instances_[instanceid];
 	unsigned int numOfAddresses = 0, count = 0;
@@ -6691,7 +6675,7 @@ int mulp_get_connection_default_params(unsigned int instanceid,
 
 int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* status)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (status == NULL) return MULP_PARAMETER_PROBLEM;
 	int ret = MULP_SUCCESS;
 	geco_instance_t* old_Instance = curr_geco_instance_;
@@ -6731,7 +6715,7 @@ int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* st
 }
 int mulp_set_connection_params(unsigned int connectionid, connection_infos_t* new_status)
 {
-	CHECK_LIBRARY;
+	EXIT_CHECK_LIBRARY;
 	if (new_status == NULL) return MULP_PARAMETER_PROBLEM;
 	ushort ret;
 	geco_instance_t* old_Instance = curr_geco_instance_;

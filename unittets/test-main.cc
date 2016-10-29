@@ -39,13 +39,13 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "MULP.test_initialize_and_free_library";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
+	::testing::GTEST_FLAG(filter) = "MULP.test_mulp_mulp_new_and_delete_geco_instnce";
 
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MBU.*";
     //::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
-    ::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
-	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_add_remove_fd";
+    //::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
 	
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_bundle_ctrl_chunk";

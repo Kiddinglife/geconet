@@ -100,7 +100,7 @@ const uint MULP_CHECKSUM_ALGORITHM_CRC32C = 2;
  * This struct contains parameters that may be set globally with
  * mulp_setLibraryParams(). For now, it only contains one flag.
  */
-struct lib_infos_t
+struct lib_params_t
 {
         /*
          * flag that controls whether an implementation will send
@@ -423,15 +423,18 @@ void free_library(void);
  *  @param noOfLocalAddresses     number of local addresses
  *  @param localAddressList       local address list (pointer to a string-array)
  *  @param ULPcallbackFunctions   call back functions for primitives passed from sctp to ULP
- *  @return     instance name of this SCTP-instance or 0 in case of errors, or error code
+ *  @return     instance id  otherwise  fatal error exit
  */
-int mulp_register_geco_instnce(unsigned short localPort,
+int mulp_new_geco_instance(unsigned short localPort,
         unsigned short noOfInStreams,
         unsigned short noOfOutStreams,
         unsigned int noOfLocalAddresses,
         unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
         ulp_cbs_t ULPcallbackFunctions);
-int mulp_remove_geco_instnce(int instance_name);
+
+// success returns MULP_SUCCESS 
+// error returns MULP_INSTANCE_NOT_FOUND MULP_INSTANCE_IN_USE
+int mulp_delete_geco_instance(int instance_name);
 
 /**
  * This function is called to setup an association.
@@ -464,8 +467,8 @@ int mulp_abort(unsigned int connectionid);
 /*----------------------------------------------------------------------------------------------*/
 /*  These are the new function for getting/setting parameters per instance, association or path */
 /*----------------------------------------------------------------------------------------------*/
-int mulp_set_lib_params(lib_infos_t *lib_params);
-int mulp_get_lib_params(lib_infos_t *lib_params);
+int mulp_set_lib_params(lib_params_t *lib_params);
+int mulp_get_lib_params(lib_params_t *lib_params);
 int mulp_set_connection_default_params(unsigned int instanceid,
         geco_instance_params_t* geco_instance_params);
 int mulp_get_connection_default_params(unsigned int instanceid,
