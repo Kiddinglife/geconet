@@ -7,6 +7,41 @@ It is implemented in the user space with raw sockets and/or udp sockets(setup by
 It is specifically designed for datagram-like meassage trasport in online games.   
 However, it is generic and may supersede TCP and Reliable-UDP in other applications as well.
 
+## Core Features
+- **Secured connection pharse and encryption of messages**   
+fast encrrption and compression of application messages.  
+Secured connection based on key-exchange.  
+key exchange methods (RAS & DH).  
+encrption methods (DES_CBC, 3DES_CBC, ASE128,AES192).  
+Hash methods (MD5, SHA-1).
+
+- **Lossless Compression of messages**  
+Support compression methods (Haffman, lempel-Ziv(lz)...and more).
+
+- **Multiple levels of message reliability**    
+reliable and order, reliable and out-of-order, 
+unreliable and order, unliable and out-of-order
+
+- **Congestion avoidance**   
+simlar but enhanced functionality as in TCP to avoid congestion with quicker slow-start-pharse
+
+- **Multiple Transfer Channels**    
+Support for more than one logical transfer channels of application messages.
+
+- **Message-oriented**   
+Preservation of apllication message boundaries.
+
+- **Multihoming for network redundancy**  
+use of multiple IP addresses per connection to allow transmission  
+of data chunks through different network paths with highest pmtu
+
+- **Fragmentation by PMTU**  
+Detection of path MTU regularly and fragmentation of user data to fit best into the highest pmtu
+
+- **Error correction**  
+Error-free, non-duplicated and non-corrupted data transfer
+
+
 ## Why use geconet instead of TCP or Reliable UDP？
 - **no head-of-line blocking**      
 TCP imposes a strictly reliable and ording data transmittions. However, if a user data message  
@@ -46,3 +81,4 @@ random number generator. There is a high possibilty for an attacker to guess the
 can proof an use  connecting and running commands in peer's machine. **geconet** carefully choose a time-unrelated  
 verification number for each established connection in order to avoid or at least make it more diffcult for an  
 attacker to lauch blind or proofing attacks.  
+
