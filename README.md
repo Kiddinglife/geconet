@@ -33,5 +33,10 @@ destination port. **geconet** has built-in support for multihoming which offload
 from implementing this feature.  
 
 - **againest denial of service,man-in-the-middle and blind attacks** 
+the connection setup of TCP allows denial of attacks, particularly SYN attacks. Each time the TCP layer  
+receives a SYN packet for setting up a new connection, it allocates a data structure for storing connection  
+parameters. Flodding with a high number of such SYN packets may lead to memory exhaustion. **geconet** implements  
+a procedure to avoid or at least make it more diffcult for an attacker to lauch a connection denial of service  
+attack (4-way connection setup with cookie).  
 
 - **Instance methods and static methods**   
