@@ -50,8 +50,8 @@ bool send_abort_for_oob_packet_ = true;
 uint ipv4_sockets_geco_instance_users = 0;
 uint ipv6_sockets_geco_instance_users = 0;
 // inits along with library inits
-int defaultlocaladdrlistsize_;
-sockaddrunion* defaultlocaladdrlist_;
+static int defaultlocaladdrlistsize_;
+static sockaddrunion* defaultlocaladdrlist_;
 /////////////////////////////////////////////////////////////////////////////
 
 bool enable_test_;
@@ -221,13 +221,18 @@ int mpath_read_primary_path();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
+int mdi_read_defaultlocaladdrlistsize()
+{
+	return defaultlocaladdrlistsize_;
+}
+sockaddrunion* mdi_read_defaultlocaladdrlist()
+{
+	return defaultlocaladdrlist_;
+}
 /**
  * function to return a pointer to the bundling module of this association
  * @return   pointer to the bundling data structure, null in case of error.*/
 bundle_controller_t* mdi_read_mbu(channel_t* channel = NULL);
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
 reltransfer_controller_t* mdi_read_mrtx(void);
 deliverman_controller_t* mdi_read_mdm(void);
 /**
@@ -6346,11 +6351,11 @@ int mulp_new_geco_instance(
 	curr_geco_instance_->default_maxRecvQueue = DEFAULT_MAX_RECVQUEUE;
 	curr_geco_instance_->default_maxBurst = DEFAULT_MAX_BURST;
 
-//#ifdef _DEBUG
-//	char strs[MAX_IPADDR_STR_LEN];
-//#endif
+	//#ifdef _DEBUG
+	//	char strs[MAX_IPADDR_STR_LEN];
+	//#endif
 
-	//copy addrlist to curr geco inst
+		//copy addrlist to curr geco inst
 	if (!is_inaddr_any && !is_in6addr_any)
 	{
 		bool found;
@@ -6359,17 +6364,17 @@ int mulp_new_geco_instance(
 		for (i = 0; i < noOfLocalAddresses; i++)
 		{
 			str2saddr(&curr_geco_instance_->local_addres_list[i], (const char*)localAddressList[i], localPort);
-//#ifdef _DEBUG
-//			saddr2str(&curr_geco_instance_->local_addres_list[i], strs, MAX_IPADDR_STR_LEN);
-//			EVENTLOG1(VERBOSE, "Try to find addr %s from default local addr list", strs);
-//#endif
+			//#ifdef _DEBUG
+			//			saddr2str(&curr_geco_instance_->local_addres_list[i], strs, MAX_IPADDR_STR_LEN);
+			//			EVENTLOG1(VERBOSE, "Try to find addr %s from default local addr list", strs);
+			//#endif
 			found = false;
 			for (int j = 0; j < defaultlocaladdrlistsize_; j++)
 			{
-//#ifdef _DEBUG
-//				saddr2str(&defaultlocaladdrlist_[j], strs, MAX_IPADDR_STR_LEN);
-//				EVENTLOG1(VERBOSE, "curr addr = %s", strs);
-//#endif
+				//#ifdef _DEBUG
+				//				saddr2str(&defaultlocaladdrlist_[j], strs, MAX_IPADDR_STR_LEN);
+				//				EVENTLOG1(VERBOSE, "curr addr = %s", strs);
+				//#endif
 				if (saddr_equals(&defaultlocaladdrlist_[j], &curr_geco_instance_->local_addres_list[i], true))
 				{
 					found = true;
@@ -6418,7 +6423,7 @@ int mulp_new_geco_instance(
 		}
 	}
 
-	if(ret < 0)
+	if (ret < 0)
 		ERRLOG(FALTAL_ERROR_EXIT, "too many geco instances !!!");
 
 	geco_instances_[ret] = curr_geco_instance_;
@@ -6445,7 +6450,7 @@ int mulp_delete_geco_instance(int instance_idx)
 
 	for (auto channel : channels_)
 	{
-		if (channel !=NULL && channel->geco_inst == instance_name)
+		if (channel != NULL && channel->geco_inst == instance_name)
 		{
 			EVENTLOG(WARNNING_ERROR, "mulp_delete_geco_instance()::MULP_INSTANCE_IN_USE, CANNOT BE REMOVED!!!");
 			return MULP_INSTANCE_IN_USE;

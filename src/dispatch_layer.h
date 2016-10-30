@@ -484,6 +484,10 @@ struct channel_t
         void * application_layer_dataptr; /* transparent pointer to some upper layer data */
 };
 
+int mdi_read_defaultlocaladdrlistsize();
+sockaddrunion* mdi_read_defaultlocaladdrlist();
+
+
 /**
  *  recv_geco_packet
  *  recv_geco_packet is the callback function of the DCTP-message dispatch_layer.

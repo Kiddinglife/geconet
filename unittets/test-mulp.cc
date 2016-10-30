@@ -72,6 +72,26 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
 	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN];
 	ulp_cbs_t ULPcallbackFunctions;
 
+	int defaultlocaladdrlistsize = mdi_read_defaultlocaladdrlistsize();
+	sockaddrunion*defaultlocaladdrlist = mdi_read_defaultlocaladdrlist();
+	char ip6addr[MAX_IPADDR_STR_LEN];
+	char ip4addr[MAX_IPADDR_STR_LEN];
+	bool fip4 = false, fip6 = false;
+	for (int i = 0; i < defaultlocaladdrlistsize; i++)
+	{
+		if (defaultlocaladdrlist[i].sa.sa_family == AF_INET6)
+		{
+			saddr2str(&defaultlocaladdrlist[i], ip6addr, MAX_IPADDR_STR_LEN);
+			fip6 = true;
+			if (fip4) break;
+		}
+		if (defaultlocaladdrlist[i].sa.sa_family == AF_INET)
+		{
+			saddr2str(&defaultlocaladdrlist[i], ip4addr, MAX_IPADDR_STR_LEN);
+			fip4 = true;
+			if (fip6) break;
+		}
+	}
 	//ip6 any and ip4 any
 	localPort = 123;
 	noOfInStreams = 32;
@@ -101,7 +121,7 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
 	//ip6 not any and ip4 any
 	localPort = 124;
 	strcpy((char*)localAddressList[0], "0.0.0.0");
-	strcpy((char*)localAddressList[1], "fe80::e5e2:146e:25a2:4016");
+	strcpy((char*)localAddressList[1], ip6addr);
 	instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams, noOfLocalAddresses, localAddressList, ULPcallbackFunctions);
 	curr_geco_instance_ = geco_instances_[instid];
 	ASSERT_EQ(curr_geco_instance_->local_port, localPort);
@@ -193,7 +213,7 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
 	//ip6
 	localPort = 129;
 	noOfLocalAddresses = 1;
-	strcpy((char*)localAddressList[0], "fe80::e5e2:146e:25a2:4016");
+	strcpy((char*)localAddressList[0], ip6addr);
 	instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams, noOfLocalAddresses, localAddressList, ULPcallbackFunctions);
 	curr_geco_instance_ = geco_instances_[instid];
 	ASSERT_EQ(curr_geco_instance_->local_port, localPort);
@@ -211,7 +231,7 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
 	//ip4 
 	localPort = 130;
 	noOfLocalAddresses = 1;
-	strcpy((char*)localAddressList[0], "10.0.0.114");
+	strcpy((char*)localAddressList[0], ip4addr);
 	instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams, noOfLocalAddresses, localAddressList, ULPcallbackFunctions);
 	curr_geco_instance_ = geco_instances_[instid];
 	ASSERT_EQ(curr_geco_instance_->local_port, localPort);
