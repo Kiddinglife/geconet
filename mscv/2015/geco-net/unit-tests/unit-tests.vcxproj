@@ -22,7 +22,7 @@
     <ProjectGuid>{1CDE268D-100B-4CE5-8373-F44F055CA9E8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>unittests</RootNamespace>
-    <ProjectName>unit-tests-ps-lib</ProjectName>
+    <ProjectName>unittests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
