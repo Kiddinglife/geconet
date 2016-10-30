@@ -15,8 +15,11 @@ key exchange methods (RAS & DH).
 encrption methods (DES_CBC, 3DES_CBC, ASE128,AES192).  
 Hash methods (MD5, SHA-1).
 
-- **Lossless Compression of messages**  
-Support compression methods (Haffman, lempel-Ziv(lz)...and more).
+- **Lossless real time encoding/decoding of game messages**  
+Support compression methods. (zlib used for compression and  
+depression of messages between client and server).(lempel-Ziv(lz4)  
+used for compression and depression of messages between server-serer).  
+(the resons are explained below).
 
 - **Multiple levels of message reliability**    
 reliable and order, reliable and out-of-order, 
@@ -35,8 +38,9 @@ Preservation of apllication message boundaries.
 use of multiple IP addresses per connection to allow transmission  
 of data chunks through different network paths with highest pmtu
 
-- **Fragmentation by PMTU**  
-Detection of path MTU regularly and fragmentation of user data to fit best into the highest pmtu
+- **Fragmentation and PMTU**  
+Detection of path MTU impelmented based on RFC 4821 - Packetization Layer Path MTU Discovery.  
+Fragmentation of user data to fit best into the highest pmtu
 
 - **Error correction**  
 Error-free, non-duplicated and non-corrupted data transfer
@@ -82,3 +86,6 @@ can proof an use  connecting and running commands in peer's machine. **geconet**
 verification number for each established connection in order to avoid or at least make it more diffcult for an  
 attacker to lauch blind or proofing attacks.  
 
+## Architecture
+
+waiting...
