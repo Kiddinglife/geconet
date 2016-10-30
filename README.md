@@ -15,11 +15,11 @@ key exchange methods (RAS & DH).
 encrption methods (DES_CBC, 3DES_CBC, ASE128,AES192).  
 Hash methods (MD5, SHA-1).
 
-- **Lossless real time encoding/decoding of game messages**  
-Support compression methods. (zlib used for compression and  
-depression of messages between client and server).(lempel-Ziv(lz4)  
-used for compression and depression of messages between server-serer).  
-(the resons are explained below).
+- **(De)compression for game messages**  
+since game packets often have small repeated blocks of data (IP packets, game messages hdr etc...),  
+zlib1.2.8 will be used in client-server model(config by users) as (de)compression method.
+(determined by formular: Time=1/Ratio+ActualBandwidth*(1/DecompressVelocity+1/CompressVelocity).  
+Therefore, zlib is best option to achieve highest network throughput when bandwidth < 133 Mbps (this is the bandwidth value most gane clients have).
 
 - **Multiple levels of message reliability**    
 reliable and order, reliable and out-of-order, 
