@@ -22,7 +22,7 @@
     <ProjectGuid>{5ED16937-E7C5-49B7-9667-60BD36047BC4}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>protocolstack</RootNamespace>
-    <ProjectName>protocol-stack-lib</ProjectName>
+    <ProjectName>geconetlib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
