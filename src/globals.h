@@ -22,39 +22,39 @@
 #ifndef MY_GLOBALS_H_
 #define MY_GLOBALS_H_
 
-/*
-   The operating system, must be one of: (Q_OS_x)
+  /*
+	 The operating system, must be one of: (Q_OS_x)
 
-     MACX   - Mac OS X
-     MAC9   - Mac OS 9
-     MSDOS  - MS-DOS and Windows
-     OS2    - OS/2
-     OS2EMX - XFree86 on OS/2 (not PM)
-     WIN32  - Win32 (Windows 95/98/ME and Windows NT/2000/XP)
-     CYGWIN - Cygwin
-     SOLARIS    - Sun Solaris
-     HPUX   - HP-UX
-     ULTRIX - DEC Ultrix
-     LINUX  - Linux
-     FREEBSD    - FreeBSD
-     NETBSD - NetBSD
-     OPENBSD    - OpenBSD
-     BSDI   - BSD/OS
-     IRIX   - SGI Irix
-     OSF    - HP Tru64 UNIX
-     SCO    - SCO OpenServer 5
-     UNIXWARE   - UnixWare 7, Open UNIX 8
-     AIX    - AIX
-     HURD   - GNU Hurd
-     DGUX   - DG/UX
-     RELIANT    - Reliant UNIX
-     DYNIX  - DYNIX/ptx
-     QNX    - QNX
-     QNX6   - QNX RTP 6.1
-     LYNX   - LynxOS
-     BSD4   - Any BSD 4.4 system
-     UNIX   - Any UNIX BSD/SYSV system
-*/
+	   MACX   - Mac OS X
+	   MAC9   - Mac OS 9
+	   MSDOS  - MS-DOS and Windows
+	   OS2    - OS/2
+	   OS2EMX - XFree86 on OS/2 (not PM)
+	   WIN32  - Win32 (Windows 95/98/ME and Windows NT/2000/XP)
+	   CYGWIN - Cygwin
+	   SOLARIS    - Sun Solaris
+	   HPUX   - HP-UX
+	   ULTRIX - DEC Ultrix
+	   LINUX  - Linux
+	   FREEBSD    - FreeBSD
+	   NETBSD - NetBSD
+	   OPENBSD    - OpenBSD
+	   BSDI   - BSD/OS
+	   IRIX   - SGI Irix
+	   OSF    - HP Tru64 UNIX
+	   SCO    - SCO OpenServer 5
+	   UNIXWARE   - UnixWare 7, Open UNIX 8
+	   AIX    - AIX
+	   HURD   - GNU Hurd
+	   DGUX   - DG/UX
+	   RELIANT    - Reliant UNIX
+	   DYNIX  - DYNIX/ptx
+	   QNX    - QNX
+	   QNX6   - QNX RTP 6.1
+	   LYNX   - LynxOS
+	   BSD4   - Any BSD 4.4 system
+	   UNIX   - Any UNIX BSD/SYSV system
+  */
 
 #if defined(__APPLE__) && defined(__GNUC__)
 #  define Q_OS_MACX
@@ -389,8 +389,8 @@ enum SENDING_DEST_ADDR_TYPE : int
  that an endpoint may have */
 #define MAX_NUM_ADDRESSES      32
 
-// if our impl is based on UDP, this is the well-known-port 
-// receiver and sender endpoints use 
+ // if our impl is based on UDP, this is the well-known-port 
+ // receiver and sender endpoints use 
 #ifndef USED_UDP_PORT
 #define USED_UDP_PORT 9899 //inna defined port
 #endif
@@ -805,12 +805,44 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum = NULL);
 inline extern bool saddr_equals(const sockaddrunion *a, const sockaddrunion *b, bool ignore_port = false)
 {
-	return saddr_family(a) == AF_INET ? (saddr_family(b) == AF_INET &&
-		s4addr(&a->sin) == s4addr(&b->sin) &&
-		(ignore_port ? true : a->sin.sin_port == b->sin.sin_port)) :
-		(saddr_family(b) == AF_INET6
-			&& (memcmp(s6addr(&a->sin6), s6addr(&b->sin6), 16) == 0)
-			&& (ignore_port ? true : a->sin6.sin6_port == b->sin6.sin6_port));
+	if (saddr_family(a) == AF_INET)
+	{
+		if (saddr_family(b) == AF_INET)
+		{
+			if (a->sin.sin_addr.s_addr == b->sin.sin_addr.s_addr)
+			{
+				if (ignore_port)
+					return true;
+				else if (a->sin.sin_port == b->sin.sin_port)
+					return true;
+				else
+					return false;
+			}
+			return false;
+		}
+		return false;
+	}
+	else if (saddr_family(a) == AF_INET6)
+	{
+		if (saddr_family(b) == AF_INET6)
+		{
+			if (IN6_ADDR_EQUAL(&a->sin6.sin6_addr, &b->sin6.sin6_addr))
+			{
+				if (ignore_port)
+					return true;
+				else if (a->sin6.sin6_port == b->sin6.sin6_port)
+					return true;
+				else
+					return false;
+			}
+			return false;
+		}
+		return false;
+	}
+	else
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "saddr_equals()::no such af!!");
+	}
 }
 
 //! From http://www.azillionmonkeys.com/qed/hash.html
@@ -843,10 +875,10 @@ Params: 3. pointer to registered events mask.
 It may be changed by the callback function.
 Params: 4. user data
 */
-typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events,void* usrdata);
+typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
 
 // function THAT WILL BE CALLED IN EACH TICK
-typedef void (*task_cb_fun_t)(void* usrdata);
+typedef void(*task_cb_fun_t)(void* usrdata);
 
 union cbunion_t
 {

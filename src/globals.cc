@@ -1361,7 +1361,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	for (i = 0; i < *numberOfNets; i++)
 	{
 		saddr2str(&(*addresses)[i], addrdebug, MAX_IPADDR_STR_LEN, 0);
-		EVENTLOG2(DEBUG, "local addr indexed %d = %s", i, addrdebug);
+		EVENTLOG2(DEBUG, "default local addr %d = %s", i, addrdebug);
 	}
 #endif
 	return (true);

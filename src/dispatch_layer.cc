@@ -40,7 +40,7 @@ struct sockaddr_cmp_functor  //比较函数 ==
 };
 
 ////////////////////// default lib geco_instance_params ///////////////////
-int myRWND = 32767;
+int myRWND = 32767; // maybe changed to other values after calling mtra_init()
 bool library_initiaized = false;
 int checksum_algorithm_ = MULP_CHECKSUM_ALGORITHM_MD5;
 bool support_pr_ = true;
@@ -66,7 +66,7 @@ bool ignore_cookie_life_spn_from_init_chunk_;
 // for transport_addr in channel_.transport_addrslist: 
 //		channel_map_.remove(transport_addr)
 // channels_.fastdelete(channel_);
-// transport_addr -> channel_id ->channel pointer
+// transport_addr [------channel_map_--->] channel_id [-----channels_ vector---->] channel pointer
 #ifdef _WIN32
 std::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
 #else
@@ -1758,7 +1758,8 @@ void mdis_init(void)
 	cookie_local_tie_tag_ = 0;
 	cookie_remote_tie_tag_ = 0;
 
-	channels_.reserve(DEFAULT_ENDPOINT_SIZE);
+	geco_instances_.resize(DEFAULT_ENDPOINT_SIZE / 2, NULL); // resize as we use fixed nuber of geco instances, overflow is fatal error exit
+	channels_.reserve(DEFAULT_ENDPOINT_SIZE); // reserve now size90 == 0, as we will push_back(newly created channel)
 	memset(tmp_local_addreslist_, 0,
 		MAX_NUM_ADDRESSES * sizeof(sockaddrunion));
 	memset(tmp_peer_addreslist_, 0,
@@ -6238,7 +6239,7 @@ int mulp_new_geco_instance(
 	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
 	ulp_cbs_t ULPcallbackFunctions)
 {
-	EVENTLOG(DEBUG, "- - - - - - - - - - Enter mulp_new_geco_instance() - - - - - - - - - -");
+	EVENTLOG(VERBOSE, "- - - - - - - - - - Enter mulp_new_geco_instance() - - - - - - - - - -");
 	EXIT_CHECK_LIBRARY;
 
 	unsigned int i;
@@ -6345,6 +6346,10 @@ int mulp_new_geco_instance(
 	curr_geco_instance_->default_maxRecvQueue = DEFAULT_MAX_RECVQUEUE;
 	curr_geco_instance_->default_maxBurst = DEFAULT_MAX_BURST;
 
+//#ifdef _DEBUG
+//	char strs[MAX_IPADDR_STR_LEN];
+//#endif
+
 	//copy addrlist to curr geco inst
 	if (!is_inaddr_any && !is_in6addr_any)
 	{
@@ -6353,16 +6358,35 @@ int mulp_new_geco_instance(
 			noOfLocalAddresses * sizeof(sockaddrunion));
 		for (i = 0; i < noOfLocalAddresses; i++)
 		{
-			str2saddr(&curr_geco_instance_->local_addres_list[i], (const char*)localAddressList[i],
-				localPort);
+			str2saddr(&curr_geco_instance_->local_addres_list[i], (const char*)localAddressList[i], localPort);
+//#ifdef _DEBUG
+//			saddr2str(&curr_geco_instance_->local_addres_list[i], strs, MAX_IPADDR_STR_LEN);
+//			EVENTLOG1(VERBOSE, "Try to find addr %s from default local addr list", strs);
+//#endif
 			found = false;
 			for (int j = 0; j < defaultlocaladdrlistsize_; j++)
 			{
-				if (saddr_equals(&defaultlocaladdrlist_[j],
-					&curr_geco_instance_->local_addres_list[i]))
+//#ifdef _DEBUG
+//				saddr2str(&defaultlocaladdrlist_[j], strs, MAX_IPADDR_STR_LEN);
+//				EVENTLOG1(VERBOSE, "curr addr = %s", strs);
+//#endif
+				if (saddr_equals(&defaultlocaladdrlist_[j], &curr_geco_instance_->local_addres_list[i], true))
 				{
 					found = true;
 				}
+			}
+			// LOOPBACK addr is not in defaultlocaladdrlist_ so handle it sepratly
+			if (curr_geco_instance_->local_addres_list[i].sa.sa_family == AF_INET &&
+				curr_geco_instance_->local_addres_list[i].sin.sin_addr.s_addr == htonl(INADDR_LOOPBACK) &&
+				curr_geco_instance_->local_addres_list[i].sin.sin_port == htons(localPort))
+			{
+				found = true;
+			}
+			if (curr_geco_instance_->local_addres_list[i].sa.sa_family == AF_INET6 &&
+				IN6_ADDR_EQUAL(&curr_geco_instance_->local_addres_list[i].sin6.sin6_addr, &in6addr_loopback) &&
+				curr_geco_instance_->local_addres_list[i].sin6.sin6_port == htons(localPort))
+			{
+				found = true;
 			}
 			if (!found)
 			{
@@ -6384,19 +6408,31 @@ int mulp_new_geco_instance(
 	if (with_ipv4) ipv4_sockets_geco_instance_users++;
 	if (with_ipv6) ipv6_sockets_geco_instance_users++;
 
-	ret = (int)geco_instances_.size();
-	geco_instances_.push_back(curr_geco_instance_);
+	ret = -1;
+	for (int idx = 0; i < geco_instances_.size(); idx++)
+	{
+		if (geco_instances_[idx] == NULL)
+		{
+			ret = idx;
+			break;
+		}
+	}
+
+	if(ret < 0)
+		ERRLOG(FALTAL_ERROR_EXIT, "too many geco instances !!!");
+
+	geco_instances_[ret] = curr_geco_instance_;
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
-
-	EVENTLOG1(DEBUG, "- - - - - - - - - - Leave mulp_new_geco_instance (instance_idx=%d)- - - - - - - - - -", ret);
+	EVENTLOG1(VERBOSE, "- - - - - - - - - - Leave mulp_new_geco_instance (instance_idx=%d)- - - - - - - - - -", ret);
 	return ret;
 }
 int mulp_delete_geco_instance(int instance_idx)
 {
-	EVENTLOG1(DEBUG, "- - - - - - - - - - Enter mulp_delete_geco_instance(instance_idx=%d) - - - - - - - - - -", instance_idx);
-
+	EVENTLOG1(VERBOSE, "- - - - - - - - - - Enter mulp_delete_geco_instance(instance_idx=%d) - - - - - - - - - -", instance_idx);
 	EXIT_CHECK_LIBRARY;
+
+	int ret = MULP_SUCCESS;
 	geco_instance_t* instance_name = geco_instances_[instance_idx];
 	if (instance_name == NULL)
 	{
@@ -6409,7 +6445,7 @@ int mulp_delete_geco_instance(int instance_idx)
 
 	for (auto channel : channels_)
 	{
-		if (channel->geco_inst == instance_name)
+		if (channel !=NULL && channel->geco_inst == instance_name)
 		{
 			EVENTLOG(WARNNING_ERROR, "mulp_delete_geco_instance()::MULP_INSTANCE_IN_USE, CANNOT BE REMOVED!!!");
 			return MULP_INSTANCE_IN_USE;
@@ -6424,17 +6460,17 @@ int mulp_delete_geco_instance(int instance_idx)
 	if (mtra_read_ip6rawsock() > 0 && ipv6_sockets_geco_instance_users == 0)
 	{
 		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 RAW SOCKET, registered FDs: %u ", mtra_read_ip6rawsock());
-		mtra_remove_event_handler(mtra_read_ip6rawsock());
+		ret = mtra_remove_event_handler(mtra_read_ip6rawsock());
 	}
 	if (mtra_read_ip4udpsock() > 0 && ipv4_sockets_geco_instance_users == 0)
 	{
 		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv4 UDP SOCKET, registered FDs: %u ", mtra_read_ip4udpsock());
-		mtra_remove_event_handler(mtra_read_ip4udpsock());
+		ret = mtra_remove_event_handler(mtra_read_ip4udpsock());
 	}
 	if (mtra_read_ip6udpsock() > 0 && ipv6_sockets_geco_instance_users == 0)
 	{
 		EVENTLOG1(VVERBOSE, "sctp_unregisterInstance : Removed IPv6 UDP SOCKET", mtra_read_ip6udpsock());
-		mtra_remove_event_handler(mtra_read_ip6udpsock());
+		ret = mtra_remove_event_handler(mtra_read_ip6udpsock());
 	}
 
 	if (instance_name->is_in6addr_any == false)
@@ -6453,11 +6489,10 @@ int mulp_delete_geco_instance(int instance_idx)
 
 	freeport(instance_name->local_port);
 	free(instance_name);
-	geco_instances_[instance_idx] = geco_instances_.back();
-	geco_instances_.pop_back();
+	geco_instances_[instance_idx] = NULL;
 
-	EVENTLOG1(DEBUG, "- - - - - - - - - - Leave mulp_delete_geco_instance(ret=%d) - - - - - - - - - -", MULP_SUCCESS);
-	return MULP_SUCCESS;
+	EVENTLOG1(VERBOSE, "- - - - - - - - - - Leave mulp_delete_geco_instance(ret=%d) - - - - - - - - - -", MULP_SUCCESS);
+	return ret;
 }
 
 int mulp_connect(unsigned int instanceid,
