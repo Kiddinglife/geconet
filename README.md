@@ -71,7 +71,7 @@ multihoming since a TCP connection is defined by the quadruple source IP, destin
 destination port. **geconet** has built-in support for multihoming which offloads high-availability applications  
 from implementing this feature.  
 
-- **againest denial of service,man-in-the-middle and blind attacks**   
+- **againest denial of service attacks**   
 the connection setup of TCP allows denial of attacks, particularly SYN attacks. Each time the TCP layer    
 receives a SYN packet for setting up a new connection, it allocates a data structure for storing connection    
 parameters. Flodding with a high number of such SYN packets may lead to memory exhaustion. **geconet**  
