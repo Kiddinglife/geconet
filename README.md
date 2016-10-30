@@ -17,8 +17,8 @@ Hash methods (MD5, SHA-1).
 
 - **(De)compression for game messages**  
 since game packets often have small repeated blocks of data (IP packets, game messages hdr etc...),  
-LZF 3.6(http://oldhome.schmorp.de/marc/liblzf.html) will be used in client-server model(config by users) as (de)compression method.
-(determined by formular: Time=1/Ratio+ActualBandwidth*(1/DecompressVelocity+1/CompressVelocity).  
+LZF 3.6(http://oldhome.schmorp.de/marc/liblzf.html) will be used in client-server model(config by users)  
+as (de)compression method(formular:Time=1/Ratio+ActualBandwidth*(1/DecompressVelocity+1/CompressVelocity).    
 Therefore, zlib is best option to achieve highest network throughput when bandwidth < 133 Mbps (this is the bandwidth value most gane clients have).
 
 - **Multiple levels of message reliability**    
