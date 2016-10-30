@@ -19,3 +19,5 @@
 *.exe
 *.la
 *.log
+*.db
+*.opendb
