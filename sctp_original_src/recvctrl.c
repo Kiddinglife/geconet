@@ -45,7 +45,7 @@
 #include "adaptation.h"
 #include "bundling.h"
 #include "distribution.h"
-#include "streamengine.h"
+#include "deliverman_control.h"
 #include "SCTP-control.h"
 
 #include <glib.h>
@@ -58,18 +58,18 @@ typedef struct rxc_buffer_struct
 {
     /*@{ */
     /** */
-    void *sack_chunk;
+	SCTP_sack_chunk *sack_chunk;
     /** */
     GList *frag_list;
     /** */
     GList *dup_list;
     /** cumulative TSN acked */
-    unsigned int ctsna;
-    /** store lowest tsn value for dups (!) */
-    unsigned int lowest;
-    /** stores highest tsn received so far, taking care of wraps
-        i.e. highest < lowest indicates a wrap */
-    unsigned int highest;
+    unsigned int cumulative_tsn;
+    /** store lowest_duplicated_tsn tsn value for dups (!) */
+    unsigned int lowest_duplicated_tsn;
+    /** stores highest_duplicated_tsn tsn received so far, taking care of wraps
+        i.e. highest_duplicated_tsn < lowest_duplicated_tsn indicates a wrap */
+    unsigned int highest_duplicated_tsn;
     /** */
     boolean contains_valid_sack;
     /** */
@@ -84,13 +84,13 @@ typedef struct rxc_buffer_struct
     /** */
     unsigned int last_address;
     /** */
-    unsigned int my_association;
+    unsigned int channel_id;
     /** */
     unsigned int my_rwnd;
     /** delay for delayed ACK in msecs */
     unsigned int delay;
     /** number of dest addresses */
-    unsigned int num_of_addresses;
+    unsigned int numofdestaddrlist;
     /*@} */
 } rxc_buffer;
 
@@ -101,7 +101,7 @@ typedef struct rxc_buffer_struct
  * @param  remote_initial_TSN initial tsn of the peer
  * @return pointer to the newly created structure
  */
-void *rxc_new_recvctrl(unsigned int remote_initial_TSN, unsigned int number_of_destination_addresses, void* sctpInstance)
+void *mrecv_new(unsigned int remote_initial_TSN, unsigned int number_of_destination_addresses, void* sctpInstance)
 {
     rxc_buffer *tmp;
 /*
@@ -112,21 +112,21 @@ void *rxc_new_recvctrl(unsigned int remote_initial_TSN, unsigned int number_of_d
 
     tmp->frag_list = NULL;
     tmp->dup_list = NULL;
-    tmp->num_of_addresses = number_of_destination_addresses;
+    tmp->numofdestaddrlist = number_of_destination_addresses;
     tmp->sack_chunk = malloc(sizeof(SCTP_sack_chunk));
-    tmp->ctsna = remote_initial_TSN - 1; /* as per section 4.1 */
-    tmp->lowest = remote_initial_TSN - 1;
-    tmp->highest = remote_initial_TSN - 1;
+    tmp->cumulative_tsn = remote_initial_TSN - 1; /* as per section 4.1 */
+    tmp->lowest_duplicated_tsn = remote_initial_TSN - 1;
+    tmp->highest_duplicated_tsn = remote_initial_TSN - 1;
     tmp->contains_valid_sack = FALSE;
     tmp->timer_running = FALSE;
     tmp->datagrams_received = -1;
     tmp->sack_flag = 2;
     tmp->last_address = 0;
-    tmp->my_rwnd =  mdi_getDefaultMyRwnd();
-    tmp->delay =    mdi_getDefaultDelay(sctpInstance);
-    tmp->my_association = mdi_readAssociationID();
-    event_logi(VVERBOSE, "RecvControl : Association-ID== %d ", tmp->my_association);
-    if (tmp->my_association == 0)
+    tmp->my_rwnd =  mdi_read_rwnd();
+    tmp->delay =    mdi_read_default_delay(sctpInstance);
+    tmp->channel_id = get_curr_channel_id();
+    event_logi(VVERBOSE, "RecvControl : Association-ID== %d ", tmp->channel_id);
+    if (tmp->channel_id == 0)
         error_log(ERROR_FATAL, "Association was not set, should be......");
     return (tmp);
 }
@@ -163,13 +163,13 @@ void rxc_delete_recvctrl(void *rxc_instance)
  */
 boolean rxc_chunk_is_duplicate(rxc_buffer * rbuf, unsigned int chunk_tsn)
 {
-    unsigned int low = rbuf->lowest;
-    unsigned int hi = rbuf->highest;
-    unsigned int ctsna = rbuf->ctsna;
+    unsigned int low = rbuf->lowest_duplicated_tsn;
+    unsigned int hi = rbuf->highest_duplicated_tsn;
+    unsigned int ctsna = rbuf->cumulative_tsn;
     fragment32 *frag;
     GList *temp = NULL;
 
-    /* Assume, lowest and highest have already been updated */
+    /* Assume, lowest_duplicated_tsn and highest_duplicated_tsn have already been updated */
     if (between(low, chunk_tsn, ctsna))
         return TRUE;
     if (!between(ctsna, chunk_tsn, hi))
@@ -201,38 +201,38 @@ boolean rxc_chunk_is_duplicate(rxc_buffer * rbuf, unsigned int chunk_tsn)
 }
 
 /**
- * Helper function to do the correct update of rxc->lowest
+ * Helper function to do the correct update of rxc->lowest_duplicated_tsn
  * Function is only called, if that is necessary !
  * @param rbuf	instance of rxc_buffer
  * @param chunk_tsn	tsn we just received
- * @return boolean indicating whether lowest was updated or not
+ * @return boolean indicating whether lowest_duplicated_tsn was updated or not
  */
 boolean rxc_update_lowest(rxc_buffer * rbuf, unsigned int chunk_tsn)
 {
-    unsigned int low = rbuf->lowest;
+    unsigned int low = rbuf->lowest_duplicated_tsn;
     if (before(chunk_tsn, low)) {
-        rbuf->lowest = chunk_tsn;
+        rbuf->lowest_duplicated_tsn = chunk_tsn;
         /* and it must be a duplicate ! */
         return TRUE;
     } else
-        return FALSE /* no update of lowest */ ;
+        return FALSE /* no update of lowest_duplicated_tsn */ ;
 }
 
 /**
- * Helper function to do the correct update of rxc->highest
+ * Helper function to do the correct update of rxc->highest_duplicated_tsn
  * Function is only called, if that is necessary !
  * @param rbuf	instance of rxc_buffer
  * @param chunk_tsn	tsn we just received
- * @return boolean indicating whether highest was updated or not
+ * @return boolean indicating whether highest_duplicated_tsn was updated or not
  */
 boolean rxc_update_highest(rxc_buffer * rbuf, unsigned int chunk_tsn)
 {
-    unsigned int hi = rbuf->highest;
+    unsigned int hi = rbuf->highest_duplicated_tsn;
     if (after(chunk_tsn, hi)) {
-        rbuf->highest = chunk_tsn;
+        rbuf->highest_duplicated_tsn = chunk_tsn;
         return TRUE;
     } else
-        return FALSE /* no update of highest */ ;
+        return FALSE /* no update of highest_duplicated_tsn */ ;
 }
 
 int rxc_sort_duplicates(duplicate * one, duplicate * two)
@@ -282,7 +282,7 @@ void rxc_update_duplicates(rxc_buffer * rbuf, unsigned int ch_tsn)
 
 
 /**
- * Helper function to do the correct update of rxc->ctsna
+ * Helper function to do the correct update of rxc->cumulative_tsn
  * @param rbuf	instance of rxc_buffer
  * @param chunk_tsn	tsn we just received
  */
@@ -300,8 +300,8 @@ void rxc_bubbleup_ctsna(rxc_buffer * rbuf)
     while (temp != NULL) {
         frag = (fragment32*)temp->data;
         if (frag != NULL){
-            if (rbuf->ctsna + 1 == frag->start_tsn) {
-                rbuf->ctsna = frag->stop_tsn;
+            if (rbuf->cumulative_tsn + 1 == frag->start_tsn) {
+                rbuf->cumulative_tsn = frag->stop_tsn;
                 old = temp;
                 temp = g_list_next(temp);
                 rbuf->frag_list = g_list_remove_link(rbuf->frag_list, old);
@@ -324,7 +324,7 @@ boolean rxc_update_fragments(rxc_buffer * rbuf, unsigned int ch_tsn)
 
     event_logi(INTERNAL_EVENT_0, "Entering rxc_update_fragments.tsn==%u.. ", ch_tsn);
 
-    lo = rbuf->ctsna + 1;
+    lo = rbuf->cumulative_tsn + 1;
 
     current = g_list_first(rbuf->frag_list);
 
@@ -344,9 +344,9 @@ boolean rxc_update_fragments(rxc_buffer * rbuf, unsigned int ch_tsn)
                     rbuf->new_chunk_received = TRUE;
                     return TRUE;
                 } else if (ch_tsn == lo) {
-                    event_logii(VVERBOSE, "ch_tsn==lo==%u....rbuf->ctsna==%u....", lo, rbuf->ctsna);
-                    if (ch_tsn == (rbuf->ctsna + 1)) {
-                        rbuf->ctsna++;
+                    event_logii(VVERBOSE, "ch_tsn==lo==%u....rbuf->cumulative_tsn==%u....", lo, rbuf->cumulative_tsn);
+                    if (ch_tsn == (rbuf->cumulative_tsn + 1)) {
+                        rbuf->cumulative_tsn++;
                         rbuf->new_chunk_received = TRUE;
                         return TRUE;
                     }
@@ -370,8 +370,8 @@ boolean rxc_update_fragments(rxc_buffer * rbuf, unsigned int ch_tsn)
             } else {        /*gapsize == 1 */
                 event_logi(INTERNAL_EVENT_0, "Value of Gapsize (should be 1 :) %u", gapsize);
                 /* delete fragment, return TRUE */
-                if (lo == rbuf->ctsna + 1) {
-                    rbuf->ctsna = frag->stop_tsn;
+                if (lo == rbuf->cumulative_tsn + 1) {
+                    rbuf->cumulative_tsn = frag->stop_tsn;
                     rbuf->frag_list = g_list_remove_link(rbuf->frag_list, current);
                     g_list_free_1(current); free(frag);
                     rbuf->new_chunk_received = TRUE;
@@ -401,10 +401,10 @@ boolean rxc_update_fragments(rxc_buffer * rbuf, unsigned int ch_tsn)
 
     /* (NULL LISTE)  OR  (End of Fragment List was passed) */
     if (ch_tsn == lo) {
-        /* just increase ctsna, handle rest in separate update_ctsna() */
-        if (ch_tsn == rbuf->ctsna + 1) {
-            event_logi(VVERBOSE, "Updating rbuf->ctsna==%u", ch_tsn);
-            rbuf->ctsna = ch_tsn;
+        /* just increase cumulative_tsn, handle rest in separate update_ctsna() */
+        if (ch_tsn == rbuf->cumulative_tsn + 1) {
+            event_logi(VVERBOSE, "Updating rbuf->cumulative_tsn==%u", ch_tsn);
+            rbuf->cumulative_tsn = ch_tsn;
             rbuf->new_chunk_received = TRUE;
             return TRUE;
         }
@@ -431,7 +431,7 @@ boolean rxc_update_fragments(rxc_buffer * rbuf, unsigned int ch_tsn)
                      "Inserting new  fragment at end...frag.start==%u,frag.stop==%u, tsn=%u",
                      new_frag->start_tsn, new_frag->stop_tsn, ch_tsn);
         rbuf->new_chunk_received = TRUE;
-        return FALSE;           /* no ctsna update necessary whatsoever */
+        return FALSE;           /* no cumulative_tsn update necessary whatsoever */
     }
 }
 
@@ -483,7 +483,7 @@ int rxc_data_chunk_rx(SCTP_data_chunk * se_chk, unsigned int ad_idx)
     chunk_len = ntohs(se_chk->chunk_length);
     assoc_state = sci_getState();
 
-    if ( (after(chunk_tsn, rxc->highest) && current_rwnd == 0) ||
+    if ( (after(chunk_tsn, rxc->highest_duplicated_tsn) && current_rwnd == 0) ||
          (assoc_state == SHUTDOWNRECEIVED) ||
          (assoc_state == SHUTDOWNACKSENT) ) {
         /* drop chunk, if either: our rwnd is 0, or we are already shutting down */
@@ -500,7 +500,7 @@ int rxc_data_chunk_rx(SCTP_data_chunk * se_chk, unsigned int ad_idx)
      */
     event_logii(VERBOSE, "rxc_data_chunk_rx : chunk_tsn==%u, chunk_len=%u", chunk_tsn, chunk_len);
     if (rxc_update_lowest(rxc, chunk_tsn) == TRUE) {
-        /* tsn is even lower than the lowest one received so far */
+        /* tsn is even lower than the lowest_duplicated_tsn one received so far */
         rxc_update_duplicates(rxc, chunk_tsn);
     } else if (rxc_update_highest(rxc, chunk_tsn) == TRUE) {
         rxc->new_chunk_received = TRUE;
@@ -512,7 +512,7 @@ int rxc_data_chunk_rx(SCTP_data_chunk * se_chk, unsigned int ad_idx)
 
     if (result == TRUE) rxc_bubbleup_ctsna(rxc);
 
-    event_logi(VVERBOSE, "rxc_data_chunk_rx: after rxc_bubbleup_ctsna, rxc->ctsna=%u", rxc->ctsna);
+    event_logi(VVERBOSE, "rxc_data_chunk_rx: after rxc_bubbleup_ctsna, rxc->cumulative_tsn=%u", rxc->cumulative_tsn);
 
     if (rxc->new_chunk_received == TRUE) {
         if(se_recvDataChunk(se_chk, chunk_len, ad_idx) == SCTP_SUCCESS) {
@@ -562,7 +562,7 @@ boolean rxc_create_sack(unsigned int *destination_address, boolean force_sack)
     /* some timers may want to have a SACK anyway */
     /* first sack is sent at once, since datagrams_received==-1 */
     if (force_sack == TRUE) {
-        rxc->lowest = rxc->ctsna;
+        rxc->lowest_duplicated_tsn = rxc->cumulative_tsn;
         result = bu_put_SACK_Chunk((SCTP_sack_chunk*)rxc->sack_chunk, destination_address);
         return TRUE;
     } else {
@@ -575,7 +575,7 @@ boolean rxc_create_sack(unsigned int *destination_address, boolean force_sack)
                 event_log(VVERBOSE, "Did not send SACK here - returning");
                 return FALSE;
         }
-        rxc->lowest = rxc->ctsna;
+        rxc->lowest_duplicated_tsn = rxc->cumulative_tsn;
         result = bu_put_SACK_Chunk((SCTP_sack_chunk*)rxc->sack_chunk,destination_address);
         return TRUE;
     }
@@ -715,11 +715,11 @@ void rxc_all_chunks_processed(boolean new_data_received)
     sack = (SCTP_sack_chunk*)rxc->sack_chunk;
     sack->chunk_header.chunk_id = CHUNK_SACK;
     sack->chunk_header.chunk_flags = 0;
-    len16 = sizeof(SCTP_chunk_header) + (2 + num_of_dups) * sizeof(unsigned int) +
+    len16 = sizeof(chunk_fixed_t) + (2 + num_of_dups) * sizeof(unsigned int) +
             (2 * num_of_frags + 2) * sizeof(unsigned short);
 
     sack->chunk_header.chunk_length = htons(len16);
-    sack->cumulative_tsn_ack = htonl(rxc->ctsna);
+    sack->cumulative_tsn_ack = htonl(rxc->cumulative_tsn);
     /* FIXME : deduct size of data still in queue, that is waiting to be picked up by an ULP */
     sack->a_rwnd = htonl(current_rwnd);
     sack->num_of_fragments  = htons(num_of_frags);
@@ -731,19 +731,19 @@ void rxc_all_chunks_processed(boolean new_data_received)
 
         f32 = (fragment32*)temp->data;
 
-        event_logiii(VVERBOSE,"ctsna==%u, fragment.start==%u, fragment.stop==%u",
-                     rxc->ctsna, f32->start_tsn, f32->stop_tsn);
+        event_logiii(VVERBOSE,"cumulative_tsn==%u, fragment.start==%u, fragment.stop==%u",
+                     rxc->cumulative_tsn, f32->start_tsn, f32->stop_tsn);
 
-        if (((f32->start_tsn - rxc->ctsna) > 0xFFFF) || ((f32->stop_tsn - rxc->ctsna) > 0xFFFF)) {
+        if (((f32->start_tsn - rxc->cumulative_tsn) > 0xFFFF) || ((f32->stop_tsn - rxc->cumulative_tsn) > 0xFFFF)) {
             error_log(ERROR_MINOR, "Fragment offset becomes too big");
             break;
         }
-        frag_start16 = (unsigned short) (f32->start_tsn - rxc->ctsna);
-        frag_stop16 = (unsigned short) (f32->stop_tsn - rxc->ctsna);
+        frag_start16 = (unsigned short) (f32->start_tsn - rxc->cumulative_tsn);
+        frag_stop16 = (unsigned short) (f32->stop_tsn - rxc->cumulative_tsn);
         event_logii(VVERBOSE, "frag_start16==%u, frag_stop16==%u", frag_start16, frag_stop16);
 
-        chunk_frag.start = htons((unsigned short)(f32->start_tsn - rxc->ctsna));
-        chunk_frag.stop = htons((unsigned short)(f32->stop_tsn - rxc->ctsna));
+        chunk_frag.start = htons((unsigned short)(f32->start_tsn - rxc->cumulative_tsn));
+        chunk_frag.stop = htons((unsigned short)(f32->stop_tsn - rxc->cumulative_tsn));
         event_logii(VVERBOSE, "chunk_frag.start=%u,chunk_frag.stop ==%u",
                                 ntohs(chunk_frag.start), ntohs(chunk_frag.stop));
         memcpy(&sack->fragments_and_dups[pos], &chunk_frag, sizeof(fragment));
@@ -761,7 +761,7 @@ void rxc_all_chunks_processed(boolean new_data_received)
     }
     /* start sack_timer set to 200 msecs */
     if (rxc->timer_running != TRUE && new_data_received == TRUE) {
-        rxc->sack_timer = adl_startTimer(rxc->delay, &rxc_sack_timer_cb, TIMER_TYPE_SACK, &(rxc->my_association), NULL);
+        rxc->sack_timer = adl_startTimer(rxc->delay, &rxc_sack_timer_cb, TIMER_TYPE_SACK, &(rxc->channel_id), NULL);
         event_log(INTERNAL_EVENT_0, "Started SACK Timer !");
         rxc->timer_running = TRUE;
     }
@@ -797,7 +797,7 @@ int rxc_start_sack_timer(unsigned int oldQueueLen)
         rxc_stop_sack_timer();
     } else {    /* normal application read, no need to rush things */
         if (rxc->timer_running != TRUE) {
-            rxc->sack_timer = adl_startTimer(rxc->delay, &rxc_sack_timer_cb, TIMER_TYPE_SACK, &(rxc->my_association), NULL);
+            rxc->sack_timer = adl_startTimer(rxc->delay, &rxc_sack_timer_cb, TIMER_TYPE_SACK, &(rxc->channel_id), NULL);
             event_log(INTERNAL_EVENT_0, "Started SACK Timer !");
             rxc->timer_running = TRUE;
         }
@@ -875,7 +875,7 @@ int rxc_set_local_receiver_window(unsigned int new_window)
 
 /**
   Get the number of the current cumulative TSN, that we may ack
-  @return my current ctsna (32 bit unsigned value)
+  @return my current cumulative_tsn (32 bit unsigned value)
  */
 unsigned int rxc_read_cummulativeTSNacked(void)
 {
@@ -886,7 +886,7 @@ unsigned int rxc_read_cummulativeTSNacked(void)
         error_log(ERROR_MAJOR, "rxc_buffer instance not set !");
         return (0);
     }
-    return (rxc->ctsna);
+    return (rxc->cumulative_tsn);
 }
 
 /**
@@ -940,9 +940,9 @@ void rxc_restart_receivecontrol(unsigned int my_rwnd, unsigned int new_remote_TS
     rxc_stop_sack_timer();
     g_list_foreach(rxc->frag_list, &free_list_element, NULL);
     g_list_free(rxc->frag_list);
-    rxc->ctsna = new_remote_TSN - 1;
-    rxc->lowest = new_remote_TSN - 1;
-    rxc->highest = new_remote_TSN - 1;
+    rxc->cumulative_tsn = new_remote_TSN - 1;
+    rxc->lowest_duplicated_tsn = new_remote_TSN - 1;
+    rxc->highest_duplicated_tsn = new_remote_TSN - 1;
     /* initialize and set up lists */
 
     rxc->frag_list = NULL;
@@ -953,7 +953,7 @@ void rxc_restart_receivecontrol(unsigned int my_rwnd, unsigned int new_remote_TS
     rxc->sack_flag = 2;
     rxc->last_address = 0;
     rxc->my_rwnd = my_rwnd;
-    rxc->my_association = mdi_readAssociationID();
+    rxc->channel_id = get_curr_channel_id();
     return;
 }
 
@@ -979,8 +979,8 @@ int rxc_process_forward_tsn(void* chunk)
         return (-1);
     }
     /* discard old FORWARD_TSN */
-    if (after(rxc->ctsna, fw_tsn) || fw_tsn==rxc->ctsna || mdi_supportsPRSCTP() == FALSE) {
-        event_logii(VERBOSE, "rxc_process_forward_tsn --> discard fw_tsn !! (fw_tsn %u <= ctsna %u)",fw_tsn, rxc->ctsna);
+    if (after(rxc->cumulative_tsn, fw_tsn) || fw_tsn==rxc->cumulative_tsn || mdi_supportsPRSCTP() == FALSE) {
+        event_logii(VERBOSE, "rxc_process_forward_tsn --> discard fw_tsn !! (fw_tsn %u <= cumulative_tsn %u)",fw_tsn, rxc->cumulative_tsn);
         return 0;
     }
 
@@ -989,8 +989,8 @@ int rxc_process_forward_tsn(void* chunk)
     /* -get first fragment
        -case1: fw_tsn after hi: delete fragment, continue with next fragment;
        -case2: fw_tsn between hi and lo-1:
-                delete fragment, set ctsna=hi, break;
-       -case3: fw_tsn before lo-1, set ctsna => fw_tsn, break;
+                delete fragment, set cumulative_tsn=hi, break;
+       -case3: fw_tsn before lo-1, set cumulative_tsn => fw_tsn, break;
      */
     while (current != NULL) {
         frag = (fragment32*)current->data;
@@ -998,23 +998,23 @@ int rxc_process_forward_tsn(void* chunk)
             lo = frag->start_tsn;
             hi = frag->stop_tsn;
             if (before(fw_tsn, lo-1)) {
-                /* case3: fw_tsn before lo-1, set ctsna => fw_tsn, break; */
-                event_logi(VERBOSE, "process- case3: update ctsna to %u !",fw_tsn);
-                rxc->ctsna  = fw_tsn;
+                /* case3: fw_tsn before lo-1, set cumulative_tsn => fw_tsn, break; */
+                event_logi(VERBOSE, "process- case3: update cumulative_tsn to %u !",fw_tsn);
+                rxc->cumulative_tsn  = fw_tsn;
                 break;
             } else if (between(lo-1, fw_tsn, hi)) {
-                /* case2: fw_tsn between hi and lo-1: delete fragment, set ctsna=hi, break; */
+                /* case2: fw_tsn between hi and lo-1: delete fragment, set cumulative_tsn=hi, break; */
                 rxc->frag_list = g_list_remove_link(rxc->frag_list, current);
                 g_list_free_1(current); free(frag);
-                event_logi(VERBOSE, "process- case2: remove fragment and update ctsna to %u !",hi);
-                rxc->ctsna = hi;
+                event_logi(VERBOSE, "process- case2: remove fragment and update cumulative_tsn to %u !",hi);
+                rxc->cumulative_tsn = hi;
                 break;
             } else if (after(fw_tsn, hi)) {
                 /* case1: fw_tsn after hi: delete fragment, continue with next fragment; */
                 rxc->frag_list = g_list_remove_link(rxc->frag_list, current);
                 g_list_free_1(current); free(frag);
-                event_logi(VERBOSE, "process- case1: remove fragment, and set ctsna => %u !",hi);
-                rxc->ctsna = fw_tsn;
+                event_logi(VERBOSE, "process- case1: remove fragment, and set cumulative_tsn => %u !",hi);
+                rxc->cumulative_tsn = fw_tsn;
             } else {
                 error_log(ERROR_FATAL, "rxc_process_forward_tsn: impossible conditon");
                 exit(-1);
@@ -1023,11 +1023,11 @@ int rxc_process_forward_tsn(void* chunk)
         /* we are still here, take next fragment == first fragment */
         current = g_list_first(rxc->frag_list);
     }
-    if (after(fw_tsn, rxc->ctsna)) {
-        rxc->ctsna = fw_tsn;
-        event_logi(VERBOSE, "rxc_process_forward_tsn: case4: set ctsna => %u !",fw_tsn);
+    if (after(fw_tsn, rxc->cumulative_tsn)) {
+        rxc->cumulative_tsn = fw_tsn;
+        event_logi(VERBOSE, "rxc_process_forward_tsn: case4: set cumulative_tsn => %u !",fw_tsn);
     }
-    se_deliver_unreliably(rxc->ctsna, chk);
+    se_deliver_unreliably(rxc->cumulative_tsn, chk);
 
     rxc_all_chunks_processed(TRUE);
 

@@ -160,7 +160,6 @@
 #define    EVENTCB_TYPE_USER       3
 #define    EVENTCB_TYPE_ROUTING    4
 
-
 #ifdef SCTP_OVER_UDP
 int dummy_sctp_udp;
 int dummy_sctpv6_udp;

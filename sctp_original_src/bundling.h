@@ -55,14 +55,14 @@ gint bu_put_Data_Chunk(SCTP_simple_chunk * chunk,unsigned int * dest_index);
 
 
 /*
- * bu_new: Creates a new bundling instance and returns a pointer to its data. 
+ * mbu_new: Creates a new bundling instance and returns a pointer to its data. 
  */
-gpointer bu_new(void);
+gpointer mbu_new(void);
 
 /* 
  * bu_delete: Deletes a bundling instance
  * 
- * Params: Pointer/handle which was returned by bu_new()
+ * Params: Pointer/handle which was returned by mbu_new()
  */
 void bu_delete(gpointer instancePtr);
 

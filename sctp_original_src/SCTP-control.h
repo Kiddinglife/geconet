@@ -87,11 +87,11 @@
            noOfDestinationAddresses:    # of destination addresses if multihoming is used
            DestinationAddressList:      list destination addresses if multihoming is used
 */
-void scu_associate(unsigned short noOfOutStreams,
+void msm_associate(unsigned short noOfOutStreams,
                    unsigned short noOfInStreams,
                    union sockunion* destinationList,
                    unsigned int numDestAddresses,
-                   gboolean withPRSCTP);
+                   bool withPRSCTP);
 
 
 /* initiates the shutdown of this association.
@@ -139,7 +139,7 @@ int sctlr_initAck(SCTP_init * initAck);
 
 
 
-/* sctlr_cookie_echo is called by bundling when a cookie chunk was received from  the peer.
+/* process_cookie_echo_chunk is called by bundling when a cookie chunk was received from  the peer.
    The following data are retrieved from the cookie and saved for this association:
    - from the init chunk: + peers tag.
                           + peers receiver window credit.
@@ -152,7 +152,7 @@ int sctlr_initAck(SCTP_init * initAck);
    - # of receive streams this side uses, can be lower than peers # of send streams the requested in
      the init chunk.
 */
-void sctlr_cookie_echo(SCTP_cookie_echo * cookie);
+void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie);
 
 
 
@@ -211,7 +211,7 @@ void sci_allChunksAcked(void);
 
 /* newSCTP_control allocates data for a new SCTP-Control instance
 */
-void *sci_newSCTP_control(void* sctpInstance);
+void *msm_new(void* sctpInstance);
 
 
 
@@ -222,7 +222,7 @@ void sci_deleteSCTP_control(void *sctpControlData);
 /**
  * function returns the state of the current SCTP instance
  */
-guint32 sci_getState(void);
+unsigned int sci_getState(void);
 
 
 int sci_getMaxAssocRetransmissions(void);
@@ -242,6 +242,6 @@ int sci_setCookieLifeTime(int new_max);
  * is in the SHUTDOWNs, else FALSE
  */
 
-gboolean sci_shutdown_procedure_started(void);
+bool sci_shutdown_procedure_started(void);
 
 #endif

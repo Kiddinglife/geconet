@@ -229,12 +229,12 @@ short pm_setPaths(short noOfPaths, short primaryPathID);
 
 
 
-/* pm_newPathman creates a new instance of pathmanagement. There is one pathmanagement instance
+/* mpath_new creates a new instance of pathmanagement. There is one pathmanagement instance
    par association.
    params: numberOfPaths:    # of paths of the association.
            primaryPath:      initial primary path.
 */
-void *pm_newPathman(short numberOfPaths, short primaryPath, void* sctpInstance);
+void *mpath_new(short numberOfPaths, short primaryPath, void* sctpInstance);
 
 
 

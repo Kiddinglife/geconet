@@ -179,9 +179,9 @@ void *fc_new_flowcontrol(unsigned int peer_rwnd,
     tmp->maxQueueLen = maxQueueLen;
     tmp->list_length = 0;
 
-    rtx_set_remote_receiver_window(peer_rwnd);
+    mrtx_set_peer_arwnd(peer_rwnd);
 
-    tmp->my_association = mdi_readAssociationID();
+    tmp->my_association = get_curr_channel_id();
     event_logi(VVERBOSE, "FlowControl : Association-ID== %d \n", tmp->my_association);
     if (tmp->my_association == 0)
         error_log(ERROR_FATAL, "Association was not set, should be......");
@@ -198,7 +198,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
     fc_data *tmp;
     guint32 count;
 
-    tmp = (fc_data *) mdi_readFlowControl();
+    tmp = (fc_data *) get_flowctrl();
     event_log(INTERNAL_EVENT_0, "fc_restart()... ");
     if (!tmp) {
         error_log(ERROR_MINOR, "fc_data instance not set !");
@@ -223,7 +223,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
     tmp->doing_retransmission = FALSE;
     tmp->current_tsn = iTSN;
     tmp->maxQueueLen = maxQueueLen;
-    rtx_set_remote_receiver_window(new_rwnd);
+    mrtx_set_peer_arwnd(new_rwnd);
     if ((tmp->chunk_list) != NULL) {
         /* TODO : pass chunks in this list back up to the ULP ! */
         g_list_foreach(tmp->chunk_list, &free_list_element, GINT_TO_POINTER(1));
@@ -267,7 +267,7 @@ void fc_debug_cparams(short event_log_level)
     unsigned int count;
 
     if (event_log_level <= Current_event_log_) {
-        fc = (fc_data *) mdi_readFlowControl();
+        fc = (fc_data *) get_flowctrl();
         if (!fc) {
             error_log(ERROR_MAJOR, "fc_data instance not set !");
             return;
@@ -310,7 +310,7 @@ void fc_debug_cparams(short event_log_level)
 void fc_shutdown()
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     event_log(VERBOSE, "fc_shutdown()... ");
     if (!fc) {
         error_log(ERROR_MINOR, "fc_data instance not set !");
@@ -331,7 +331,7 @@ void fc_stop_timers(void)
     unsigned int count;
     int result;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     event_log(INTERNAL_EVENT_0, "fc_stop_timers()... ");
     if (!fc) {
         event_log(INTERNAL_EVENT_0, "fc_data instance not set !");
@@ -363,7 +363,7 @@ int fc_reset_cwnd(unsigned int pathId)
     struct timeval now, resetTime;
 
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "fc_data instance not set !");
         return SCTP_MODULE_NOT_FOUND;
@@ -412,7 +412,7 @@ unsigned int fc_getNextActivePath(fc_data* fc, unsigned int start)
  * @return index of the address where we should send this chunk to, now
  */
 unsigned int
-fc_select_destination(fc_data * fc, chunk_data * dat,
+fc_select_destination(fc_data * fc, internal_data_chunk_t * dat,
                       boolean data_retransmitted, unsigned int *old_destination)
 {
     /* TODO : check for number_of_addresses == 1, ==2 */
@@ -463,7 +463,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
     unsigned int oldListLen;
     int count;
     int num_of_chunks;
-    chunk_data **chunks;
+    internal_data_chunk_t **chunks;
     gboolean removed_association = FALSE;
 
     res = mdi_setAssociationData(*(unsigned int *) assoc);
@@ -476,7 +476,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
         error_log(ERROR_MAJOR, "Association was not cleared..... !!!");
     }
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_FATAL, "fc_data instance not set !");
         return;
@@ -486,7 +486,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
     event_logi(INTERNAL_EVENT_0, "===============> fc_timer_cb_t3_timeout(address=%u) <========", ad_idx);
     fc->T3_timer[ad_idx] = 0;
 
-    num_of_chunks = rtx_readNumberOfUnackedChunks();
+    num_of_chunks = rtx_get_unacked_chunks_count();
     event_logii(INTERNAL_EVENT_0, "Address-Index : %u, Number of Chunks==%d", ad_idx, num_of_chunks);
 
     if (num_of_chunks <= 0) {
@@ -499,7 +499,7 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
         return;
     }
 
-    chunks = (chunk_data**)malloc(num_of_chunks * sizeof(chunk_data *));
+    chunks = (internal_data_chunk_t**)malloc(num_of_chunks * sizeof(internal_data_chunk_t *));
     num_of_chunks = rtx_t3_timeout(&(fc->my_association), ad_idx, fc->cparams[ad_idx].mtu, chunks);
     if (num_of_chunks <= 0) {
         event_log(VERBOSE, "No Chunks to re-transmit - AFTER calling rtx_t3_timeout - returning");
@@ -576,11 +576,11 @@ void fc_timer_cb_t3_timeout(TimerID tid, void *assoc, void *data2)
 /**
  * function increases chunk's number of transmissions, stores used destination, updates counts per addresses
  */
-void fc_update_chunk_data(fc_data * fc, chunk_data * dat, unsigned int destination)
+void fc_update_chunk_data(fc_data * fc, internal_data_chunk_t * dat, unsigned int destination)
 {
     unsigned int rwnd;
 
-    rwnd = rtx_read_remote_receiver_window();
+    rwnd = rtx_get_peer_rwnd();
     dat->num_of_transmissions++;
 
     event_logiii(VERBOSE,
@@ -608,9 +608,9 @@ void fc_update_chunk_data(fc_data * fc, chunk_data * dat, unsigned int destinati
         /* outstanding byte counter has been decreased if chunks were scheduled for RTX, increase here ! */
         fc->outstanding_bytes += dat->chunk_len;
         if (dat->chunk_len >= rwnd)
-            rtx_set_remote_receiver_window(0);
+            mrtx_set_peer_arwnd(0);
         else
-            rtx_set_remote_receiver_window(rwnd - dat->chunk_len);
+            mrtx_set_peer_arwnd(rwnd - dat->chunk_len);
     }
 
     event_logi(VERBOSE, "outstanding_bytes overall: %u", fc->outstanding_bytes);
@@ -618,7 +618,7 @@ void fc_update_chunk_data(fc_data * fc, chunk_data * dat, unsigned int destinati
 }
 
 gboolean fc_send_okay(fc_data* fc,
-                      chunk_data* nextChunk,
+                      internal_data_chunk_t* nextChunk,
                       unsigned int destination,
                       unsigned int totalSize,
                       unsigned int obpa)
@@ -638,7 +638,7 @@ gboolean fc_send_okay(fc_data* fc,
     }
     if ((totalSize + obpa < (fc->cparams[destination].cwnd+fc->cparams[destination].mtu-1)) &&
         (
-         ((nextChunk->num_of_transmissions==0)&&(rtx_read_remote_receiver_window() > nextChunk->chunk_len)) ||
+         ((nextChunk->num_of_transmissions==0)&&(rtx_get_peer_rwnd() > nextChunk->chunk_len)) ||
          (fc->one_packet_inflight == FALSE) ||
          (nextChunk->num_of_transmissions > 0)) ) {
         event_logii(VERBOSE, "fc_send_okay --> TRUE (totalSize == %u, obpa == %u)",totalSize, obpa);
@@ -661,20 +661,20 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
     int result;
     unsigned int len, obpa;
     fc_data *fc;
-    chunk_data *dat;
+    internal_data_chunk_t *dat;
     unsigned int total_size, destination, oldDestination, peer_rwnd, rto_time;
 
     gboolean data_is_retransmitted = FALSE;
     gboolean lowest_tsn_is_retransmitted = FALSE;
     gboolean data_is_submitted = FALSE;
-    peer_rwnd = rtx_read_remote_receiver_window();
+    peer_rwnd = rtx_get_peer_rwnd();
 
     event_logi(INTERNAL_EVENT_0, "Entering fc_check_for_txmit(rwnd=%u)... ", peer_rwnd);
 
     fc = (fc_data *) fc_instance;
 
     if (fc->chunk_list != NULL) {
-        dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
     } else {
         return -1;
     }
@@ -761,7 +761,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
         fc->chunk_list = g_list_remove(fc->chunk_list, (gpointer) dat);
         fc->list_length--;
 
-        dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+        dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
         if (dat != NULL) {
             if (dat->num_of_transmissions >= 1)    data_is_retransmitted = TRUE;
             else if (dat->num_of_transmissions == 0) data_is_retransmitted = FALSE;
@@ -777,7 +777,7 @@ int fc_check_for_txmit(void *fc_instance, unsigned int oldListLen, gboolean doIn
             }
             event_logii(VERBOSE, "Called fc_select_destination == %d, obpa = %d \n", destination, obpa);
 
-            if ((rtx_read_remote_receiver_window() < dat->chunk_len) && data_is_retransmitted == FALSE) {
+            if ((rtx_get_peer_rwnd() < dat->chunk_len) && data_is_retransmitted == FALSE) {
                 break;
             }
 
@@ -863,7 +863,7 @@ void fc_check_t3(unsigned int ad_idx, boolean all_acked, boolean new_acked)
     int result, obpa = 0;
     unsigned int count;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "fc_data instance not set !");
         return;
@@ -939,7 +939,7 @@ void fc_check_t3(unsigned int ad_idx, boolean all_acked, boolean new_acked)
             else pointer to boolean indicating whether it is or it is not allowed.
  * @return -1 on error, 0 on success, (1 if problems occurred ?)
  */
-int fc_send_data_chunk(chunk_data * chunkd,
+int fc_send_data_chunk(internal_data_chunk_t * chunkd,
                        short destAddressIndex,
                        unsigned int lifetime,
                        gboolean dontBundle,
@@ -951,7 +951,7 @@ int fc_send_data_chunk(chunk_data * chunkd,
 
     event_log(INTERNAL_EVENT_0, "fc_send_data_chunk is being executed.");
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "fc_data instance not set !");
         return (SCTP_MODULE_NOT_FOUND);
@@ -1016,11 +1016,11 @@ int fc_send_data_chunk(chunk_data * chunkd,
 
 int fc_dequeue_acked_chunks(unsigned int ctsna)
 {
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList* tmp = NULL;
     fc_data *fc = NULL;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_FATAL, "fc_data instance not set in fc_dequeue_acked_chunks !");
         return (-1);
@@ -1029,7 +1029,7 @@ int fc_dequeue_acked_chunks(unsigned int ctsna)
     tmp = g_list_first(fc->chunk_list);
 
     while (tmp != NULL) {
-        dat = (chunk_data*)tmp->data;
+        dat = (internal_data_chunk_t*)tmp->data;
          if (before(dat->chunk_tsn, ctsna) || (dat->chunk_tsn == ctsna)) {
             tmp = g_list_next(tmp);
             fc->chunk_list = g_list_remove(fc->chunk_list, (gpointer) dat);
@@ -1129,13 +1129,13 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
                      unsigned int rtx_bytes, boolean all_data_acked,
                      boolean new_data_acked, unsigned int num_acked,
                      unsigned int number_of_addresses,
-                     int number_of_rtx_chunks, chunk_data ** chunks)
+                     int number_of_rtx_chunks, internal_data_chunk_t ** chunks)
 {
     fc_data *fc;
     int count, result;
     unsigned int oldListLen, peer_rwnd;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "fc_data instance not set !");
         return (-1);
@@ -1202,7 +1202,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
         peer_rwnd = 0;
     }
     /* section 6.2.1.C */
-    rtx_set_remote_receiver_window(peer_rwnd);
+    mrtx_set_peer_arwnd(peer_rwnd);
 
     if (all_data_acked == TRUE) {
         fc->one_packet_inflight = FALSE;
@@ -1239,7 +1239,7 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
     fc_data *fc;
     unsigned int oldListLen;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "fc_data instance not set !");
         return;
@@ -1271,9 +1271,9 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
 
     /* section 6.2.1.C */
     if (arwnd > fc->outstanding_bytes)
-        rtx_set_remote_receiver_window(arwnd - fc->outstanding_bytes);
+        mrtx_set_peer_arwnd(arwnd - fc->outstanding_bytes);
     else
-        rtx_set_remote_receiver_window(0);
+        mrtx_set_peer_arwnd(0);
 
     if (fc->chunk_list != NULL) {
         fc_check_for_txmit(fc, oldListLen, FALSE);
@@ -1297,15 +1297,15 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
 int fc_dequeueUnackedChunk(unsigned int tsn)
 {
     fc_data *fc = NULL;
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList *tmp = NULL;
     gboolean found = FALSE;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
         return SCTP_MODULE_NOT_FOUND;
     }
-    dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+    dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
     tmp = fc->chunk_list;
     while (dat != NULL && tmp != NULL) {
         event_logii(VVERBOSE, "fc_dequeueOldestUnsentChunks(): checking chunk tsn=%u, num_rtx=%u ", dat->chunk_tsn, dat->num_of_transmissions);
@@ -1315,7 +1315,7 @@ int fc_dequeueUnackedChunk(unsigned int tsn)
         } else {
             tmp = g_list_next(tmp);
             if (tmp != NULL) {
-                dat = (chunk_data*)tmp->data;
+                dat = (internal_data_chunk_t*)tmp->data;
             } else {
                 dat = NULL;
             }
@@ -1337,12 +1337,12 @@ int fc_dequeueOldestUnsentChunk(unsigned char *buf, unsigned int *len, unsigned 
                                 unsigned char* flags, gpointer* ctx)
 {
     fc_data *fc = NULL;
-    chunk_data *dat = NULL;
+    internal_data_chunk_t *dat = NULL;
     GList *tmp = NULL;
     SCTP_data_chunk* dchunk;
     int listlen;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1352,13 +1352,13 @@ int fc_dequeueOldestUnsentChunk(unsigned char *buf, unsigned int *len, unsigned 
 
     if (listlen <= 0)               return SCTP_UNSPECIFIED_ERROR;
     if (fc->chunk_list == NULL) return  SCTP_UNSPECIFIED_ERROR;
-    dat = (chunk_data*)g_list_nth_data(fc->chunk_list, 0);
+    dat = (internal_data_chunk_t*)g_list_nth_data(fc->chunk_list, 0);
     tmp = fc->chunk_list;
     while (dat != NULL && tmp != NULL) {
         event_logii(VVERBOSE, "fc_dequeueOldestUnsentChunks(): checking chunk tsn=%u, num_rtx=%u ", dat->chunk_tsn, dat->num_of_transmissions);
         if (dat->num_of_transmissions != 0) {
             tmp = g_list_next(tmp);
-            dat = (chunk_data*)tmp->data;
+            dat = (internal_data_chunk_t*)tmp->data;
         /* should be a sorted list, and not happen here */
         } else break;
     }
@@ -1389,9 +1389,9 @@ int fc_readNumberOfUnsentChunks(void)
     int queue_len = 0;
     fc_data *fc;
     GList* tmp;
-    chunk_data *cdat = NULL;
+    internal_data_chunk_t *cdat = NULL;
 
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
         return SCTP_MODULE_NOT_FOUND;
@@ -1399,7 +1399,7 @@ int fc_readNumberOfUnsentChunks(void)
     if (fc->chunk_list == NULL) return 0;
     tmp = g_list_first(fc->chunk_list);
     while (tmp) {
-        cdat = (chunk_data*)tmp->data; /* deref list data */
+        cdat = (internal_data_chunk_t*)tmp->data; /* deref list data */
         event_logii(VERBOSE, "fc_readNumberOfUnsentChunks(): checking chunk tsn=%u, num_rtx=%u ", cdat->chunk_tsn, cdat->num_of_transmissions);
         if (cdat->num_of_transmissions == 0) queue_len++;
         tmp = g_list_next(tmp);
@@ -1415,11 +1415,11 @@ int fc_readNumberOfUnsentChunks(void)
  * retransmitted.
  * @return size of the send queue of the current flowcontrol module
  */
-unsigned int fc_readNumberOfQueuedChunks(void)
+unsigned int fc_get_queued_chunks_count(void)
 {
     unsigned int queue_len;
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1431,7 +1431,7 @@ unsigned int fc_readNumberOfQueuedChunks(void)
     else
         queue_len=0;
 
-    event_logi(VERBOSE, "fc_readNumberOfQueuedChunks() returns %u", queue_len);
+    event_logi(VERBOSE, "fc_get_queued_chunks_count() returns %u", queue_len);
     return queue_len;
 }
 
@@ -1446,7 +1446,7 @@ unsigned int fc_readNumberOfQueuedChunks(void)
 int fc_readCWND(short path_id)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1469,7 +1469,7 @@ int fc_readCWND(short path_id)
 int fc_readCWND2(short path_id)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1491,7 +1491,7 @@ int fc_readCWND2(short path_id)
 int fc_readSsthresh(short path_id)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1512,7 +1512,7 @@ int fc_readSsthresh(short path_id)
 unsigned int fc_readMTU(short path_id)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1533,7 +1533,7 @@ unsigned int fc_readMTU(short path_id)
 int fc_readPBA(short path_id)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1551,10 +1551,10 @@ int fc_readPBA(short path_id)
  * Function returns the outstanding byte count value of this association.
  * @return current outstanding_bytes value, else -1
  */
-int fc_readOutstandingBytes(void)
+int fc_get_outstanding_bytes(void)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1566,7 +1566,7 @@ int fc_readOutstandingBytes(void)
 int fc_get_maxSendQueue(unsigned int * queueLen)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");
@@ -1580,7 +1580,7 @@ int fc_get_maxSendQueue(unsigned int * queueLen)
 int fc_set_maxSendQueue(unsigned int maxQueueLen)
 {
     fc_data *fc;
-    fc = (fc_data *) mdi_readFlowControl();
+    fc = (fc_data *) get_flowctrl();
 
     if (!fc) {
         error_log(ERROR_MAJOR, "flow control instance not set !");

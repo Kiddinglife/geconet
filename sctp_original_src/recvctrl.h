@@ -55,7 +55,7 @@
 #define MAX_SACK_SIZE	1200
 #define MAX_SACK_ARRAY_SIZE	1000
 
-void *rxc_new_recvctrl(unsigned int remote_initial_TSN,
+void *mrecv_new(unsigned int remote_initial_TSN,
 											 unsigned int number_of_destination_addresses,
 											 void* sctpInstance);
 

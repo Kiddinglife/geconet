@@ -71,7 +71,7 @@ static int eventTraceLevel[50];
  * @param  two pointer to other chunk data
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
-int sort_tsn(chunk_data * one, chunk_data * two)
+int sort_tsn(internal_data_chunk_t * one, internal_data_chunk_t * two)
 {
     if (before(one->chunk_tsn, two->chunk_tsn)) {
         return -1;
@@ -379,7 +379,7 @@ int between(unsigned int seq1, unsigned int seq2, unsigned int seq3)
 
 void free_list_element(gpointer list_element, gpointer user_data)
 {
-    chunk_data * chunkd = (chunk_data*) list_element;
+    internal_data_chunk_t * chunkd = (internal_data_chunk_t*) list_element;
 
     if (user_data == NULL) {
         if (list_element != NULL) free (list_element);

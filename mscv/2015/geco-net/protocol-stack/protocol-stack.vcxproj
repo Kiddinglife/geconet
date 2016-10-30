@@ -119,7 +119,7 @@
     </Link>
     <Lib>
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common_Debugx64.lib;Crypt_Debugx64.lib;Math_Debugx64.lib;Tunnel_Debugx64.lib;</AdditionalDependencies>
+      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
@@ -173,7 +173,7 @@
       <OutputFile>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).lib</OutputFile>
     </Lib>
     <Lib>
-      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;Common.lib;Crypt.lib;Math.lib;Tunnel.lib;</AdditionalDependencies>
+      <AdditionalDependencies>Iphlpapi.lib;Ws2_32.lib;</AdditionalDependencies>
     </Lib>
     <Lib>
       <AdditionalLibraryDirectories>../../../../thirdparty/libs/;</AdditionalLibraryDirectories>
@@ -184,8 +184,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\auth.cc" />
+    <ClCompile Include="..\..\..\..\src\module_chunk.cc" />
     <ClCompile Include="..\..\..\..\src\dispatch_layer.cc" />
-    <ClCompile Include="..\..\..\..\src\geco-malloc.cpp" />
+    <ClCompile Include="..\..\..\..\src\geco-malloc.cc" />
     <ClCompile Include="..\..\..\..\src\gecotimer.cc" />
     <ClCompile Include="..\..\..\..\src\globals.cc" />
     <ClCompile Include="..\..\..\..\src\transport_layer.cc" />
@@ -203,6 +204,7 @@
     <ClInclude Include="..\..\..\..\src\gecotimer.h" />
     <ClInclude Include="..\..\..\..\src\globals.h" />
     <ClInclude Include="..\..\..\..\src\messages.h" />
+    <ClInclude Include="..\..\..\..\src\module_chunk.h" />
     <ClInclude Include="..\..\..\..\src\protoco-stack.h" />
     <ClInclude Include="..\..\..\..\src\transport_layer.h" />
   </ItemGroup>

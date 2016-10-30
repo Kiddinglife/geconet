@@ -8,13 +8,20 @@
 #ifndef MY_CONFIG_H_
 #define MY_CONFIG_H_
 
-//#define USED_UDP_PORT 9899
-//#define HAVE_SIN_LEN
-//#define HAVE_IPV6_RECVPKTINFO
+#define USED_UDP_PORT 9899
 //#define USE_UDP
-#define _DEBUG
-#define GECO_ASSERTIONS
-#define GECO_PRINTS
-#define CURR_EVENT_LOG_LEVEL 5
-#define ENABLE_UNIT_TEST
+
+//comment those macros before running unit tests
+//uncomment those macros after running unit tests
+//otherwise these functions will never be invoked
+#define _DEBUG //uncommnet this in release version
+#define ENABLE_UNIT_TEST 1
+#if ENABLE_UNIT_TEST == 1
+#define MYSTATIC
+#else
+#define MYSTATIC static
+#endif
+
+#define enable_mock_dispatch_send_geco_packet 0
+#define CURR_EVENT_LOG_LEVEL   DEBUG // VVERBOSE
 #endif /* MY_CONFIG_H_ */

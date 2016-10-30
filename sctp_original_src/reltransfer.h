@@ -52,7 +52,7 @@
 
 
 
-void *rtx_new_reltransfer(unsigned int number_of_destination_addresses, unsigned int iTSN);
+void *mrtx_new(unsigned int number_of_destination_addresses, unsigned int iTSN);
 
 void rtx_delete_reltransfer(void *rtx_instance);
 
@@ -90,7 +90,7 @@ int rtx_update_retrans_chunks(void *data_chunk, unsigned int dest);
  * been sent to the address that timed out
  */
 int rtx_t3_timeout(void *rtx_instance, unsigned int address,
-                   unsigned int mtu, chunk_data ** rtx_chunks);
+                   unsigned int mtu, internal_data_chunk_t ** rtx_chunks);
 
 
 
@@ -99,17 +99,17 @@ void chunk_list_debug(short event_log_level, GList * chunk_list);
 /**
  * function to return the last a_rwnd value we got from our peer
  */
-unsigned int rtx_read_remote_receiver_window(void);
+unsigned int rtx_get_peer_rwnd(void);
 
 /**
  * Function returns the number of chunks that are waiting in the queue to be acked
  */
-unsigned int rtx_readNumberOfUnackedChunks(void);
+unsigned int rtx_get_unacked_chunks_count(void);
 
 /**
  * function to set the a_rwnd value we got from our peer (from INIT/INIT ACK)
  */
-int rtx_set_remote_receiver_window(unsigned int new_arwnd);
+int mrtx_set_peer_arwnd(unsigned int new_arwnd);
 
 
 /**

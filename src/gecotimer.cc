@@ -50,8 +50,8 @@ void timer_mgr::delete_timer(timer_id_t& timerptr)
 }
 int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 {
-    EVENTLOG(VERBOSE, "reset timer\n");
-    if (this->timers.empty())
+	EVENTLOG(VERBOSE, "reset_timer");
+	if (this->timers.empty())
         return -1;
     uint timer_type = timerptr->timer_type;
     timer::Action action = timerptr->action;
@@ -63,31 +63,28 @@ int timer_mgr::reset_timer(timer_id_t& timerptr, uint timeouts)
 }
 int timer_mgr::timeouts()
 {
-    if (this->timers.empty())
+	if (this->timers.empty())
         return -1;
 
     // get now and timeout
     struct timeval now;
-    if (gettimenow(&now) < 0)
-        return -1;
+    if (gettimenow(&now) < 0) return -1;
 
     const struct timeval& timeout = this->timers.front().action_time;
-    int64_t secs = timeout.tv_sec - now.tv_sec;
-    if (secs < 0)
-        return 0; // sec timeouts
+    int secs = timeout.tv_sec - now.tv_sec;
+    if (secs < 0) return 0; // sec timeouts
 
-    int64_t usecs = timeout.tv_usec - now.tv_usec;
+	int usecs = timeout.tv_usec - now.tv_usec;
     if (usecs < 0)
     {
         //as usecs has timeout, we need ti check if secs checkouts
         //if  two secs equals, secs == 0, then must timeout
         // if two secs difference greater than 1 sec, then must not timeout
-        --secs;
+        secs--;
         usecs += 1000000;
     }
 
-    if (secs < 0)
-        return 0; //secs timeouts
+    if (secs < 0) return 0; //secs timeouts
 
     // no type overflow because number is very small
     return ((int)(secs * 1000 + usecs / 1000));
@@ -125,26 +122,24 @@ void timer_mgr::print_timer(short event_log_level, const timer& item)
             ttype = "Unknown Timer";
             break;
     }
-    EVENTLOG4(event_log_level,
-        "TimerID: %u, Type : %s, action_time: {%ld sec, %ld us}\n",
+    EVENTLOG4(VVERBOSE,
+        "TimerID: %u, Type : %s, action_time: {%ld sec, %ld us}",
         item.timer_id, ttype, item.action_time.tv_sec,
         item.action_time.tv_usec);
 }
 void timer_mgr::print(short event_log_level)
 {
-    EVENTLOG(event_log_level, "Enter timer_mgr::print_debug_list");
     if (this->timers.size() == 0)
     {
         EVENTLOG(event_log_level, "No timers!");
         return;
     }
     print_time_now(event_log_level);
-    EVENTLOG1(event_log_level, "List Length : %ld ", this->timers.size());
+    EVENTLOG1(event_log_level, "lList Length : %ld", this->timers.size());
     for (auto& timer : this->timers)
     {
         this->print_timer(event_log_level, timer);
     }
-    EVENTLOG(event_log_level, "Leave timer_mgr::print_debug_list");
 }
 
 

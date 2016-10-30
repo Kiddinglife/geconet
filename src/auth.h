@@ -37,11 +37,6 @@
 // documentation and/or software.
 // *******************************************************************/
 //
-///* PROTOTYPES should be set to one if and only if the compiler supports
-// function argument prototyping.
-// The following makes PROTOTYPES default to 0 if it has not already
-// been defined with C compiler flags.
-// */
 #ifndef MY_MD5_H_
 #define MY_MD5_H_
 
@@ -87,65 +82,44 @@
 #endif
 #define MAX_DEST    16
 
-extern int set_crc32_checksum(char *buffer, int length);
-extern uchar* get_secre_key(int operation_code);
+extern void (*gset_checksum)(char *buffer, int length);
+extern int (*gvalidate_checksum)(char *buffer, int length);
+
+extern int validate_md5_checksum(char *buffer, int length);
+extern void set_md5_checksum(char *buffer, int length);
+
+extern void set_crc32_checksum(char *buffer, int length);
 extern int validate_crc32_checksum(char* buffer, int len);
+
 extern uint generate_random_uint32();
+extern const char* hexdigest(uchar data[], int lenbytes);
+extern uchar* get_secre_key(int operation_code);
 
-// a small class for calculating MD5 hashes of strings or byte arrays
-// it is not meant to be fast or secure
-//
-// usage: 
-//      1) MD5 obj; 
-//      2) obj.update()
-//      2) obj.finalize()
-//      3) obj.hexdigest() 
-//      or
-//      MD5(std::string).hexdigest()
-//
-// assumes that char is 8 bit and int is 32 bit
-class MD5
+/* PROTOTYPES should be set to one if and only if the compiler supports
+function argument prototyping.
+The following makes PROTOTYPES default to 0 if it has not already
+been defined with C compiler flags.
+*/
+/* POINTER defines a generic pointer type */
+typedef unsigned char *POINTER;
+/* UINT2 defines a two byte word */
+typedef unsigned short UINT2;
+/* UINT4 defines a four byte word */
+typedef unsigned int UINT4;
+/* PROTO_LIST is defined depending on how PROTOTYPES is defined above.
+If using PROTOTYPES, then PROTO_LIST returns the list, otherwise it
+returns an empty list.
+*/
+/* MD5 context. */
+typedef struct
 {
-    public:
-    typedef unsigned int size_type; // must be 32bit
-
-    MD5();
-    MD5(const std::string& text);
-    void init();
-    void update(const unsigned char *buf, size_type length);
-    void update(const char *buf, size_type length);
-    MD5& finalize();
-    std::string hexdigest() const;
-    friend std::ostream& operator<<(std::ostream&, MD5 md5);
-
-    unsigned char* Digest() const { return (unsigned char*)digest; }
-
-    private:
-    typedef unsigned char uint1; //  8bit
-    typedef unsigned int uint4;  // 32bit
-    enum { blocksize = 64 }; // VC6 won't eat a const static int here
-
-    void transform(const uint1 block[blocksize]);
-    static void decode(uint4 output[], const uint1 input[], size_type len);
-    static void encode(uint1 output[], const uint4 input[], size_type len);
-
-    bool finalized;
-    uint1 buffer[blocksize]; // bytes that didn't fit in last 64 byte chunk
-    uint4 count[2];   // 64bit counter for number of bits (lo, hi)
-    uint4 state[4];   // digest so far
-    uint1 digest[16]; // the result
-
-    // low level logic operations
-    static inline uint4 F(uint4 x, uint4 y, uint4 z);
-    static inline uint4 G(uint4 x, uint4 y, uint4 z);
-    static inline uint4 H(uint4 x, uint4 y, uint4 z);
-    static inline uint4 I(uint4 x, uint4 y, uint4 z);
-    static inline uint4 rotate_left(uint4 x, int n);
-    static inline void FF(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac);
-    static inline void GG(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac);
-    static inline void HH(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac);
-    static inline void II(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4 ac);
-};
-std::string md5(const std::string str);
+    UINT4 state[4]; /* state (ABCD) */
+    UINT4 count[2]; /* number of bits, modulo 2^64 (lsb first) */
+    unsigned char buffer[64]; /* input buffer */
+} MD5_CTX;
+extern void MD5Init(MD5_CTX *);
+extern void MD5Update(MD5_CTX *, unsigned char * src, unsigned int len);
+extern void MD5Final(unsigned char dest_digest[16], MD5_CTX * ctx);
+extern unsigned int generate_md5_checksum(const void *data, int length);
 #endif
 

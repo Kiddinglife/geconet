@@ -381,7 +381,7 @@ typedef
  *  may only be retrieved using the  sctp_getAssocStatus() function, or
  *  also set using the  sctp_setAssocStatus() function.
  */
-struct SCTP_Association_Status
+struct SCTP_Association_Status //connection_params_t
 {
     /* @{ */
     /** (get)  */
@@ -572,16 +572,10 @@ int sctp_receivefrom(unsigned int associationID, unsigned short streamID, unsign
 /*----------------------------------------------------------------------------------------------*/
 int sctp_setLibraryParameters(SCTP_LibraryParameters *params);
 int sctp_getLibraryParameters(SCTP_LibraryParameters *params);
-
 int sctp_setAssocDefaults(unsigned short SCTP_InstanceName, SCTP_InstanceParameters* params);
-
 int sctp_getAssocDefaults(unsigned short SCTP_InstanceName, SCTP_InstanceParameters* params);
-
-
 int sctp_getAssocStatus(unsigned int associationID, SCTP_AssociationStatus* status);
-
 int sctp_setAssocStatus(unsigned int associationID, SCTP_AssociationStatus* new_status);
-
 int sctp_getPathStatus(unsigned int associationID, short path_id, SCTP_PathStatus* status);
 int sctp_setPathStatus(unsigned int associationID, short path_id, SCTP_PathStatus *new_status);
 /*----------------------------------------------------------------------------------------------*/
