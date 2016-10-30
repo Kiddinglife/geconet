@@ -40,7 +40,8 @@ use of multiple IP addresses per connection to allow transmission
 of data chunks through different network paths with highest pmtu
 
 - **Fragmentation and PMTU**  
-Detection of path MTU impelmented based on RFC 4821 - Packetization Layer Path MTU Discovery.  
+Detection of path MTU impelmented based on RFC 4821 - Packetization  
+Layer Path MTU Discovery (https://www.ietf.org/rfc/rfc4821.txt).  
 Fragmentation of user data to fit best into the highest pmtu
 
 - **Error correction**  
