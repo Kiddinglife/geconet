@@ -1,1 +1,33 @@
-﻿
+﻿  timer_list.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  deliverman_controller_t.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  SCTP-control.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  sbundling.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  reltransfer.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  recvctrl.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  rbundling.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  pathmanagement.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  md5.c
+d:\vs-workspace\geconet\sctp_original_src\md5.h(47): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  globals.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  flowcontrol.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  errorhandler.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  distribution.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  chunkHandler.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  auxiliary.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  adaptation.c
+d:\vs-workspace\geconet\sctp_original_src\globals.h(53): fatal error C1083: Cannot open include file: 'glib.h': No such file or directory
+  Generating Code...

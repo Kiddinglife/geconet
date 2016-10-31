@@ -461,7 +461,7 @@ socket_cb(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* 
 
 	if (sfd == mtra_read_ip4rawsock())
 	{
-		EVENTLOG8(DEBUG, "socket_cb(ip%d raw fd=%d)::receive (%d) bytes  of data(%s) from addr (%s:%d) to addr (%s:%d)", 4 , sfd, datalen, data, fromstr, fport, tostr, tport);
+		EVENTLOG8(DEBUG, "socket_cb(ip%d raw fd=%d)::receive (%d) bytes  of data(%s) from addr (%s:%d) to addr (%s:%d)", 4, sfd, datalen, data, fromstr, fport, tostr, tport);
 	}
 	else if (sfd == mtra_read_ip6rawsock())
 	{
@@ -502,26 +502,31 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 {
 	int rcwnd = 512;
 	mtra_init(&rcwnd);
+
 	cbunion_t cbunion;
 	cbunion.socket_cb_fun = socket_cb;
-	mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(),
-		EVENTCB_TYPE_SCTP,
-		POLLIN | POLLPRI, cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip6rawsock(),
 		EVENTCB_TYPE_SCTP,
 		POLLIN | POLLPRI, cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip6udpsock(),
 		EVENTCB_TYPE_UDP,
 		POLLIN | POLLPRI, cbunion, 0);
+	mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(),
+		EVENTCB_TYPE_SCTP,
+		POLLIN | POLLPRI, cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(),
 		EVENTCB_TYPE_UDP,
 		POLLIN | POLLPRI, cbunion, 0);
+
 	//you have to put stdin as last because we test it
 	mtra_add_stdin_cb(stdin_cb);
 	mtra_set_tick_task_cb(task_cb, (void*)"this is user datta");
-	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 100000, timer_cb, 0, 0);
+	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 300000, timer_cb, 0, 0);
+
 	while (flag)
+	{
 		mtra_poll(0, 0, 0);
+	}
 	mtra_destroy();
 }
 
