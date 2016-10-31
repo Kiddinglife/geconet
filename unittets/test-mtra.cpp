@@ -3,6 +3,7 @@
 // @caution because geco-ds-malloc includes geco-thread.h that includes window.h but transport_layer.h includes wsock2.h, as we know, it must include before windows.h so if you uncomment this line, will cause error
 //#include "geco-ds-malloc.h"
 #include "transport_layer.h"
+#include "globals.h"
 #include "geco-ds-malloc.h"
 #include "geco-malloc.h"
 using namespace geco::ds;
@@ -431,7 +432,7 @@ static void stdin_cb(char* data, size_t datalen)
 	assert(sentsize == datalen);
 	EXPECT_STRCASEEQ(data, inputs);
 
-	str2saddr(&saddr, "10.0.0.114", USED_UDP_PORT);
+	str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
 	sentsize = mtra_send_rawsocks(mtra_read_ip4rawsock(), inputs, datalen, &saddr, tos);
 	assert(sentsize == datalen);
 	EXPECT_STRCASEEQ(data, inputs);
@@ -517,7 +518,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 		POLLIN | POLLPRI, cbunion, 0);
 	//you have to put stdin as last because we test it
 	mtra_add_stdin_cb(stdin_cb);
-	mtra_set_tick_task_cb(task_cb, "this is user datta");
+	mtra_set_tick_task_cb(task_cb, (void*)"this is user datta");
 	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 100000, timer_cb, 0, 0);
 	while (flag)
 		mtra_poll(0, 0, 0);

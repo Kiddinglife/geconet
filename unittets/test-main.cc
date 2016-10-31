@@ -25,7 +25,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_timer_mgr";
 
-    // last pass on 26 Oct 2016
+    // last pass on 31 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.*";
     //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_alloc_dealloc";
     //::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_alloc_dealloc";
@@ -34,19 +34,20 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
-    // last pass on 26 Oct 2016
-    // ::testing::GTEST_FLAG(filter) = "MULP.*";
+    // last pass on 31 Oct 2016
+    //::testing::GTEST_FLAG(filter) = "MULP.*";
     //::testing::GTEST_FLAG(filter) = "MULP.test_initialize_and_free_library";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
-	::testing::GTEST_FLAG(filter) = "MULP.test_mulp_mulp_new_and_delete_geco_instnce";
+    //::testing::GTEST_FLAG(filter) ="MULP.test_mulp_mulp_new_and_delete_geco_instnce";
 
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MBU.*";
     //::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
+    // last pass on 31 Oct 2016
     //::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
-	
+
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_bundle_ctrl_chunk";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
@@ -60,5 +61,5 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_geco_instance";
     // ::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_channel";
 
-    return  RUN_ALL_TESTS ();
+    return RUN_ALL_TESTS ();
   }

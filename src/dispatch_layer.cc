@@ -6155,7 +6155,8 @@ int initialize_library(void)
 		cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip6udpsock(), EVENTCB_TYPE_UDP, POLLIN | POLLPRI,
 		cbunion, 0);
-	mtra_set_tick_task_cb(dummy_tick_task_cb, "dummy_user_data");
+	const char* userdataa = "dummy_user_data";
+	mtra_set_tick_task_cb(dummy_tick_task_cb, (void*)userdataa);
 
 	mdis_init();
 
@@ -6608,14 +6609,14 @@ int mulp_set_lib_params(lib_params_t *lib_params)
 		ERRLOG(FALTAL_ERROR_EXIT, "mulp_set_lib_params()::no such checksum_algorithm!");
 		return ret;
 	}
-	EVENTLOG5(VERBOSE,
+	EVENTLOG6(VERBOSE,
 		"mulp_set_lib_params():: \nsend_ootb_aborts %s,\nchecksum_algorithm %s,\nsupport_dynamic_addr_config %s,\nsupport_particial_reliability %s,\n"
 		"delayed_ack_interval %d",
 		(send_abort_for_oob_packet_ == true) ? "TRUE" : "FALSE",
 		(checksum_algorithm_ == MULP_CHECKSUM_ALGORITHM_CRC32C) ? "CRC32C" : "MD5",
 		(support_addip_ == true) ? "TRUE" : "FALSE",
 		(support_pr_ == true) ? "TRUE" : "FALSE",
-		delayed_ack_interval_, mtra_read_udp_local_bind_port());
+		delayed_ack_interval_,mtra_read_udp_local_bind_port());
 	return MULP_SUCCESS;
 }
 int mulp_get_lib_params(lib_params_t *lib_params)
@@ -6628,14 +6629,14 @@ int mulp_get_lib_params(lib_params_t *lib_params)
 	lib_params->support_particial_reliability = support_pr_;
 	lib_params->delayed_ack_interval = delayed_ack_interval_;
 	lib_params->udp_bind_port = mtra_read_udp_local_bind_port();
-	EVENTLOG5(VERBOSE,
+	EVENTLOG6(VERBOSE,
 		"mulp_get_lib_params():: \nsend_ootb_aborts %s,\nchecksum_algorithm %s,\nsupport_dynamic_addr_config %s,\nsupport_particial_reliability %s,\n"
 		"delayed_ack_interval %d,udp_bind_port %d",
 		(send_abort_for_oob_packet_ == true) ? "TRUE" : "FALSE",
 		(checksum_algorithm_ == MULP_CHECKSUM_ALGORITHM_CRC32C) ? "CRC32C" : "MD5",
 		(support_addip_ == true) ? "TRUE" : "FALSE",
 		(support_pr_ == true) ? "TRUE" : "FALSE",
-		delayed_ack_interval_, mtra_read_udp_local_bind_port());
+		delayed_ack_interval_,mtra_read_udp_local_bind_port());
 	return MULP_SUCCESS;
 }
 int mulp_set_connection_default_params(unsigned int instanceid,
