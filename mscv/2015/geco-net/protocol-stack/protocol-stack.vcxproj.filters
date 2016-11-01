@@ -9,78 +9,84 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Header Files\geco">
+      <UniqueIdentifier>{6c720cc8-4551-47f0-97ae-6346bf3cfe8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\geco-ds">
+      <UniqueIdentifier>{dac87933-d910-4341-a2b5-bceee896a805}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\geco-net">
+      <UniqueIdentifier>{18a6e1ac-496e-4d21-a361-fba37a3d71a9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\src\gecotimer.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\src\globals.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\src\transport_layer.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\src\dispatch_layer.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\src\auth.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\src\module_chunk.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\src\geco-malloc.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-net-transport.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-net-dispatch.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-net-chunk.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-net-auth.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-net-common.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-net-timer.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\src\auth.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\basic-type.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\geco-ds-config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\geco-ds-malloc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\src\geco-ip-stack.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\..\src\geco-malloc.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\geco</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\src\geco-thread.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\geco</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\gecotimer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-ds-config.h">
+      <Filter>Header Files\geco-ds</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\globals.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-ds-malloc.h">
+      <Filter>Header Files\geco-ds</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\messages.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-ds-timer.h">
+      <Filter>Header Files\geco-ds</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\protoco-stack.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-net-auth.h">
+      <Filter>Header Files\geco-net</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\transport_layer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-net-config.h">
+      <Filter>Header Files\geco-net</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\dispatch_layer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-net-dispatch.h">
+      <Filter>Header Files\geco-net</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\src\module_chunk.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\..\src\geco-net-common.h">
+      <Filter>Header Files\geco-net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\geco-net-msg.h">
+      <Filter>Header Files\geco-net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\geco-net-chunk.h">
+      <Filter>Header Files\geco-net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\geco-net.h">
+      <Filter>Header Files\geco-net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\geco-net-transport.h">
+      <Filter>Header Files\geco-net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\geco-common.h">
+      <Filter>Header Files\geco</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

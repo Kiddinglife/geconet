@@ -2,9 +2,9 @@
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
-#include "globals.h"
-#include "protoco-stack.h"
-#include "dispatch_layer.h"
+#include "geco-net-common.h"
+#include "geco-net.h"
+#include "geco-net-dispatch.h"
 
 TEST(MULP, test_initialize_and_free_library)
 {

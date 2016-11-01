@@ -29,12 +29,12 @@
 #include <tr1/unordered_map>
 #endif
 
-#include "globals.h"
+#include "geco-net-common.h"
 #include "geco-malloc.h"
-#include "gecotimer.h"
-#include "protoco-stack.h"
-#include "auth.h"
-#include "module_chunk.h"
+#include "geco-ds-timer.h"
+#include "geco-net.h"
+#include "geco-net-auth.h"
+#include "geco-net-chunk.h"
 
 /**
  * This struct stores data of geco_instance_t.

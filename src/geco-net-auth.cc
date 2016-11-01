@@ -31,8 +31,8 @@
 
  /* system implementation headers */
 #include <stdio.h>
-#include "auth.h"
-#include "globals.h"
+#include "geco-net-auth.h"
+#include "geco-net-common.h"
 
 void(*gset_checksum)( char*, int ) = &set_md5_checksum;
 int(*gvalidate_checksum)( char*, int ) = &validate_md5_checksum;

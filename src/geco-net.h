@@ -20,7 +20,7 @@
 #ifndef __INCLUDE_PROTOCOL_STACK_H
 #define __INCLUDE_PROTOCOL_STACK_H
 
-#include "globals.h"
+#include "geco-net-common.h"
 
 /* Here are some error codes that are returned by some functions         */
 /* this list may be enhanced or become more extensive in future releases */

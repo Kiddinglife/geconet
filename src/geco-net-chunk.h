@@ -52,7 +52,7 @@
 # ifndef __INCLUDE_CHUNK_BUILDER_H
 # define __INCLUDE_CHUNK_BUILDER_H
 
-#include "globals.h"
+#include "geco-net-common.h"
 
   /**
    *  check if this is a good cookie, i.e. verify HMAC signature

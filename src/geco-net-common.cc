@@ -5,7 +5,7 @@
  *      Author: jakez
  */
 
-#include "globals.h"
+#include "geco-net-common.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdarg>

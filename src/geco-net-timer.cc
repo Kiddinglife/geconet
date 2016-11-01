@@ -5,7 +5,7 @@
  *      Author: jakez
  */
 
-#include "gecotimer.h"
+#include "geco-ds-timer.h"
 
 timer_mgr::timer_mgr()
 {

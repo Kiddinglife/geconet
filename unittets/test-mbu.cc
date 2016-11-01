@@ -8,8 +8,8 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 //#include "globals.h"
-#include "protoco-stack.h"
-#include "dispatch_layer.h"
+#include "geco-net.h"
+#include "geco-net-dispatch.h"
 #include <iostream>
 
 /**

@@ -183,30 +183,29 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\src\auth.cc" />
-    <ClCompile Include="..\..\..\..\src\module_chunk.cc" />
-    <ClCompile Include="..\..\..\..\src\dispatch_layer.cc" />
+    <ClCompile Include="..\..\..\..\src\geco-net-auth.cc" />
+    <ClCompile Include="..\..\..\..\src\geco-net-chunk.cc" />
+    <ClCompile Include="..\..\..\..\src\geco-net-dispatch.cc" />
     <ClCompile Include="..\..\..\..\src\geco-malloc.cc" />
-    <ClCompile Include="..\..\..\..\src\gecotimer.cc" />
-    <ClCompile Include="..\..\..\..\src\globals.cc" />
-    <ClCompile Include="..\..\..\..\src\transport_layer.cc" />
+    <ClCompile Include="..\..\..\..\src\geco-net-timer.cc" />
+    <ClCompile Include="..\..\..\..\src\geco-net-common.cc" />
+    <ClCompile Include="..\..\..\..\src\geco-net-transport.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\src\auth.h" />
-    <ClInclude Include="..\..\..\..\src\basic-type.h" />
-    <ClInclude Include="..\..\..\..\src\config.h" />
-    <ClInclude Include="..\..\..\..\src\dispatch_layer.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-auth.h" />
+    <ClInclude Include="..\..\..\..\src\geco-common.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-config.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-dispatch.h" />
     <ClInclude Include="..\..\..\..\src\geco-ds-config.h" />
     <ClInclude Include="..\..\..\..\src\geco-ds-malloc.h" />
-    <ClInclude Include="..\..\..\..\src\geco-ip-stack.h" />
     <ClInclude Include="..\..\..\..\src\geco-malloc.h" />
     <ClInclude Include="..\..\..\..\src\geco-thread.h" />
-    <ClInclude Include="..\..\..\..\src\gecotimer.h" />
-    <ClInclude Include="..\..\..\..\src\globals.h" />
-    <ClInclude Include="..\..\..\..\src\messages.h" />
-    <ClInclude Include="..\..\..\..\src\module_chunk.h" />
-    <ClInclude Include="..\..\..\..\src\protoco-stack.h" />
-    <ClInclude Include="..\..\..\..\src\transport_layer.h" />
+    <ClInclude Include="..\..\..\..\src\geco-ds-timer.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-common.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-msg.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-chunk.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net.h" />
+    <ClInclude Include="..\..\..\..\src\geco-net-transport.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

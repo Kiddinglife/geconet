@@ -4,8 +4,8 @@
 // but transport_layer.h includes wsock2.h, as we know, it must include before windows.h
 // so if you uncomment this line, will cause error
 //#include "geco-ds-malloc.h"
-#include "transport_layer.h"
-#include "dispatch_layer.h"
+#include "geco-net-transport.h"
+#include "geco-net-dispatch.h"
 #include "geco-ds-malloc.h"
 #include "geco-malloc.h"
 using namespace geco::ds;

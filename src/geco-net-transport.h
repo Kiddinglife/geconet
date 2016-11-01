@@ -24,9 +24,9 @@
 #include <cstring>
 #include <cerrno>
 
-#include "globals.h"
-#include "gecotimer.h"
-#include "dispatch_layer.h"
+#include "geco-net-common.h"
+#include "geco-ds-timer.h"
+#include "geco-net-dispatch.h"
 
   /**
    * Structure for callback events. The function "action" is called by the event-handler,

@@ -15,8 +15,8 @@
 #include <sys/socket.h>
 #endif
 
-#include "config.h"
-#include "basic-type.h"
+#include "geco-net-config.h"
+#include "geco-common.h"
 
 #define DEFAULT_COOKIE_LIFE_SPAN 10000 //ms
 
@@ -413,7 +413,7 @@ struct forward_tsn_chunk_t
  *  - variable part of init (address list).
  *  Only the fixed part is defined here.
  */
-#include "auth.h"
+#include "geco-net-auth.h"
  /* cookie chunks fixed params length including chunk header */
 #ifdef MD5_HMAC
 #define HMAC_SIZE (16*sizeof(uchar))

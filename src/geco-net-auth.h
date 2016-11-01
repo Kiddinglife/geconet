@@ -42,7 +42,7 @@
 
 #include <string>
 #include <iostream>
-#include "basic-type.h"
+#include "geco-common.h"
 
 /**
 * CRC32Ϊ32bit�ļ�hash��MD5Ϊ128bit�ϸ��ӵ�hash�㷨��

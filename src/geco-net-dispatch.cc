@@ -1,9 +1,9 @@
-#include "dispatch_layer.h"
-#include "transport_layer.h"
-#include "module_chunk.h"
-#include "auth.h"
+#include "geco-net-dispatch.h"
+#include "geco-net-transport.h"
+#include "geco-net-chunk.h"
+#include "geco-net-auth.h"
 #include "geco-ds-malloc.h"
-#include "protoco-stack.h"
+#include "geco-net.h"
 
 #define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 

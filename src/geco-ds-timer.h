@@ -10,7 +10,7 @@
 
 #include <list>
 #include <algorithm>
-#include "globals.h"
+#include "geco-net-common.h"
 
 /**
  *  A singly linked list for timer events
