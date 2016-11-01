@@ -2,16 +2,16 @@
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
+
 #include "geco-net-common.h"
-#include "geco-net.h"
 #include "geco-net-dispatch.h"
+#include "geco-net.h"
 
 TEST(MULP, test_initialize_and_free_library)
 {
   initialize_library ();
   free_library ();
 }
-
 TEST(MULP, test_mulp_get_lib_params)
 {
   //precondition lib has been inited
@@ -27,7 +27,6 @@ TEST(MULP, test_mulp_get_lib_params)
 
   free_library ();
 }
-
 TEST(MULP, test_mulp_set_lib_params)
 {
   //precondition lib has been inited
@@ -266,14 +265,14 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
   ASSERT_EQ(ipv4_sockets_geco_instance_users, 1);
   ASSERT_EQ(ipv6_sockets_geco_instance_users, 0);
 
-  //ip4 and ip6 that are not found in local addr list -> fatal error exits
+  //ip4 and ip6 that are not found in local addr list, should cause fatal error exits
   //localPort = 131;
   //noOfLocalAddresses = 2;
   //strcpy((char*)localAddressList[0], "10.0.0.113");
   //strcpy((char*)localAddressList[1], "fe80::e5e2:146e:25a2:4015");
   //instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams, noOfLocalAddresses, localAddressList, ULPcallbackFunctions);
 
-  //ip4 and ip6  one of them  is not found in local addr list -> fatal error exits
+  //ip4 and ip6  one of them  is not found in local addr list, should cause fatal error exits
   //localPort = 132;
   //noOfLocalAddresses = 2;
   //strcpy((char*)localAddressList[0], "10.0.0.114");
@@ -315,9 +314,80 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
   free_library ();
 }
 
-TEST(MULP, test_mulp_mulp_remove_geco_instnce)
+TEST(MULP, test_mulp_connect)
 {
-  //precondition lib has been inited
-  initialize_library ();
-  free_library ();
+	//precondition lib has been inited
+	initialize_library();
+
+	lib_params_t lib_infos;
+	mulp_get_lib_params(&lib_infos);
+
+	geco_instance_t* curr_geco_instance_;
+	int instid;
+	bool fip4 = false, fip6 = false;
+	char ip4addrstr[MAX_IPADDR_STR_LEN];
+	char ip6addrstr[MAX_IPADDR_STR_LEN];
+	
+	for (int i = 0; i < defaultlocaladdrlistsize_; i++)
+	{
+		if (!fip4 && defaultlocaladdrlist_[i].sa.sa_family == AF_INET)
+		{
+			fip4 = true;
+			saddr2str(&defaultlocaladdrlist_[i], ip4addrstr, MAX_IPADDR_STR_LEN);
+			if (fip6)
+				break;
+		}
+		if (!fip6 && defaultlocaladdrlist_[i].sa.sa_family == AF_INET6)
+		{
+			fip6 = true;
+			saddr2str(&defaultlocaladdrlist_[i], ip6addrstr, MAX_IPADDR_STR_LEN);
+			if (fip4)
+				break;
+		}
+	}
+	EVENTLOG2(DEBUG, "used ip4 addr %s, ip6 addr %s", ip4addrstr, ip6addrstr);
+
+	unsigned short localPort;
+	unsigned short noOfInStreams;
+	unsigned short noOfOutStreams;
+	unsigned int noOfLocalAddresses;
+	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN];
+	ulp_cbs_t ULPcallbackFunctions;
+
+	//ip6 any and ip4 any
+	localPort = 123;
+	noOfInStreams = 32;
+	noOfOutStreams = 32;
+	noOfLocalAddresses = 2;
+	strcpy((char*)localAddressList[0], "0.0.0.0");
+	strcpy((char*)localAddressList[1], "::0");
+	ULPcallbackFunctions =
+	{ 0 };
+	instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams,
+		noOfLocalAddresses, localAddressList,
+		ULPcallbackFunctions);
+	curr_geco_instance_ = geco_instances_[instid];
+
+	/* At this moment the curr_geco_instance_ MUST have the following stats:
+		ASSERT_EQ(curr_geco_instance_->local_port, localPort);
+		ASSERT_EQ(curr_geco_instance_->noOfInStreams, noOfInStreams);
+		ASSERT_EQ(curr_geco_instance_->noOfOutStreams, noOfOutStreams);
+		ASSERT_EQ(curr_geco_instance_->is_inaddr_any, true);
+		ASSERT_EQ(curr_geco_instance_->is_in6addr_any, true);
+		ASSERT_EQ(curr_geco_instance_->use_ip4, true);
+		ASSERT_EQ(curr_geco_instance_->use_ip6, true);
+		ASSERT_EQ(curr_geco_instance_->use_ip6, true);
+		ASSERT_EQ(curr_geco_instance_->supportedAddressTypes,
+		SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6);
+		ASSERT_EQ(ipv4_sockets_geco_instance_users, 1);
+		ASSERT_EQ(ipv6_sockets_geco_instance_users, 1);
+		mulp_delete_geco_instance(instid);
+		ASSERT_EQ(ipv4_sockets_geco_instance_users, 0);
+		ASSERT_EQ(ipv6_sockets_geco_instance_users, 0);
+	*/
+	noOfOutStreams = 12;
+	mulp_connect(instid, noOfOutStreams, "::1", localPort, &ULPcallbackFunctions);
+
+	mulp_delete_geco_instance(instid);
+	free_library();
 }

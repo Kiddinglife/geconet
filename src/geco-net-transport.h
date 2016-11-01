@@ -78,7 +78,7 @@ struct test_dummy_t
 };
 
 struct timer_mgr;
-extern timer_mgr* mtra_read_timer();
+extern timer_mgr& mtra_read_timer();
 extern int mtra_read_ip4rawsock();
 extern int mtra_read_ip6rawsock();
 extern int mtra_read_ip4udpsock();

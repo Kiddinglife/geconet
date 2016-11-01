@@ -247,18 +247,6 @@ struct path_controller_t
 /**state controller structure. Stores the current state of the channel.*/
 struct smctrl_t
 {
-        void reset()
-        {
-            channel_state = Closed;
-            instance = 0;
-            channel_ptr = 0;
-        }
-
-        smctrl_t()
-        {
-            reset();
-        }
-
         /*@{ */
         /** the state of this state machine */
         ChannelState channel_state;

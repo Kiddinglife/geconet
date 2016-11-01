@@ -714,6 +714,8 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 {
 	EVENTLOG(VERBOSE, "- - - - Enter typeofaddr()");
 	bool ret = false;
+	bool b1;
+	bool b2;
 	switch (saddr_family(newAddress))
 	{
 	case AF_INET:
@@ -766,6 +768,44 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 			goto leave;
 		}
 #else
+		//b1 = flags & AllExceptLoopbackAddrTypes;
+		//b2 = !IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & AllExceptLoopbackAddrTypes=%d,"
+		//	"!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = flags & LoopBackAddrType;
+		//b2 = IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & LoopBackAddrType=%d,"
+		//	"IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = flags & AllExceptLinkLocalAddrTypes;
+		//b2 = !IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & AllExceptLinkLocalAddrTypes=%d,"
+		//	"!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = flags & ExceptSiteLocalAddrTypes;
+		//b2 = !IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & ExceptSiteLocalAddrTypes=%d,"
+		//	"!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = flags & LinkLocalAddrType;
+		//b2 = IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & LinkLocalAddrType=%d,"
+		//	"IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = flags & SiteLocalAddrType;
+		//b2 = IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & SiteLocalAddrType=%d,"
+		//	"IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = flags & MulticastAddrType;
+		//b2 = IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG2(DEBUG, "flags & MulticastAddrType=%d,"
+		//	"IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)=%d", b1, b2);
+
+		//b1 = IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr));
+		//EVENTLOG1(DEBUG, "IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr)=%d", b1);
+
 		if (
 			(!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLoopbackAddrTypes)) ||
 			(IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & LoopBackAddrType)) ||

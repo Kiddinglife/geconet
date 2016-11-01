@@ -75,6 +75,7 @@ std::tr1::unordered_map<transport_addr_t, uint, transportaddr_hash_functor,
 #endif
 /* many diferent channels belongs to a same geco instance*/
 std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
+std::vector<int> available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
 std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
 
 /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
@@ -3767,9 +3768,9 @@ bundle_controller_t* mbu_new(void)
 	bundle_ctrl->got_send_request = false;
 	bundle_ctrl->got_send_address = false;
 	bundle_ctrl->locked = false;
-	bundle_ctrl->data_position = UDP_GECO_PACKET_FIXED_SIZES;
-	bundle_ctrl->ctrl_position = UDP_GECO_PACKET_FIXED_SIZES;
-	bundle_ctrl->sack_position = UDP_GECO_PACKET_FIXED_SIZES;
+	bundle_ctrl->data_position = GECO_PACKET_FIXED_SIZE;
+	bundle_ctrl->ctrl_position = GECO_PACKET_FIXED_SIZE;
+	bundle_ctrl->sack_position = GECO_PACKET_FIXED_SIZE;
 	bundle_ctrl->requested_destination = 0;
 	bundle_ctrl->got_shutdown = false;
 #ifdef _DEBUG
@@ -3827,14 +3828,15 @@ smctrl_t* msm_new(void)
 #endif
 
 	assert(curr_channel_ != NULL);
-	smctrl_t* tmp = NULL;
-	if ((tmp = (smctrl_t*)geco_malloc_ext(sizeof(smctrl_t), __FILE__, __LINE__)) == NULL)
-	{
-		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
-		return 0;
-	}
+	//smctrl_t* tmp;
+	//if ((tmp = (smctrl_t*)geco_malloc_ext(sizeof(smctrl_t), __FILE__, __LINE__)) == NULL)
+	//{
+	//	ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+	//	return 0;
+	//}
+	smctrl_t* tmp = new smctrl_t();
 	tmp->channel_state = ChannelState::Closed;
-	tmp->init_timer_id = mdis_timer_mgr_.timers.end();
+	tmp->init_timer_id = mtra_read_timer().timers.end();
 	tmp->init_timer_interval = RTO_INITIAL;
 	tmp->init_retrans_count = 0;
 	tmp->channel_id = curr_channel_->channel_id;
@@ -3980,12 +3982,39 @@ bool mdi_new_channel(geco_instance_t* instance,
 	curr_channel_->remote_addres =
 		(sockaddrunion*)geco_malloc_ext(noOfDestinationAddresses * sizeof(sockaddrunion),
 			__FILE__, __LINE__);
-	memcpy(curr_channel_->remote_addres, destinationAddressList, noOfDestinationAddresses);
+
+	memcpy(curr_channel_->remote_addres, destinationAddressList, noOfDestinationAddresses* sizeof(sockaddrunion));
+
+	//insert channel pointer to vector
+	if (available_channel_ids_.size() == 0)
+	{
+		curr_channel_->channel_id = channels_.size();
+		channels_.push_back(curr_channel_);
+	}
+	else
+	{
+		curr_channel_->channel_id = available_channel_ids_.back();
+		channels_[curr_channel_->channel_id] = curr_channel_;
+		available_channel_ids_.pop_back();
+	}
+
+	//insert channel id to map
+	// @FIXME should be done when received initack  after curr_channel_->remote_addres is filled up
+	//for (int i = 0; i < curr_channel_->local_addres_size; i++)
+	//{
+	//	curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
+	//	for (int ii = 0; ii < curr_channel_->remote_addres_size; ii++)
+	//	{
+	//		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+	//		channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
+	//	}
+	//}
 
 	curr_channel_->flow_control = NULL;
 	curr_channel_->reliable_transfer_control = NULL;
 	curr_channel_->receive_control = NULL;
 	curr_channel_->deliverman_control = NULL;
+
 
 	/* only pathman, bundling and sctp-control are created at this point, the rest is created
 	 with mdi_initAssociation */
@@ -3997,19 +4026,6 @@ bool mdi_new_channel(geco_instance_t* instance,
 	curr_channel_->locally_supported_ADDIP = instance->supportsADDIP;
 	curr_channel_->remotely_supported_ADDIP = instance->supportsADDIP;
 
-	//insert channel pointer to vector
-	curr_channel_->channel_id = channels_.size();
-	channels_.push_back(curr_channel_);
-	//insert channel id to map
-	for (int i = 0; i < curr_channel_->local_addres_size; i++)
-	{
-		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
-		for (int ii = 0; ii < curr_channel_->remote_addres_size; ii++)
-		{
-			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
-		}
-	}
 
 	EVENTLOG1(VERBOSE, "mdi_new_channel()::CHANNEL ID = %d !", curr_channel_->channel_id);
 	return true;
@@ -6498,17 +6514,17 @@ int mulp_delete_geco_instance(int instance_idx)
 
 int mulp_connect(unsigned int instanceid,
 	unsigned short noOfOutStreams,
-	unsigned char destinationAddress[MAX_IPADDR_STR_LEN],
+	char destinationAddress[MAX_IPADDR_STR_LEN],
 	unsigned short destinationPort,
 	void* ulp_data)
 {
-	unsigned char dAddress[1][MAX_IPADDR_STR_LEN];
+	char dAddress[1][MAX_IPADDR_STR_LEN];
 	memcpy(dAddress, destinationAddress, MAX_IPADDR_STR_LEN);
 	return mulp_connectx(instanceid, noOfOutStreams, dAddress, 1, 1, destinationPort, ulp_data);
 }
 int mulp_connectx(unsigned int instanceid,
 	unsigned short noOfOutStreams,
-	unsigned char destinationAddresses[][MAX_IPADDR_STR_LEN],
+	char destinationAddresses[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
 	unsigned int noOfDestinationAddresses,
 	unsigned int maxSimultaneousInits,
 	unsigned short destinationPort,
@@ -6519,8 +6535,7 @@ int mulp_connectx(unsigned int instanceid,
 
 	if (destinationPort == 0)
 	{
-		ERRLOG(MAJOR_ERROR, "destination port is zero....this is not allowed !");
-		return -1;
+		ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx()::destination port is zero....this is not allowed !");
 	}
 
 	union sockaddrunion dest_su[MAX_NUM_ADDRESSES];
@@ -6528,11 +6543,13 @@ int mulp_connectx(unsigned int instanceid,
 
 	for (uint count = 0; count < noOfDestinationAddresses; count++)
 	{
-		if (str2saddr(&dest_su[count], (char*)destinationAddresses[count], destinationPort) < 0 ||
-			(typeofaddr(&dest_su[count], filterFlags) == false))
+		if (str2saddr(&dest_su[count], (char*)destinationAddresses[count], destinationPort) < 0)
 		{
-			ERRLOG(MAJOR_ERROR, "sctp_associate: destination adress not good !");
-			return -1;
+			ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx()::str2saddr(destination adress) failed !");
+		}
+		if (typeofaddr(&dest_su[count], filterFlags))
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx()::typeofaddr(destination adress) failed !");
 		}
 	}
 

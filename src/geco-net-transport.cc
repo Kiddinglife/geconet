@@ -50,8 +50,8 @@ static HANDLE stdin_thread_handle;
 static HANDLE win32events_[MAX_FD_SIZE];
 #endif
 
-timer_mgr* mtra_read_timer() {
-	return &mtra_timer_mgr_;
+timer_mgr& mtra_read_timer() {
+	return mtra_timer_mgr_;
 }
 
 int mtra_read_ip4rawsock() {
