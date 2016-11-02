@@ -610,10 +610,10 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams,
 		uint itag = mdi_read_local_tag();
 		uint rwand = mdi_read_rwnd();
 		uint itsn = mdi_generate_itag();
-		chunk_id_t initCID = 
-			mch_make_init_chunk(itag,rwand, noOfOutStreams, noOfInStreams,itsn);
+		chunk_id_t initCID =
+			mch_make_init_chunk(itag, rwand, noOfOutStreams, noOfInStreams, itsn);
 		EVENTLOG4(DEBUG, "msm_connect()::INIT CHUNK (CID=%d) [itag=%d,rwnd=%d,itsn=%d]",
-			initCID, itag,rwand,itsn);
+			initCID, itag, rwand, itsn);
 
 		/* store the number of streams */
 		smctrl->outbound_stream = noOfOutStreams;
@@ -777,7 +777,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	bool ignore_last_src_addr)
 {
 	EVENTLOG(DEBUG, "- - - Enter mdis_read_peer_addreslist()");
-	assert(chunk != NULL && peer_addreslist != NULL && len>0);
+	assert(chunk != NULL && peer_addreslist != NULL && len > 0);
 
 	/*1) validate method input geco_instance_params*/
 	uint read_len;
@@ -1116,7 +1116,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 #endif
 				EVENTLOG3(VERBOSE,
 					"Added also last_source_addr_ (%s )to the addresslist at index %u,found_addr_number = %u!",
-					hoststr_,found_addr_number, found_addr_number + 1);
+					hoststr_, found_addr_number, found_addr_number + 1);
 			}
 		}
 	}
@@ -2396,16 +2396,7 @@ int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 int process_init_chunk(init_chunk_t * init)
 {
 #if defined(_DEBUG)
-#if ENABLE_UNIT_TEST
-	if (enable_mock_dispatcher_process_init_chunk_)
-	{
-		EVENTLOG(DEBUG,
-			"Mock::dispatch_layer_t::disassemle_curr_geco_packet() is called");
-		return 0;
-	}
-#else
 	EVENTLOG(VERBOSE, "- - - - Enter process_init_chunk() - - -");
-#endif
 #endif
 
 	/*1) put init chunk into chunk  array */
@@ -2418,10 +2409,6 @@ int process_init_chunk(init_chunk_t * init)
 		mch_remove_simple_chunk(init_cid);
 		return STOP_PROCESS_CHUNK_FOR_WRONG_CHUNK_TYPE;
 	}
-#ifdef _DEBUG
-	ERRLOG1(DEBUG, "1) put init chunk into chunk  array : [good] : init_cid %d",
-		init_cid);
-#endif
 
 	/*2) validate init geco_instance_params*/
 	uchar abortcid;
@@ -2590,12 +2577,6 @@ int process_init_chunk(init_chunk_t * init)
 		 5.2.2. Unexpected INIT in States Other than CLOSED,COOKIE-ECHOED COOKIE-WAIT, and SHUTDOWN-ACK-SENT
 		 5.2.4. Handle a COOKIE ECHO when a TCB Exists */
 
-#ifdef  _DEBUG
-		EVENTLOG1(DEBUG,
-			"smctrl != NULL -> channel exisits -> received INIT chunk in state %u",
-			smctrl->channel_state);
-#endif
-
 		ChannelState channel_state = smctrl->channel_state;
 		int primary_path = mpath_read_primary_path();
 		uint init_i_sent_cid;
@@ -2618,21 +2599,31 @@ int process_init_chunk(init_chunk_t * init)
 			 original INIT chunk (including its Initiate Tag, unchanged).  When
 			 responding, the endpoint MUST send the INIT ACK back to the same
 			 address that the original INIT (sent by this endpoint) was sent.*/
+#ifdef  _DEBUG
+			EVENTLOG(DEBUG,
+				"******************************* RECEIVE OOTB INIT CHUNK AT Cookie Wait %u *******************************");
+#endif
 
-			 // both tie tags of zero value indicates that connection procedures are not done completely.
-			 // in other words, we are not connected to Z side although channel is not null
+			// both tie tags of zero value indicates that connection procedures are not done completely.
+			// in other words, we are not connected to Z side although channel is not null
 			assert(smctrl->local_tie_tag == 0);
 			assert(smctrl->peer_tie_tag == 0);
 			assert(curr_channel_->local_tag != 0);
 			assert(curr_channel_->remote_tag == 0);
 
 			// make init ack with geco_instance_params from init chunk I sent
-			init_ack_cid = mch_make_init_ack_chunk(
-				smctrl->my_init_chunk->init_fixed.init_tag,
-				smctrl->my_init_chunk->init_fixed.rwnd,
-				smctrl->my_init_chunk->init_fixed.outbound_streams,
-				smctrl->my_init_chunk->init_fixed.inbound_streams,
-				smctrl->my_init_chunk->init_fixed.initial_tsn);
+			uint itag = ntohl(smctrl->my_init_chunk->init_fixed.init_tag);
+			uint rwnd = ntohl(smctrl->my_init_chunk->init_fixed.rwnd);
+			ushort outbound_streams = ntohs(smctrl->my_init_chunk->init_fixed.outbound_streams);
+			ushort inbound_streams = ntohs(smctrl->my_init_chunk->init_fixed.inbound_streams);
+			uint itsn = ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn);
+			init_ack_cid = mch_make_init_ack_chunk(itag, rwnd, outbound_streams, inbound_streams, itsn);
+
+#ifdef  _DEBUG
+			EVENTLOG5(DEBUG,
+				"INIT ACK CHUNK [itag=%d,rwnd=%d,itsn=%d,outbound_streams=%d,inbound_streams=%d]",
+				itag, rwnd, itsn, outbound_streams, inbound_streams);
+#endif
 
 			tmp_peer_addreslist_size_ = mdis_read_peer_addreslist(
 				tmp_peer_addreslist_, (uchar*)init,
@@ -2679,9 +2670,6 @@ int process_init_chunk(init_chunk_t * init)
 				 * unnormal connection handling precedures*/
 
 				 // send all bundled chunks to ensure init ack is the only chunk sent in the whole geco packet
-				EVENTLOG1(VERBOSE,
-					"at line 1672 process_init_chunk():CURR BUNDLE SIZE (%d)",
-					get_bundle_total_size(mdi_read_mbu(curr_channel_)));
 				mdi_unlock_bundle_ctrl();
 				mdi_send_bundled_chunks();
 
@@ -2689,8 +2677,8 @@ int process_init_chunk(init_chunk_t * init)
 				mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(init_ack_cid));
 				mdi_send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
 				mch_free_simple_chunk(init_ack_cid);
-				EVENTLOG(VERBOSE,
-					"event: initAck sent at state of cookie wait");
+				EVENTLOG(DEBUG,
+					"****************** INIT ACK CHUNK  SENT AT COOKIE WAIT *********************");
 			}
 		}
 		else if (channel_state == ChannelState::CookieEchoed)
@@ -2710,9 +2698,13 @@ int process_init_chunk(init_chunk_t * init)
 			 its Tie-Tags within both the association TCB and inside the State
 			 Cookie (see Section 5.2.2 for a description of the Tie-Tags).*/
 
-			 // because we have set up tie tags in process_init_ack() where :
-			 // smctrl->local_tie_tag is channel's local tag
-			 // smctrl->peer_tie_tag is the init tag carried in init ack
+#ifdef  _DEBUG
+			EVENTLOG(DEBUG,
+				"******************************* RECEIVE OOTB INIT CHUNK AT CookieEchoed %u *******************************");
+#endif
+			// because we have set up tie tags in process_init_ack() where :
+			// smctrl->local_tie_tag is channel's local tag
+			// smctrl->peer_tie_tag is the init tag carried in init ack
 			assert(smctrl->local_tie_tag != 0);
 			assert(smctrl->peer_tie_tag != 0);
 			assert(curr_channel_->local_tag != 0);
@@ -3353,7 +3345,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 		geco_free_ext(tmp, __FILE__, __LINE__);
 		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
 	}
-	if ((tmp->T3_timer = new timer_id_t[numofdestaddres])== NULL)
+	if ((tmp->T3_timer = new timer_id_t[numofdestaddres]) == NULL)
 	{
 		geco_free_ext(tmp->cparams, __FILE__, __LINE__);
 		geco_free_ext(tmp, __FILE__, __LINE__);
@@ -3457,8 +3449,8 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN,
 	tmp->last_address = 0;
 	tmp->my_rwnd = mdi_read_rwnd();
 	tmp->delay = mdi_read_default_delay(geco_instance);
-		EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id,
-			curr_channel_->local_tag);
+	EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id,
+		curr_channel_->local_tag);
 	return tmp;
 	EVENTLOG(VERBOSE, "- - - Leave mrecv_new()");
 }
@@ -4077,7 +4069,7 @@ bool mdi_new_channel(geco_instance_t* instance, ushort local_port,
 	assert(primaryDestinitionAddress >= 0);
 	assert(primaryDestinitionAddress < noOfDestinationAddresses);
 
-	EVENTLOG5(DEBUG,"mdi_new_channel()::Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",
+	EVENTLOG5(DEBUG, "mdi_new_channel()::Instance: %u, local port %u, rem.port: %u, local tag: %u, primary: %d",
 		instance->dispatcher_name, local_port, remote_port, tagLocal,
 		primaryDestinitionAddress);
 
@@ -4109,7 +4101,7 @@ bool mdi_new_channel(geco_instance_t* instance, ushort local_port,
 		//use all addrlist
 		curr_channel_->local_addres_size = defaultlocaladdrlistsize_;
 		curr_channel_->local_addres = defaultlocaladdrlist_;
-		EVENTLOG1(DEBUG,"mdi_new_channel()::gec inst  is_in6addr_any and is_inaddr_any both true, use default local addrlist size %d",defaultlocaladdrlistsize_);
+		EVENTLOG1(DEBUG, "mdi_new_channel()::gec inst  is_in6addr_any and is_inaddr_any both true, use default local addrlist size %d", defaultlocaladdrlistsize_);
 	}
 	else
 	{
@@ -6444,7 +6436,7 @@ int initialize_library(void)
 		EVENTLOG(NOTICE,
 			"You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
@@ -6752,7 +6744,7 @@ int mulp_new_geco_instance(unsigned short localPort,
 	geco_instances_[ret] = curr_geco_instance_;
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
-	EVENTLOG1(DEBUG,"mulp_new_geco_instance()::instance_idx=%d",ret);
+	EVENTLOG1(DEBUG, "mulp_new_geco_instance()::instance_idx=%d", ret);
 	return ret;
 }
 int mulp_delete_geco_instance(int instance_idx)
@@ -6873,7 +6865,7 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 		}
 		if (typeofaddr(&dest_su[count], filterFlags) == true)// is type of filtered addr
 		{
-			ERRLOG(FALTAL_ERROR_EXIT,"mulp_connectx():: is type of filtered addrfailed !");
+			ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx():: is type of filtered addrfailed !");
 		}
 	}
 
