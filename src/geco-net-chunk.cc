@@ -631,8 +631,6 @@ int mch_write_vlp_addrlist(uint chunkid,
 		sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
 		uint local_addreslist_size)
 {
-	EVENTLOG(DEBUG, "- - - Enter mch_write_vlp_addrlist()");
-
 	if (local_addreslist_size <= 1)
 	{
 		ERRLOG1(MAJOR_ERROR,
@@ -703,7 +701,6 @@ int mch_write_vlp_addrlist(uint chunkid,
 		length++;
 	}
 	curr_write_pos_[chunkid] += length;
-	EVENTLOG(DEBUG, "- - - Leave mch_write_vlp_addrlist()");
 	return 0;
 }
 
@@ -735,7 +732,7 @@ void mch_write_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata,
 chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text)
 {
 	simple_chunk_index_ = ((simple_chunk_index_ + 1) % MAX_CHUNKS_SIZE_MASK);
-	EVENTLOG1(DEBUG, log_text, simple_chunk_index_);
+	EVENTLOG1(VERBOSE, log_text, simple_chunk_index_);
 	simple_chunks_[simple_chunk_index_] = chunk;
 	curr_write_pos_[simple_chunk_index_] = 0;
 	completed_chunks_[simple_chunk_index_] = false;

@@ -531,7 +531,8 @@ static int mtra_poll_timers() {
 	if (result == 0)  // this timer has timeouts
 	{
 		timer_id_t tid = mtra_timer_mgr_.get_front_timer();
-		if (tid->action(tid, tid->arg1, tid->arg2) == NOT_RESET_TIMER_FROM_CB)
+		bool ret = tid->action(tid, tid->arg1, tid->arg2);
+		if (ret == NOT_RESET_TIMER_FROM_CB)
 			mtra_timer_mgr_.delete_timer(tid);
 	}
 	return result;
@@ -567,7 +568,7 @@ static void mtra_fire_event(int num_of_events) {
 			ERRLOG(FALTAL_ERROR_EXIT, "WSAEnumNetworkEvents() failed!\n");
 			return;
 		}
-		if (socket_despts[i].trigger_event.lNetworkEvents & (FD_READ | FD_ACCEPT | FD_CLOSE)) 
+		if (socket_despts[i].trigger_event.lNetworkEvents & (FD_READ | FD_ACCEPT | FD_CLOSE))
 			goto cb_dispatcher;
 #endif
 
@@ -734,7 +735,11 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout,
 #ifdef _WIN32
 	// winevents arr = one or more sfds + stdin, total size = sfdsize+1
 	// socket_despt_ = one or more sfds, total size = sfdsize
-	ret = MsgWaitForMultipleObjects(*sfdsize + 1, win32events_, false, timeout, QS_KEY);
+	if ((despts+(*sfdsize)) ->fd == STD_INPUT_FD)
+	{
+		*sfdsize += 1;
+	}
+	ret = MsgWaitForMultipleObjects(*sfdsize, win32events_, false, timeout, QS_KEY);
 	ret -= WAIT_OBJECT_0;
 	//EVENTLOG1(DEBUG, "MsgWaitForMultipleObjects return fd=%d", ret == (*sfdsize) ? 0 : socket_despts[ret].fd);
 	mtra_fire_event(ret);
@@ -872,7 +877,7 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout,
 		if (unlock) {
 			unlock(data);
 		}
-}
+	}
 	return ret;
 #endif
 }
@@ -958,9 +963,8 @@ void mtra_ctor() {
 #ifdef _WIN32
 		// this is init and so we set it to null
 		socket_despts[fd_index].event = NULL;
-		socket_despts[fd_index].trigger_event =
-		{ 0 };
-#else
+		socket_despts[fd_index].trigger_event ={ 0 };
+#endif
 		socket_despts[fd_index].event_handler_index = fd_index;
 		socket_despts[fd_index].fd = -1; /* file descriptor */
 		socket_despts[fd_index].events = 0;
@@ -972,7 +976,6 @@ void mtra_ctor() {
 		 */
 		socket_despts[fd_index].revision = revision_;
 		socket_despts[fd_index].revents = 0;
-#endif
 	}
 }
 
@@ -1296,10 +1299,10 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd) {
 			safe_close_soket(sockdespt);
 			ERRLOG(FALTAL_ERROR_EXIT,
 				"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
-	}
+		}
 		EVENTLOG(VERBOSE, "setsockopt(IPV6_RECVPKTINFO) good");
 #endif
-}
+	}
 
 	//do not frag
 #if defined (Q_OS_LINUX)
@@ -1463,10 +1466,10 @@ static int mtra_open_geco_udp_socket(int af, int* rwnd) {
 			safe_close_soket(sockdespt);
 			ERRLOG(FALTAL_ERROR_EXIT,
 				"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
-	}
+		}
 		EVENTLOG(VERBOSE, "setsockopt(IPV6_RECVPKTINFO) good");
 #endif
-}
+	}
 
 	//do not frag
 #if defined (Q_OS_LINUX)

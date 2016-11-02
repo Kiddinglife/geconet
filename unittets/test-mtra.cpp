@@ -525,14 +525,14 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 
 	cbunion_t cbunion;
 	cbunion.socket_cb_fun = socket_cb;
+	mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(),
+		EVENTCB_TYPE_SCTP,
+		POLLIN | POLLPRI, cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip6rawsock(),
 		EVENTCB_TYPE_SCTP,
 		POLLIN | POLLPRI, cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip6udpsock(),
 		EVENTCB_TYPE_UDP,
-		POLLIN | POLLPRI, cbunion, 0);
-	mtra_set_expected_event_on_fd(mtra_read_ip4rawsock(),
-		EVENTCB_TYPE_SCTP,
 		POLLIN | POLLPRI, cbunion, 0);
 	mtra_set_expected_event_on_fd(mtra_read_ip4udpsock(),
 		EVENTCB_TYPE_UDP,
