@@ -3658,9 +3658,9 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 
 	ChannelState channel_state = smctrl->channel_state;
 	if (channel_state == ChannelState::CookieWait)
-	{  //2) discard init ack recived in state other than cookie wait
-
-		EVENTLOG(INFO, "event:received init ack in cookie wait state");
+	{  
+		//2) discard init ack recived in state other than cookie wait
+		EVENTLOG(INFO, "************************** RECV INIT ACK CHUNK AT COOKIE WAIT ******************************8");
 		ushort initchunklen = ntohs(
 			smctrl->my_init_chunk->chunk_header.chunk_length);
 		if (!mch_read_ostreams(initAckCID) || !mch_read_instreams(initAckCID)
