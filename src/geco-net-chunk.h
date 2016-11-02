@@ -139,6 +139,7 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 	uint peer_tie_tag, ushort last_dest_port, ushort last_src_port,
 	sockaddrunion local_Addresses[], uint num_local_Addresses,
 	bool local_support_unre,
+	bool local_support_addip,
 	sockaddrunion peer_Addresses[],
 	uint num_peer_Addresses);
 

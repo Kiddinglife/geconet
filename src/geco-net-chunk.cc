@@ -334,7 +334,7 @@ uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len)
 			return NULL;
 		}
 
-		vlp = (vlparam_fixed_t*) vlp_fixed;
+		vlp = (vlparam_fixed_t*)&vlp_fixed[read_len];
 		vlptype = ntohs(vlp->param_type);
 		vlp_len = ntohs(vlp->param_length);
 		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
@@ -348,7 +348,6 @@ uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len)
 		read_len += vlp_len;
 		padding_len = ((read_len % 4) == 0) ? 0 : (4 - read_len % 4);
 		read_len += padding_len;
-		vlp_fixed += read_len;
 	}
 	return NULL;
 }
@@ -380,7 +379,10 @@ int write_add_ip_chunk(uint initAckCID, uint initCID)
 					foundvlp, vlp_len);
 			curr_write_pos_[initAckCID] += vlp_len;
 			while (curr_write_pos_[initAckCID] & 3)
+			{
+				initack->variableParams[curr_write_pos_[initAckCID]]=0;
 				curr_write_pos_[initAckCID]++;
+			}
 			EVENTLOG1(VERBOSE,
 					"Found VLPARAM_ADDIP (len %d ), copied to init ack cookie",
 					vlp_len);
@@ -437,13 +439,14 @@ void write_unknown_param_error(uchar* pos, uint cid, ushort length, uchar* data)
 		curr_write_pos_[cid]++;
 }
 
-void mch_write_cookie(uint initCID, uint initAckID,
-		init_chunk_fixed_t* peer_init, init_chunk_fixed_t* local_initack,
-		uint cookieLifetime, uint local_tie_tag, uint peer_tie_tag,
-		ushort last_dest_port, ushort last_src_port,
-		sockaddrunion local_Addresses[], uint num_local_Addresses,
-		bool local_support_unre, sockaddrunion peer_Addresses[],
-		uint num_peer_Addresses)
+void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_init,
+	init_chunk_fixed_t* local_initack, uint cookieLifetime, uint local_tie_tag,
+	uint peer_tie_tag, ushort last_dest_port, ushort last_src_port,
+	sockaddrunion local_Addresses[], uint num_local_Addresses,
+	bool local_support_unre,
+	bool local_support_addip,
+	sockaddrunion peer_Addresses[],
+	uint num_peer_Addresses)
 {
 	init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckID]);
 	if (initack == NULL)
@@ -524,10 +527,10 @@ void mch_write_cookie(uint initCID, uint initAckID,
 	mch_write_vlp_addrlist(initAckID, local_Addresses, num_local_Addresses);
 	mch_write_vlp_addrlist(initAckID, peer_Addresses, num_peer_Addresses);
 
-	/* append peer unre to cookie */
+	/* if endpoint is PR capable, append it in cookie */
 	int peer_support_unre = mch_write_vlp_unreliability(initAckID, initCID);
-
-	/* check if endpoint is ADD-IP capable, store result, and append it in cookie */
+	/* if endpoint is ADD-IP capable, append it in cookie */
+	int peersupportaddip = write_add_ip_chunk(initAckID, initCID);
 	if (write_add_ip_chunk(initAckID, initCID) > 0)
 	{
 		/* check for set primary chunk ? Maybe add this only after Cookie Chunk ! */
@@ -556,6 +559,12 @@ void mch_write_cookie(uint initCID, uint initAckID,
 	{
 		/* this is variable-length-data, this fuction will internally do alignment */
 		mch_write_vlp_of_init_chunk(initAckID, VLPARAM_UNRELIABILITY);
+	}
+	/* if both support ADD-IP, enter our ADD-IP parameter to INIT ACK chunk */
+	if ((peersupportaddip >= 0) && local_support_addip)
+	{
+		/* this is variable-length-data, this fuction will internally do alignment */
+		mch_write_vlp_of_init_chunk(initAckID, VLPARAM_ADDIP);
 	}
 
 	/* cookie geco_instance_params is all filledup and now let us align it to 4 by default

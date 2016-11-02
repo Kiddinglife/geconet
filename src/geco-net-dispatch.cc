@@ -612,7 +612,10 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams,
 		smctrl->outbound_stream = noOfOutStreams;
 		smctrl->inbound_stream = noOfInStreams;
 
-		mch_write_vlp_of_init_chunk(initCID, VLPARAM_UNRELIABILITY);
+		if (support_pr_)
+			mch_write_vlp_of_init_chunk(initCID, VLPARAM_UNRELIABILITY);
+		if (support_addip_)
+			mch_write_vlp_of_init_chunk(initCID, VLPARAM_ADDIP);
 		my_supported_addr_types_ = mdi_read_supported_addr_types();
 		mch_write_vlp_supportedaddrtypes(initCID,
 				my_supported_addr_types_ & SUPPORT_ADDRESS_TYPE_IPV4,
@@ -634,7 +637,7 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams,
 		}
 
 		// init smctrl
-		smctrl->addr_my_init_chunk_sent_to = numDestAddresses-1;
+		smctrl->addr_my_init_chunk_sent_to = numDestAddresses - 1;
 		smctrl->cookieChunk = NULL;
 		smctrl->local_tie_tag = 0;
 		smctrl->peer_tie_tag = 0;
@@ -819,7 +822,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 		 * then this falg will be used to validate other found addres*/
 		if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
 		{
-			bool b1, b2, b3;
+			bool b1 = false, b2 = false, b3 = false;
 			if (!(b1 = mdi_contain_localhost(last_source_addr_, 1)))
 			{
 				/* this is from a normal address,
@@ -953,9 +956,8 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 									0;
 							peer_addreslist[found_addr_number].sin6.sin6_flowinfo =
 									0;
-#ifdef HAVE_SIN6_SCOPE_ID
-							foundAddress[found_addr_number].sin6.sin6_scope_id = 0;
-#endif
+							peer_addreslist[found_addr_number].sin6.sin6_scope_id =
+									0;
 							memcpy(
 									peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr,
 									&(addres->dest_addr_un.ipv6_addr),
@@ -1619,7 +1621,11 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 int mdi_send_bundled_chunks(int * ad_idx)
 {
 #ifdef _DEBUG
-	EVENTLOG1(VERBOSE, "- -  - Enter send_bundled_chunks (%d)", *ad_idx);
+	if (ad_idx == NULL)
+		EVENTLOG(VERBOSE, "- -  - Enter send_bundled_chunks (ad_idx=Null)");
+		else
+		EVENTLOG1(VERBOSE, "- -  - Enter send_bundled_chunks (ad_idx=%d)",
+				*ad_idx);
 #endif
 
 	int ret = 0;
@@ -2325,18 +2331,30 @@ inline ushort get_local_outbound_stream(uint * geco_inst_id = NULL)
 
 bool do_we_support_unreliability(void)
 {
-	if (curr_channel_ != NULL)
-	{
-		return (curr_channel_->remotely_supported_PRSCTP
-				&& curr_channel_->locally_supported_PRDCTP);
-	}
 	if (curr_geco_instance_ != NULL)
 	{
 		return curr_geco_instance_->supportsPRSCTP;
 	}
-	return (library_support_unreliability_);
+	else if (curr_channel_ != NULL)
+	{
+		return curr_channel_->locally_supported_PRDCTP;
+	}
+	else
+		return (support_pr_);
 }
-
+bool do_we_support_addip(void)
+{
+	if (curr_geco_instance_ != NULL)
+	{
+		return curr_geco_instance_->supportsADDIP;
+	}
+	else if (curr_channel_ != NULL)
+	{
+		return curr_channel_->locally_supported_ADDIP;
+	}
+	else
+		return (support_addip_);
+}
 /**
  * @brief enters unrecognized geco_instance_params from Init into initAck chunk
  * that is returned then. Returns -1 if unrecognized chunk forces termination of chunk parsing
@@ -2513,7 +2531,7 @@ int process_init_chunk(init_chunk_t * init)
 				0, /*local tie tag*/
 				0,/*local tie tag*/
 				last_dest_port_, last_src_port_, tmp_local_addreslist_,
-				tmp_local_addreslist_size_, do_we_support_unreliability(),
+				tmp_local_addreslist_size_, do_we_support_unreliability(),do_we_support_addip(),
 				tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 		/* 4.6) check unrecognized geco_instance_params*/
@@ -2616,11 +2634,10 @@ int process_init_chunk(init_chunk_t * init)
 					mch_read_init_fixed(init_ack_cid),
 					mch_read_cookie_life(init_cid,
 							ignore_cookie_life_spn_from_init_chunk_,
-							msm_get_cookielife()),
-					0, 0, last_dest_port_, last_src_port_,
-					tmp_local_addreslist_, tmp_local_addreslist_size_,
-					do_we_support_unreliability(), tmp_peer_addreslist_,
-					tmp_peer_addreslist_size_);
+							msm_get_cookielife()), 0, 0, last_dest_port_,
+					last_src_port_, tmp_local_addreslist_,
+					tmp_local_addreslist_size_, do_we_support_unreliability(),do_we_support_addip(),
+					tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 6.8) check unrecognized geco_instance_params*/
 			ret = mch_validate_init_vlps(init_cid, init_ack_cid);
@@ -2782,7 +2799,7 @@ int process_init_chunk(init_chunk_t * init)
 					/* unexpected case: existing channel found, set both NOT zero*/
 					smctrl->local_tie_tag, smctrl->peer_tie_tag,
 					last_dest_port_, last_src_port_, tmp_local_addreslist_,
-					tmp_local_addreslist_size_, do_we_support_unreliability(),
+					tmp_local_addreslist_size_, do_we_support_unreliability(),do_we_support_addip(),
 					tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 5.8) check unrecognized geco_instance_params */
@@ -2954,8 +2971,9 @@ int process_init_chunk(init_chunk_t * init)
 							msm_get_cookielife()),
 					/* unexpected case:  channel existing, set both NOT zero*/
 					smctrl->local_tie_tag, smctrl->peer_tie_tag,
-					last_dest_port_, last_src_port_, tmp_local_addreslist_,
-					tmp_local_addreslist_size_, do_we_support_unreliability(),
+					last_dest_port_, last_src_port_,
+					tmp_local_addreslist_,tmp_local_addreslist_size_,
+					do_we_support_unreliability(),do_we_support_addip(),
 					tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 6.8) check unrecognized geco_instance_params*/
@@ -3194,11 +3212,6 @@ reltransfer_controller_t* mrtx_new(uint numofdestaddrlist, uint iTSN)
 	tmp->fr_exit_point = 0L;
 	tmp->numofdestaddrlist = numofdestaddrlist;
 	tmp->advancedPeerAckPoint = iTSN - 1; /* a save bet */
-	if ((tmp->channel_id = get_curr_channel_id()) == 0)
-		ERRLOG(FALTAL_ERROR_EXIT, "channel_id is zero !");
-		else
-		EVENTLOG2(DEBUG, "channel id %d, local tag %d",
-				curr_channel_->channel_id, curr_channel_->local_tag);
 	reset_rtx_bytecounters(tmp);
 
 	EVENTLOG(VERBOSE, "- - - Leave mrtx_new()");
@@ -3359,11 +3372,6 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 	tmp->doing_retransmission = false;
 	tmp->maxQueueLen = maxQueueLen;
 	tmp->list_length = 0;
-	if ((tmp->channel_id = get_curr_channel_id()) == 0)
-	{
-		mfc_free(tmp);
-		ERRLOG(FALTAL_ERROR_EXIT, "channel_id is zero !");
-	}
 	mrtx_set_peer_arwnd(peer_rwnd);
 
 	EVENTLOG1(VERBOSE, "- - - Leave mfc_new(channel id=%d)", tmp->channel_id);
@@ -3561,7 +3569,7 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams,
 		uint localInitialTSN, bool assocSupportsPRSCTP, bool assocSupportsADDIP)
 {
 	EVENTLOG(DEBUG, "- - - Enter mdi_init_channel()");
-	assert(curr_channel_ == NULL);
+	assert(curr_channel_ != NULL);
 
 	if (curr_channel_->remote_tag != 0)
 	{
@@ -3577,11 +3585,11 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams,
 			&& curr_channel_->locally_supported_PRDCTP;
 	curr_channel_->locally_supported_PRDCTP =
 			curr_channel_->remotely_supported_PRSCTP = with_pr;
+	curr_channel_->reliable_transfer_control = mrtx_new(
+				curr_channel_->remote_addres_size, localInitialTSN);
 	curr_channel_->flow_control = mfc_new(remoteSideReceiverWindow,
 			localInitialTSN, curr_channel_->remote_addres_size,
 			curr_channel_->maxSendQueue);
-	curr_channel_->reliable_transfer_control = mrtx_new(
-			curr_channel_->remote_addres_size, localInitialTSN);
 	curr_channel_->receive_control = mrecv_new(remoteInitialTSN,
 			curr_channel_->remote_addres_size, curr_channel_->geco_inst);
 	curr_channel_->deliverman_control = mdlm_new(noOfInStreams, noOfOutStreams,
@@ -3728,21 +3736,24 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 				&tmp_peer_supported_types_, true, false);
 		if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
 		{
-			char* errstr = "peer does not supports your adress types !";
+			const char* errstr = "peer does not supports your adress types !";
 			msm_abort_channel(ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*) errstr,
 					strlen(errstr) + 1);
 		}
-		ERRLOG(FALTAL_ERROR_EXIT,
-				"BAKEOFF: Program error, no common address types in process_init_chunk()");
 		set_channel_remote_addrlist(tmp_peer_addreslist_,
 				tmp_peer_addreslist_size_);
 
 		/* initialize channel with infos in init ack*/
-		mdi_init_channel(mch_read_rwnd(initAckCID), inbound_stream,
-				outbound_stream, mch_read_itsn(initAckCID),
-				mch_read_itag(initAckCID),
-				ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn),
-				peer_supports_pr(initAck), peer_supports_addip(initAck));
+		uint itsn = mch_read_itsn(initAckCID);
+		uint rwnd = mch_read_rwnd(initAckCID);
+		uint itag = mch_read_itag(initAckCID);
+		bool peersupportpr = peer_supports_pr(initAck);
+		bool peersupportaddip = peer_supports_addip(initAck);
+		uint init_itag = ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn);
+
+
+		mdi_init_channel(rwnd, inbound_stream, outbound_stream, itsn, itag,
+				init_itag, peersupportpr, peersupportaddip);
 
 		EVENTLOG2(VERBOSE,
 				"process_init_ack_chunk()::called mdi_init_channel(in-streams=%u, out-streams=%u)",
