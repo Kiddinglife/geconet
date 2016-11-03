@@ -378,16 +378,16 @@ TEST(MULP, test_mulp_connect)
   mulp_connect (instid, noOfOutStreams, (char*) "::1", localPort,
                 &ULPcallbackFunctions);
 
-  //poll to receive the init chunk
+  //poll to receive the init, send initack
   mtra_poll (0, 0, 0);
 
-  //poll to receive the initack chunk
+  //poll to receive the initack  send cookie echoed
   mtra_poll (0, 0, 0);
 
-  //poll to receive the cookie echoed chunk
+  //poll to receive the cookie echoed chunk and send cookie ack
   mtra_poll (0, 0, 0);
 
-  //poll to receive the cookie ack chunk
+  //poll to receive the cookie ack
   mtra_poll (0, 0, 0);
 
   mulp_delete_geco_instance (instid);

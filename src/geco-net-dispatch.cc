@@ -815,10 +815,6 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	/*3) parse all vlparams in this chunk*/
 	while (read_len < len)
 	{
-		EVENTLOG2(VVERBOSE,
-			"mdis_read_peer_addreslist() : len==%u, processed_len == %u",
-			len, read_len);
-
 		if (len - read_len < VLPARAM_FIXED_SIZE)
 		{
 			EVENTLOG(WARNNING_ERROR,
@@ -935,7 +931,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 								}
 								else
 								{
-									EVENTLOG(VERBOSE,
+									EVENTLOG(DEBUG,
 										"IPv4 was in the INIT or INIT ACK chunk more than once");
 								}
 							}
@@ -943,7 +939,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 					}
 					else  // IS_IPV4_ADDRESS_PTR_HBO(addres) == false
 					{
-						ERRLOG(MAJOR_ERROR,
+						EVENTLOG(DEBUG,
 							"ip4 vlp has problem, stop read addresses");
 						break;
 					}
@@ -1021,7 +1017,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 								}
 								else
 								{
-									EVENTLOG(VERBOSE,
+									EVENTLOG(DEBUG,
 										"IPv6 was in the INIT or INIT ACK chunk more than once");
 								}
 							}
@@ -1030,7 +1026,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 				}
 				else
 				{
-					ERRLOG(WARNNING_ERROR,
+					EVENTLOG(DEBUG,
 						"Too many addresses found during IPv4 reading");
 				}
 			}
@@ -1051,7 +1047,7 @@ int mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 						SUPPORT_ADDRESS_TYPE_IPV6;
 					size--;
 				}
-				EVENTLOG1(VERBOSE,
+				EVENTLOG1(DEBUG,
 					"Found VLPARAM_SUPPORTED_ADDR_TYPES, update peer_supported_addr_types now it is (%d)",
 					*peer_supported_addr_types);
 			}
@@ -2601,7 +2597,7 @@ int process_init_chunk(init_chunk_t * init)
 			 address that the original INIT (sent by this endpoint) was sent.*/
 #ifdef  _DEBUG
 			EVENTLOG(DEBUG,
-				"******************************* RECEIVE OOTB INIT CHUNK AT Cookie Wait %u *******************************");
+				"******************************* RECEIVE OOTB INIT CHUNK AT Cookie Wait *******************************");
 #endif
 
 			// both tie tags of zero value indicates that connection procedures are not done completely.
@@ -3101,8 +3097,7 @@ cookie_param_t* get_state_cookie_from_init_ack(init_chunk_t* initack)
 	assert(initack != 0);
 	if (initack->chunk_header.chunk_id == CHUNK_INIT_ACK)
 	{
-		return (cookie_param_t*)mch_read_vlparam(VLPARAM_UNRELIABILITY,
-			&initack->variableParams[0],
+		return (cookie_param_t*)mch_read_vlparam(VLPARAM_COOKIE,&initack->variableParams[0],
 			initack->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
 	}
 	else
@@ -3372,7 +3367,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 		gettimenow(&(tmp->cparams[count].time_of_cwnd_adjustment));
 		timerclear(&(tmp->cparams[count].last_send_time));
 	}
-
+	tmp->channel_id = curr_channel_->channel_id;
 	tmp->outstanding_bytes = 0;
 	tmp->peerarwnd = peer_rwnd;
 	tmp->numofdestaddrlist = numofdestaddres;
@@ -3451,8 +3446,9 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN,
 	tmp->delay = mdi_read_default_delay(geco_instance);
 	EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id,
 		curr_channel_->local_tag);
-	return tmp;
+
 	EVENTLOG(VERBOSE, "- - - Leave mrecv_new()");
+	return tmp;
 }
 /**
  This function is called to instanciate one deliverman for an association.
@@ -3508,8 +3504,6 @@ deliverman_controller_t* mdlm_new(unsigned int numberReceiveStreams, /* max of s
 	for (i = 0; i < numberReceiveStreams; i++)
 	{
 		(tmp->recv_streams)[i].nextSSN = 0;
-		//(tmp->recv_streams)[i].pduList = NULL;
-		//(tmp->recv_streams)[i].prePduList = NULL;
 		(tmp->recv_streams)[i].index = 0; /* for ordered chunks, next ssn */
 	}
 	for (i = 0; i < numberSendStreams; i++)

@@ -179,8 +179,8 @@ chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam)
 	/*  copy cookie parameter EXcluding param-header into chunk            */
 	memcpy(&(cookieChunk->cookie), cookieParam,
 			ntohs(cookieParam->vlparam_header.param_length) - VLPARAM_FIXED_SIZE);
-	while (curr_write_pos_[simple_chunk_index_] & 3)
-		curr_write_pos_[simple_chunk_index_]++;
+	curr_write_pos_[simple_chunk_index_] += cookieChunk->chunk_header.chunk_length;
+
 	return simple_chunk_index_;
 }
 
