@@ -21,4 +21,5 @@
 *.log
 *.db
 *.opendb
+*.VC.opendb
 *.idb

@@ -374,21 +374,29 @@ TEST(MULP, test_mulp_connect)
                                    ULPcallbackFunctions);
   curr_geco_instance_ = geco_instances_[instid];
 
+ 
   noOfOutStreams = 12;
-  mulp_connect (instid, noOfOutStreams, ip6addrstr, localPort,
+  mulp_connect (instid, noOfOutStreams, "::1", localPort,
                 &ULPcallbackFunctions);
-
   //poll to receive the init, send initack
   mtra_poll (0, 0, 0);
-
   //poll to receive the initack  send cookie echoed
   mtra_poll (0, 0, 0);
-
   //poll to receive the cookie echoed chunk and send cookie ack
   mtra_poll (0, 0, 0);
-
   //poll to receive the cookie ack
   mtra_poll (0, 0, 0);
+
+  mulp_connect(instid, noOfOutStreams, ip6addrstr, localPort,
+	  &ULPcallbackFunctions);
+  //poll to receive the init, send initack
+  mtra_poll(0, 0, 0);
+  //poll to receive the initack  send cookie echoed
+  mtra_poll(0, 0, 0);
+  //poll to receive the cookie echoed chunk and send cookie ack
+  mtra_poll(0, 0, 0);
+  //poll to receive the cookie ack
+  mtra_poll(0, 0, 0);
 
   mulp_delete_geco_instance (instid);
   free_library ();

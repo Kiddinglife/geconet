@@ -5,6 +5,10 @@
 #include "geco-ds-malloc.h"
 #include "geco-net.h"
 
+// this prevents mscv reports complie errors when we use std::min and max safe way for shipping codes
+#undef min
+#undef max
+
 extern timer_mgr mtra_timer_mgr_; //Initialized in mtra
 #define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
