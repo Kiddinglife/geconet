@@ -272,7 +272,8 @@ static void Decode(UINT4 *output, unsigned char *input, unsigned int len)
 // return hex representation of digest as string
 const char* hexdigest(uchar data[ ], int lenbytes)
 {
-    static char buf[4096];
+    static char buf[1024];
+	memset(buf, 0, 1024);
     for( int i = 0; i < lenbytes; i++ )
         sprintf(buf + i * 2, "%02x", data[i]);
     buf[lenbytes * 2] = 0;
@@ -423,7 +424,7 @@ void set_crc32_checksum(char *buffer, int length)
 uchar* get_secre_key(int operation_code)
 {
     static bool init = false;
-    static uchar secret_key[SECRET_KEYSIZE];
+	static uchar secret_key[SECRET_KEYSIZE] = {0};
     if( !init )
     {
         uint count = 0, tmp;
@@ -434,6 +435,7 @@ uchar* get_secre_key(int operation_code)
             memcpy(&secret_key[count], &tmp, sizeof(uint));
             count += sizeof(uint);
         }
+		assert(count == SECRET_KEYSIZE);
         init = true;
     }
     return secret_key;

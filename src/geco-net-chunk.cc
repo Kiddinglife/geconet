@@ -169,22 +169,20 @@ chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam)
 	cookie_echo_chunk_t* cookieChunk = (cookie_echo_chunk_t*) geco_malloc_ext(
 			sizeof(cookie_echo_chunk_t), __FILE__,
 			__LINE__);
-	memset(cookieChunk, 0, sizeof(cookie_echo_chunk_t));
 	cookieChunk->chunk_header.chunk_id = CHUNK_COOKIE_ECHO;
 	cookieChunk->chunk_header.chunk_flags = 0x00;
 	cookieChunk->chunk_header.chunk_length = ntohs(
 			cookieParam->vlparam_header.param_length);
 	add2chunklist((simple_chunk_t*) cookieChunk,
 			"created cookie echo chunk %u ");
-	/*  copy cookie parameter EXcluding param-header into chunk            */
-	memcpy(&(cookieChunk->cookie), cookieParam,
-			ntohs(cookieParam->vlparam_header.param_length) - VLPARAM_FIXED_SIZE);
-	curr_write_pos_[simple_chunk_index_] += cookieChunk->chunk_header.chunk_length;
-
+	/*  copy cookie parameter EXcluding param-header into chunk */
+	memcpy(&(cookieChunk->cookie),
+		&cookieParam->ck,
+		cookieChunk->chunk_header.chunk_length-VLPARAM_FIXED_SIZE);
 	return simple_chunk_index_;
 }
 
-uint mch_read_cookie_life(uint chunkID,
+uint mch_read_cookie_preserve(uint chunkID,
 		bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife)
 {
 	if (simple_chunks_[chunkID] == NULL)
@@ -195,7 +193,7 @@ uint mch_read_cookie_life(uint chunkID,
 
 	if (simple_chunks_[chunkID]->chunk_header.chunk_id != CHUNK_INIT)
 	{
-		ERRLOG(MAJOR_ERROR, "mch_read_cookie_life()::chunk type not init");
+		ERRLOG(MAJOR_ERROR, "mch_read_cookie_preserve()::chunk type not init");
 		return 0;
 	}
 
@@ -342,7 +340,7 @@ uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len)
 
 		if (vlptype == vlp_type)
 		{
-			return vlp_fixed;
+			return (uchar*)vlp;
 		}
 
 		read_len += vlp_len;
@@ -1127,16 +1125,46 @@ uint put_vlp_cookie_life_span(cookie_preservative_t* preserv,
  4)  Generate the State Cookie by combining this subset of information
  and the resultant MAC.
  */
+
+static int mch_write_hmac(cookie_fixed_t* cookieString, ushort cookieLength,
+	uchar* digest)
+{
+	if (cookieString == NULL || cookieLength == 0)
+		return -1;
+	memset(cookieString->hmac, 0, HMAC_LEN);
+
+	uchar* key = get_secre_key(KEY_READ);
+	if (key == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "mch_write_hmac()::get_secre_key() FAILED!");
+		return -1;
+	}
+
+	MD5_CTX ctx;
+	MD5Init(&ctx);
+	MD5Update(&ctx, (uchar*)cookieString, cookieLength);
+	MD5Update(&ctx, (uchar*)key, SECRET_KEYSIZE);
+	MD5Final(digest, &ctx);
+
+#ifdef _DEBUG
+	EVENTLOG1(INFO, "================ SECRET_KEY: %s", hexdigest(key, HMAC_SIZE));
+	EVENTLOG1(INFO, "================ Computed MD5 signature : %s", hexdigest(digest, HMAC_SIZE));
+#endif
+
+	return 0;
+}
+
 /** computes a cookie signature.*/
 int mch_write_hmac(cookie_param_t* cookieString)
 {
 	if (cookieString == NULL)
 		return -1;
 
-	cookieString->ck.hmac[0] = 0;
-	cookieString->ck.hmac[1] = 0;
-	cookieString->ck.hmac[2] = 0;
-	cookieString->ck.hmac[3] = 0;
+	//cookieString->ck.hmac[0] = 0;
+	//cookieString->ck.hmac[1] = 0;
+	//cookieString->ck.hmac[2] = 0;
+	//cookieString->ck.hmac[3] = 0;
+	memset(cookieString->ck.hmac, 0, HMAC_SIZE);
 
 	uint cookieLength = ntohs(
 			cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
@@ -1150,55 +1178,32 @@ int mch_write_hmac(cookie_param_t* cookieString)
 		return -1;
 	}
 
-	static MD5_CTX ctx;
+	MD5_CTX ctx;
 	MD5Init(&ctx);
 	MD5Update(&ctx, (uchar*) &cookieString->ck, cookieLength);
 	MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
-	unsigned char digest[HMAC_LEN];
 	MD5Final(cookieString->ck.hmac, &ctx);
 
 #ifdef _DEBUG
-	EVENTLOG1(DEBUG, "Computed MD5 signature : %s",
-			hexdigest(cookieString->ck.hmac, HMAC_LEN));
+	EVENTLOG1(INFO, "================ SECRET_KEY: %s", hexdigest(key, HMAC_SIZE));
+	EVENTLOG1(INFO, "================ Computed MD5 signature : %s", hexdigest(cookieString->ck.hmac, HMAC_SIZE));
 #endif
-	return 0;
 }
 
-static int mch_write_hmac(uchar* cookieString, ushort cookieLength,
-		uchar* digest)
-{
-	if (cookieString == NULL || cookieLength == 0)
-		return -1;
-	memset(((cookie_fixed_t *) cookieString)->hmac, 0, HMAC_LEN);
-
-	uchar* key = get_secre_key(KEY_READ);
-	if (key == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "mch_write_hmac()::get_secre_key() FAILED!");
-		return -1;
-	}
-
-	static MD5_CTX ctx;
-	MD5Init(&ctx);
-	MD5Update(&ctx, cookieString, cookieLength);
-	MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
-	MD5Final(digest, &ctx);
-
-#ifdef _DEBUG
-	EVENTLOG1(DEBUG, "Computed MD5 signature : %s",
-			hexdigest(digest, HMAC_LEN));
-#endif
-	return 0;
-}
 bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk)
 {
 	cookie_fixed_t* cookie = &cookie_chunk->cookie;
 	uchar cookieSignature[HMAC_LEN];
 	memcpy(cookieSignature, cookie->hmac, HMAC_LEN); // store existing hmac
 
+#ifdef _DEBUG
+	EVENTLOG1(INFO, "---------------- mch_verify_hmac()::cookie->hmac : %s",hexdigest(cookie->hmac, HMAC_LEN));
+#endif
+
 	uchar ourSignature[HMAC_LEN];
-	ushort cookieLength = cookie_chunk->chunk_header.chunk_length
-			- CHUNK_FIXED_SIZE;
-	mch_write_hmac((uchar*) cookie, cookieLength, ourSignature); // recalculate and store hmac
+	ushort cookieLength =
+		cookie_chunk->chunk_header.chunk_length- CHUNK_FIXED_SIZE;
+	mch_write_hmac(cookie, cookieLength, ourSignature); // recalculate and store hmac
+
 	return (memcmp(cookieSignature, ourSignature, HMAC_LEN) == 0); //compare noth hmacs
 }

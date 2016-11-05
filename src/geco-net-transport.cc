@@ -900,13 +900,16 @@ int mtra_poll(void(*lock)(void* data) = NULL,
 	if (unlock != NULL)
 		unlock(data);
 	// timer timeouts
+#if !ENABLE_UNIT_TEST 
 	if (msecs == 0)
 		return msecs;
+#endif
 	// no timers, we use a default timeout for select
 	if (msecs < 0 || msecs > GRANULARITY)
 		msecs = GRANULARITY;
-	return mtra_poll_fds(socket_despts, &socket_despts_size_, msecs, lock,
-		unlock, data);
+
+	int ret = mtra_poll_fds(socket_despts, &socket_despts_size_, msecs, lock,unlock, data);
+	return ret;
 }
 
 static bool use_udp_; /* enable udp-based-impl */

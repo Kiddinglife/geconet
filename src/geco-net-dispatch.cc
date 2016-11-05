@@ -143,7 +143,7 @@ ushort curr_ecc_code_;
 ushort curr_ecc_len_;
 uchar* curr_ecc_reason_;
 
-timer_mgr mdis_timer_mgr_;
+//timer_mgr mtra_timer_mgr_;
 char hoststr_[MAX_IPADDR_STR_LEN];
 bool library_support_unreliability_;
 char chunkflag2use_;
@@ -590,7 +590,7 @@ MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID,
 	default:
 		ERRLOG1(MAJOR_ERROR, "unexpected event: timer expired in state %02d",
 			smctrl->channel_state);
-		smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+		smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 		break;
 	}
 	return false;
@@ -711,10 +711,10 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 	mch_free_simple_chunk(abortcid);
 	mdi_unlock_bundle_ctrl();
 	mdi_send_bundled_chunks();
-	if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+	if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
 	{  //stop init timer
-		mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-		smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+		mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+		smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 	}
 	// delete all data of channel
 	mdi_delete_curr_channel();
@@ -1960,9 +1960,9 @@ int mdi_stop_hb_timer(short pathID)
 	}
 	if (pathctrl->path_params[pathID].hb_enabled)
 	{
-		mdis_timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
+		mtra_timer_mgr_.delete_timer(pathctrl->path_params[pathID].hb_timer_id);
 		pathctrl->path_params[pathID].hb_timer_id =
-			mdis_timer_mgr_.timers.end();
+			mtra_timer_mgr_.timers.end();
 		pathctrl->path_params[pathID].hb_enabled = false;
 		EVENTLOG1(INTERNAL_TRACE, "mdi_stop_hb_timer: path %d disabled",
 			pathID);
@@ -1979,10 +1979,10 @@ inline void mdi_stop_sack_timer(void)
 		/* stop running sack timer*/
 		if (curr_channel_->receive_control->timer_running)
 		{
-			mdis_timer_mgr_.delete_timer(
+			mtra_timer_mgr_.delete_timer(
 				curr_channel_->receive_control->sack_timer);
 			curr_channel_->receive_control->sack_timer =
-				mdis_timer_mgr_.timers.end();
+				mtra_timer_mgr_.timers.end();
 			curr_channel_->receive_control->timer_running = false;
 			EVENTLOG(DEBUG, "mdi_stop_sack_timer()::Stopped Timer");
 		}
@@ -2267,7 +2267,7 @@ void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
  */
 void on_connection_up(uint status)
 {
-	//todo
+	EVENTLOG(INFO, "on_connection_up");
 }
 /**
  * indicates that a restart has occured(chapter 10.2.G).
@@ -2450,7 +2450,7 @@ int process_init_chunk(init_chunk_t * init)
 		{
 			if (smctrl->init_timer_id->timer_id != 0)
 			{
-				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
 			}
 			mdi_unlock_bundle_ctrl();
 			mdi_delete_curr_channel();
@@ -2528,7 +2528,7 @@ int process_init_chunk(init_chunk_t * init)
 		// 4.5) generate and append cookie to INIT ACK
 		mch_write_cookie(init_cid, init_ack_cid, mch_read_init_fixed(init_cid),
 			mch_read_init_fixed(init_ack_cid),
-			mch_read_cookie_life(init_cid,
+			mch_read_cookie_preserve(init_cid,
 				ignore_cookie_life_spn_from_init_chunk_,
 				msm_get_cookielife()),
 			/* normal case: no existing channel, set both zero*/
@@ -2637,14 +2637,19 @@ int process_init_chunk(init_chunk_t * init)
 				tmp_local_addreslist_size_);
 
 			// generate cookie and append it to INIT ACK
+			init_chunk_fixed_t* init_chunk_fixed = mch_read_init_fixed(init_cid);
+			init_chunk_fixed_t* init_ack_chunk_fixed = mch_read_init_fixed(init_ack_cid);
+			int cokkielife = msm_get_cookielife();
+			int newcookielife = mch_read_cookie_preserve(init_cid, ignore_cookie_life_spn_from_init_chunk_, cokkielife);
+			bool spre = do_we_support_unreliability();
+			bool saddip = do_we_support_addip();
 			mch_write_cookie(init_cid, init_ack_cid,
-				mch_read_init_fixed(init_cid),
-				mch_read_init_fixed(init_ack_cid),
-				mch_read_cookie_life(init_cid,
-					ignore_cookie_life_spn_from_init_chunk_,
-					msm_get_cookielife()), 0, 0, last_dest_port_,
-				last_src_port_, tmp_local_addreslist_,
-				tmp_local_addreslist_size_, do_we_support_unreliability(), do_we_support_addip(),
+				init_chunk_fixed, init_ack_chunk_fixed,
+				newcookielife,
+				0, 0,
+				last_dest_port_, last_src_port_,
+				tmp_local_addreslist_, tmp_local_addreslist_size_,
+				spre, saddip,
 				tmp_peer_addreslist_, tmp_peer_addreslist_size_);
 
 			/* 6.8) check unrecognized geco_instance_params*/
@@ -2802,7 +2807,7 @@ int process_init_chunk(init_chunk_t * init)
 			mch_write_cookie(init_cid, init_ack_cid,
 				mch_read_init_fixed(init_cid),
 				mch_read_init_fixed(init_ack_cid),
-				mch_read_cookie_life(init_cid,
+				mch_read_cookie_preserve(init_cid,
 					ignore_cookie_life_spn_from_init_chunk_,
 					msm_get_cookielife()),
 				/* unexpected case: existing channel found, set both NOT zero*/
@@ -2975,7 +2980,7 @@ int process_init_chunk(init_chunk_t * init)
 			mch_write_cookie(init_cid, init_ack_cid,
 				mch_read_init_fixed(init_cid),
 				mch_read_init_fixed(init_ack_cid),
-				mch_read_cookie_life(init_cid,
+				mch_read_cookie_preserve(init_cid,
 					ignore_cookie_life_spn_from_init_chunk_,
 					msm_get_cookielife()),
 				/* unexpected case:  channel existing, set both NOT zero*/
@@ -3092,13 +3097,14 @@ bool peer_supports_addip(init_chunk_t* initack)
 	}
 	return false;
 }
-cookie_param_t* get_state_cookie_from_init_ack(init_chunk_t* initack)
+cookie_param_t* mch_read_cookie(init_chunk_t* initack)
 {
 	assert(initack != 0);
 	if (initack->chunk_header.chunk_id == CHUNK_INIT_ACK)
 	{
-		return (cookie_param_t*)mch_read_vlparam(VLPARAM_COOKIE,&initack->variableParams[0],
+		cookie_param_t* ret = (cookie_param_t*)mch_read_vlparam(VLPARAM_COOKIE, &initack->variableParams[0],
 			initack->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+		return ret;
 	}
 	else
 	{
@@ -3201,8 +3207,7 @@ reltransfer_controller_t* mrtx_new(uint numofdestaddrlist, uint iTSN)
 {
 	EVENTLOG(VERBOSE, "- - - Enter mrtx_new()");
 
-	reltransfer_controller_t* tmp = (reltransfer_controller_t*)geco_malloc_ext(
-		sizeof(reltransfer_controller_t), __FILE__, __LINE__);
+	reltransfer_controller_t* tmp = new reltransfer_controller_t();
 	if (tmp == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
 	tmp->lowest_tsn = iTSN - 1;
@@ -3251,8 +3256,7 @@ void mrtx_free(reltransfer_controller_t* rtx_inst)
 	{
 		free_data_chunk(it);
 	}
-	geco_free_ext(rtx_inst, __FILE__, __LINE__);
-
+	free(rtx_inst);
 	EVENTLOG(VERBOSE, "- - - Leave mrtx_free()");
 }
 /**
@@ -3270,10 +3274,10 @@ void mfc_stop_timers(void)
 	}
 	for (uint count = 0; count < fc->numofdestaddrlist; count++)
 	{
-		if (fc->T3_timer[count] != mdis_timer_mgr_.timers.end())
+		if (fc->T3_timer[count] != mtra_timer_mgr_.timers.end())
 		{
-			mdis_timer_mgr_.delete_timer(fc->T3_timer[count]);
-			fc->T3_timer[count] = mdis_timer_mgr_.timers.end();
+			mtra_timer_mgr_.delete_timer(fc->T3_timer[count]);
+			fc->T3_timer[count] = mtra_timer_mgr_.timers.end();
 #ifdef _DEBUG
 			EVENTLOG2(VERBOSE, "Stopping T3-Timer(id=%d, timer_type=%d) ",
 				fc->T3_timer[count]->timer_id,
@@ -3294,7 +3298,7 @@ void mfc_free(flow_controller_t* fctrl_inst)
 	geco_free_ext(fctrl_inst->cparams, __FILE__, __LINE__);
 	geco_free_ext(fctrl_inst->T3_timer, __FILE__, __LINE__);
 	geco_free_ext(fctrl_inst->addresses, __FILE__, __LINE__);
-	if (fctrl_inst->chunk_list.size() > 0)
+	if (!fctrl_inst->chunk_list.empty())
 	{
 		EVENTLOG(NOTICE,
 			"mfc_free() : fctrl_inst is deleted but chunk_list has size > 0 ...");
@@ -3305,7 +3309,7 @@ void mfc_free(flow_controller_t* fctrl_inst)
 			fctrl_inst->chunk_list.erase(it++);
 		}
 	}
-	geco_free_ext(fctrl_inst, __FILE__, __LINE__);
+	free(fctrl_inst);
 	EVENTLOG(VERBOSE, "- - - Leave mfc_free()");
 }
 /**
@@ -3323,9 +3327,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 		"- - - Enter mfc_new(peer_rwnd=%d,numofdestaddres=%d,my_iTSN=%d,maxQueueLen=%d)",
 		peer_rwnd, numofdestaddres, my_iTSN, maxQueueLen);
 
-	flow_controller_t* tmp = (flow_controller_t*)geco_malloc_ext(
-		sizeof(flow_controller_t),
-		__FILE__, __LINE__);
+	flow_controller_t* tmp = new flow_controller_t();
 	if (tmp == NULL)
 	{
 		geco_free_ext(tmp, __FILE__, __LINE__);
@@ -3357,7 +3359,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 
 	for (uint count = 0; count < numofdestaddres; count++)
 	{
-		tmp->T3_timer[count] = mdis_timer_mgr_.timers.end(); /* i.e. timer not running */
+		tmp->T3_timer[count] = mtra_timer_mgr_.timers.end(); /* i.e. timer not running */
 		tmp->addresses[count] = count;
 		(tmp->cparams[count]).cwnd = 2 * MAX_MTU_SIZE;
 		(tmp->cparams[count]).cwnd2 = 0L;
@@ -3381,7 +3383,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 	mrtx_set_peer_arwnd(peer_rwnd);
 
 	EVENTLOG1(VERBOSE, "- - - Leave mfc_new(channel id=%d)", tmp->channel_id);
-	return 0;
+	return tmp;
 }
 /**
  * function deletes a rxc_buffer structure (when it is not needed anymore)
@@ -3393,7 +3395,7 @@ void mrecv_free(recv_controller_t* rxc_inst)
 	geco_free_ext(rxc_inst->sack_chunk, __FILE__, __LINE__);
 	if (rxc_inst->timer_running)
 	{
-		mdis_timer_mgr_.delete_timer(rxc_inst->sack_timer);
+		mtra_timer_mgr_.delete_timer(rxc_inst->sack_timer);
 		rxc_inst->timer_running = false;
 	}
 	for (auto it = rxc_inst->fragmented_data_chunks_list.begin();
@@ -3408,7 +3410,7 @@ void mrecv_free(recv_controller_t* rxc_inst)
 		free_data_chunk((*it));
 		rxc_inst->duplicated_data_chunks_list.erase(it++);
 	}
-	geco_free_ext(rxc_inst, __FILE__, __LINE__);
+	free(rxc_inst);
 
 	EVENTLOG(VERBOSE, "- - - Leave mrecv_free()");
 }
@@ -3423,9 +3425,7 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN,
 	geco_instance_t* geco_instance)
 {
 	EVENTLOG(VERBOSE, "- - - Enter mrecv_new()");
-	recv_controller_t* tmp = (recv_controller_t*)geco_malloc_ext(
-		sizeof(recv_controller_t),
-		__FILE__, __LINE__);
+	recv_controller_t* tmp = new recv_controller_t();
 	if (tmp == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
 
@@ -3464,16 +3464,13 @@ deliverman_controller_t* mdlm_new(unsigned int numberReceiveStreams, /* max of s
 		numberReceiveStreams, numberSendStreams,
 		(assocSupportsPRSCTP == true) ? "TRUE" : "FALSE");
 
-	deliverman_controller_t* tmp = (deliverman_controller_t*)geco_malloc_ext(
-		sizeof(deliverman_controller_t), __FILE__, __LINE__);
+	deliverman_controller_t* tmp = new deliverman_controller_t();
 	if (tmp == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "deliverman_controller_t Malloc failed");
 
-	if ((tmp->recv_streams = (recv_stream_t*)geco_malloc_ext(
-		numberReceiveStreams * sizeof(recv_stream_t),
-		__FILE__, __LINE__)) == NULL)
+	if ((tmp->recv_streams = new recv_stream_t[numberReceiveStreams]) == NULL)
 	{
-		geco_free_ext(tmp, __FILE__, __LINE__);
+		free(tmp);
 		ERRLOG(FALTAL_ERROR_EXIT, "recv_streams Malloc failed");
 	}
 	if ((tmp->recvStreamActivated = (bool*)geco_malloc_ext(
@@ -3540,7 +3537,7 @@ void mdlm_free(deliverman_controller_t* se)
 	}
 	geco_free_ext(se->recvStreamActivated, __FILE__, __LINE__);
 	geco_free_ext(se->recv_streams, __FILE__, __LINE__);
-	geco_free_ext(se, __FILE__, __LINE__);
+	free(se);
 	EVENTLOG(VERBOSE, "- - - Leave mdlm_free()");
 }
 
@@ -3555,7 +3552,7 @@ void mdlm_free(deliverman_controller_t* se)
  * At the z-side, with the cookie message all data is available at once. So mdi_newAssociation
  * and mdi_initAssociation must be called when the initAck with valid Cookie is received.
  *
- * @param  remoteSideReceiverWindow  rwnd size that the peer allowed in this association
+ * @param  remoteSideReceiverWindow  peer_rwnd size that the peer allowed in this association
  * @param  noOfInStreams  number of incoming (receive) streams after negotiation
  * @param  noOfOutStreams number of outgoing (send) streams after negotiation
  * @param  remoteInitialTSN     initial  TSN of the peer
@@ -3652,7 +3649,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 
 	ChannelState channel_state = smctrl->channel_state;
 	if (channel_state == ChannelState::CookieWait)
-	{  
+	{
 		//2) discard init ack recived in state other than cookie wait
 		EVENTLOG(INFO, "************************** RECV INIT ACK CHUNK AT COOKIE WAIT ******************************8");
 		ushort initchunklen = ntohs(
@@ -3702,7 +3699,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			{
 				if (smctrl->init_timer_id->timer_id != 0)
 				{
-					mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
+					mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
 				}
 				mdi_unlock_bundle_ctrl();
 				mdi_delete_curr_channel();
@@ -3743,32 +3740,32 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			tmp_peer_addreslist_size_);
 
 		/* initialize channel with infos in init ack*/
-		uint itsn = mch_read_itsn(initAckCID);
-		uint rwnd = mch_read_rwnd(initAckCID);
-		uint itag = mch_read_itag(initAckCID);
+		uint peer_itsn = mch_read_itsn(initAckCID);
+		uint peer_rwnd = mch_read_rwnd(initAckCID);
+		uint peer_itag = mch_read_itag(initAckCID);
 		bool peersupportpr = peer_supports_pr(initAck);
 		bool peersupportaddip = peer_supports_addip(initAck);
-		uint init_itag = ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn);
-
-
-		mdi_init_channel(rwnd, inbound_stream, outbound_stream, itsn, itag,
-			init_itag, peersupportpr, peersupportaddip);
+		uint my_init_itag = ntohl(smctrl->my_init_chunk->init_fixed.init_tag);
+		mdi_init_channel(peer_rwnd,
+			inbound_stream, outbound_stream,
+			peer_itsn, peer_itag, my_init_itag,
+			peersupportpr, peersupportaddip);
 
 		EVENTLOG2(VERBOSE,
 			"process_init_ack_chunk()::called mdi_init_channel(in-streams=%u, out-streams=%u)",
 			inbound_stream, outbound_stream);
 
 		// make cookie echo to en to peer
-		chunk_id_t cookieecho_cid = mch_make_cookie_echo(
-			get_state_cookie_from_init_ack(initAck));
+		cookie_param_t* cookie_param = mch_read_cookie(initAck);
+		chunk_id_t cookieecho_cid = mch_make_cookie_echo(cookie_param);
 		if (cookieecho_cid < 0)
 		{
 			EVENTLOG(INFO, "received a initAck without cookie");
 			// stop shutdown timer
-			if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+			if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
 			{
-				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+				mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 			}
 			missing_mandaory_params_err_t missing_mandaory_params_err;
 			missing_mandaory_params_err.numberOfParams = htonl(1);
@@ -3795,10 +3792,10 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			if (errorCID > 0)
 				mch_free_simple_chunk(errorCID);
 			// stop shutdown timer
-			if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+			if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
 			{
-				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+				mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 			}
 			mdi_unlock_bundle_ctrl();
 			mdi_delete_curr_channel();
@@ -3807,12 +3804,6 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			smctrl->channel_state = ChannelState::Closed;
 			return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
 			return return_state;
-		}
-
-		if (process_further
-			== ActionWhenUnknownVlpOrChunkType::STOP_PROCES_PARAM_REPORT_EREASON)
-		{
-			return_state = ChunkProcessResult::Stop;
 		}
 
 		smctrl->cookieChunk = (cookie_echo_chunk_t *)mch_complete_simple_chunk(
@@ -3827,29 +3818,30 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 
 		/* send cookie echo back to peer */
 		mdis_bundle_ctrl_chunk((simple_chunk_t*)smctrl->cookieChunk); // not free cookie echo
-		if (errorCID != 0)
+		if (process_further == ActionWhenUnknownVlpOrChunkType::STOP_PROCES_PARAM_REPORT_EREASON)
 		{
+			return_state = ChunkProcessResult::Stop;
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(errorCID));
-			mch_free_simple_chunk(errorCID);
 		}
+		mch_free_simple_chunk(errorCID);
 		mdi_unlock_bundle_ctrl();
 		mdi_send_bundled_chunks();
 
 		// stop init timer
-		if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+		if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
 		{
-			mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-			smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+			mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+			smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 		}
 
 		//start cookie timer
 		channel_state = ChannelState::CookieEchoed;
-		smctrl->init_timer_id = mdis_timer_mgr_.add_timer(TIMER_TYPE_INIT,
+		smctrl->init_timer_id = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT,
 			smctrl->init_timer_interval, &msm_timer_expired,
 			smctrl->channel_ptr,
 			NULL);
 		EVENTLOG(INFO,
-			"event: sent cookie echo to last src addr, stop init timer, starts cookie timer!");
+			"**************** SEND COOKIE ECHOED, ENTER COOKIE ECHOED****************");
 	}
 	else if (channel_state == ChannelState::CookieEchoed)
 	{
@@ -4632,10 +4624,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			// notification to ULP
 			SendCommUpNotification = COMM_UP_RECEIVED_VALID_COOKIE;
 			// stop t1-init timer
-			if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+			if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
 			{
-				mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-				smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+				mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+				smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 			}
 			//bundle and send cookie ack
 			cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK,
@@ -4673,12 +4665,14 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 						tmp_peer_addreslist_size_);
 				}
 
-				mdi_init_channel(mch_read_rwnd(initCID),
-					mch_read_instreams(initAckCID),
-					mch_read_ostreams(initAckCID), mch_read_itsn(initCID),
-					cookie_remote_tag, mch_read_itsn(initAckCID),
-					peer_supports_pr(cookie_echo),
-					peer_supports_addip(cookie_echo));
+				uint peer_rwnd = mch_read_rwnd(initCID);
+				ushort our_in = mch_read_instreams(initAckCID);
+				ushort our_os = mch_read_ostreams(initAckCID);
+				uint peer_itsn = mch_read_itsn(initCID);
+				uint our_itsn = mch_read_itsn(initAckCID);
+				bool peer_spre = peer_supports_pr(cookie_echo);
+				bool peer_saddip = peer_supports_addip(cookie_echo);
+				mdi_init_channel(peer_rwnd,our_in,our_os,peer_itsn,cookie_remote_tag, our_itsn,peer_spre,peer_saddip);
 
 				smctrl->outbound_stream = mch_read_ostreams(initAckCID);
 				smctrl->inbound_stream = mch_read_instreams(initAckCID);
@@ -4686,10 +4680,10 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 					"Set Outbound Stream to %u, Inbound Streams to %u",
 					smctrl->outbound_stream, smctrl->inbound_stream);
 
-				if (smctrl->init_timer_id != mdis_timer_mgr_.timers.end())
+				if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
 				{  // stop t1-init timer
-					mdis_timer_mgr_.delete_timer(smctrl->init_timer_id);
-					smctrl->init_timer_id = mdis_timer_mgr_.timers.end();
+					mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+					smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
 				}
 
 				newstate = ChannelState::Connected;	 // enters CONNECTED state
@@ -5577,17 +5571,20 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet,
 		EVENTLOG(VERBOSE, "AddrFamily((source_addr)) -> discard!");
 		should_discard_curr_geco_packet_ = true;
 	}
-
+#ifdef _DEBUG
 	saddr2str(source_addr, src_addr_str_, MAX_IPADDR_STR_LEN, NULL);
 	saddr2str(dest_addr, dest_addr_str_, MAX_IPADDR_STR_LEN, NULL);
+#endif
 
 	if (should_discard_curr_geco_packet_)
 	{
 		last_src_port_ = 0;
 		last_dest_port_ = 0;
+#ifdef _DEBUG
 		EVENTLOG4(VERBOSE,
 			"discarding packet for incorrect address src addr : %s:%d, dest addr%s:%d",
 			src_addr_str_, last_src_port_, dest_addr_str_, last_dest_port_);
+#endif
 		EVENTLOG(NOTICE,
 			"- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 		return recv_geco_packet_but_addrs_formate_check_failed;
@@ -5637,18 +5634,22 @@ int mdis_recv_geco_packet(int socket_fd, char *dctp_packet,
 			// Possible Reasons: dest af not matched || dest addr not matched || dest port not matched
 			my_supported_addr_types_ = SUPPORT_ADDRESS_TYPE_IPV4
 				| SUPPORT_ADDRESS_TYPE_IPV6;
+#ifdef _DEBUG
 			EVENTLOG3(VERBOSE,
 				"Couldn't find an Instance with dest addr %s:%u, default support addr types ip4 and ip6 %u !",
 				src_addr_str_, last_dest_port_, my_supported_addr_types_);
+#endif
 		}
 		else
 		{
 			// use user sepecified supported addr types
 			my_supported_addr_types_ =
 				curr_geco_instance_->supportedAddressTypes;
+#ifdef _DEBUG
 			EVENTLOG3(VERBOSE,
 				"Find an Instance with dest addr %s:%u, user sepecified support addr types:%u !",
 				src_addr_str_, last_dest_port_, my_supported_addr_types_);
+#endif
 		}
 	}
 
@@ -6430,7 +6431,7 @@ int initialize_library(void)
 		EVENTLOG(NOTICE,
 			"You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-}
+	}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
@@ -6477,7 +6478,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-	}
+}
 void free_library(void)
 {
 	mtra_destroy();

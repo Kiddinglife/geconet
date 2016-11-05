@@ -101,7 +101,7 @@ uint mch_read_itag(uchar init_chunk_id);
 *  @brief returns the suggested cookie lifespan increment if a cookie
 *  preservative is present in a init chunk.
 */
-uint mch_read_cookie_life(uint chunkID, bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife);
+uint mch_read_cookie_preserve(uint chunkID, bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife);
 /**
 * @brief scans for a parameter of a certain type in a message string.
 * The message string must point to a parameter header.
