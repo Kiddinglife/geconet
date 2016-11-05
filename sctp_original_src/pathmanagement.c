@@ -499,7 +499,7 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
         return;
     }
 
-    ch_forgetChunk(heartbeatCID);
+    mch_remove_simple_chunk(heartbeatCID);
 
     if (!(pathID >= 0 && pathID < pmData->numberOfPaths)) {
         error_logi(ERROR_MAJOR, "pm_heartbeatAck: invalid path ID %d", pathID);

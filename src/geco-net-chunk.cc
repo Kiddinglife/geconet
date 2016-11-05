@@ -20,7 +20,7 @@ simple_chunk_t** mch_read_simple_chunks()
 }
 
 uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
-		ushort param_type)
+	ushort param_type)
 {
 	/*1) validate packet length*/
 	uint read_len = CHUNK_FIXED_SIZE + INIT_CHUNK_FIXED_SIZE;
@@ -30,9 +30,9 @@ uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
 	}
 
 	/*2) validate chunk id inside this chunk*/
-	init_chunk_t* init_chunk = (init_chunk_t*) setup_chunk;
+	init_chunk_t* init_chunk = (init_chunk_t*)setup_chunk;
 	if (init_chunk->chunk_header.chunk_id != CHUNK_INIT
-			&& init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
+		&& init_chunk->chunk_header.chunk_id != CHUNK_INIT_ACK)
 	{
 		return NULL;
 	}
@@ -48,15 +48,15 @@ uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
 	while (read_len < len)
 	{
 		EVENTLOG2(VVERBOSE,
-				"find_params_from_setup_chunk() : len==%u, processed_len == %u",
-				len, read_len);
+			"find_params_from_setup_chunk() : len==%u, processed_len == %u",
+			len, read_len);
 
 		if (len - read_len < VLPARAM_FIXED_SIZE)
 		{
 			return NULL;
 		}
 
-		vlp = (vlparam_fixed_t*) (curr_pos);
+		vlp = (vlparam_fixed_t*)(curr_pos);
 		vlp_len = ntohs(vlp->param_length);
 		if (vlp_len < VLPARAM_FIXED_SIZE || vlp_len + read_len > len)
 		{
@@ -67,8 +67,8 @@ uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
 		if (ntohs(vlp->param_type) == param_type)
 		{
 			EVENTLOG1(VERBOSE,
-					"find_params_from_setup_chunk() : Founf chunk type %d-> return",
-					param_type);
+				"find_params_from_setup_chunk() : Founf chunk type %d-> return",
+				param_type);
 			return curr_pos;
 		}
 
@@ -82,13 +82,13 @@ uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
 }
 
 chunk_id_t mch_make_init_chunk_from_cookie(
-		cookie_echo_chunk_t* cookie_echo_chunk)
+	cookie_echo_chunk_t* cookie_echo_chunk)
 {
 	assert(cookie_echo_chunk != NULL);
-	init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
-			INIT_CHUNK_TOTAL_SIZE,
-			__FILE__,
-			__LINE__);
+	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(
+		INIT_CHUNK_TOTAL_SIZE,
+		__FILE__,
+		__LINE__);
 	if (initChunk == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
 	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
@@ -96,17 +96,17 @@ chunk_id_t mch_make_init_chunk_from_cookie(
 	initChunk->chunk_header.chunk_flags = 0x00;
 	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
 	initChunk->init_fixed = cookie_echo_chunk->cookie.peer_init;
-	return add2chunklist((simple_chunk_t*) initChunk,
-			"add2chunklist()::created initChunk  from cookie %u");
+	return add2chunklist((simple_chunk_t*)initChunk,
+		"add2chunklist()::created initChunk  from cookie %u");
 }
 chunk_id_t mch_make_init_ack_chunk_from_cookie(
-		cookie_echo_chunk_t* cookie_echo_chunk)
+	cookie_echo_chunk_t* cookie_echo_chunk)
 {
 	assert(cookie_echo_chunk != NULL);
-	init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
-			INIT_CHUNK_TOTAL_SIZE,
-			__FILE__,
-			__LINE__);
+	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(
+		INIT_CHUNK_TOTAL_SIZE,
+		__FILE__,
+		__LINE__);
 	if (initChunk == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
 	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
@@ -114,8 +114,8 @@ chunk_id_t mch_make_init_ack_chunk_from_cookie(
 	initChunk->chunk_header.chunk_flags = 0x00;
 	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
 	initChunk->init_fixed = cookie_echo_chunk->cookie.local_initack;
-	return add2chunklist((simple_chunk_t*) initChunk,
-			"add2chunklist()::created init ack chunk  from cookie %u");
+	return add2chunklist((simple_chunk_t*)initChunk,
+		"add2chunklist()::created init ack chunk  from cookie %u");
 }
 
 uint mch_read_rwnd(uint chunkID)
@@ -127,9 +127,9 @@ uint mch_read_rwnd(uint chunkID)
 	}
 
 	if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
-			|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+		|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
 	{
-		return ntohl(((init_chunk_t*) simple_chunks_[chunkID])->init_fixed.rwnd);
+		return ntohl(((init_chunk_t*)simple_chunks_[chunkID])->init_fixed.rwnd);
 	}
 	else
 	{
@@ -148,10 +148,10 @@ uint mch_read_itsn(uint chunkID)
 	}
 
 	if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
-			|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+		|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
 	{
 		return ntohl(
-				((init_chunk_t*) simple_chunks_[chunkID])->init_fixed.initial_tsn);
+			((init_chunk_t*)simple_chunks_[chunkID])->init_fixed.initial_tsn);
 	}
 	else
 	{
@@ -166,24 +166,24 @@ chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam)
 	if (cookieParam == 0)
 		return -1;
 
-	cookie_echo_chunk_t* cookieChunk = (cookie_echo_chunk_t*) geco_malloc_ext(
-			sizeof(cookie_echo_chunk_t), __FILE__,
-			__LINE__);
+	cookie_echo_chunk_t* cookieChunk = (cookie_echo_chunk_t*)geco_malloc_ext(
+		sizeof(cookie_echo_chunk_t), __FILE__,
+		__LINE__);
 	cookieChunk->chunk_header.chunk_id = CHUNK_COOKIE_ECHO;
 	cookieChunk->chunk_header.chunk_flags = 0x00;
 	cookieChunk->chunk_header.chunk_length = ntohs(
-			cookieParam->vlparam_header.param_length);
-	add2chunklist((simple_chunk_t*) cookieChunk,
-			"created cookie echo chunk %u ");
+		cookieParam->vlparam_header.param_length);
+	add2chunklist((simple_chunk_t*)cookieChunk,
+		"created cookie echo chunk %u ");
 	/*  copy cookie parameter EXcluding param-header into chunk */
 	memcpy(&(cookieChunk->cookie),
 		&cookieParam->ck,
-		cookieChunk->chunk_header.chunk_length-VLPARAM_FIXED_SIZE);
+		cookieChunk->chunk_header.chunk_length - VLPARAM_FIXED_SIZE);
 	return simple_chunk_index_;
 }
 
 uint mch_read_cookie_preserve(uint chunkID,
-		bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife)
+	bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife)
 {
 	if (simple_chunks_[chunkID] == NULL)
 	{
@@ -197,16 +197,16 @@ uint mch_read_cookie_preserve(uint chunkID,
 		return 0;
 	}
 
-	init_chunk_t* init = ((init_chunk_t*) simple_chunks_[chunkID]);
+	init_chunk_t* init = ((init_chunk_t*)simple_chunks_[chunkID]);
 	uint vlparams_len = ntohs(
-			init->chunk_header.chunk_length) - INIT_CHUNK_FIXED_SIZES;
+		init->chunk_header.chunk_length) - INIT_CHUNK_FIXED_SIZES;
 	uchar* curr_pos = mch_read_vlparam(VLPARAM_COOKIE_PRESEREASONV,
-			init->variableParams, vlparams_len);
+		init->variableParams, vlparams_len);
 	if (curr_pos != NULL && !ignore_cookie_life_spn_from_init_chunk_)
 	{
 		/* found cookie preservative */
-		return ntohl(((cookie_preservative_t*) curr_pos)->cookieLifetimeInc)
-				+ defaultcookielife;
+		return ntohl(((cookie_preservative_t*)curr_pos)->cookieLifetimeInc)
+			+ defaultcookielife;
 	}
 	else
 	{
@@ -228,10 +228,10 @@ int mch_validate_init_vlps(uint src_cid, uint dest_cid)
 		return -1;
 	}
 
-	init_chunk_t* chunk = ((init_chunk_t*) simple_chunks_[src_cid]);
+	init_chunk_t* chunk = ((init_chunk_t*)simple_chunks_[src_cid]);
 	uchar* curr_vlp_start = chunk->variableParams;
 	uint total_len_vlps = chunk->chunk_header.chunk_length
-			- INIT_CHUNK_FIXED_SIZES;
+		- INIT_CHUNK_FIXED_SIZES;
 
 	uint read_len = 0;
 	ushort pType;
@@ -244,7 +244,7 @@ int mch_validate_init_vlps(uint src_cid, uint dest_cid)
 		if (total_len_vlps - read_len < VLPARAM_FIXED_SIZE)
 		{
 			EVENTLOG(WARNNING_ERROR,
-					"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
+				"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !");
 			return -1;
 		}
 		//init_ack_str = &chunk->variableParams[curr_write_pos_[dest_chunk_cid]];
@@ -257,47 +257,47 @@ int mch_validate_init_vlps(uint src_cid, uint dest_cid)
 
 		/* handle unrecognized geco_instance_params */
 		else if (pType != VLPARAM_COOKIE_PRESEREASONV
-				&& pType != VLPARAM_SUPPORTED_ADDR_TYPES
-				&& pType != VLPARAM_IPV4_ADDRESS
-				&& pType != VLPARAM_IPV6_ADDRESS
-				&& pType != VLPARAM_UNRELIABILITY && pType != VLPARAM_ADDIP
-				&& pType != VLPARAM_COOKIE_PRESEREASONV
-				&& pType != VLPARAM_COOKIE && pType != VLPARAM_SET_PRIMARY
-				&& pType != VLPARAM_UNRELIABILITY)
+			&& pType != VLPARAM_SUPPORTED_ADDR_TYPES
+			&& pType != VLPARAM_IPV4_ADDRESS
+			&& pType != VLPARAM_IPV6_ADDRESS
+			&& pType != VLPARAM_UNRELIABILITY && pType != VLPARAM_ADDIP
+			&& pType != VLPARAM_COOKIE_PRESEREASONV
+			&& pType != VLPARAM_COOKIE && pType != VLPARAM_SET_PRIMARY
+			&& pType != VLPARAM_UNRELIABILITY)
 		{
 			if (STOP_PROCESS_PARAM(pType))
 			{
 				EVENTLOG2(NOTICE,
-						"found unknown parameter type %u len %u in message -> stop",
-						pType, pLen);
+					"found unknown parameter type %u len %u in message -> stop",
+					pType, pLen);
 				mch_write_error_cause(dest_cid, VLPARAM_UNRECOGNIZED_PARAM,
-						curr_vlp_start, pLen);
+					curr_vlp_start, pLen);
 				return ActionWhenUnknownVlpOrChunkType::STOP_PROCESS_PARAM;
 			}
 			else if (STOP_PROCES_PARAM_REPORT_EREASON(pType))
 			{
 				EVENTLOG2(NOTICE,
-						"found unknown parameter type %u len %u in message -> stop and report",
-						pType, pLen);
+					"found unknown parameter type %u len %u in message -> stop and report",
+					pType, pLen);
 				mch_write_error_cause(dest_cid, VLPARAM_UNRECOGNIZED_PARAM,
-						curr_vlp_start, pLen);
+					curr_vlp_start, pLen);
 				return ActionWhenUnknownVlpOrChunkType::STOP_PROCES_PARAM_REPORT_EREASON;
 			}
 			else if (SKIP_PARAM_REPORT_EREASON(pType))
 			{
 				EVENTLOG2(NOTICE,
-						"found unknown parameter type %u len %u in message -> skip and report",
-						pType, pLen);
+					"found unknown parameter type %u len %u in message -> skip and report",
+					pType, pLen);
 				mch_write_error_cause(dest_cid, VLPARAM_UNRECOGNIZED_PARAM,
-						curr_vlp_start, pLen);
+					curr_vlp_start, pLen);
 				ret =
-						ActionWhenUnknownVlpOrChunkType::SKIP_PARAM_REPORT_EREASON;
+					ActionWhenUnknownVlpOrChunkType::SKIP_PARAM_REPORT_EREASON;
 			}
 			else if (SKIP_PARAM(pType))
 			{
 				EVENTLOG2(NOTICE,
-						"found unknown parameter type %u len %u in message -> skip",
-						pType, pLen);
+					"found unknown parameter type %u len %u in message -> skip",
+					pType, pLen);
 				ret = ActionWhenUnknownVlpOrChunkType::SKIP_PARAM;
 			}
 		}
@@ -328,7 +328,7 @@ uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len)
 		if (len - read_len < VLPARAM_FIXED_SIZE)
 		{
 			EVENTLOG(WARNNING_ERROR,
-					"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
+				"remainning bytes not enough for VLPARAM_FIXED_SIZE(4 bytes) invalid !\n");
 			return NULL;
 		}
 
@@ -354,18 +354,18 @@ int write_add_ip_chunk(uint initAckCID, uint initCID)
 {
 	EVENTLOG(VERBOSE, " - - - Enter write_add_ip_chunk() to cookie");
 
-	init_chunk_t* init = (init_chunk_t*) (simple_chunks_[initCID]);
-	init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckCID]);
+	init_chunk_t* init = (init_chunk_t*)(simple_chunks_[initCID]);
+	init_chunk_t* initack = (init_chunk_t*)(simple_chunks_[initAckCID]);
 	if (init == NULL || initack == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "Invalid init or initAck chunk ID");
 		return -1;
 	}
 	uchar* foundvlp = mch_read_vlparam(VLPARAM_ADDIP, &init->variableParams[0],
-			init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+		init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
 	if (foundvlp != NULL)
 	{
-		ushort vlp_len = ntohs(((vlparam_fixed_t*) foundvlp)->param_length);
+		ushort vlp_len = ntohs(((vlparam_fixed_t*)foundvlp)->param_length);
 		if (vlp_len < VLPARAM_FIXED_SIZE)
 		{
 			EVENTLOG(VERBOSE, "vlp length less than 4 bytes -> return -1");
@@ -374,16 +374,16 @@ int write_add_ip_chunk(uint initAckCID, uint initCID)
 		if (vlp_len >= VLPARAM_FIXED_SIZE)
 		{
 			memcpy(&initack->variableParams[curr_write_pos_[initAckCID]],
-					foundvlp, vlp_len);
+				foundvlp, vlp_len);
 			curr_write_pos_[initAckCID] += vlp_len;
 			while (curr_write_pos_[initAckCID] & 3)
 			{
-				initack->variableParams[curr_write_pos_[initAckCID]]=0;
+				initack->variableParams[curr_write_pos_[initAckCID]] = 0;
 				curr_write_pos_[initAckCID]++;
 			}
 			EVENTLOG1(VERBOSE,
-					"Found VLPARAM_ADDIP (len %d ), copied to init ack cookie",
-					vlp_len);
+				"Found VLPARAM_ADDIP (len %d ), copied to init ack cookie",
+				vlp_len);
 			return 1;
 		}
 	}
@@ -409,14 +409,14 @@ init_chunk_fixed_t* mch_read_init_fixed(uint chunkID)
 	}
 
 	if (simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK
-			|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
+		|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT)
 	{
-		return &((init_chunk_t *) simple_chunks_[chunkID])->init_fixed;
+		return &((init_chunk_t *)simple_chunks_[chunkID])->init_fixed;
 	}
 	else
 	{
 		ERRLOG(MAJOR_ERROR,
-				"mch_read_init_fixed()::chunk type not init or initAck");
+			"mch_read_init_fixed()::chunk type not init or initAck");
 		return NULL;
 	}
 }
@@ -427,7 +427,7 @@ void write_unknown_param_error(uchar* pos, uint cid, ushort length, uchar* data)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "write_unknown_param()::pos gets NULL !");
 	}
-	ec = (error_cause_t*) pos;
+	ec = (error_cause_t*)pos;
 	ec->error_reason_code = htons(VLPARAM_UNRECOGNIZED_PARAM);
 	ec->error_reason_length = htons(length + ERR_CAUSE_FIXED_SIZE);
 	if (length > 0)
@@ -446,7 +446,7 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 	sockaddrunion peer_Addresses[],
 	uint num_peer_Addresses)
 {
-	init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckID]);
+	init_chunk_t* initack = (init_chunk_t*)(simple_chunks_[initAckID]);
 	if (initack == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "mch_write_cookie()::Invalid chunk ID");
@@ -463,8 +463,8 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 		return;
 	}
 
-	cookie_param_t* cookie = (cookie_param_t*) (initack->variableParams
-			+ curr_write_pos_[initAckID]);
+	cookie_param_t* cookie = (cookie_param_t*)(initack->variableParams
+		+ curr_write_pos_[initAckID]);
 
 	//put_vlp_cookie_fixed
 	cookie->vlparam_header.param_type = htons(VLPARAM_COOKIE);
@@ -515,13 +515,13 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 	cookie->ck.no_local_ipv6_addresses = htons(no_local_ipv6_addresses);
 	cookie->ck.no_remote_ipv6_addresses = htons(no_remote_ipv6_addresses);
 	cookie->ck.cookieLifetime = htonl(cookieLifetime);
-	cookie->ck.sendingTime = htonl((uint) get_safe_time_ms());
+	cookie->ck.sendingTime = htonl((uint)get_safe_time_ms());
 
 	uint wr = curr_write_pos_[initAckID];
 	curr_write_pos_[initAckID] += COOKIE_PARAM_SIZE;
 
 	EVENTLOG2(VERBOSE, "Building Cookie with %u local, %u peer addresses",
-			num_local_Addresses, num_peer_Addresses);
+		num_local_Addresses, num_peer_Addresses);
 	mch_write_vlp_addrlist(initAckID, local_Addresses, num_local_Addresses);
 	mch_write_vlp_addrlist(initAckID, peer_Addresses, num_peer_Addresses);
 
@@ -541,7 +541,7 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 	/* calculate and write hmac when other fields are all filled*/
 	while (curr_write_pos_[initAckID] & 3)
 	{
-		initack->variableParams[curr_write_pos_[initAckID]]=0;
+		initack->variableParams[curr_write_pos_[initAckID]] = 0;
 		curr_write_pos_[initAckID]++;
 	}
 
@@ -575,8 +575,8 @@ int mch_write_vlp_unreliability(uint initAckCID, uint initCID)
 {
 	EVENTLOG(VERBOSE, " - - - Enter mch_write_vlp_unreliability()");
 
-	init_chunk_t* init = (init_chunk_t*) (simple_chunks_[initCID]);
-	init_chunk_t* initack = (init_chunk_t*) (simple_chunks_[initAckCID]);
+	init_chunk_t* init = (init_chunk_t*)(simple_chunks_[initCID]);
+	init_chunk_t* initack = (init_chunk_t*)(simple_chunks_[initAckCID]);
 	if (init == NULL || initack == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "Invalid init or initAck chunk ID");
@@ -584,11 +584,11 @@ int mch_write_vlp_unreliability(uint initAckCID, uint initCID)
 	}
 	int ret;
 	uchar* foundvlp = mch_read_vlparam(VLPARAM_UNRELIABILITY,
-			&init->variableParams[0],
-			init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
+		&init->variableParams[0],
+		init->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES);
 	if (foundvlp != NULL)
 	{
-		ushort vlp_len = ntohs(((vlparam_fixed_t*) foundvlp)->param_length);
+		ushort vlp_len = ntohs(((vlparam_fixed_t*)foundvlp)->param_length);
 		if (vlp_len < VLPARAM_FIXED_SIZE)
 		{
 			EVENTLOG(VERBOSE, "vlp length less than 4 bytes -> return -1");
@@ -598,22 +598,22 @@ int mch_write_vlp_unreliability(uint initAckCID, uint initCID)
 		if (vlp_len == VLPARAM_FIXED_SIZE)
 		{
 			/* peer supports it, but doesn't send anything unreliably  */ret =
-					0;
+				0;
 		}
 		else
 		{
 			/* peer supports it, and does send some */ret = 1;
 		}
 		memcpy(&initack->variableParams[curr_write_pos_[initAckCID]], foundvlp,
-				vlp_len);
+			vlp_len);
 		curr_write_pos_[initAckCID] += vlp_len;
 		while (curr_write_pos_[initAckCID] & 3)
 		{
-			initack->variableParams[curr_write_pos_[initAckCID]]=0;
+			initack->variableParams[curr_write_pos_[initAckCID]] = 0;
 			curr_write_pos_[initAckCID]++;
 		}
 		EVENTLOG1(VERBOSE, "Found pr vlp (len %d ), copied to init ack cookie",
-				vlp_len);
+			vlp_len);
 	}
 	else
 	{
@@ -626,14 +626,14 @@ int mch_write_vlp_unreliability(uint initAckCID, uint initCID)
 }
 
 int mch_write_vlp_addrlist(uint chunkid,
-		sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
-		uint local_addreslist_size)
+	sockaddrunion local_addreslist[MAX_NUM_ADDRESSES],
+	uint local_addreslist_size)
 {
 	if (local_addreslist_size <= 1)
 	{
 		ERRLOG1(MAJOR_ERROR,
-				"mch_write_vlp_addrlist()::Invalid local_addreslist_size should >= 1  %d!",
-				local_addreslist_size);
+			"mch_write_vlp_addrlist()::Invalid local_addreslist_size should >= 1  %d!",
+			local_addreslist_size);
 		return -1;
 	}
 	if (simple_chunks_[chunkid] == NULL)
@@ -644,7 +644,7 @@ int mch_write_vlp_addrlist(uint chunkid,
 	if (completed_chunks_[chunkid])
 	{
 		ERRLOG(MAJOR_ERROR,
-				"mch_write_vlp_addrlist()::chunk already completed !");
+			"mch_write_vlp_addrlist()::chunk already completed !");
 		return -1;
 	}
 
@@ -652,12 +652,12 @@ int mch_write_vlp_addrlist(uint chunkid,
 	if (simple_chunks_[chunkid]->chunk_header.chunk_id != CHUNK_ASCONF)
 	{
 		vlp =
-				&((init_chunk_t *) simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+			&((init_chunk_t *)simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
 	}
 	else
 	{
 		vlp =
-				&((asconfig_chunk_t*) simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
+			&((asconfig_chunk_t*)simple_chunks_[chunkid])->variableParams[curr_write_pos_[chunkid]];
 	}
 
 	uint i, length = 0;
@@ -665,31 +665,31 @@ int mch_write_vlp_addrlist(uint chunkid,
 	for (i = 0; i < local_addreslist_size; i++)
 	{
 
-		ip_addr = (ip_address_t*) (vlp + length);
+		ip_addr = (ip_address_t*)(vlp + length);
 		switch (saddr_family(&(local_addreslist[i])))
 		{
 		case AF_INET:
 			ip_addr->vlparam_header.param_type = htons(VLPARAM_IPV4_ADDRESS);
 			ip_addr->vlparam_header.param_length = htons(
-					sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
+				sizeof(struct in_addr) + VLPARAM_FIXED_SIZE);
 			ip_addr->dest_addr_un.ipv4_addr = s4addr(&(local_addreslist[i]));
 			assert(sizeof(struct in_addr) + VLPARAM_FIXED_SIZE == 8);
 			length += 8;
 			break;
 		case AF_INET6:
 			ip_addr->vlparam_header.param_type = htons(
-			VLPARAM_IPV6_ADDRESS);
+				VLPARAM_IPV6_ADDRESS);
 			ip_addr->vlparam_header.param_length = htons(
-					sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
+				sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
 			memcpy(&ip_addr->dest_addr_un.ipv6_addr,
-					&(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
+				&(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
 			assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE == 20);
 			length += 20;
 			break;
 		default:
 			ERRLOG1(MAJOR_ERROR,
-					"dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
-					saddr_family(&(local_addreslist[i])));
+				"dispatch_layer_t::write_addrlist()::Unsupported Address Family %d",
+				saddr_family(&(local_addreslist[i])));
 			break;
 		}
 	}
@@ -708,7 +708,7 @@ int mch_write_vlp_ecn(uint initAckID, uint initCID)
 }
 
 void mch_write_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata,
-		uint errdatalen)
+	uint errdatalen)
 {
 	assert(simple_chunks_[chunkID] != NULL);
 	assert(completed_chunks_[chunkID] == false);
@@ -716,7 +716,7 @@ void mch_write_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata,
 	assert(simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_ABORT);
 	assert(simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK);
 	error_cause_t* ecause =
-			(error_cause_t*) &simple_chunks_[chunkID]->chunk_value[curr_write_pos_[chunkID]];
+		(error_cause_t*)&simple_chunks_[chunkID]->chunk_value[curr_write_pos_[chunkID]];
 	ecause->error_reason_code = htons(errcode);
 	int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
 	ecause->error_reason_length = htons(len);
@@ -747,9 +747,9 @@ uchar mch_make_simple_chunk(simple_chunk_t* chunk)
 uint mch_make_simple_chunk(uint chunk_type, uchar flag)
 {
 	//create smple chunk used for ABORT, SHUTDOWN-ACK, COOKIE-ACK
-	simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*) geco_malloc_ext(
-			SIMPLE_CHUNK_SIZE,
-			__FILE__, __LINE__);
+	simple_chunk_t* simple_chunk_ptr = (simple_chunk_t*)geco_malloc_ext(
+		SIMPLE_CHUNK_SIZE,
+		__FILE__, __LINE__);
 
 	simple_chunk_ptr->chunk_header.chunk_id = chunk_type;
 	simple_chunk_ptr->chunk_header.chunk_flags = flag;
@@ -760,11 +760,11 @@ uint mch_make_simple_chunk(uint chunk_type, uchar flag)
 }
 
 chunk_id_t mch_make_init_ack_chunk(uint initTag, uint arwnd,
-		ushort noOutStreams, ushort noInStreams, uint initialTSN)
+	ushort noOutStreams, ushort noInStreams, uint initialTSN)
 {
 	assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
-	init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
-			INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
+	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(
+		INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
 	if (initChunk == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
 	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
@@ -776,16 +776,16 @@ chunk_id_t mch_make_init_ack_chunk(uint initTag, uint arwnd,
 	initChunk->init_fixed.outbound_streams = htons(noOutStreams);
 	initChunk->init_fixed.inbound_streams = htons(noInStreams);
 	initChunk->init_fixed.initial_tsn = htonl(initialTSN);
-	return add2chunklist((simple_chunk_t*) initChunk,
-			"create init ack chunk %u");
+	return add2chunklist((simple_chunk_t*)initChunk,
+		"create init ack chunk %u");
 }
 
 chunk_id_t mch_make_init_chunk(uint initTag, uint arwnd, ushort noOutStreams,
-		ushort noInStreams, uint initialTSN)
+	ushort noInStreams, uint initialTSN)
 {
 	assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
-	init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
-			INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
+	init_chunk_t* initChunk = (init_chunk_t*)geco_malloc_ext(
+		INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
 	if (initChunk == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
 	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
@@ -797,11 +797,11 @@ chunk_id_t mch_make_init_chunk(uint initTag, uint arwnd, ushort noOutStreams,
 	initChunk->init_fixed.outbound_streams = htons(noOutStreams);
 	initChunk->init_fixed.inbound_streams = htons(noInStreams);
 	initChunk->init_fixed.initial_tsn = htonl(initialTSN);
-	return add2chunklist((simple_chunk_t*) initChunk,
-			"create init ack chunk %u");
+	return add2chunklist((simple_chunk_t*)initChunk,
+		"create init ack chunk %u");
 }
 void mch_write_error_cause_unrecognized_chunk(chunk_id_t cid,
-		error_cause_t*ecause, uchar* errdata, uint errdatalen)
+	error_cause_t*ecause, uchar* errdata, uint errdatalen)
 {
 	//error chunk is paramsless chunk so no need simple_chunks[cid] check
 	assert(ecause != 0 && errdata != 0 && errdatalen > 0);
@@ -838,13 +838,13 @@ ushort mch_read_ostreams(uchar init_chunk_id)
 	if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
 	{
 		ushort osnum = ntohs(
-				((init_chunk_t*) scptr)->init_fixed.outbound_streams);
+			((init_chunk_t*)scptr)->init_fixed.outbound_streams);
 		return osnum;
 	}
 	else
 	{
 		ERRLOG(MAJOR_ERROR,
-				"mch_read_ostreams(): chunk type not init or initAck");
+			"mch_read_ostreams(): chunk type not init or initAck");
 		return 0;
 	}
 }
@@ -862,13 +862,13 @@ ushort mch_read_instreams(uchar init_chunk_id)
 	if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
 	{
 		ushort isnum = ntohs(
-				((init_chunk_t*) scptr)->init_fixed.inbound_streams);
+			((init_chunk_t*)scptr)->init_fixed.inbound_streams);
 		return isnum;
 	}
 	else
 	{
 		ERRLOG(MAJOR_ERROR,
-				"mch_read_instreams(): chunk type not init or initAck");
+			"mch_read_instreams(): chunk type not init or initAck");
 		return -1;
 	}
 }
@@ -884,7 +884,7 @@ uint mch_read_itag(uchar init_chunk_id)
 	uint chunkid = scptr->chunk_header.chunk_id;
 	if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
 	{
-		uint initag = ntohl(((init_chunk_t*) scptr)->init_fixed.init_tag);
+		uint initag = ntohl(((init_chunk_t*)scptr)->init_fixed.init_tag);
 		return initag;
 	}
 	else
@@ -899,7 +899,7 @@ void mch_free_simple_chunk(uint chunkID)
 	if (simple_chunks_[chunkID] != NULL)
 	{
 		EVENTLOG1(INFO, "mch_free_simple_chunk():: free simple chunk %u",
-				chunkID);
+			chunkID);
 		geco_free_ext(simple_chunks_[chunkID], __FILE__, __LINE__);
 		simple_chunks_[chunkID] = NULL;
 	}
@@ -928,19 +928,19 @@ simple_chunk_t *mch_complete_simple_chunk(uint chunkID)
 		return NULL;
 	}
 	simple_chunks_[chunkID]->chunk_header.chunk_length = htons(
-			(simple_chunks_[chunkID]->chunk_header.chunk_length
-					+ curr_write_pos_[chunkID]));
+		(simple_chunks_[chunkID]->chunk_header.chunk_length
+			+ curr_write_pos_[chunkID]));
 	completed_chunks_[chunkID] = true;
 	return simple_chunks_[chunkID];
 }
 
 void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4,
-		bool with_ipv6, bool with_dns)
+	bool with_ipv6, bool with_dns)
 {
 	assert(simple_chunks_[chunkID] != NULL);
 	assert(completed_chunks_[chunkID] == false);
 	assert(
-			simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT|| simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK);
+		simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK);
 
 	ushort num_of_types = 0, position = 0;
 	if (with_ipv4)
@@ -951,11 +951,11 @@ void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4,
 		num_of_types++;
 	if (num_of_types == 0)
 		ERRLOG(FALTAL_ERROR_EXIT,
-				"put_supported_addr_types()::No Supported Address Types -- Program Error\n");
+			"put_supported_addr_types()::No Supported Address Types -- Program Error\n");
 
 	ushort total_length = VLPARAM_FIXED_SIZE + num_of_types * sizeof(ushort);
 	supported_address_types_t* param =
-			(supported_address_types_t*) &((init_chunk_t*) simple_chunks_[chunkID])->variableParams[curr_write_pos_[chunkID]];
+		(supported_address_types_t*) &((init_chunk_t*)simple_chunks_[chunkID])->variableParams[curr_write_pos_[chunkID]];
 	param->vlparam_header.param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
 	param->vlparam_header.param_length = htons(total_length);
 
@@ -978,22 +978,22 @@ void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4,
 	/* take care of padding */
 	if (total_length & 3)
 	{
-		*((ushort*) ((uchar*) param + total_length)) = 0;
+		*((ushort*)((uchar*)param + total_length)) = 0;
 		total_length += 2;
 	}
 	curr_write_pos_[chunkID] += total_length;
 }
 void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode,
-		uchar* data, ushort len)
+	uchar* data, ushort len)
 {
 	assert(simple_chunks_[initChunkID] != NULL);
 	assert(completed_chunks_[initChunkID] == false);
 	assert(
-			simple_chunks_[initChunkID]->chunk_header.chunk_id == CHUNK_INIT || simple_chunks_[initChunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK);
+		simple_chunks_[initChunkID]->chunk_header.chunk_id == CHUNK_INIT || simple_chunks_[initChunkID]->chunk_header.chunk_id == CHUNK_INIT_ACK);
 	uchar* vlPtr =
-			&((init_chunk_t*) simple_chunks_[initChunkID])->variableParams[curr_write_pos_[initChunkID]];
-	*((ushort*) vlPtr) = htons(pCode);
-	*((ushort*) (vlPtr + sizeof(ushort))) = htons(len + VLPARAM_FIXED_SIZE);
+		&((init_chunk_t*)simple_chunks_[initChunkID])->variableParams[curr_write_pos_[initChunkID]];
+	*((ushort*)vlPtr) = htons(pCode);
+	*((ushort*)(vlPtr + sizeof(ushort))) = htons(len + VLPARAM_FIXED_SIZE);
 	if (len > 0 && data != NULL)
 		memcpy(vlPtr + 2 * sizeof(ushort), data, len);
 	len += VLPARAM_FIXED_SIZE;
@@ -1007,9 +1007,9 @@ void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode,
 
 error_chunk_t* mch_make_error_chunk()
 {
-	error_chunk_t* errorChunk = (error_chunk_t*) geco_malloc_ext(
-	INIT_CHUNK_TOTAL_SIZE, __FILE__,
-	__LINE__);
+	error_chunk_t* errorChunk = (error_chunk_t*)geco_malloc_ext(
+		INIT_CHUNK_TOTAL_SIZE, __FILE__,
+		__LINE__);
 	if (errorChunk == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
 	memset(errorChunk, 0, ERROR_CHUNK_TOTAL_SIZE);
@@ -1020,11 +1020,11 @@ error_chunk_t* mch_make_error_chunk()
 }
 
 void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
-		init_chunk_fixed_t* local_initack, uint cookieLifetime,
-		uint local_tie_tag, uint peer_tie_tag, ushort last_dest_port,
-		ushort last_src_port, sockaddrunion local_Addresses[],
-		uint num_local_Addresses, sockaddrunion peer_Addresses[],
-		uint num_peer_Addresses)
+	init_chunk_fixed_t* local_initack, uint cookieLifetime,
+	uint local_tie_tag, uint peer_tie_tag, ushort last_dest_port,
+	ushort last_src_port, sockaddrunion local_Addresses[],
+	uint num_local_Addresses, sockaddrunion peer_Addresses[],
+	uint num_peer_Addresses)
 {
 	cookie->vlparam_header.param_type = htons(VLPARAM_COOKIE);
 	cookie->ck.local_initack = *local_initack;
@@ -1074,11 +1074,11 @@ void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
 	cookie->ck.no_local_ipv6_addresses = htons(no_local_ipv6_addresses);
 	cookie->ck.no_remote_ipv6_addresses = htons(no_remote_ipv6_addresses);
 	cookie->ck.cookieLifetime = htonl(cookieLifetime);
-	cookie->ck.sendingTime = htonl((uint) get_safe_time_ms());
+	cookie->ck.sendingTime = htonl((uint)get_safe_time_ms());
 }
 
 uint put_vlp_cookie_life_span(cookie_preservative_t* preserv,
-		unsigned int lifespanIncrement)
+	unsigned int lifespanIncrement)
 {
 	ushort len = VLPARAM_FIXED_SIZE + sizeof(unsigned int);
 	preserv->vlparam_header.param_type = htons(VLPARAM_COOKIE_PRESEREASONV);
@@ -1129,8 +1129,7 @@ uint put_vlp_cookie_life_span(cookie_preservative_t* preserv,
 static int mch_write_hmac(cookie_fixed_t* cookieString, ushort cookieLength,
 	uchar* digest)
 {
-	if (cookieString == NULL || cookieLength == 0)
-		return -1;
+	if (cookieString == NULL || cookieLength == 0) return -1;
 	memset(cookieString->hmac, 0, HMAC_LEN);
 
 	uchar* key = get_secre_key(KEY_READ);
@@ -1145,29 +1144,17 @@ static int mch_write_hmac(cookie_fixed_t* cookieString, ushort cookieLength,
 	MD5Update(&ctx, (uchar*)cookieString, cookieLength);
 	MD5Update(&ctx, (uchar*)key, SECRET_KEYSIZE);
 	MD5Final(digest, &ctx);
-
-#ifdef _DEBUG
-	EVENTLOG1(INFO, "================ SECRET_KEY: %s", hexdigest(key, HMAC_SIZE));
-	EVENTLOG1(INFO, "================ Computed MD5 signature : %s", hexdigest(digest, HMAC_SIZE));
-#endif
-
 	return 0;
 }
 
 /** computes a cookie signature.*/
 int mch_write_hmac(cookie_param_t* cookieString)
 {
-	if (cookieString == NULL)
-		return -1;
-
-	//cookieString->ck.hmac[0] = 0;
-	//cookieString->ck.hmac[1] = 0;
-	//cookieString->ck.hmac[2] = 0;
-	//cookieString->ck.hmac[3] = 0;
+	if (cookieString == NULL) return -1;
 	memset(cookieString->ck.hmac, 0, HMAC_SIZE);
 
 	uint cookieLength = ntohs(
-			cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
+		cookieString->vlparam_header.param_length) - VLPARAM_FIXED_SIZE;
 	if (cookieLength == 0)
 		return -1;
 
@@ -1180,14 +1167,9 @@ int mch_write_hmac(cookie_param_t* cookieString)
 
 	MD5_CTX ctx;
 	MD5Init(&ctx);
-	MD5Update(&ctx, (uchar*) &cookieString->ck, cookieLength);
-	MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
+	MD5Update(&ctx, (uchar*)&cookieString->ck, cookieLength);
+	MD5Update(&ctx, (uchar*)key, SECRET_KEYSIZE);
 	MD5Final(cookieString->ck.hmac, &ctx);
-
-#ifdef _DEBUG
-	EVENTLOG1(INFO, "================ SECRET_KEY: %s", hexdigest(key, HMAC_SIZE));
-	EVENTLOG1(INFO, "================ Computed MD5 signature : %s", hexdigest(cookieString->ck.hmac, HMAC_SIZE));
-#endif
 }
 
 bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk)
@@ -1196,13 +1178,9 @@ bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk)
 	uchar cookieSignature[HMAC_LEN];
 	memcpy(cookieSignature, cookie->hmac, HMAC_LEN); // store existing hmac
 
-#ifdef _DEBUG
-	EVENTLOG1(INFO, "---------------- mch_verify_hmac()::cookie->hmac : %s",hexdigest(cookie->hmac, HMAC_LEN));
-#endif
-
 	uchar ourSignature[HMAC_LEN];
 	ushort cookieLength =
-		cookie_chunk->chunk_header.chunk_length- CHUNK_FIXED_SIZE;
+		cookie_chunk->chunk_header.chunk_length - CHUNK_FIXED_SIZE;
 	mch_write_hmac(cookie, cookieLength, ourSignature); // recalculate and store hmac
 
 	return (memcmp(cookieSignature, ourSignature, HMAC_LEN) == 0); //compare noth hmacs

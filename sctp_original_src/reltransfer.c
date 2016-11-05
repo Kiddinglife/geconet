@@ -126,7 +126,7 @@ void reset_rtx_bytecounters(reltransfer_controller_t * rtx)
  * @param   number_of_destination_addresses     number of paths to the peer of the association
  * @return pointer to the newly created structure
  */
-void *mrtx_new(unsigned int number_of_destination_addresses, unsigned int iTSN)
+void *mreltrans_new(unsigned int number_of_destination_addresses, unsigned int iTSN)
 {
 	reltransfer_controller_t *tmp;
 
@@ -167,7 +167,7 @@ void *mrtx_new(unsigned int number_of_destination_addresses, unsigned int iTSN)
 /**
  * function deletes a reltransfer_controller_t structure (when it is not needed anymore)
  * @param rtx_instance pointer to a reltransfer_controller_t, that was previously created
-			with mrtx_new()
+			with mreltrans_new()
  */
 void rtx_delete_reltransfer(void *rtx_instance)
 {
@@ -1050,7 +1050,7 @@ void* rtx_restart_reliable_transfer(void* rtx_instance, unsigned int numOfPaths,
 	rtx_delete_reltransfer(rtx_instance);
 	/* For ease of implementation we will delete all old data ! */
 	/* chunk_list_debug(VVERBOSE, rtx->chunk_list_tsn_ascended); */
-	new_rtx = mrtx_new(numOfPaths, iTSN);
+	new_rtx = mreltrans_new(numOfPaths, iTSN);
 
 	return new_rtx;
 }

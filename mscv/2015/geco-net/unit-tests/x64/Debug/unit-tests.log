@@ -11,7 +11,7 @@ d:\vs-workspace\geconet\src\geco-net-common.h(88): warning C4005: 'POLLERR': mac
 d:\vs-workspace\geconet\src\geco-net-config.h(17): warning C4005: '_DEBUG': macro redefinition
   d:\vs-workspace\geconet\src\geco-net-config.h(17): note: command-line arguments:  see previous definition of '_DEBUG'
 d:\vs-workspace\geconet\src\geco-net-auth.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-net-common.h(626): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
+d:\vs-workspace\geconet\src\geco-net-common.h(630): warning C4005: 'DEFAULT_MTU_CEILING': macro redefinition
   d:\vs-workspace\geconet\src\geco-net-msg.h(29): note: see previous definition of 'DEFAULT_MTU_CEILING'
 d:\vs-workspace\geconet\src\geco-net-dispatch.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geconet\src\geco-ds-timer.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
@@ -46,7 +46,7 @@ d:\vs-workspace\geconet\unittets\test-mulp.cc(368): warning C4996: 'strcpy': Thi
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
 d:\vs-workspace\geconet\unittets\test-mulp.cc(369): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
-d:\vs-workspace\geconet\src\geco-net-common.h(727): warning C4715: 'saddr_equals': not all control paths return a value
+d:\vs-workspace\geconet\src\geco-net-common.h(731): warning C4715: 'saddr_equals': not all control paths return a value
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1189,5): warning MSB8012: TargetPath(D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\unittests.exe) does not match the Linker's OutputFile property value (D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\geconet_unittests_Debugx64.exe). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1191,5): warning MSB8012: TargetName(unittests) does not match the Linker's OutputFile property value (geconet_unittests_Debugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
   unit-tests.vcxproj -> D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\unittests.exe

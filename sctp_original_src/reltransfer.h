@@ -52,7 +52,7 @@
 
 
 
-void *mrtx_new(unsigned int number_of_destination_addresses, unsigned int iTSN);
+void *mreltrans_new(unsigned int number_of_destination_addresses, unsigned int iTSN);
 
 void rtx_delete_reltransfer(void *rtx_instance);
 

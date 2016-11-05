@@ -262,7 +262,7 @@ ChunkID mch_make_simple_chunk(SCTP_simple_chunk * chunk);
  */
 void ch_deleteChunk(ChunkID chunkID);
 
-/* ch_forgetChunk removes the chunk from the array of chunks without freeing the
+/* mch_remove_simple_chunk removes the chunk from the array of chunks without freeing the
  memory allocated for that chunk.
  This is used in the following cases:
  - the caller wants to keep the chunk for retransmissions.
@@ -270,5 +270,5 @@ void ch_deleteChunk(ChunkID chunkID);
  into an SCTP-message, which was allocated as a whole. In this case the chunk
  can not be freed here.
  */
-void ch_forgetChunk(ChunkID chunkID);
+void mch_remove_simple_chunk(ChunkID chunkID);
 

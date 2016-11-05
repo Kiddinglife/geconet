@@ -5566,7 +5566,7 @@ unsigned short mdi_init_channel(unsigned int remoteSideReceiverWindow,
 	curr_channel_->peerSupportsPRSCTP = withPRSCTP;
 	curr_channel_->supportsPRSCTP = withPRSCTP;
 
-	curr_channel_->reliable_transfer_control = (void *)mrtx_new(
+	curr_channel_->reliable_transfer_control = (void *)mreltrans_new(
 		curr_channel_->noOfNetworks, localInitialTSN);
 	curr_channel_->flow_control = (void *)fc_new_flowcontrol(
 		remoteSideReceiverWindow, localInitialTSN,

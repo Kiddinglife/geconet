@@ -23,5 +23,5 @@
 #endif
 
 #define enable_mock_dispatch_send_geco_packet 0
-#define CURR_EVENT_LOG_LEVEL   INFO // VVERBOSE //DEBUG // VVERBOSE
+#define CURR_EVENT_LOG_LEVEL     DEBUG // VVERBOSE INFO
 #endif /* MY_CONFIG_H_ */

@@ -259,11 +259,11 @@ struct smctrl_t
         /** Counter for init and cookie retransmissions */
         uint init_retrans_count;
         /** pointer to the init chunk data structure (for retransmissions) */
-        init_chunk_t *my_init_chunk;  //!< init chunk sent by me
+        init_chunk_t *my_init_chunk;  //!< init chunk sent by me MUST NOT free it as this is from mtra
         int addr_my_init_chunk_sent_to;
 
         /** pointer to the cookie chunk data structure (for retransmissions) */
-        cookie_echo_chunk_t *cookieChunk;
+        cookie_echo_chunk_t *peer_cookie_chunk; //MUST NOT free it as this is from mtra
         /** my tie tag for cross initialization and other sick cases */
         uint local_tie_tag;
         /** peer's tie tag for cross initialization and other sick cases */

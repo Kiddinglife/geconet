@@ -95,7 +95,7 @@ typedef struct SCTP_CONTROLDATA
 	/** pointer to the init chunk data structure (for retransmissions) */
 	SCTP_init *initChunk;
 	/** pointer to the cookie chunk data structure (for retransmissions) */
-	cookie_echo_chunk_t *cookieChunk;
+	cookie_echo_chunk_t *peer_cookie_chunk;
 	/** my tie tag for cross initialization and other sick cases */
 	unsigned int local_tie_tag;
 	/** peer's tie tag for cross initialization and other sick cases */
@@ -207,7 +207,7 @@ static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 		{
 			/* increase retransmissission-counter, resend init and restart init-timer */
 			smctrl->initRetransCounter++;
-			bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->cookieChunk, NULL);
+			bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->peer_cookie_chunk, NULL);
 			bu_sendAllChunks(NULL);
 			/* restart cookie timer after timer backoff */
 			smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
@@ -223,10 +223,10 @@ static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 			/* log error to log-file */
 			event_log(EXTERNAL_EVENT,
 				"init retransmission counter exeeded threshold; state: COOKIE_ECHOED");
-			/* free memory for cookieChunk */
-			free(smctrl->cookieChunk);
+			/* free memory for peer_cookie_chunk */
+			free(smctrl->peer_cookie_chunk);
 			smctrl->initTimer = 0;
-			smctrl->cookieChunk = NULL;
+			smctrl->peer_cookie_chunk = NULL;
 			/* report error to ULP tbd: status */
 			mdi_deleteCurrentAssociation();
 			mdi_communicationLostNotif(SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
@@ -424,7 +424,7 @@ void msm_associate(unsigned short noOfOutStreams,
 			ch_enterIPaddresses(initCID, lAddresses, nlAddresses);
 
 		smctrl->initChunk = (SCTP_init *)ch_chunkString(initCID);
-		ch_forgetChunk(initCID);
+		mch_remove_simple_chunk(initCID);
 
 		/* send init chunk */
 		for (count = 0; count < numDestAddresses; count++)
@@ -433,7 +433,7 @@ void msm_associate(unsigned short noOfOutStreams,
 			bu_sendAllChunks(&count);
 		}
 
-		smctrl->cookieChunk = NULL;
+		smctrl->peer_cookie_chunk = NULL;
 		smctrl->local_tie_tag = 0;
 		smctrl->peer_tie_tag = 0;
 
@@ -715,7 +715,7 @@ int sctlr_init(SCTP_init *init)
 	if (ch_chunkType(initCID) != CHUNK_INIT)
 	{
 		/* error logging */
-		ch_forgetChunk(initCID);
+		mch_remove_simple_chunk(initCID);
 		error_log(ERROR_MAJOR, "sctlr_init: wrong chunk type");
 		return return_state;
 	}
@@ -813,7 +813,7 @@ int sctlr_init(SCTP_init *init)
 		if (process_further == -1)
 		{
 			/*   ch_deleteChunk(initAckCID);
-				   ch_forgetChunk(initCID); */
+				   mch_remove_simple_chunk(initCID); */
 			return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
 							   /* return return_state; */
 		}
@@ -889,7 +889,7 @@ int sctlr_init(SCTP_init *init)
 
 			/* reset length field again to NBO...and remove reference */
 			ch_chunkString(initCID_local);
-			ch_forgetChunk(initCID_local);
+			mch_remove_simple_chunk(initCID_local);
 
 			/* retreive a-side source addresses from message */
 			nrAddresses = ch_IPaddresses(initCID, supportedTypes, rAddresses, &peerSupportedTypes, &last_source);
@@ -915,7 +915,7 @@ int sctlr_init(SCTP_init *init)
 			if (process_further == -1)
 			{
 				ch_deleteChunk(initAckCID);
-				ch_forgetChunk(initCID);
+				mch_remove_simple_chunk(initCID);
 				return_state = STATE_STOP_PARSING; /* to stop parsing without actually removing it */
 				return return_state;
 			}
@@ -980,7 +980,7 @@ int sctlr_init(SCTP_init *init)
 			if (process_further == -1)
 			{
 				ch_deleteChunk(initAckCID);
-				ch_forgetChunk(initCID);
+				mch_remove_simple_chunk(initCID);
 				return_state = STATE_STOP_PARSING;
 				return return_state;
 			}
@@ -1011,7 +1011,7 @@ int sctlr_init(SCTP_init *init)
 	}
 
 	/* was only treated with mch_make_simple_chunk -- it is enough to "FORGET" it */
-	ch_forgetChunk(initCID);
+	mch_remove_simple_chunk(initCID);
 	return return_state;
 }
 
@@ -1061,14 +1061,14 @@ bool sctlr_initAck(SCTP_init *initAck)
 	if (ch_chunkType(initAckCID) != CHUNK_INIT_ACK)
 	{
 		/* error logging */
-		ch_forgetChunk(initAckCID);
+		mch_remove_simple_chunk(initAckCID);
 		error_log(ERROR_MAJOR, "sctlr_initAck: wrong chunk type");
 		return return_state;
 	}
 
 	if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
 	{
-		ch_forgetChunk(initAckCID);
+		mch_remove_simple_chunk(initAckCID);
 		error_log(ERROR_MAJOR, "sctlr_initAck: read SCTP-control failed");
 		return return_state;
 	}
@@ -1150,7 +1150,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 		/* reset length field again to NBO... */
 		ch_chunkString(initCID),
 			/* free initChunk memory */
-			ch_forgetChunk(initCID);
+			mch_remove_simple_chunk(initCID);
 
 		cookieCID = ch_makeCookie(ch_cookieParam(initAckCID));
 
@@ -1189,7 +1189,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 
 		if (process_further == -1)
 		{
-			ch_forgetChunk(initAckCID);
+			mch_remove_simple_chunk(initAckCID);
 			ch_deleteChunk(cookieCID);
 			if (errorCID != 0)
 				ch_deleteChunk(errorCID);
@@ -1212,7 +1212,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 			return_state = STATE_STOP_PARSING;
 		}
 
-		smctrl->cookieChunk = (cookie_echo_chunk_t *)ch_chunkString(cookieCID);
+		smctrl->peer_cookie_chunk = (cookie_echo_chunk_t *)ch_chunkString(cookieCID);
 		/* populate tie tags -> section 5.2.1/5.2.2 */
 		smctrl->local_tie_tag = mdi_read_local_tag();
 		smctrl->peer_tie_tag = ch_initiateTag(initAckCID);
@@ -1220,8 +1220,8 @@ bool sctlr_initAck(SCTP_init *initAck)
 		smctrl->outbound_stream = outbound_streams;
 		smctrl->inbound_stream = inbound_streams;
 
-		ch_forgetChunk(cookieCID);
-		ch_forgetChunk(initAckCID);
+		mch_remove_simple_chunk(cookieCID);
+		mch_remove_simple_chunk(initAckCID);
 
 		/* send cookie back to the address where we got it from     */
 		for (index = 0; index < ndAddresses; index++)
@@ -1229,7 +1229,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 				break;
 
 		/* send cookie */
-		bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->cookieChunk, &index);
+		bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->peer_cookie_chunk, &index);
 		if (errorCID != 0)
 		{
 			bu_put_Ctrl_Chunk((SCTP_simple_chunk *)ch_chunkString(errorCID), &index);
@@ -1334,14 +1334,14 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	if (ch_chunkType(cookieCID) != CHUNK_COOKIE_ECHO)
 	{
 		/* error logging */
-		ch_forgetChunk(cookieCID);
+		mch_remove_simple_chunk(cookieCID);
 		error_log(ERROR_MAJOR, "process_cookie_echo_chunk: wrong chunk type");
 		return;
 	}
 	/* section 5.2.4. 1) and 2.) */
 	if (ch_goodCookie(cookieCID))
 	{
-		ch_forgetChunk(cookieCID);
+		mch_remove_simple_chunk(cookieCID);
 		event_log(EXTERNAL_EVENT, "event: invalidCookie received");
 		return;
 	}
@@ -1360,7 +1360,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		(mdi_readLastDestPort() != ch_CookieDestPort(cookieCID)))
 	{
 
-		ch_forgetChunk(cookieCID);
+		mch_remove_simple_chunk(cookieCID);
 		ch_deleteChunk(initCID);
 		ch_deleteChunk(initAckCID);
 		event_log(EXTERNAL_EVENT, "event: good cookie echo received, but with incorrect verification tag");
@@ -1386,7 +1386,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			ch_enterStaleCookieError(errorCID, (unsigned int)(1.2 * cookieLifetime));
 			bu_put_Ctrl_Chunk(ch_chunkString(errorCID), NULL);
 			bu_sendAllChunks(NULL);
-			ch_forgetChunk(cookieCID);
+			mch_remove_simple_chunk(cookieCID);
 			ch_deleteChunk(initCID);
 			ch_deleteChunk(initAckCID);
 			ch_deleteChunk(errorCID);
@@ -1400,7 +1400,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		error_log(ERROR_MAJOR, "process_cookie_echo_chunk: mdi_readLastFromAddress failed !");
 		ch_deleteChunk(initCID);
 		ch_deleteChunk(initAckCID);
-		ch_forgetChunk(cookieCID);
+		mch_remove_simple_chunk(cookieCID);
 		return;
 	}
 
@@ -1422,7 +1422,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			error_log(ERROR_MAJOR, "process_cookie_echo_chunk: Creation of association failed");
 			ch_deleteChunk(initCID);
 			ch_deleteChunk(initAckCID);
-			ch_forgetChunk(cookieCID);
+			mch_remove_simple_chunk(cookieCID);
 			return;
 		}
 	}
@@ -1432,7 +1432,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		error_log(ERROR_MAJOR, "sctlr_cookie-echo: program error: SCTP-control NULL");
 		ch_deleteChunk(initCID);
 		ch_deleteChunk(initAckCID);
-		ch_forgetChunk(cookieCID);
+		mch_remove_simple_chunk(cookieCID);
 		return;
 	}
 
@@ -1625,7 +1625,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			{ /* is case C */
 			/* section 5.2.4. action C : silently discard cookie */
 				event_log(VERBOSE, "Dupl. CookieEcho, case 5.2.4.C) --> Silently discard !");
-				ch_forgetChunk(cookieCID);
+				mch_remove_simple_chunk(cookieCID);
 				ch_deleteChunk(initCID);
 				ch_deleteChunk(initAckCID);
 				smctrl = NULL;
@@ -1672,7 +1672,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 					else
 					{ /* silently discard */
 						event_log(VERBOSE, "Restart not successful, silently discarding CookieEcho");
-						ch_forgetChunk(cookieCID);
+						mch_remove_simple_chunk(cookieCID);
 						ch_deleteChunk(initCID);
 						ch_deleteChunk(initAckCID);
 						smctrl = NULL;
@@ -1699,7 +1699,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			else
 			{ /* silently discard */
 				event_log(VERBOSE, "Dupl. CookieEcho, silently discarding CookieEcho");
-				ch_forgetChunk(cookieCID);
+				mch_remove_simple_chunk(cookieCID);
 				ch_deleteChunk(initCID);
 				ch_deleteChunk(initAckCID);
 				smctrl = NULL;
@@ -1715,7 +1715,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 
 	ch_deleteChunk(initCID);
 	ch_deleteChunk(initAckCID);
-	ch_forgetChunk(cookieCID);
+	mch_remove_simple_chunk(cookieCID);
 
 	if (new_state != 0xFFFFFFFF)
 		smctrl->association_state = new_state;
@@ -1751,7 +1751,7 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 		error_log(ERROR_MAJOR, "sctlr_cookieAck: wrong chunk type");
 		return;
 	}
-	ch_forgetChunk(cookieAckCID);
+	mch_remove_simple_chunk(cookieAckCID);
 
 	if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
 	{
@@ -1772,11 +1772,11 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 			sctp_stopTimer(smctrl->initTimer);
 			smctrl->initTimer = 0;
 		}
-		/* free  cookieChunk */
+		/* free  peer_cookie_chunk */
 		free(smctrl->initChunk);
-		free(smctrl->cookieChunk);
+		free(smctrl->peer_cookie_chunk);
 		smctrl->initChunk = NULL;
-		smctrl->cookieChunk = NULL;
+		smctrl->peer_cookie_chunk = NULL;
 		SendCommUpNotif = SCTP_COMM_UP_RECEIVED_COOKIE_ACK;
 		/* mdi_communicationUpNotif(SCTP_COMM_UP_RECEIVED_COOKIE_ACK); */
 
@@ -1791,8 +1791,7 @@ void sctlr_cookieAck(SCTP_simple_chunk *cookieAck)
 	case SHUTDOWNPENDING:
 	case SHUTDOWNRECEIVED:
 	case SHUTDOWNSENT:
-		/* In this states the cookie is unexpected event.
-				   Do error logging  */
+		/* In this states the cookie is unexpected event.Do error logging  */
 		event_logi(EXTERNAL_EVENT_X, "unexpected event: sctlr_cookieAck in state %02d", state);
 		break;
 	default:
@@ -1828,7 +1827,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	{
 		/* error logging */
 		error_log(ERROR_MAJOR, "sctlr_cookieAck: wrong chunk type");
-		ch_forgetChunk(shutdownCID);
+		mch_remove_simple_chunk(shutdownCID);
 		return return_state;
 	}
 
@@ -1836,7 +1835,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	{
 		/* error log */
 		error_log(ERROR_MAJOR, "sctlr_shutdown: read SCTP-control failed");
-		ch_forgetChunk(shutdownCID);
+		mch_remove_simple_chunk(shutdownCID);
 		return return_state;
 	}
 
@@ -1864,7 +1863,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 	case COOKIE_ECHOED:
 	case SHUTDOWNPENDING:
 		event_logi(EXTERNAL_EVENT, "event: sctlr_shutdown in state %2u -> discarding !", state);
-		ch_forgetChunk(shutdownCID);
+		mch_remove_simple_chunk(shutdownCID);
 		break;
 
 	case SHUTDOWNRECEIVED:
@@ -1947,7 +1946,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 		event_logi(EXTERNAL_EVENT_X, "sctlr_shutdown in state %02d: unexpected event", state);
 		break;
 	}
-	ch_forgetChunk(shutdownCID);
+	mch_remove_simple_chunk(shutdownCID);
 	if (sendNotification)
 	{
 		mdi_peerShutdownReceivedNotif();
@@ -2255,7 +2254,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	if (ch_chunkType(errorCID) != CHUNK_ERROR)
 	{
 		/* error logging */
-		ch_forgetChunk(errorCID);
+		mch_remove_simple_chunk(errorCID);
 		error_log(ERROR_MAJOR, "sctlr_staleCookie: wrong chunk type");
 		return;
 	}
@@ -2282,7 +2281,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 		/* resend init */
 		bu_put_Ctrl_Chunk(ch_chunkString(initCID), NULL);
 		bu_sendAllChunks(NULL);
-		ch_forgetChunk(initCID);
+		mch_remove_simple_chunk(initCID);
 
 		state = COOKIE_WAIT;
 		break;
@@ -2460,7 +2459,7 @@ void *msm_new(void *sctpInstance)
 	tmp->initTimerDuration = RTO_INITIAL;
 	tmp->initRetransCounter = 0;
 	tmp->initChunk = NULL;
-	tmp->cookieChunk = NULL;
+	tmp->peer_cookie_chunk = NULL;
 	tmp->associationID = get_curr_channel_id();
 	tmp->outbound_stream = mdi_readLocalOutStreams();
 	tmp->inbound_stream = mdi_readLocalInStreams();
@@ -2492,8 +2491,8 @@ void sci_deleteSCTP_control(void *sctpControlData)
 	}
 	if (sctpCD->initChunk != NULL)
 		free(sctpCD->initChunk);
-	if (sctpCD->cookieChunk != NULL)
-		free(sctpCD->cookieChunk);
+	if (sctpCD->peer_cookie_chunk != NULL)
+		free(sctpCD->peer_cookie_chunk);
 	free(sctpControlData);
 }
 

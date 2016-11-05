@@ -350,6 +350,10 @@ if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i),
 if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n))
 #define EVENTLOG8(x,y,z,i,j,k,l,m,n,o)\
 if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o))
+#define EVENTLOG9(x,y,z,i,j,k,l,m,n,o,p)\
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o),(p))
+#define EVENTLOG10(x,y,z,i,j,k,l,m,n,o,p,q)\
+if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o),(p),(q))
 
 #define ERRLOG(x,y)  \
 if (CURR_ERROR_LOG_LEVEL >= x) error_log1((x), __FILE__, __LINE__, (y))

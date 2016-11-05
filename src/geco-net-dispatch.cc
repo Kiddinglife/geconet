@@ -187,12 +187,12 @@ unsigned int mfc_get_queued_chunks_count(void);
  * function to return the last a_rwnd value we got from our peer
  * @return  peers advertised receiver window
  */
-unsigned int mrtx_get_peer_rwnd();
+unsigned int mreltx_get_peer_rwnd();
 /**
  * function to set the a_rwnd value when we got it from our peer
  * @param  new_arwnd      peers newly advertised receiver window
  * @return  0 for success, -1 for error*/
-int mrtx_set_peer_arwnd(uint new_arwnd);
+int mreltx_set_peer_arwnd(uint new_arwnd);
 /**
  * Function returns the number of chunks that are waiting in the queue to be acked
  * @return size of the retransmission queue
@@ -381,19 +381,19 @@ inline int mfc_get_outstanding_bytes(void)
 	return (int)fc->outstanding_bytes;
 }
 
-inline unsigned int mrtx_get_peer_rwnd()
+inline unsigned int mreltx_get_peer_rwnd()
 {
 	reltransfer_controller_t *rtx;
 	if ((rtx = mdi_read_mrtx()) == NULL)
 	{
 		ERRLOG(MAJOR_ERROR,
-			"mrtx_get_peer_rwnd()::reltransfer_controller_t instance not set !");
+			"mreltx_get_peer_rwnd()::reltransfer_controller_t instance not set !");
 		return 0;
 	}
-	EVENTLOG1(VERBOSE, "mrtx_get_peer_rwnd() returns %u", rtx->peer_arwnd);
+	EVENTLOG1(VERBOSE, "mreltx_get_peer_rwnd() returns %u", rtx->peer_arwnd);
 	return rtx->peer_arwnd;
 }
-inline int mrtx_set_peer_arwnd(uint new_arwnd)
+inline int mreltx_set_peer_arwnd(uint new_arwnd)
 {
 	reltransfer_controller_t *rtx;
 	if ((rtx = (reltransfer_controller_t *)mdi_read_mrtx()) == NULL)
@@ -403,7 +403,7 @@ inline int mrtx_set_peer_arwnd(uint new_arwnd)
 	}
 	else
 		rtx->peer_arwnd = new_arwnd;
-	EVENTLOG1(VERBOSE, "mrtx_set_peer_arwnd to %u", rtx->peer_arwnd);
+	EVENTLOG1(VERBOSE, "mreltx_set_peer_arwnd to %u", rtx->peer_arwnd);
 	return 0;
 }
 inline unsigned int rtx_get_unacked_chunks_count()
@@ -647,7 +647,6 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams,
 
 		simple_chunk_t* myinit = mch_complete_simple_chunk(initCID);
 		smctrl->my_init_chunk = (init_chunk_t*)myinit;
-
 		mch_remove_simple_chunk(initCID);
 
 		/* send init chunk */
@@ -661,7 +660,7 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams,
 		// init smctrl
 		EVENTLOG(DEBUG, "msm_connect()::init smctrl");
 		smctrl->addr_my_init_chunk_sent_to = numDestAddresses - 1;
-		smctrl->cookieChunk = NULL;
+		smctrl->peer_cookie_chunk = NULL;
 		smctrl->local_tie_tag = 0;
 		smctrl->peer_tie_tag = 0;
 		smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
@@ -2259,6 +2258,30 @@ void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 	EVENTLOG(VERBOSE, "- -  Leave mdis_bundle_ctrl_chunk()");
 }
 
+static void mdi_print_channel()
+{
+	EVENTLOG10(INFO,
+		"curr_channel_->channel_id=%d\n"
+		"curr_channel_->deleted=%d\n"
+		"curr_channel_->local_port=%d\n"
+		"curr_channel_->remote_port=%d\n"
+		"curr_channel_->local_addres_size=%d\n"
+		"curr_channel_->remote_addres_size=%d\n"
+		"curr_channel_->local_tag=%d\n"
+		"curr_channel_->remote_tag=%d\n"
+		"curr_channel_->local_tie_tag=%d\n"
+		"curr_channel_->peer_tie_tag=%d\n",
+		curr_channel_->channel_id,
+		curr_channel_->deleted,
+		curr_channel_->local_port,
+		curr_channel_->remote_port,
+		curr_channel_->local_addres_size,
+		curr_channel_->remote_addres_size,
+		curr_channel_->local_tag,
+		curr_channel_->remote_tag,
+		curr_channel_->state_machine_control->local_tie_tag,
+		curr_channel_->state_machine_control->peer_tie_tag);
+}
 /**
  * indicates that an association is established (chapter 10.2.D).
  * @param status     type of event that caused association to come up;
@@ -2267,7 +2290,8 @@ void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
  */
 void on_connection_up(uint status)
 {
-	EVENTLOG(INFO, "on_connection_up");
+	EVENTLOG1(INFO, "on_connection_up %d", status);
+	mdi_print_channel();
 }
 /**
  * indicates that a restart has occured(chapter 10.2.G).
@@ -3203,9 +3227,9 @@ void reset_rtx_bytecounters(reltransfer_controller_t * rtx)
  * @param number of paths to the peer of the association
  * @return pointer to the newly created structure
  */
-reltransfer_controller_t* mrtx_new(uint numofdestaddrlist, uint iTSN)
+reltransfer_controller_t* mreltx_new(uint numofdestaddrlist, uint iTSN)
 {
-	EVENTLOG(VERBOSE, "- - - Enter mrtx_new()");
+	EVENTLOG(VERBOSE, "- - - Enter mreltx_new()");
 
 	reltransfer_controller_t* tmp = new reltransfer_controller_t();
 	if (tmp == NULL)
@@ -3227,7 +3251,7 @@ reltransfer_controller_t* mrtx_new(uint numofdestaddrlist, uint iTSN)
 	tmp->advancedPeerAckPoint = iTSN - 1; /* a save bet */
 	reset_rtx_bytecounters(tmp);
 
-	EVENTLOG(VERBOSE, "- - - Leave mrtx_new()");
+	EVENTLOG(VERBOSE, "- - - Leave mreltx_new()");
 	return tmp;
 }
 /**
@@ -3235,9 +3259,9 @@ reltransfer_controller_t* mrtx_new(uint numofdestaddrlist, uint iTSN)
  * @param rtx_instance pointer to a retransmit_controller_t, that was previously created
  with rtx_new_reltransfer()
  */
-void mrtx_free(reltransfer_controller_t* rtx_inst)
+void mreltx_free(reltransfer_controller_t* rtx_inst)
 {
-	EVENTLOG(VERBOSE, "- - - Enter mrtx_free()");
+	EVENTLOG(VERBOSE, "- - - Enter mreltx_free()");
 
 	if (rtx_inst->chunk_list_tsn_ascended.size() > 0)
 	{
@@ -3257,7 +3281,7 @@ void mrtx_free(reltransfer_controller_t* rtx_inst)
 		free_data_chunk(it);
 	}
 	free(rtx_inst);
-	EVENTLOG(VERBOSE, "- - - Leave mrtx_free()");
+	EVENTLOG(VERBOSE, "- - - Leave mreltx_free()");
 }
 /**
  * this function stops all currently running timers of the flowcontrol module
@@ -3380,7 +3404,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres,
 	tmp->doing_retransmission = false;
 	tmp->maxQueueLen = maxQueueLen;
 	tmp->list_length = 0;
-	mrtx_set_peer_arwnd(peer_rwnd);
+	mreltx_set_peer_arwnd(peer_rwnd);
 
 	EVENTLOG1(VERBOSE, "- - - Leave mfc_new(channel id=%d)", tmp->channel_id);
 	return tmp;
@@ -3572,7 +3596,7 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams,
 		/* channel init was already completed */
 		EVENTLOG(INFO, "mdi_init_channel()::reset channel members!");
 		mfc_free(curr_channel_->flow_control);
-		mrtx_free(curr_channel_->reliable_transfer_control);
+		mreltx_free(curr_channel_->reliable_transfer_control);
 		mrecv_free(curr_channel_->receive_control);
 		mdlm_free(curr_channel_->deliverman_control);
 	}
@@ -3581,7 +3605,7 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams,
 		&& curr_channel_->locally_supported_PRDCTP;
 	curr_channel_->locally_supported_PRDCTP =
 		curr_channel_->remotely_supported_PRSCTP = with_pr;
-	curr_channel_->reliable_transfer_control = mrtx_new(
+	curr_channel_->reliable_transfer_control = mreltx_new(
 		curr_channel_->remote_addres_size, localInitialTSN);
 	curr_channel_->flow_control = mfc_new(remoteSideReceiverWindow,
 		localInitialTSN, curr_channel_->remote_addres_size,
@@ -3806,7 +3830,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			return return_state;
 		}
 
-		smctrl->cookieChunk = (cookie_echo_chunk_t *)mch_complete_simple_chunk(
+		smctrl->peer_cookie_chunk = (cookie_echo_chunk_t *)mch_complete_simple_chunk(
 			cookieecho_cid);
 		smctrl->local_tie_tag =
 			curr_channel_ == NULL ? 0 : curr_channel_->local_tag;
@@ -3817,7 +3841,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		mch_remove_simple_chunk(initAckCID);
 
 		/* send cookie echo back to peer */
-		mdis_bundle_ctrl_chunk((simple_chunk_t*)smctrl->cookieChunk); // not free cookie echo
+		mdis_bundle_ctrl_chunk((simple_chunk_t*)smctrl->peer_cookie_chunk); // not free cookie echo
 		if (process_further == ActionWhenUnknownVlpOrChunkType::STOP_PROCES_PARAM_REPORT_EREASON)
 		{
 			return_state = ChunkProcessResult::Stop;
@@ -4014,7 +4038,7 @@ smctrl_t* msm_new(void)
 	tmp->init_retrans_count = 0;
 	tmp->channel_id = curr_channel_->channel_id;
 	tmp->my_init_chunk = NULL;
-	tmp->cookieChunk = NULL;
+	tmp->peer_cookie_chunk = NULL;
 	tmp->outbound_stream = curr_geco_instance_->noOfOutStreams;
 	tmp->inbound_stream = curr_geco_instance_->noOfInStreams;
 	tmp->local_tie_tag = 0;
@@ -4327,7 +4351,7 @@ inline void mdi_set_channel_addrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES],
  \end{itemiz}
  @param  cookie_echo pointer to the received cookie echo chunk
  */
-void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
+static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 {
 	EVENTLOG(VERBOSE, "Enter process_cookie_echo_chunk()");
 
@@ -4672,7 +4696,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 				uint our_itsn = mch_read_itsn(initAckCID);
 				bool peer_spre = peer_supports_pr(cookie_echo);
 				bool peer_saddip = peer_supports_addip(cookie_echo);
-				mdi_init_channel(peer_rwnd,our_in,our_os,peer_itsn,cookie_remote_tag, our_itsn,peer_spre,peer_saddip);
+				mdi_init_channel(peer_rwnd, our_in, our_os, peer_itsn, cookie_remote_tag, our_itsn, peer_spre, peer_saddip);
 
 				smctrl->outbound_stream = mch_read_ostreams(initAckCID);
 				smctrl->inbound_stream = mch_read_instreams(initAckCID);
@@ -4688,6 +4712,8 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 
 				newstate = ChannelState::Connected;	 // enters CONNECTED state
 				SendCommUpNotification = COMM_UP_RECEIVED_VALID_COOKIE; // notification to ULP
+				EVENTLOG(INFO,
+					"****************************** ENTER CONNECTED STATE**********************");
 
 				//bundle and send cookie ack
 				cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK,
@@ -4722,20 +4748,79 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	EVENTLOG(VERBOSE, "Leave process_cookie_echo_chunk()");
 }
 
-int mdis_disassemle_packet()
+/**
+sctlr_cookieAck is called by bundling when a cookieAck chunk was received from  the peer.
+The only purpose is to inform the active side that peer has received the cookie chunk.
+The association is in established state after this function is called.
+Communication up is signalled to the upper layer in this case.
+@param cookieAck pointer to the received cookie ack chunk
+*/
+static void process_cookie_ack_chunk(simple_chunk_t* cookieAck)
+{
+	EVENTLOG(INFO, "****************** RECV CHUNK_COOKIE_ACK AT COOKIE_ECHOED STATE ********************");
+	if (cookieAck->chunk_header.chunk_id != CHUNK_COOKIE_ACK)
+	{
+		ERRLOG(MINOR_ERROR,
+			"process_cookie_ack_chunk():  NOT CHUNK_COOKIE_ACK -> RETURN!");
+		return;
+	}
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(MINOR_ERROR,
+			"process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		return;
+	}
+
+	if (smctrl->channel_state != ChannelState::CookieEchoed)
+	{
+		/*Duplicated or unexpected cookie, ignore, do error logging  */
+		EVENTLOG1(NOTICE,
+			"unexpected event: recv cookieAck in state %d rather than CookieEchoed -> return", smctrl->channel_state);
+		return;
+	}
+
+
+	if (smctrl->init_timer_id != mtra_timer_mgr_.timers.end())
+	{  // stop t1-init timer
+		mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
+		smctrl->init_timer_id = mtra_timer_mgr_.timers.end();
+	}
+
+	chunk_id_t  cookieAckCID = mch_make_simple_chunk(cookieAck);
+	smctrl->my_init_chunk = NULL;
+	smctrl->peer_cookie_chunk = NULL;
+	mch_remove_simple_chunk(cookieAckCID);
+	smctrl->channel_state = ChannelState::Connected;
+	on_connection_up(COMM_UP_RECEIVED_COOKIE_ACK);
+}
+
+/*
+pass to relevant module :
+
+msm:
+CHUNK_INIT,
+CHUNK_INIT_ACK,
+CHUNK_ABORT,
+CHUNK_SHUTDOWN,
+CHUNK_SHUTDOWN_ACK
+CHUNK_COOKIE_ECHO,
+CHUNK_COOKIE_ACK
+CHUNK_ERROR
+
+mreltrans:
+CHUNK_SACK
+
+mpath:
+CHUNK_HBREQ
+CHUNK_HBACK
+
+mrecv:
+CHUNK_DATA
+*/
+int mdi_disassemle_packet()
 {
 #if defined(_DEBUG)
-	//#if ENABLE_UNIT_TEST
-	//	if (enable_mock_dispatcher_disassemle_curr_geco_packet_)
-	//	{
-	//		EVENTLOG(DEBUG, "Mock::dispatch_layer_t::disassemle_curr_geco_packet() is called");
-	//		return 0;
-	//	}
-	//#else
-	//	EVENTLOG2(DEBUG,
-	//		"- - - ENTER dispatch_layer_t::disassemle_curr_geco_packet():last_src_path_ %u,packetvallen %u",
-	//		last_src_path_, curr_geco_packet_value_len_);
-	//#endif
 	EVENTLOG2(DEBUG,
 		"- - - ENTER dispatch_layer_t::disassemle_curr_geco_packet():last_src_path_ %u,packetvallen %u",
 		last_src_path_, curr_geco_packet_value_len_);
@@ -4782,24 +4867,28 @@ int mdis_disassemle_packet()
 		switch (chunk->chunk_header.chunk_id)
 		{
 		case CHUNK_DATA:
-			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_DATA");
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
 			handle_ret = process_data_chunk((data_chunk_t*)chunk, -2);
 			data_chunk_received = true;
 			break;
 		case CHUNK_INIT:
-			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT");
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_INIT");
 			handle_ret = process_init_chunk((init_chunk_t *)chunk);
 			break;
 		case CHUNK_INIT_ACK:
-			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_INIT_ACK");
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_INIT_ACK");
 			handle_ret = process_init_ack_chunk((init_chunk_t *)chunk);
 			break;
 		case CHUNK_COOKIE_ECHO:
-			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_COOKIE_ECHO");
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_COOKIE_ECHO");
 			process_cookie_echo_chunk((cookie_echo_chunk_t*)chunk);
 			break;
+		case CHUNK_COOKIE_ACK:
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_COOKIE_ACK");
+			process_cookie_ack_chunk((simple_chunk_t*)chunk);
+			break;
 		case CHUNK_SACK:
-			EVENTLOG(VERBOSE, "***** Diassemble received CHUNK_SACK");
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_SACK");
 			handle_ret = process_sack_chunk(-2, chunk,
 				curr_geco_packet_value_len_);
 			break;
@@ -6382,7 +6471,7 @@ SEND_ABORT:
 	}  // 23 send_abort_ == true
 
 	// forward packet value to bundle ctrl module for disassemblings
-	mdis_disassemle_packet();
+	mdi_disassemle_packet();
 
 	// no need to clear last_src_port_ and last_dest_port_ MAY be used by other functions
 	last_src_path_ = -1;
@@ -7073,7 +7162,7 @@ int mulp_get_connection_params(unsigned int connectionid,
 			NULL);
 		status->inStreams = mdm_get_istreams();
 		status->outStreams = mdm_get_ostreams();
-		status->currentReceiverWindowSize = mrtx_get_peer_rwnd();
+		status->currentReceiverWindowSize = mreltx_get_peer_rwnd();
 		status->outstandingBytes = mfc_get_outstanding_bytes();
 		status->noOfChunksInSendQueue = mfc_get_queued_chunks_count();
 		status->noOfChunksInRetransmissionQueue =
