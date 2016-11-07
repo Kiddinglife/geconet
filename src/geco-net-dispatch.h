@@ -273,14 +273,14 @@ struct smctrl_t
         /** todo we store these here, too. Maybe better be stored with StreamEngine ? */
         ushort inbound_stream;
         /** value for maximum retransmissions per association */
-        uint max_assoc_retrans_count_per_channel;
+        uint max_assoc_retrans_count;
         /** value for maximum initial retransmissions per association */
         uint max_init_retrans_count;
         /** value for the current cookie lifetime */
         uint cookie_lifetime;
         /** the geco instance */
         geco_instance_t* instance;
-        channel_t* channel_ptr;
+        channel_t* channel;
         /*@} */
 };
 
