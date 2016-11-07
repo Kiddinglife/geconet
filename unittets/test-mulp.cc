@@ -12,6 +12,7 @@ TEST(MULP, test_initialize_and_free_library)
   initialize_library ();
   free_library ();
 }
+
 TEST(MULP, test_mulp_get_lib_params)
 {
   //precondition lib has been inited
@@ -27,6 +28,7 @@ TEST(MULP, test_mulp_get_lib_params)
 
   free_library ();
 }
+
 TEST(MULP, test_mulp_set_lib_params)
 {
   //precondition lib has been inited
@@ -52,12 +54,64 @@ TEST(MULP, test_mulp_set_lib_params)
   free_library ();
 }
 
-extern std::vector<geco_instance_t*> geco_instances_;
+/**
+ * allocatePort Allocate a given port.
+ * @return usable port otherwise 0 if port is occupied.
+ */
+extern unsigned char portsSeized[65536];
+extern unsigned int numberOfSeizedPorts;
+extern unsigned short
+unused (unsigned short port);
+TEST(MULP, test_unused_port)
+{
+  //test initial values
+  ASSERT_EQ(numberOfSeizedPorts, 0);
+  for (int i = 0; i < 65536; i++)
+  {
+    ASSERT_EQ(portsSeized[i], 0);
+  }
+
+  //test unoccupied port
+  ASSERT_EQ(unused (1234), 1234);
+  ASSERT_EQ(numberOfSeizedPorts, 1);
+
+  //test occupied port
+  ASSERT_EQ(unused (1234), 0);
+  ASSERT_EQ(numberOfSeizedPorts, 1);
+
+  //should exit if port value > UINT16_MAX, which is overflowed uint16
+  //ASSERT_EQ(unused(655355),123456);
+}
+
+/**
+ * seizePort return a free port number.
+ * @return free port.
+ */
+extern unsigned short
+allocport (void);
+/**
+ * releasePort frees a previously used port.
+ * @param portSeized port that is to be freed.
+ */
+extern void
+freeport (unsigned short portSeized);
+TEST(MULP, test_alloc_and_free_port)
+{
+  ushort port = allocport ();
+  ASSERT_EQ(numberOfSeizedPorts, 1);
+  freeport (port);
+  ASSERT_EQ(numberOfSeizedPorts, 0);
+  numberOfSeizedPorts = 65535;
+  port = allocport ();
+  ASSERT_EQ(port, 0);
+}
+
 extern int myRWND;
 extern uint ipv4_sockets_geco_instance_users;
 extern uint ipv6_sockets_geco_instance_users;
 extern int defaultlocaladdrlistsize_;
 extern sockaddrunion* defaultlocaladdrlist_;
+extern std::vector<geco_instance_t*> geco_instances_;
 TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
 {
   //precondition lib has been inited
@@ -314,6 +368,12 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
   free_library ();
 }
 
+
+TEST(MULP, test_mdi_new_and_delete_channel)
+{
+  //todo
+}
+
 extern int
 mtra_poll (void
 (*lock) (void* data),
@@ -374,30 +434,119 @@ TEST(MULP, test_mulp_connect)
                                    ULPcallbackFunctions);
   curr_geco_instance_ = geco_instances_[instid];
 
- 
   noOfOutStreams = 12;
   mulp_connect (instid, noOfOutStreams, "::1", localPort,
                 &ULPcallbackFunctions);
+  channel_t* curr_channel_ = channels_[0];
+
+  ASSERT_EQ(curr_channel_->channel_id, 0);
+  ASSERT_EQ(curr_channel_->deleted, false);
+  ASSERT_EQ(curr_channel_->remotely_supported_PRSCTP, false);
+  ASSERT_EQ(curr_channel_->remotely_supported_ADDIP, false);
+  ASSERT_EQ(curr_channel_->locally_supported_PRDCTP,
+            lib_infos.support_particial_reliability);
+  ASSERT_EQ(curr_channel_->locally_supported_ADDIP,
+            lib_infos.support_dynamic_addr_config);
+  ASSERT_EQ(curr_channel_->ipTos, curr_geco_instance_->default_ipTos);
+  ASSERT_EQ(curr_channel_->is_IN6ADDR_ANY, curr_geco_instance_->is_in6addr_any);
+  ASSERT_EQ(curr_channel_->is_INADDR_ANY, curr_geco_instance_->is_inaddr_any);
+  //ASSERT_EQ(curr_channel_->local_addres,false);
+  bundle_controller_t* mbu = curr_channel_->bundle_control;
+  EXPECT_EQ(mbu->ctrl_chunk_in_buffer, false);
+  EXPECT_EQ(mbu->ctrl_position, GECO_PACKET_FIXED_SIZE);
+  EXPECT_EQ(mbu->data_in_buffer, false);
+  EXPECT_EQ(mbu->data_position, GECO_PACKET_FIXED_SIZE);
+  EXPECT_EQ(mbu->sack_in_buffer, false);
+  EXPECT_EQ(mbu->sack_position, GECO_PACKET_FIXED_SIZE);
+  EXPECT_EQ(mbu->got_send_address, false);
+  EXPECT_EQ(mbu->got_send_request, false);
+  EXPECT_EQ(mbu->got_shutdown, false);
+  EXPECT_EQ(mbu->locked, false);
+  EXPECT_EQ(mbu->requested_destination, 0);
+
+  mulp_delete_geco_instance (instid);
+  free_library ();
+}
+
+TEST(MULP, test_process_init_chunk)
+{
+  //precondition lib has been inited
+  initialize_library ();
+
+  lib_params_t lib_infos;
+  mulp_get_lib_params (&lib_infos);
+
+  geco_instance_t* curr_geco_instance_;
+  int instid;
+  bool fip4 = false, fip6 = false;
+  char ip4addrstr[MAX_IPADDR_STR_LEN];
+  char ip6addrstr[MAX_IPADDR_STR_LEN];
+
+  for (int i = 0; i < defaultlocaladdrlistsize_; i++)
+  {
+    if (!fip4 && defaultlocaladdrlist_[i].sa.sa_family == AF_INET)
+    {
+      fip4 = true;
+      saddr2str (&defaultlocaladdrlist_[i], ip4addrstr, MAX_IPADDR_STR_LEN);
+      if (fip6)
+        break;
+    }
+    if (!fip6 && defaultlocaladdrlist_[i].sa.sa_family == AF_INET6)
+    {
+      fip6 = true;
+      saddr2str (&defaultlocaladdrlist_[i], ip6addrstr, MAX_IPADDR_STR_LEN);
+      if (fip4)
+        break;
+    }
+  }
+  EVENTLOG2(DEBUG, "used ip4 addr %s, ip6 addr %s", ip4addrstr, ip6addrstr);
+
+  unsigned short localPort;
+  unsigned short noOfInStreams;
+  unsigned short noOfOutStreams;
+  unsigned int noOfLocalAddresses;
+  unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN];
+  ulp_cbs_t ULPcallbackFunctions;
+
+  //ip6 any and ip4 any
+  localPort = 123;
+  noOfInStreams = 32;
+  noOfOutStreams = 32;
+  noOfLocalAddresses = 2;
+  strcpy ((char*) localAddressList[0], "0.0.0.0");
+  strcpy ((char*) localAddressList[1], "::0");
+  ULPcallbackFunctions =
+  { 0};
+  instid = mulp_new_geco_instance (localPort, noOfInStreams, noOfOutStreams,
+                                   noOfLocalAddresses, localAddressList,
+                                   ULPcallbackFunctions);
+  curr_geco_instance_ = geco_instances_[instid];
+
+  noOfOutStreams = 12;
+  mulp_connect (instid, noOfOutStreams, "::1", localPort,
+                &ULPcallbackFunctions);
+
   //poll to receive the init, send initack
   mtra_poll (0, 0, 0);
-  //poll to receive the initack  send cookie echoed
-  mtra_poll (0, 0, 0);
-  //poll to receive the cookie echoed chunk and send cookie ack
-  mtra_poll (0, 0, 0);
-  //poll to receive the cookie ack
-  mtra_poll (0, 0, 0);
 
-  mulp_connect(instid, noOfOutStreams, ip6addrstr, localPort,
-	  &ULPcallbackFunctions);
-  //poll to receive the init, send initack
-  mtra_poll(0, 0, 0);
-  //poll to receive the initack  send cookie echoed
-  mtra_poll(0, 0, 0);
-  //poll to receive the cookie echoed chunk and send cookie ack
-  mtra_poll(0, 0, 0);
-  //poll to receive the cookie ack
-  mtra_poll(0, 0, 0);
-
+//  //poll to receive the initack  send cookie echoed
+//  mtra_poll (0, 0, 0);
+//  //poll to receive the cookie echoed chunk and send cookie ack
+//  mtra_poll (0, 0, 0);
+//  //poll to receive the cookie ack
+//  mtra_poll (0, 0, 0);
+//
+//  mulp_connect(instid, noOfOutStreams, ip6addrstr, localPort,
+//          &ULPcallbackFunctions);
+//  //poll to receive the init, send initack
+//  mtra_poll(0, 0, 0);
+//  //poll to receive the initack  send cookie echoed
+//  mtra_poll(0, 0, 0);
+//  //poll to receive the cookie echoed chunk and send cookie ack
+//  mtra_poll(0, 0, 0);
+//  //poll to receive the cookie ack
+//  mtra_poll(0, 0, 0);
+//
   mulp_delete_geco_instance (instid);
   free_library ();
 }

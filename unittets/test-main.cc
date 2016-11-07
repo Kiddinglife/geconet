@@ -35,12 +35,14 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
     // last pass on 31 Oct 2016
-    //::testing::GTEST_FLAG(filter) = "MULP.*";
+    //::testing::GTEST_FLAG(filter) = "MULP.*";test_alloc_and_free_port
+    //::testing::GTEST_FLAG(filter) = "MULP.test_unused_port";
+    //::testing::GTEST_FLAG(filter) = "MULP.test_alloc_and_free_port";
     //::testing::GTEST_FLAG(filter) = "MULP.test_initialize_and_free_library";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_get_lib_params";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
     //::testing::GTEST_FLAG(filter) ="MULP.test_mulp_mulp_new_and_delete_geco_instnce";
-	::testing::GTEST_FLAG(filter) ="MULP.test_mulp_connect";
+    //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
 
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MBU.*";
