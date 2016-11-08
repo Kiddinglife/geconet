@@ -4809,14 +4809,14 @@ short mdi_getIndexForAddress(union sockunion* address)
  * @param addresses array that will hold the destination addresses after returning
  * @param noOfAddresses number of addresses that the peer has (and sends along in init/initAck)
  */
-void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES],
+void mdi_set_channel_remoteaddrlist(union sockunion addresses[MAX_NUM_ADDRESSES],
 	int noOfAddresses)
 {
 
 	if (curr_channel_ == NULL)
 	{
 		error_log(ERROR_MINOR,
-			"mdi_set_channel_addrlist: association not set");
+			"mdi_set_channel_remoteaddrlist: association not set");
 		return;
 	}
 	else
@@ -4830,7 +4830,7 @@ void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES],
 			noOfAddresses * sizeof(union sockunion));
 
 		if (curr_channel_->destinationAddresses == NULL)
-			error_log(ERROR_FATAL, "mdi_set_channel_addrlist: out of memory");
+			error_log(ERROR_FATAL, "mdi_set_channel_remoteaddrlist: out of memory");
 
 		memcpy(curr_channel_->destinationAddresses, addresses,
 			noOfAddresses * sizeof(union sockunion));
@@ -5654,7 +5654,7 @@ unsigned short mdi_restart_channel(unsigned short noOfInStreams,
 	}
 
 	/* frees old address-list before assigning new one */
-	mdi_set_channel_addrlist(destinationAddressList, noOfPaths);
+	mdi_set_channel_remoteaddrlist(destinationAddressList, noOfPaths);
 
 	curr_channel_->path_control = mpath_new(noOfPaths, primaryAddress,
 		curr_geco_instance_);

@@ -322,7 +322,7 @@ bool mdi_supportsPRSCTP(void);
 bool mdi_peerSupportsPRSCTP(void);
 /*------------- functions to write and read addresses --------------------------------------------*/
 
-void mdi_set_channel_addrlist(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
+void mdi_set_channel_remoteaddrlist(union sockunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 
 void mdi_validate_localaddrs_before_write_to_init(union sockunion laddresses[MAX_NUM_ADDRESSES],
         guint16 * noOfAddresses,

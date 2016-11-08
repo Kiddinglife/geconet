@@ -372,7 +372,7 @@ extern bool mdi_new_channel(geco_instance_t* instance, ushort local_port, ushort
 	short primaryDestinitionAddress, ushort noOfDestinationAddresses, sockaddrunion *destinationAddressLis);
 extern int mtra_poll(void(*lock)(void* data) = NULL,
 	void(*unlock)(void* data) = NULL, void* data = NULL);
-extern void msm_abort_channel(short error_type=0, uchar* errordata=0, ushort errordattalen=0);
+extern void msm_abort_channel(short error_type = 0, uchar* errordata = 0, ushort errordattalen = 0);
 extern channel_t** channels_; /*store all channels, channel id as key*/
 extern uint channels_size_;
 extern uint* available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
@@ -436,7 +436,7 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 	str2saddr(dest_su, "127.0.0.1");
 	str2saddr(dest_su + 1, "192.168.1.1");
 	str2saddr(dest_su + 2, "192.168.1.2");
-	ushort noOfDestinationAddresses = sizeof(dest_su)/sizeof(sockaddrunion);
+	ushort noOfDestinationAddresses = sizeof(dest_su) / sizeof(sockaddrunion);
 	ushort destinationPort = 456;
 	ushort ppath = 0;
 	uint itag = 1234567;
@@ -502,67 +502,67 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 	ASSERT_EQ(msm->init_retrans_count, 0);
 	ASSERT_EQ(msm->channel_id, curr_channel_->channel_id);
 	ASSERT_EQ(msm->my_init_chunk, (init_chunk_t*)NULL);
-	ASSERT_EQ(msm->peer_cookie_chunk, (cookie_echo_chunk_t*)NULL );
+	ASSERT_EQ(msm->peer_cookie_chunk, (cookie_echo_chunk_t*)NULL);
 	ASSERT_EQ(msm->outbound_stream, curr_geco_instance_->noOfOutStreams);
 	ASSERT_EQ(msm->inbound_stream, curr_geco_instance_->noOfInStreams);
-	ASSERT_EQ(msm->local_tie_tag, 0 );
+	ASSERT_EQ(msm->local_tie_tag, 0);
 	ASSERT_EQ(msm->peer_tie_tag, 0);
 	ASSERT_EQ(msm->max_init_retrans_count, curr_geco_instance_->default_maxInitRetransmits);
 	ASSERT_EQ(msm->max_assoc_retrans_count, curr_geco_instance_->default_assocMaxRetransmits);
-	ASSERT_EQ(msm->cookie_lifetime, curr_geco_instance_->default_validCookieLife );
+	ASSERT_EQ(msm->cookie_lifetime, curr_geco_instance_->default_validCookieLife);
 	ASSERT_EQ(msm->instance, curr_geco_instance_);
 	ASSERT_EQ(msm->channel, curr_channel_);
 
 
 	//test error flow: when create an existing channel, should return false
-        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), false);
+	ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), false);
 
-        //test channel id generating mechnics
-        destinationPort = 4567;
-        ppath = 1;
-        itag = 1234567;
-        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
-        curr_channel_ = channels_[1];
-        ASSERT_EQ(curr_channel_->channel_id, 1);
-        ASSERT_EQ(curr_channel_->geco_inst, curr_geco_instance_);
+	//test channel id generating mechnics
+	destinationPort = 4567;
+	ppath = 1;
+	itag = 1234567;
+	ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
+	curr_channel_ = channels_[1];
+	ASSERT_EQ(curr_channel_->channel_id, 1);
+	ASSERT_EQ(curr_channel_->geco_inst, curr_geco_instance_);
 
-        destinationPort = 4568;
-        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
-        curr_channel_ = channels_[2];
-        ASSERT_EQ(curr_channel_->channel_id, 2);
-        ASSERT_EQ(channels_size_,3);
+	destinationPort = 4568;
+	ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
+	curr_channel_ = channels_[2];
+	ASSERT_EQ(curr_channel_->channel_id, 2);
+	ASSERT_EQ(channels_size_, 3);
 
-        // let us delete channel with id 2
-        msm_abort_channel();
+	// let us delete channel with id 2
+	msm_abort_channel();
 
-        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
-        curr_geco_instance_ = geco_instances_[instid];
+	// need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+	curr_geco_instance_ = geco_instances_[instid];
 
-        destinationPort = 4569;
-        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
-        curr_channel_ = channels_[2];
-        ASSERT_EQ(curr_channel_->channel_id, 2);
-        ASSERT_EQ(channels_size_,3);
-        ASSERT_EQ(available_channel_ids_size_,0);
-        msm_abort_channel();
-        assert(channels_[2]==NULL);
-        assert(channels_size_==3);
-        ASSERT_EQ(available_channel_ids_size_,1);
+	destinationPort = 4569;
+	ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
+	curr_channel_ = channels_[2];
+	ASSERT_EQ(curr_channel_->channel_id, 2);
+	ASSERT_EQ(channels_size_, 3);
+	ASSERT_EQ(available_channel_ids_size_, 0);
+	msm_abort_channel();
+	assert(channels_[2] == NULL);
+	assert(channels_size_ == 3);
+	ASSERT_EQ(available_channel_ids_size_, 1);
 
-        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
-        curr_geco_instance_ = geco_instances_[instid];
-        curr_channel_ = channels_[0];
-        assert(curr_channel_!=NULL);
-        msm_abort_channel();
+	// need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+	curr_geco_instance_ = geco_instances_[instid];
+	curr_channel_ = channels_[0];
+	assert(curr_channel_ != NULL);
+	msm_abort_channel();
 
-        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
-        curr_geco_instance_ = geco_instances_[instid];
-        curr_channel_ = channels_[1];
-        assert(curr_channel_!=NULL);
-        msm_abort_channel();
+	// need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+	curr_geco_instance_ = geco_instances_[instid];
+	curr_channel_ = channels_[1];
+	assert(curr_channel_ != NULL);
+	msm_abort_channel();
 
-        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
-        curr_geco_instance_ = geco_instances_[instid];
+	// need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+	curr_geco_instance_ = geco_instances_[instid];
 	mulp_delete_geco_instance(instid);
 	free_library();
 
@@ -652,11 +652,16 @@ TEST(MULP, test_mulp_connect)
 	EXPECT_EQ(mbu->locked, false);
 	EXPECT_EQ(mbu->requested_destination, 0);
 
+	channels_size_ = 0; // clear channel
 	mulp_delete_geco_instance(instid);
 	free_library();
 }
 
-TEST(MULP, test_process_init_chunk)
+static void communicationLostNotif(unsigned int, unsigned short, void*)
+{
+	EVENTLOG(INFO, "connection lost !");
+}
+TEST(MULP, test_connection_pharse)
 {
 	//precondition lib has been inited
 	initialize_library();
@@ -705,6 +710,7 @@ TEST(MULP, test_process_init_chunk)
 	strcpy((char*)localAddressList[1], "::0");
 	ULPcallbackFunctions =
 	{ 0 };
+	ULPcallbackFunctions.communicationLostNotif = communicationLostNotif;
 	instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams,
 		noOfLocalAddresses, localAddressList,
 		ULPcallbackFunctions);
@@ -717,24 +723,14 @@ TEST(MULP, test_process_init_chunk)
 	//poll to receive the init, send initack
 	mtra_poll(0, 0, 0);
 
-	//  //poll to receive the initack  send cookie echoed
-	//  mtra_poll (0, 0, 0);
-	//  //poll to receive the cookie echoed chunk and send cookie ack
-	//  mtra_poll (0, 0, 0);
-	//  //poll to receive the cookie ack
-	//  mtra_poll (0, 0, 0);
-	//
-	//  mulp_connect(instid, noOfOutStreams, ip6addrstr, localPort,
-	//          &ULPcallbackFunctions);
-	//  //poll to receive the init, send initack
-	//  mtra_poll(0, 0, 0);
-	//  //poll to receive the initack  send cookie echoed
-	//  mtra_poll(0, 0, 0);
-	//  //poll to receive the cookie echoed chunk and send cookie ack
-	//  mtra_poll(0, 0, 0);
-	//  //poll to receive the cookie ack
-	//  mtra_poll(0, 0, 0);
-	//
+	//poll to receive the initack  send cookie echoed
+	mtra_poll(0, 0, 0);
+	//poll to receive the cookie echoed chunk and send cookie ack
+	mtra_poll(0, 0, 0);
+	//poll to receive the cookie ack
+	mtra_poll(0, 0, 0);
+
+	msm_abort_channel();
 	mulp_delete_geco_instance(instid);
 	free_library();
 }

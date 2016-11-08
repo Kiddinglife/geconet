@@ -1127,7 +1127,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 		supportedTypes = mdi_getSupportedAddressTypes();
 		/* retrieve addresses from initAck */
 		ndAddresses = ch_IPaddresses(initAckCID, supportedTypes, dAddresses, &peerSupportedTypes, &destAddress);
-		mdi_set_channel_addrlist(dAddresses, ndAddresses);
+		mdi_set_channel_remoteaddrlist(dAddresses, ndAddresses);
 
 		/* initialize rest of association with data received from peer */
 		inbound_streams = min(ch_noOutStreams(initAckCID), smctrl->inbound_stream);
@@ -1456,7 +1456,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 			/* save addresses if initAck contained more then zero, otherwise the source address
 					   of the IP-message carrying the cookie-chunk will be used for this association. */
 			event_logi(VERBOSE, "Storing %d destination addresses as paths", ndAddresses);
-			mdi_set_channel_addrlist(dAddresses, ndAddresses);
+			mdi_set_channel_remoteaddrlist(dAddresses, ndAddresses);
 		}
 
 		peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
@@ -1532,7 +1532,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 						/* save addresses if initAck contained more then zero, otherwise the source address
 										   of the IP-message carrying the cookie-chunk will be used for this association. */
 						event_logi(VERBOSE, "Storing %d destination addresses as paths", ndAddresses);
-						mdi_set_channel_addrlist(dAddresses, ndAddresses);
+						mdi_set_channel_remoteaddrlist(dAddresses, ndAddresses);
 					}
 					peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
 
@@ -1585,7 +1585,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 						/* save addresses if initAck contained more then zero, otherwise the source address
 										   of the IP-message carrying the cookie-chunk will be used for this association. */
 						event_logi(VERBOSE, "Storing %d destination addresses as paths", ndAddresses);
-						mdi_set_channel_addrlist(dAddresses, ndAddresses);
+						mdi_set_channel_remoteaddrlist(dAddresses, ndAddresses);
 					}
 					peerSupportsPRSCTP = ch_getPRSCTPfromCookie(cookieCID);
 
