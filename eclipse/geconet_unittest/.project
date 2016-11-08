@@ -26,6 +26,16 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>docx</name>
+			<type>2</type>
+			<location>/home/jackiez/20160219/geconet/docx</location>
+		</link>
+		<link>
+			<name>sctp_original_src</name>
+			<type>2</type>
+			<location>/home/jackiez/20160219/geconet/sctp_original_src</location>
+		</link>
+		<link>
 			<name>unittets</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
