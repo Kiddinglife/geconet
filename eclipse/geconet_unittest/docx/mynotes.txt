@@ -1,0 +1,472 @@
+
+- - - - - - - - - - - - - - CONGESTION CONTROL & FLOW CONTROL - - - - - - - - - - - - - - - -
+congestion control is to prevent too many messages from injecting to network so that the routers do not overload.
+it is related to all devices existing in the network. when it happens, we cannot know where and why it happens.
+(some servers overload or natural disaster happend?). Whileas,flow control is to prevent senders from sending too fast 
+so that receivers can receive them.
+
+example1:
+network transmission speed 1000GB/S, a powerful computer sends data at speed of 1 GB/S,At this case, there is 
+no congestion problem. But flow control is definitely needed as the powerful computer has to often stop sending so that 
+the receivers can buffer them.
+
+example2:
+network transmission speed 1MB/S, 500 computer sends data at speed of 100KB/S to other 500 coputers. 
+At this case, there is no flow control problem. But congestion control is definitely needed as if the whole input loads
+have exceeded the network loads.
+
+when rwnd < cwmd, it is the receiver's avaiable buffer amounts that limits the sender's sending speed
+when rwnd > cwnd, it is the network's congestion that limits the sender's sending speed.
+so, the smaller one either rwnd or cwnd controls the sender's sending speed.
+
+
+
+- - - - - - - - - - - - - - SICK CASE of RECEIVE INIT At COOKIE_WAIT_STATE - - - - - - - - - - - - - - - -
+ {A sets connection with z}
+(build channel)
+A [lt=a1,pt=0,ltt=0,ptt=0]
+T0 INIT [vt=0,it=a1]                                   
+(starts t1-init timer)                                 
+(enters COOKIE-WAIT state)  
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >    
+CASE(1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        "Z sends INIT before it  receives INIT sent by A"
+                                                        Z firstly sends INIT               																							
+                                                        {Z sets connection with z}
+                                                        Z [lt=z1,pt=0,ltt=0,ptt=0]
+                                                        T1 INIT [vt=0,it=a1]                                   
+                                                        (starts t1-init timer)                                 
+                                                        (enters COOKIE-WAIT state)
+                                                        - - - 
+                                                        Z secondly  receives T0 INIT [vt=0,it=a1]   
+                                                        (use old itag z1)
+                                                        T2 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 	
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T1 INIT [vt=0,it=a1]   && 
+T2 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]		
+CASE(1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly recvs T1 INIT [vt=0,it=a1] 
+Sick Case recv INIT at cookie_wait state
+(compose tmp channel and cookie_a)
+(uses old itag a1)
+T3 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+- - -  
+A secondly recvs T2 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]] 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+T4 COOKIE_ECHO [vt=z1,COOKIE_Z[lt=z1,pt=a1,ltt=a1, ptt=z1]]
+(Enters COOKIE-ECHOED state)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T3 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]] &&
+T4 COOKIE_ECHO [vt=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]] 
+CASE(1.1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T3 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+                                                        (canncel t1-init timer)
+                                                        (update curr channel)
+                                                        Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+                                                        T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+                                                        (start t1-init timer)
+                                                        (enters COOKIE_ECHOED state)
+                                                        - - -
+                                                        Z secondly receives T4 COOKIE_ECHO [vt=z1,COOKIE_Z[lt=z1,pt=a1,ltt=a1, ptt=z1]] 
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z [lt=z1,pt=a1,ltt=z1, ptt=a1]
+                                                        Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+                                                        (take action D, mmaa)
+                                                        T6 COOKIE_ACK [vt=z1]
+                                                        (Enters CONNECTED state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]] && 
+T6 COOKIE_ACK [vt=z1]
+CASE(1.1.1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T6 COOKIE_ACK [vt=z1] 
+A COOKIE_ECHOED state
+(canncel t1-init timer)
+(Enters CONNECTED state)
+- - - 
+A secondly receives T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+(recv cookie_echo at state CONNECTED)
+(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+A successfully connects to Z
+CASE(1.1.1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1.1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]] 
+A COOKIE_ECHOED state
+(validate cookie)
+(compare tags within cookie and Z)
+COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+(take action D, mmaa)
+(Enters CONNECTED state)
+- - - 
+A secondly receives T6 COOKIE_ACK [vt=z1] 
+(recv cookie_ack at state CONNECTED)
+(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+Z successfully connects to A
+CASE(1.1.1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T4 COOKIE_ECHO [vt=z1,COOKIE_Z[lt=z1,pt=a1,ltt=a1, ptt=z1]] 
+                                                        Z COOKIE-WAIT state
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=a1, ptt=z1]
+                                                        Z [lt=z1,pt=0,ltt=0,ptt=0]
+                                                        (TAKE_ACTION_B, mxaa)
+                                                        (update Z's peer tag with a1)
+                                                        Z [lt=z1,pt=a1,ltt=0,ptt=0]
+                                                        (populate Z's local tie tags)
+                                                        Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+                                                        (enters CONNECTED state)
+                                                        T5 COOKIE_ACK [vt=a1]
+                                                        - - -
+                                                        Z secondly receives T3 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=0, ptt=0]]
+                                                        (receives INIT_ACK at state CONNECTED)
+                                                        (discard)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE ONLY T5 COOKIE_ACK [vt=z1]
+A COOKIE_ECHOED state
+(canncel t1-init timer)
+(Enters CONNECTED)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+A successfully connects to Z
+CASE(1.1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+CASE(1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly recvs T2 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]  
+COOKIE-WAIT state
+(canncel t1-init timer)
+(update curr channel)
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+(start t1-init timer)
+(enters COOKIE_ECHOED state)
+- - -  
+A secondly recvs T1 INIT [vt=0,it=a1] 
+COOKIE_ECHOED state
+(uses old itag a1)
+T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]] &&
+T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+CASE(1.2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+                                                        COOKIE-WAIT state
+                                                        (canncel t1-init timer)
+                                                        (update curr channel)
+                                                        Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+                                                        T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+                                                        (start t1-init timer)
+                                                        (enters COOKIE_ECHOED state)
+                                                        - - -
+                                                        Z secondly receives T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]
+                                                        Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+                                                        (take action D, mmaa)
+                                                        T6 COOKIE_ACK [vt=a1]
+                                                        (Enters CONNECTED state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T6 COOKIE_ACK [vt=a1] &&
+T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+CASE(1.2.1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T6 COOKIE_ACK [vt=a1] 
+A COOKIE_ECHOED state
+(canncel t1-init timer)
+(Enters CONNECTED state)
+- - - 
+A secondly receives T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+(recv cookie_echo at state CONNECTED)
+(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+A successfully connects to Z
+CASE(1.2.1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2.1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly receives T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]]
+A COOKIE_ECHOED state
+(validate cookie)
+(compare tags within cookie and A)
+COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+(take action D, mmaa)
+(Enters CONNECTED state)
+- - - 
+A secondly receives  T6 COOKIE_ACK [vt=a1] 
+(receives cookie_ack at state CONNECTED)
+(discard)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+Z successfully connects to A
+CASE(1.2.1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        COOKIE-WAIT state
+                                                        (validate cookie)
+                                                        (compare tags within cookie and A)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]
+                                                        Z [lt=z1,pt=0,ltt=0,ptt=0]
+                                                        (take action B, mxaa)
+                                                        (update Z's peer tag)
+                                                        Z [lt=z1,pt=a1,ltt=0,ptt=0]
+                                                        (update Z's tie tags)
+                                                        Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+                                                        (Enters CONNECTED state)
+                                                        T5 COOKIE_ACK [vt=a1]
+                                                        - - -
+                                                        Z secondly receives T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z1,ltt=r1, ptt=r2]] 
+                                                        (receives INIT_ACK at state CONNECTED)
+                                                        (discard)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT HAVE ONLY T5 COOKIE_ACK [vt=a1]
+COOKIE_ECHOED state
+(canncel t1-init timer)
+(Enters CONNECTED)
+RESULT: 
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+Z [lt=z1,pt=a1,ltt=z1,ptt=a1]
+A successfully connects to Z
+CASE(1.2.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        "Z sends INIT AFTER it  receives INIT sent by A"
+                                                        Z firstly receives T0 INIT [vt=0,it=a1]   
+                                                        (use newly created itag z1)
+                                                        T1 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        - - - 
+                                                        Z secondly sends its own INIT               																							
+                                                        {Z sets connection with A}
+                                                        (use newly created itag z2)
+                                                        Z [lt=z2,pt=0,ltt=0,ptt=0]
+                                                        T2 INIT [vt=0,it=z2]                                   
+                                                        (starts t1-init timer)                                 
+                                                        (enters COOKIE-WAIT state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 	
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T2 INIT [vt=0,it=z2] && 
+T1 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]	
+CASE(2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly recvs T1 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]	  
+COOKIE-WAIT state
+(canncel t1-init timer)
+(update curr channel)
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+(start t1-init timer)
+(enters COOKIE_ECHOED state)
+- - -  
+A secondly recvs T2 INIT [vt=0,it=z2]
+COOKIE_ECHOED state
+(uses old itag a1)
+T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]] &&
+T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+CASE(2.1.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+                                                        COOKIE-WAIT state
+                                                        (canncel t1-init timer)
+                                                        (update curr channel)
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+                                                        (start t1-init timer)
+                                                        (enters COOKIE_ECHOED state)
+                                                        - - -
+                                                        Z secondly receives T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        (ACTION_C, XM00)
+                                                        (DISCARD)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT ONLY HAVE T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+COOKIE_ECHOED state
+(validate cookie)
+(compare tags within cookie and A)
+COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+(ACTION_B, MXAA)
+(update A's peer tag)
+A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+(Enters CONNECTED state)
+COOKIE_ACK [vt=z2]
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+                                                        COOKIE_ECHOED state
+                                                        (canncel t1-init timer)
+                                                        (Enters CONNECTED state)
+                                                        RESULT: 
+                                                        A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        Z successfully connects to A
+CASE(2.1.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(2.1.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T3 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        COOKIE-WAIT state
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]
+                                                        Z [lt=z2,pt=0,ltt=0,ptt=0]
+                                                        (XX00, DISCARD)
+                                                        - - -
+                                                        Z secondly receives T4 INIT_ACK [vt=z1,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]] 
+                                                        COOKIE-WAIT state
+                                                        (canncel t1-init timer)
+                                                        (update curr channel)
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+                                                        (start t1-init timer)
+                                                        (enters COOKIE_ECHOED state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT ONLY HAVE T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]]
+COOKIE_ECHOED state
+(validate cookie)
+(compare tags within cookie and A)
+COOKIE_A[lt=a1,pt=z2,ltt=r1, ptt=r2]
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+(ACTION_B, MXAA)
+(update A's peer tag)
+A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+(Enters CONNECTED state)
+T6 COOKIE_ACK [vt=z2]
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+                                                        COOKIE_ECHOED state
+                                                        (canncel t1-init timer)
+                                                        (Enters CONNECTED state)
+                                                        RESULT: 
+                                                        A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        Z successfully connects to A
+CASE(2.1.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(2.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+CASE(2.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+A firstly recvs T2 INIT [vt=0,it=z2]	  
+COOKIE_WAIT state
+(uses old itag a1)
+T3 INIT_ACK [vt=z2,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]]
+- - -  
+A secondly recvs  T1 INIT_ACK [vt=a1,itag=z1,COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]	 
+COOKIE-WAIT state
+(canncel t1-init timer)
+(update curr channel)
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+(start t1-init timer)
+(enters COOKIE_ECHOED state)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+FLYING CHUNKS AT THIS MOMENT HAVE 
+T3 INIT_ACK [vt=z2,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]] &&
+T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+CASE(2.2.1) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        COOKIE-WAIT state
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]
+                                                        Z [lt=z2,pt=0,ltt=0,ptt=0]
+                                                        (XX00, DISCARD)
+                                                        - - -
+                                                        Z secondly receives T3 INIT_ACK [vt=z2,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]] 
+                                                        COOKIE-WAIT state
+                                                        (canncel t1-init timer)
+                                                        (update curr channel)
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        T5 COOKIE_ECHO COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]]
+                                                        (start t1-init timer)
+                                                        (enters COOKIE_ECHOED state)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT ONLY HAVE T5 COOKIE_ECHO COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]]
+COOKIE_ECHOED state
+(validate cookie)
+(compare tags within cookie and A)
+COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+(ACTION_B, MXAA)
+(update A's peer tag)
+A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+(Enters CONNECTED state)
+T6 COOKIE_ACK [vt=z2]
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+                                                        COOKIE_ECHOED state
+                                                        (canncel t1-init timer)
+                                                        (Enters CONNECTED state)
+                                                        RESULT: 
+                                                        A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        Z successfully connects to A
+CASE(2.2.1) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(2.2.2) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                                        Z firstly receives T3 INIT_ACK [vt=z2,itag=a1,COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]]  
+                                                        COOKIE-WAIT state
+                                                        (canncel t1-init timer)
+                                                        (update curr channel)
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]]
+                                                        (start t1-init timer)
+                                                        (enters COOKIE_ECHOED state)
+                                                        - - -
+                                                        Z secondly receives T4 COOKIE_ECHO [COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]]
+                                                        COOKIE_ECHOED state
+                                                        (validate cookie)
+                                                        (compare tags within cookie and Z)
+                                                        COOKIE_Z[lt=z1,pt=a1,ltt=0, ptt=0]
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        (ACTION_C, XM00)
+                                                        (DISCARD)
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FLYING CHUNKS AT THIS MOMENT ONLY HAVE T5 COOKIE_ECHO [COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]]
+COOKIE_ECHOED state
+(validate cookie)
+(compare tags within cookie and A)
+COOKIE_A[lt=a1,pt=z2,ltt=0, ptt=0]
+A [lt=a1,pt=z1,ltt=a1,ptt=z1]
+(ACTION_B, MXAA)
+(update A's peer tag)
+A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+(Enters CONNECTED state)
+T6 COOKIE_ACK [vt=z2]
+<- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+                                                        COOKIE_ECHOED state
+                                                        (canncel t1-init timer)
+                                                        (Enters CONNECTED state)
+                                                        RESULT: 
+                                                        A [lt=a1,pt=z2,ltt=a1,ptt=z1]
+                                                        Z [lt=z2,pt=a1,ltt=z2,ptt=a1]
+                                                        Z successfully connects to A
+CASE(2.2.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+CASE(2.2) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+FLOW CONTROL COMMENTS
+cwnd stands for the max number of flying bytes sent. 
+
+The loads of whole networks is a fixed number for the total size of
+routers' receive buffers is fixed number. In such case, you can treat 
+network as a sink that contains water where the amounts of water 
+are changed all the time as senders will add water while receivers 
+take away water. 
+
+At this point,  updating cwnd is actually  to probe the newest 
+available receive buffers of all routers existing on the networks at some time.
+In other words, probe of the unused space in the sink

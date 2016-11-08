@@ -372,9 +372,11 @@ extern bool mdi_new_channel(geco_instance_t* instance, ushort local_port, ushort
 	short primaryDestinitionAddress, ushort noOfDestinationAddresses, sockaddrunion *destinationAddressLis);
 extern int mtra_poll(void(*lock)(void* data) = NULL,
 	void(*unlock)(void* data) = NULL, void* data = NULL);
-extern void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen);
-extern std::vector<channel_t*> channels_; /*store all channels, channel id as key*/
-extern std::vector<int> available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
+extern void msm_abort_channel(short error_type=0, uchar* errordata=0, ushort errordattalen=0);
+extern channel_t** channels_; /*store all channels, channel id as key*/
+extern uint channels_size_;
+extern uint* available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
+extern uint available_channel_ids_size_;
 extern geco_instance_t *curr_geco_instance_;
 extern channel_t *curr_channel_;
 extern timer_mgr mtra_timer_mgr_;
@@ -416,7 +418,7 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN];
 	ulp_cbs_t ULPcallbackFunctions;
 
-	//ip6 any and ip4 any
+	//test normal flows: given ip6 any and ip4 any
 	localPort = 123;
 	noOfInStreams = 32;
 	noOfOutStreams = 32;
@@ -434,7 +436,7 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 	str2saddr(dest_su, "127.0.0.1");
 	str2saddr(dest_su + 1, "192.168.1.1");
 	str2saddr(dest_su + 2, "192.168.1.2");
-	ushort noOfDestinationAddresses = sizeof(dest_su);
+	ushort noOfDestinationAddresses = sizeof(dest_su)/sizeof(sockaddrunion);
 	ushort destinationPort = 456;
 	ushort ppath = 0;
 	uint itag = 1234567;
@@ -511,7 +513,56 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 	ASSERT_EQ(msm->instance, curr_geco_instance_);
 	ASSERT_EQ(msm->channel, curr_channel_);
 
-	channels_.clear(); // delete cur channel ptr otherwise geco instance cannot be deleted
+
+	//test error flow: when create an existing channel, should return false
+        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), false);
+
+        //test channel id generating mechnics
+        destinationPort = 4567;
+        ppath = 1;
+        itag = 1234567;
+        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
+        curr_channel_ = channels_[1];
+        ASSERT_EQ(curr_channel_->channel_id, 1);
+        ASSERT_EQ(curr_channel_->geco_inst, curr_geco_instance_);
+
+        destinationPort = 4568;
+        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
+        curr_channel_ = channels_[2];
+        ASSERT_EQ(curr_channel_->channel_id, 2);
+        ASSERT_EQ(channels_size_,3);
+
+        // let us delete channel with id 2
+        msm_abort_channel();
+
+        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+        curr_geco_instance_ = geco_instances_[instid];
+
+        destinationPort = 4569;
+        ASSERT_EQ(mdi_new_channel(curr_geco_instance_, localPort, destinationPort, itag, ppath, noOfDestinationAddresses, dest_su), true);
+        curr_channel_ = channels_[2];
+        ASSERT_EQ(curr_channel_->channel_id, 2);
+        ASSERT_EQ(channels_size_,3);
+        ASSERT_EQ(available_channel_ids_size_,0);
+        msm_abort_channel();
+        assert(channels_[2]==NULL);
+        assert(channels_size_==3);
+        ASSERT_EQ(available_channel_ids_size_,1);
+
+        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+        curr_geco_instance_ = geco_instances_[instid];
+        curr_channel_ = channels_[0];
+        assert(curr_channel_!=NULL);
+        msm_abort_channel();
+
+        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+        curr_geco_instance_ = geco_instances_[instid];
+        curr_channel_ = channels_[1];
+        assert(curr_channel_!=NULL);
+        msm_abort_channel();
+
+        // need reassign curr_geco_instance_  as it is set to NULL in msm_abort_channel();this is not error
+        curr_geco_instance_ = geco_instances_[instid];
 	mulp_delete_geco_instance(instid);
 	free_library();
 
