@@ -1877,8 +1877,8 @@ int mtra_recv_rawsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 
 	// currently  iphdr+udphdr + data, now we need move data to the front of this packet,
 	// skipping all bytes in iphdr and updhdr as if hey  never exists
-	memmove(dest, dest + iphdrlen, len - iphdrlen);
-	len -= iphdrlen;
+	//memmove(dest, dest + iphdrlen, len - iphdrlen);
+	//len -= iphdrlen;
 
 #ifdef _DEBUG
 	char str[MAX_IPADDR_STR_LEN];

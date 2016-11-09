@@ -1374,12 +1374,48 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	*addresses = localAddresses;
 #endif
 
-	// reorder addres to put ip4 addr together and ip6 addres together
-	sockaddrunion* buf = (sockaddrunion*)calloc(*numberOfNets, sizeof(sockaddrunion));
+	bool hasip6loopback = false;
+	bool hasip4loopback = false;
 	for (i = 0; i < *numberOfNets; i++)
 	{
-		memcpy(&buf[i], &(*addresses)[i], sizeof(sockaddrunion));
+		if ((*addresses)[i].sin.sin_addr.s_addr == htonl(INADDR_LOOPBACK))
+			hasip4loopback = true;
+		if (IN6_IS_ADDR_LOOPBACK(&(*addresses)[i].sin6.sin6_addr))
+			hasip6loopback = true;
 	}
+
+	if (!hasip4loopback)
+	{
+		(*numberOfNets)++;
+	}
+	if (!hasip6loopback)
+	{
+		(*numberOfNets)++;
+	}
+
+	// reorder addres to put ip4 addr together and ip6 addres together
+	sockaddrunion* buf = (sockaddrunion*)calloc(*numberOfNets, sizeof(sockaddrunion));
+
+	//copy loopback first if not present
+	i = 0;
+	if (!hasip4loopback)
+	{
+		EVENTLOG(DEBUG, "no hasip4loopback, copy it");
+		str2saddr(&buf[i], "127.0.0.1");
+		i++;
+	}
+	if (!hasip6loopback)
+	{
+		EVENTLOG(DEBUG, "no hasip6loopback, copy it");
+		str2saddr(&buf[i], "::1");
+		i++;
+	}
+
+	for (; i < *numberOfNets; i++)
+	{
+		memcpy(&buf[i], &(*addresses)[i-2], sizeof(sockaddrunion));
+	}
+
 	free(*addresses);
 	*addresses = buf;
 
@@ -1389,5 +1425,6 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		saddr2str(&(*addresses)[i], addrdebug, MAX_IPADDR_STR_LEN, 0);
 		EVENTLOG2(DEBUG, "default local addr %d = %s", i, addrdebug);
 	}
+
 	return (true);
 }

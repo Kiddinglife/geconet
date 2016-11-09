@@ -717,7 +717,7 @@ TEST(MULP, test_connection_pharse)
 	curr_geco_instance_ = geco_instances_[instid];
 
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, "::1", localPort,
+	mulp_connect(instid, noOfOutStreams, "10.0.0.114", localPort,
 		&ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
