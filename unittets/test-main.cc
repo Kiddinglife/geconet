@@ -43,7 +43,7 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
 	//::testing::GTEST_FLAG(filter) ="MULP.test_mulp_mulp_new_and_delete_geco_instnce";
 	//::testing::GTEST_FLAG(filter) ="MULP.test_mdi_new_and_delete_channel";
-   // ::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
+     // ::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
 	::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
 	// last pass on 26 Oct 2016

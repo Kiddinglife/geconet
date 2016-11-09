@@ -276,6 +276,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port) {
 		su->sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		su->sin6.sin6_scope_id = 0;
+		su->sin6.sin6_flowinfo = 0;
 		return 0;
 	}
 	return -1;
@@ -1695,6 +1696,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 	static int tmp;
 
 	if (sfd == mtra_ip4rawsock_) {
+        ushort old = dest->sin.sin_port;
 		dest->sin.sin_port = 0;
 		opt_len = sizeof(old_tos);
 		tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, (char*)&old_tos, &opt_len);
@@ -1716,11 +1718,13 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 			"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
 			sfd, len, inet_ntoa(dest->sin.sin_addr),
 			ntohs(dest->sin.sin_port), tos, txmt_len);
+		dest->sin.sin_port = old;
 		if (txmt_len < 0)
 			return txmt_len;
 	}
 	else if (sfd == mtra_ip6rawsock_) {
-		dest->sin6.sin6_port = 0; //reset to zero otherwise invalidate argu error
+		ushort old = dest->sin6.sin6_port;
+	    dest->sin6.sin6_port = 0; //reset to zero otherwise invalidate argu error
 #ifdef _WIN32
 		opt_len = sizeof(old_tos);
 		tmp = getsockopt(sfd, IPPROTO_IPV6, IP_TOS, (char*)&old_tos, &opt_len);
@@ -1753,6 +1757,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 			"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
 			sfd, len, hostname, ntohs(dest->sin6.sin6_port), tos, txmt_len);
 #endif
+		dest->sin6.sin6_port = old;
 		if (txmt_len < 0)
 			return txmt_len;
 	}
