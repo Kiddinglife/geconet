@@ -9,6 +9,17 @@
 #undef min
 #undef max
 
+static void print_addrlist(sockaddrunion* list, uint nAddresses)
+{
+	static char addrstr[MAX_IPADDR_STR_LEN];
+	static ushort port;
+	for (uint i = 0; i < nAddresses; i++)
+	{
+		saddr2str(&list[i], addrstr, MAX_IPADDR_STR_LEN, &port);
+		EVENTLOG2(DEBUG, "+++ ip addr=%s:%d", addrstr, port);
+	}
+}
+
 extern timer_mgr mtra_timer_mgr_; //Initialized in mtra
 #define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
@@ -1111,8 +1122,8 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
-			}
-			}
+		}
+	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -1161,7 +1172,7 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-		}
+}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
 	uint numPeerAddresses, uint supported_types, bool receivedFromPeer)
 {
@@ -2144,19 +2155,23 @@ void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 
 static void mdi_print_channel()
 {
-	EVENTLOG10(INFO, "curr_channel_->channel_id=%d\n"
+	EVENTLOG8(INFO,
+		"\ncurr_channel_->channel_id=%d\n"
 		"curr_channel_->deleted=%d\n"
 		"curr_channel_->local_port=%d\n"
 		"curr_channel_->remote_port=%d\n"
-		"curr_channel_->local_addres_size=%d\n"
-		"curr_channel_->remote_addres_size=%d\n"
 		"curr_channel_->local_tag=%d\n"
 		"curr_channel_->remote_tag=%d\n"
 		"curr_channel_->local_tie_tag=%d\n"
-		"curr_channel_->peer_tie_tag=%d\n", curr_channel_->channel_id, curr_channel_->deleted,
-		curr_channel_->local_port, curr_channel_->remote_port, curr_channel_->local_addres_size,
-		curr_channel_->remote_addres_size, curr_channel_->local_tag, curr_channel_->remote_tag,
+		"curr_channel_->peer_tie_tag=%d\n", 
+		curr_channel_->channel_id, curr_channel_->deleted,
+		curr_channel_->local_port, curr_channel_->remote_port, 
+		curr_channel_->local_tag, curr_channel_->remote_tag,
 		curr_channel_->state_machine_control->local_tie_tag, curr_channel_->state_machine_control->peer_tie_tag);
+	EVENTLOG1(DEBUG, "curr_channel_->local_addres(%d):", curr_channel_->local_addres_size );
+	print_addrlist(curr_channel_->local_addres, curr_channel_->local_addres_size);
+	EVENTLOG1(DEBUG, "curr_channel_->remote_addres(%d):", curr_channel_->remote_addres_size);
+	print_addrlist(curr_channel_->remote_addres, curr_channel_->remote_addres_size);
 }
 /**
  * indicates that an association is established (chapter 10.2.D).
@@ -2861,37 +2876,17 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], 
 		ERRLOG(MINOR_ERROR, "set_channel_destaddrlist(): current cannel is NULL!");
 		return;
 	}
+
+	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
+	{
+		geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
+		channel_map_.clear();
+	}
+	curr_channel_->remote_addres =
+		(sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__, __LINE__);
+	assert(curr_channel_->remote_addres != NULL);
 	memcpy(curr_channel_->remote_addres, destaddrlist, noOfAddresses * sizeof(sockaddrunion));
 	curr_channel_->remote_addres_size = noOfAddresses;
-
-	//	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
-	//	    {
-	//	        geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
-	//	    }
-	//	curr_channel_->remote_addres =
-	//	        (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,__LINE__);
-	//	assert(curr_channel_->remote_addres != NULL);
-	//	memcpy(curr_channel_->remote_addres, destaddrlist, noOfAddresses * sizeof(sockaddrunion));
-	//	curr_channel_->remote_addres_size = noOfAddresses;
-
-	char str[128];
-	ushort port;
-
-	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
-	{
-		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
-		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
-			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
-			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
-		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "local_saddr %d = %s:%d", i, str, port);
-	}
-	for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
-	{
-		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-		saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "peer_saddr %i = %s:%d", ii, str, port);
-	}
 
 	//insert channel id to map
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
@@ -2900,13 +2895,9 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], 
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
-		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG2(DEBUG, "curr_trans_addr_.local_saddr=%s:%d", str, port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-			EVENTLOG2(DEBUG, "curr_trans_addr_.peer_saddr=%s:%d", str, port);
 			if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
 				continue;
 			if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
@@ -3980,9 +3971,9 @@ int mch_read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk, uint mySuppo
 	vl_param_total_length = cookiechunk->chunk_header.chunk_length - CHUNK_FIXED_SIZE - COOKIE_FIXED_SIZE;
 
 #ifdef _DEBUG
-	EVENTLOG1(VVERBOSE, " Computed total length of vparams : %d", vl_param_total_length);
-	EVENTLOG2(VVERBOSE, " Num of local/remote IPv4 addresses %u / %u", no_loc_ipv4_addresses, no_remote_ipv4_addresses);
-	EVENTLOG2(VVERBOSE, " Num of local/remote IPv6 addresses %u / %u", no_loc_ipv6_addresses, no_remote_ipv6_addresses);
+	EVENTLOG1(DEBUG, " Computed total length of vparams : %d", vl_param_total_length);
+	EVENTLOG2(DEBUG, " Num of local/remote IPv4 addresses %u / %u", no_loc_ipv4_addresses, no_remote_ipv4_addresses);
+	EVENTLOG2(DEBUG, " Num of local/remote IPv6 addresses %u / %u", no_loc_ipv6_addresses, no_remote_ipv6_addresses);
 #endif
 
 	nAddresses = mdis_read_peer_addreslist(temp_addresses, (uchar*)cookiechunk, cookiechunk->chunk_header.chunk_length,
@@ -4002,16 +3993,22 @@ int mch_read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk, uint mySuppo
 		return -1;
 	}
 
-	//copy remote ip4 addrlist
-	memcpy(addresses, &temp_addresses[no_loc_ipv4_addresses], no_remote_ipv4_addresses * sizeof(sockaddrunion));
+
+	//copy remote ip4 and ip6 addrlist
+	//EVENTLOG(DEBUG, "+++++++++++++++++temp_addresses are :: \n");
+	//print_addrlist(temp_addresses, nAddresses);
+
+	if (no_remote_ipv4_addresses > 0)
+		memcpy(addresses, &temp_addresses[no_loc_ipv4_addresses + no_loc_ipv6_addresses], no_remote_ipv4_addresses * sizeof(sockaddrunion));
+
 	if (no_remote_ipv6_addresses > 0)
 		memcpy(&addresses[no_remote_ipv4_addresses],
-			&temp_addresses[no_loc_ipv4_addresses + no_remote_ipv4_addresses + no_loc_ipv6_addresses],
+			&temp_addresses[no_loc_ipv4_addresses + no_loc_ipv6_addresses + no_remote_ipv4_addresses],
 			no_remote_ipv6_addresses * sizeof(sockaddrunion));
 
 #ifdef _DEBUG
-	EVENTLOG1(VERBOSE, "Leave mch_read_addrlist_from_cookie(remote affrlist size=%d)",
-		no_remote_ipv4_addresses + no_remote_ipv6_addresses);
+	EVENTLOG(DEBUG, "mch_read_addrlist_from_cookie():: remote addr from cookie are:: ");
+	print_addrlist(addresses, no_remote_ipv6_addresses + no_remote_ipv4_addresses);
 #endif
 	return (no_remote_ipv4_addresses + no_remote_ipv6_addresses);
 }
@@ -4025,45 +4022,21 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 #ifdef _DEBUG
 	EVENTLOG1(DEBUG, "- - - - - Enter mdi_set_channel_remoteaddrlist(noOfAddresses =%d)", noOfAddresses);
 #endif
-	char str[128];
-	ushort port;
-
-	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
-	{
-		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
-		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
-			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
-			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
-		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "local_saddr %d = %s:%d", i, str, port);
-	}
-	for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
-	{
-		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-		saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "before free channel remote, peer_saddr %i = %s:%d", ii, str, port);
-	}
 
 	assert(curr_channel_ != NULL);
-	//	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
-	//	{
-	//		geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
-	//	}
-	if (curr_channel_->remote_addres_size == 0 && curr_channel_->remote_addres == NULL)
+	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
 	{
-		curr_channel_->remote_addres = (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,
-			__LINE__);
-		assert(curr_channel_->remote_addres != NULL);
-		memcpy(curr_channel_->remote_addres, addresses, noOfAddresses * sizeof(sockaddrunion));
-		curr_channel_->remote_addres_size = noOfAddresses;
+		geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
+		channel_map_.clear();
+		curr_channel_->remote_addres = NULL;
+		curr_channel_->remote_addres_size = 0;
 	}
 
-	for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
-	{
-		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-		saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "after free channel remote, peer_saddr %i = %s:%d", ii, str, port);
-	}
+	curr_channel_->remote_addres = (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,
+		__LINE__);
+	assert(curr_channel_->remote_addres != NULL);
+	memcpy(curr_channel_->remote_addres, addresses, noOfAddresses * sizeof(sockaddrunion));
+	curr_channel_->remote_addres_size = noOfAddresses;
 
 	//insert channel id to map
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
@@ -4072,13 +4045,9 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
-		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG2(DEBUG, "curr_trans_addr_.local_saddr=%s:%d", str, port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-			EVENTLOG2(DEBUG, "curr_trans_addr_.peer_saddr=%s:%d", str, port);
 			if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
 				continue;
 			if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
@@ -4086,19 +4055,10 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
-	//for (int i = 0; i < curr_channel_->local_addres_size; i++)
-	//{
-	//	curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
-	//	for (int ii = 0; ii < curr_channel_->remote_addres_size; ii++)
-	//	{
-	//		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-	//		channel_t* ret = mdi_find_channel();
-	//		assert(ret == curr_channel_);
-	//	}
-	//}
+
 #ifdef _DEBUG
-	EVENTLOG1(DEBUG, "- - - - - Leave mdi_set_channel_remoteaddrlist(curr_channel_->remote_addres_size =%d)",
-		curr_channel_->remote_addres_size);
+	EVENTLOG(DEBUG, "mdi_set_channel_remoteaddrlist():: remote addr from cookie are:: ");
+	print_addrlist(addresses, noOfAddresses);
 #endif
 }
 /**
@@ -6550,13 +6510,13 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(localPort) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(localPort);
 		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "local_saddr %i = %s:%d", i, str, port);
+		EVENTLOG3(DEBUG, "mulp_connectx()::local_saddr %i = %s:%d", i, str, port);
 	}
 	for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 	{
 		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
 		saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "peer_saddr %i = %s:%d", ii, str, port);
+		EVENTLOG3(DEBUG, "mulp_connectx()::peer_saddr %i = %s:%d", ii, str, port);
 	}
 
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
@@ -6579,7 +6539,7 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
-	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses,false);
+	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses, false);
 	uint channel_id = curr_channel_->channel_id;
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
