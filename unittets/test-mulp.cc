@@ -731,7 +731,7 @@ TEST(MULP, test_connection_pharse)
 
 	// cline code
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, "10.0.0.107", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, "fe80::f98a:7d29:fe76:cc3b", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
 	while(flag)

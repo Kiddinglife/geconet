@@ -39,6 +39,9 @@ d:\vs-workspace\geconet\src\geco-net-transport.cc(1593): warning C4996: 'inet_nt
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: see declaration of 'inet_ntoa'
 d:\vs-workspace\geconet\src\geco-net-transport.cc(1681): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: see declaration of 'inet_ntoa'
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1873): warning C4101: 'destport': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1872): warning C4101: 'fromlen': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1871): warning C4101: 'iphdrlen': unreferenced local variable
 d:\vs-workspace\geconet\src\geco-net-common.h(709): warning C4715: 'saddr_equals': not all control paths return a value
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\geconetDebugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(lib) does not match the Library's OutputFile property value (geconetDebugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
