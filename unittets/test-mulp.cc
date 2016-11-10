@@ -715,7 +715,7 @@ TEST(MULP, test_connection_pharse)
 	ulp_cbs_t ULPcallbackFunctions;
 
 	//ip6 any and ip4 any
-	localPort = 123;
+	localPort = USED_UDP_PORT;
 	noOfInStreams = 32;
 	noOfOutStreams = 32;
 	noOfLocalAddresses = 2;

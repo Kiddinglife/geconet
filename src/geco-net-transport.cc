@@ -1678,7 +1678,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 		}
 		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
 			sizeof(struct sockaddr_in));
-		EVENTLOG6(VERBOSE,
+		EVENTLOG6(DEBUG,
 			"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
 			sfd, len, inet_ntoa(dest->sin.sin_addr),
 			ntohs(dest->sin.sin_port), tos, txmt_len);
@@ -1717,7 +1717,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 			ERRLOG(MAJOR_ERROR, "inet_ntop()  buffer is too small !\n");
 			return -1;
 		}
-		EVENTLOG6(VERBOSE,
+		EVENTLOG6(DEBUG,
 			"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
 			sfd, len, hostname, ntohs(dest->sin6.sin6_port), tos, txmt_len);
 #endif

@@ -5068,7 +5068,7 @@ void clear()
 int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len, sockaddrunion * source_addr,
 	sockaddrunion * dest_addr)
 {
-	EVENTLOG2(VERBOSE, "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
+	EVENTLOG2(DEBUG, "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -",
 		dctp_packet_len, socket_fd);
 
 	/* 1) validate packet hdr size, checksum and if aligned 4 bytes */
@@ -6498,40 +6498,15 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 	curr_channel_->application_layer_dataptr = ulp_data;
 
 	//insert channel id to map
-	//bool b1 = curr_trans_addr_.peer_saddr->sa.sa_family == AF_INET && curr_trans_addr_.peer_saddr->sin.sin_addr.s_addr != htonl(INADDR_LOOPBACK);
-	//bool b2 = curr_trans_addr_.peer_saddr->sa.sa_family == AF_INET6 && IN6_IS_ADDR_LOOPBACK(peer_saddr->sin6.sin6_addr);
-	char str[128];
-	ushort port;
-
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
 	{
 		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(localPort) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(localPort);
-		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "mulp_connectx()::local_saddr %i = %s:%d", i, str, port);
-	}
-	for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
-	{
-		curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-		saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-		EVENTLOG3(DEBUG, "mulp_connectx()::peer_saddr %i = %s:%d", ii, str, port);
-	}
-
-	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
-	{
-		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
-		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
-			curr_trans_addr_.local_saddr->sin.sin_port = htons(localPort) :
-			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(localPort);
-		saddr2str(curr_trans_addr_.local_saddr, str, 128, &port);
-		EVENTLOG2(DEBUG, "curr_trans_addr_.local_saddr=%s:%d", str, port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			saddr2str(curr_trans_addr_.peer_saddr, str, 128, &port);
-			EVENTLOG2(DEBUG, "curr_trans_addr_.peer_saddr=%s:%d", str, port);
 			if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
 				continue;
 			if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
@@ -6539,7 +6514,7 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
-	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses, false);
+	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses, true);
 	uint channel_id = curr_channel_->channel_id;
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;
