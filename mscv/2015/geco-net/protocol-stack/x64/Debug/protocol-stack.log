@@ -1,5 +1,4 @@
-﻿  geco-net-dispatch.cc
-d:\vs-workspace\geconet\src\geco-net-dispatch.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+﻿  geco-net-transport.cc
 d:\vs-workspace\geconet\src\geco-net-common.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
 d:\vs-workspace\geconet\src\geco-net-common.h(76): warning C4005: 'POLLIN': macro redefinition
   c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1617): note: see previous definition of 'POLLIN'
@@ -18,72 +17,28 @@ d:\vs-workspace\geconet\src\geco-ds-timer.h : warning C4819: The file contains a
 d:\vs-workspace\geconet\src\geco-ds-timer.h(123): warning C4293: '<<': shift count negative or too big, undefined behavior
 d:\vs-workspace\geconet\src\geco-ds-timer.h(277): warning C4244: 'initializing': conversion from 'time_t' to 'uint', possible loss of data
 d:\vs-workspace\geconet\src\geco-ds-timer.h(282): warning C4101: 'overflow_timeout': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-ds-malloc.h(812): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(434): warning C4267: 'return': conversion from 'size_t' to 'unsigned int', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(449): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(640): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(650): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1146): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1162): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1287): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1315): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2033): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2397): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2410): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2513): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2611): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2663): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2761): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2809): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2475): warning C4101: 'init_i_sent_cid': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2866): warning C4102: 'leave': unreferenced label
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3306): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3322): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3327): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3340): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3444): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3465): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3522): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3523): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3533): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3540): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3579): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3600): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3603): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3604): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3449): warning C4101: 'result': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3453): warning C4101: 'errorCID': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3451): warning C4101: 'idx': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3455): warning C4101: 'preferredPath': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3451): warning C4101: 'state': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3456): warning C4101: 'prefered_primary_addr': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4102): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4114): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4126): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4127): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4148): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4185): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4205): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4231): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4234): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4235): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4271): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4332): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4336): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4337): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4385): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4386): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4394): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4395): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4427): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4479): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4820): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4985): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5016): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5997): warning C4102: 'SEND_ABORT': unreferenced label
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(6702): warning C4101: 'ret': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geconet\src\geco-net-transport.cc(171): warning C4244: 'argument': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-transport.cc(205): warning C4018: '>': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-transport.cc(245): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1850): note: see declaration of 'inet_addr'
+d:\vs-workspace\geconet\src\geco-net-transport.cc(304): warning C4312: 'type cast': conversion from 'NTSTATUS' to 'char *' of greater size
+d:\vs-workspace\geconet\src\geco-net-transport.cc(288): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(346): note: see declaration of 'strncpy'
+d:\vs-workspace\geconet\src\geco-net-transport.cc(315): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
+d:\vs-workspace\geconet\src\geco-net-transport.cc(316): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1190): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1173): warning C4101: 'optname_ippmtudisc': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1174): warning C4101: 'optval_ippmtudisc_do': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1355): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1339): warning C4101: 'optname_ippmtudisc': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1340): warning C4101: 'optval_ippmtudisc_do': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1593): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: see declaration of 'inet_ntoa'
+d:\vs-workspace\geconet\src\geco-net-transport.cc(1681): warning C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(1868): note: see declaration of 'inet_ntoa'
 d:\vs-workspace\geconet\src\geco-net-common.h(709): warning C4715: 'saddr_equals': not all control paths return a value
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\geconetDebugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(lib) does not match the Library's OutputFile property value (geconetDebugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).

@@ -623,12 +623,12 @@ static void mtra_fire_event(int num_of_events) {
 
 					  case EVENTCB_TYPE_UDP:
 						  recvlen_ = mtra_recv_udpsocks(socket_despts[i].fd,
-						          curr, MAX_MTU_SIZE, &src, &dest);
+							  curr, MAX_MTU_SIZE, &src, &dest);
 						  if (recvlen_ < 0)
 							  break;
 						  if (event_callbacks[i].action.socket_cb_fun != NULL)
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-							          curr, recvlen_, &src, &dest);
+								  curr, recvlen_, &src, &dest);
 						  mdi_recv_geco_packet(socket_despts[i].fd, curr,
 							  recvlen_, &src, &dest);
 						  break;
@@ -646,7 +646,7 @@ static void mtra_fire_event(int num_of_events) {
 						  // src and dest port nums are carried in geco packet hdr at this moment
 						  if (event_callbacks[i].action.socket_cb_fun != NULL)
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-							          curr, recvlen_, &src, &dest);
+								  curr, recvlen_, &src, &dest);
 
 						  mdi_recv_geco_packet(socket_despts[i].fd, curr,
 							  recvlen_, &src, &dest);
@@ -867,7 +867,7 @@ int mtra_poll(void(*lock)(void* data) = NULL,
 	if (msecs < 0 || msecs > GRANULARITY)
 		msecs = GRANULARITY;
 
-	int ret = mtra_poll_fds(socket_despts, &socket_despts_size_, msecs, lock,unlock, data);
+	int ret = mtra_poll_fds(socket_despts, &socket_despts_size_, msecs, lock, unlock, data);
 	return ret;
 }
 
@@ -913,7 +913,7 @@ void mtra_ctor() {
 
 	internal_udp_buffer_ = (char*)malloc(1500);
 	internal_dctp_buffer = (char*)malloc(1500);
-	if((uintptr_t)internal_udp_buffer_%4 > 0 || (uintptr_t)internal_dctp_buffer % 4 > 0)
+	if ((uintptr_t)internal_udp_buffer_ % 4 > 0 || (uintptr_t)internal_dctp_buffer % 4 > 0)
 	{
 		perror("mtra_ctor()::internal_udp_buffer_ or internal_dctp_buffer not aligned !!");
 		exit(0);
@@ -931,7 +931,7 @@ void mtra_ctor() {
 #ifdef _WIN32
 		// this is init and so we set it to null
 		socket_despts[fd_index].event = NULL;
-		socket_despts[fd_index].trigger_event ={ 0 };
+		socket_despts[fd_index].trigger_event = { 0 };
 #endif
 		socket_despts[fd_index].event_handler_index = fd_index;
 		socket_despts[fd_index].fd = -1; /* file descriptor */
@@ -1660,7 +1660,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 	static int tmp;
 
 	if (sfd == mtra_ip4rawsock_) {
-        ushort old = dest->sin.sin_port;
+		ushort old = dest->sin.sin_port;
 		dest->sin.sin_port = 0;
 		opt_len = sizeof(old_tos);
 		tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, (char*)&old_tos, &opt_len);
@@ -1688,7 +1688,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 	}
 	else if (sfd == mtra_ip6rawsock_) {
 		ushort old = dest->sin6.sin6_port;
-	    dest->sin6.sin6_port = 0; //reset to zero otherwise invalidate argu error
+		dest->sin6.sin6_port = 0; //reset to zero otherwise invalidate argu error
 #ifdef _WIN32
 		opt_len = sizeof(old_tos);
 		tmp = getsockopt(sfd, IPPROTO_IPV6, IP_TOS, (char*)&old_tos, &opt_len);
@@ -1844,9 +1844,9 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
 	// currently  iphdr + data, now we need move data to the front of this packet,
 	// skipping all bytes in iphdr and updhdr as if hey  never exists
 	//memmove(dest, dest + iphdrlen, len - iphdrlen);
-	(*destptr)+=iphdrlen;
+	(*destptr) += iphdrlen;
 	geco_packet_t* p = ((geco_packet_t*)((char*)(*destptr)));
-	len-= iphdrlen;
+	len -= iphdrlen;
 
 #ifdef _DEBUG
 	char str[MAX_IPADDR_STR_LEN];
@@ -1867,18 +1867,18 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 	assert(from != 0);
 	assert(to != 0);
 
-	static int len;
-	static int iphdrlen;
-	static int fromlen;
-	static ushort destport;
+	int len;
+	int iphdrlen;
+	int fromlen;
+	ushort destport;
 
-	static struct msghdr rmsghdr;
-	static struct cmsghdr *rcmsgp;
-	static struct iovec data_vec;
+	struct msghdr rmsghdr;
+	struct cmsghdr *rcmsgp;
+	struct iovec data_vec;
 
 	if (sfd == mtra_ip4udpsock_) {
-		static char m4buf[(CMSG_SPACE(sizeof(struct in_pktinfo)))];
-		static struct in_pktinfo *pkt4info;
+		char m4buf[(CMSG_SPACE(sizeof(struct in_pktinfo)))];
+		struct in_pktinfo *pkt4info;
 		rcmsgp = (struct cmsghdr *) m4buf;
 		pkt4info = (struct in_pktinfo *) (MY_CMSG_DATA(rcmsgp));
 
@@ -1894,7 +1894,7 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		rmsghdr.dwFlags = 0;
 		rmsghdr.lpBuffers = &data_vec;
 		rmsghdr.dwBufferCount = 1;
-		rmsghdr.name = (sockaddr*)&(from->sa);
+		rmsghdr.name = (sockaddr*)&(from->sin);
 		rmsghdr.namelen = sizeof(struct sockaddr_in);
 		rmsghdr.Control.buf = m4buf;
 		rmsghdr.Control.len = sizeof(m4buf);
@@ -1904,20 +1904,20 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		rmsghdr.msg_flags = 0;
 		rmsghdr.msg_iov = &data_vec;
 		rmsghdr.msg_iovlen = 1;
-		rmsghdr.msg_name = (caddr_t) &(from->sa);
+		rmsghdr.msg_name = (caddr_t) &(from->sin);
 		rmsghdr.msg_namelen = sizeof(struct sockaddr_in);
 		rmsghdr.msg_control = (caddr_t)m4buf;
 		rmsghdr.msg_controllen = sizeof(m4buf);
 		len = recvmsg(sfd, &rmsghdr, 0);
 #endif
-		to->sa.sa_family = AF_INET6;
+		to->sa.sa_family = AF_INET;
 		to->sin.sin_port = htons(udp_local_bind_port_); //our well-kown port that clients use to send data to us 
 		memcpy(&(to->sin.sin_addr), &(pkt4info->ipi_addr),
 			sizeof(struct in_addr));
 	}
 	else if (sfd == mtra_ip6udpsock_) {
-		static char m6buf[(CMSG_SPACE(sizeof(struct in6_pktinfo)))];
-		static struct in6_pktinfo *pkt6info;
+		char m6buf[(CMSG_SPACE(sizeof(struct in6_pktinfo)))];
+		struct in6_pktinfo *pkt6info;
 		rcmsgp = (struct cmsghdr *) m6buf;
 		pkt6info = (struct in6_pktinfo *) (MY_CMSG_DATA(rcmsgp));
 
@@ -1933,7 +1933,7 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		rmsghdr.dwFlags = 0;
 		rmsghdr.lpBuffers = &data_vec;
 		rmsghdr.dwBufferCount = 1;
-		rmsghdr.name = (sockaddr*)&(from->sa);
+		rmsghdr.name = (sockaddr*)&(from->sin6);
 		rmsghdr.namelen = sizeof(struct sockaddr_in6);
 		rmsghdr.Control.buf = m6buf;
 		rmsghdr.Control.len = sizeof(m6buf);
