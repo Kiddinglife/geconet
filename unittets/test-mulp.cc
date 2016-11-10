@@ -657,14 +657,27 @@ TEST(MULP, test_mulp_connect)
 	free_library();
 }
 
+
+static bool flag = true;
+static void stdin_cb(char* data, size_t datalen)
+{
+	EVENTLOG2(DEBUG, "stdin_cb()::%d bytes : %s", datalen, data);
+	if (strcmp(data, "q") == 0)
+	{
+		flag = false;
+		return;
+	}
+}
 static void communicationLostNotif(unsigned int, unsigned short, void*)
 {
 	EVENTLOG(INFO, "connection lost !");
 }
+#include "geco-net-transport.h"
 TEST(MULP, test_connection_pharse)
 {
 	//precondition lib has been inited
 	initialize_library();
+	mtra_add_stdin_cb(stdin_cb);
 
 	lib_params_t lib_infos;
 	mulp_get_lib_params(&lib_infos);
@@ -716,21 +729,17 @@ TEST(MULP, test_connection_pharse)
 		ULPcallbackFunctions);
 	curr_geco_instance_ = geco_instances_[instid];
 
+	// cline code
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, "127.0.0.1", localPort,
-		&ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, "10.0.0.114", localPort,&ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
-	mtra_poll(0, 0, 0);
+	while(flag)
+		mtra_poll(0, 0, 0);
 
-	//poll to receive the initack  send cookie echoed
-	mtra_poll(0, 0, 0);
-	//poll to receive the cookie echoed chunk and send cookie ack
-	mtra_poll(0, 0, 0);
-	//poll to receive the cookie ack
-	mtra_poll(0, 0, 0);
-
+	// client code
 	msm_abort_channel();
+
 	mulp_delete_geco_instance(instid);
 	free_library();
 }

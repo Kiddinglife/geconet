@@ -488,7 +488,7 @@ struct channel_t
  *  @param fromAddress        source address of DG
  *  @param portnum            bogus port number
  */
-extern int mdis_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
+extern int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
         sockaddrunion * source_addr, sockaddrunion * dest_addr);
 
 #endif

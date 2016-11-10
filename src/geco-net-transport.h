@@ -98,11 +98,11 @@ extern void mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_m
 extern int mtra_remove_event_handler(int sfd);
 // cb will be called each tick 10ms
 extern void mtra_set_tick_task_cb(task_cb_fun_t taskcb, void* userdata);
+extern void mtra_add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb);
 
 //@pre  to->sin.sin_port MUST be assigned by caller with our well-knwon local port
 extern int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
 extern int mtra_recv_rawsocks(int sfd, char **dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
-
 extern int mtra_send_udpscoks(int sfd, char* buf, int length, sockaddrunion* destsu, uchar tos);
 extern int mtra_send_rawsocks(int sfd, char* buf, int len, sockaddrunion *dest, uchar tos);
 

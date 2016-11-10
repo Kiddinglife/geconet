@@ -557,6 +557,8 @@ static void mtra_fire_event(int num_of_events) {
 	}
 #endif
 
+	char* curr = internal_dctp_buffer;
+
 	//handle network events  individually right here 
 	//socket_despts_size_ = socket fd size with stdin excluded
 	for (; i < socket_despts_size_; i++) {
@@ -605,12 +607,10 @@ static void mtra_fire_event(int num_of_events) {
 				return;
 		}
 
-        char* curr = internal_dctp_buffer;
-
 #ifdef _WIN32
 		cb_dispatcher :
 #endif
-					 switch (event_callbacks[i].eventcb_type) {
+					  switch (event_callbacks[i].eventcb_type) {
 					  case EVENTCB_TYPE_USER:
 						  EVENTLOG1(VERBOSE,
 							  "Activity on user fd %d - Activating USER callback\n",
@@ -629,7 +629,7 @@ static void mtra_fire_event(int num_of_events) {
 						  if (event_callbacks[i].action.socket_cb_fun != NULL)
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
 							          curr, recvlen_, &src, &dest);
-						  mdis_recv_geco_packet(socket_despts[i].fd, curr,
+						  mdi_recv_geco_packet(socket_despts[i].fd, curr,
 							  recvlen_, &src, &dest);
 						  break;
 
@@ -648,7 +648,7 @@ static void mtra_fire_event(int num_of_events) {
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
 							          curr, recvlen_, &src, &dest);
 
-						  mdis_recv_geco_packet(socket_despts[i].fd, curr,
+						  mdi_recv_geco_packet(socket_despts[i].fd, curr,
 							  recvlen_, &src, &dest);
 						  break;
 
@@ -694,10 +694,10 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout,
 #ifdef _WIN32
 	// winevents arr = one or more sfds + stdin, total size = sfdsize+1
 	// socket_despt_ = one or more sfds, total size = sfdsize
-	if ((despts+(*sfdsize)) ->fd == STD_INPUT_FD)
-	{
-		*sfdsize += 1;
-	}
+	//if ((despts+(*sfdsize)) ->fd == STD_INPUT_FD)
+	//{
+	//	*sfdsize += 1;
+	//}
 	ret = MsgWaitForMultipleObjects(*sfdsize, win32events_, false, timeout, QS_KEY);
 	ret -= WAIT_OBJECT_0;
 	//EVENTLOG1(DEBUG, "MsgWaitForMultipleObjects return fd=%d", ret == (*sfdsize) ? 0 : socket_despts[ret].fd);
@@ -911,8 +911,14 @@ void mtra_ctor() {
 	test_dummy_.enable_stub_error_ = true;
 #endif
 
-	internal_udp_buffer_ = (char*)malloc(MAX_MTU_SIZE);
-	internal_dctp_buffer = (char*)malloc(MAX_MTU_SIZE);
+	internal_udp_buffer_ = (char*)malloc(1500);
+	internal_dctp_buffer = (char*)malloc(1500);
+	if((uintptr_t)internal_udp_buffer_%4 > 0 || (uintptr_t)internal_dctp_buffer % 4 > 0)
+	{
+		perror("mtra_ctor()::internal_udp_buffer_ or internal_dctp_buffer not aligned !!");
+		exit(0);
+	}
+
 	socket_despts_size_ = 0;
 	revision_ = 0;
 	src_addr_len_ = sizeof(src);
