@@ -2841,13 +2841,43 @@ leave:
 
 void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], int noOfAddresses)
 {
-	if (curr_channel_ == NULL)
+    EVENTLOG(DEBUG, "------ ENTER set_channel_remote_addrlist");
+    if (curr_channel_ == NULL)
 	{
 		ERRLOG(MINOR_ERROR, "set_channel_destaddrlist(): current cannel is NULL!");
 		return;
 	}
 	memcpy(curr_channel_->remote_addres, destaddrlist, noOfAddresses * sizeof(sockaddrunion));
 	curr_channel_->remote_addres_size = noOfAddresses;
+
+//	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
+//	    {
+//	        geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
+//	    }
+//	curr_channel_->remote_addres =
+//	        (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,__LINE__);
+//	assert(curr_channel_->remote_addres != NULL);
+//	memcpy(curr_channel_->remote_addres, destaddrlist, noOfAddresses * sizeof(sockaddrunion));
+//	curr_channel_->remote_addres_size = noOfAddresses;
+
+	char str[128];
+	ushort port;
+
+    for (uint i = 0; i < curr_channel_->local_addres_size; i++)
+    {
+        curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
+        curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
+            curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
+            curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
+        saddr2str(curr_trans_addr_.local_saddr, str, 128,&port);
+        EVENTLOG3(DEBUG, "local_saddr %d = %s:%d",i,str,port);
+    }
+    for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
+    {
+        curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+        saddr2str(curr_trans_addr_.peer_saddr, str, 128,&port);
+        EVENTLOG3(DEBUG, "peer_saddr %i = %s:%d",ii,str,port);
+    }
 
 	//insert channel id to map
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
@@ -2856,9 +2886,13 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], 
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
+	    saddr2str(curr_trans_addr_.local_saddr, str, 128,&port);
+	    EVENTLOG2(DEBUG, "curr_trans_addr_.local_saddr=%s:%d",str,port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+	        saddr2str(curr_trans_addr_.peer_saddr, str, 128,&port);
+	        EVENTLOG2(DEBUG, "curr_trans_addr_.peer_saddr=%s:%d",str,port);
             if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
                 continue;
             if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
@@ -2866,6 +2900,7 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], 
             channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
+    EVENTLOG(DEBUG, "------ LEAVE set_channel_remote_addrlist");
 }
 bool peer_supports_pr(init_chunk_t* initack)
 {
@@ -3974,19 +4009,47 @@ int mch_read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk, uint mySuppo
 void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses)
 {
 #ifdef _DEBUG
-	EVENTLOG1(VERBOSE, "- - - - - Enter mdi_set_channel_remoteaddrlist(noOfAddresses =%d)", noOfAddresses);
+	EVENTLOG1(DEBUG, "- - - - - Enter mdi_set_channel_remoteaddrlist(noOfAddresses =%d)", noOfAddresses);
 #endif
+    char str[128];
+    ushort port;
+
+    for (uint i = 0; i < curr_channel_->local_addres_size; i++)
+    {
+        curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
+        curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
+            curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
+            curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
+        saddr2str(curr_trans_addr_.local_saddr, str, 128,&port);
+        EVENTLOG3(DEBUG, "local_saddr %d = %s:%d",i,str,port);
+    }
+    for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
+    {
+        curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+        saddr2str(curr_trans_addr_.peer_saddr, str, 128,&port);
+        EVENTLOG3(DEBUG, "before free channel remote, peer_saddr %i = %s:%d",ii,str,port);
+    }
 
 	assert(curr_channel_ != NULL);
-	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
-	{
-		geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
-	}
-	curr_channel_->remote_addres = (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,
-		__LINE__);
-	assert(curr_channel_->remote_addres != NULL);
-	memcpy(curr_channel_->remote_addres, addresses, noOfAddresses * sizeof(sockaddrunion));
-	curr_channel_->remote_addres_size = noOfAddresses;
+//	if (curr_channel_->remote_addres_size > 0 && curr_channel_->remote_addres != NULL)
+//	{
+//		geco_free_ext(curr_channel_->remote_addres, __FILE__, __LINE__);
+//	}
+    if (curr_channel_->remote_addres_size == 0 && curr_channel_->remote_addres == NULL)
+    {
+        curr_channel_->remote_addres = (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,
+                __LINE__);
+            assert(curr_channel_->remote_addres != NULL);
+            memcpy(curr_channel_->remote_addres, addresses, noOfAddresses * sizeof(sockaddrunion));
+            curr_channel_->remote_addres_size = noOfAddresses;
+    }
+
+    for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
+    {
+        curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+        saddr2str(curr_trans_addr_.peer_saddr, str, 128,&port);
+        EVENTLOG3(DEBUG, "after free channel remote, peer_saddr %i = %s:%d",ii,str,port);
+    }
 
 	//insert channel id to map
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
@@ -3995,9 +4058,13 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
+		saddr2str(curr_trans_addr_.local_saddr,str,128,&port);
+		EVENTLOG2(DEBUG, "curr_trans_addr_.local_saddr=%s:%d",str, port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+	        saddr2str(curr_trans_addr_.peer_saddr,str,128,&port);
+	        EVENTLOG2(DEBUG, "curr_trans_addr_.peer_saddr=%s:%d",str, port);
 			if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
 			    continue;
 			if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
@@ -4016,7 +4083,7 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 	//	}
 	//}
 #ifdef _DEBUG
-	EVENTLOG1(VERBOSE, "- - - - - Leave mdi_set_channel_remoteaddrlist(curr_channel_->remote_addres_size =%d)",
+	EVENTLOG1(DEBUG, "- - - - - Leave mdi_set_channel_remoteaddrlist(curr_channel_->remote_addres_size =%d)",
 		curr_channel_->remote_addres_size);
 #endif
 }
@@ -6458,6 +6525,24 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 	//insert channel id to map
 	//bool b1 = curr_trans_addr_.peer_saddr->sa.sa_family == AF_INET && curr_trans_addr_.peer_saddr->sin.sin_addr.s_addr != htonl(INADDR_LOOPBACK);
 	//bool b2 = curr_trans_addr_.peer_saddr->sa.sa_family == AF_INET6 && IN6_IS_ADDR_LOOPBACK(peer_saddr->sin6.sin6_addr);
+	char str[128];
+	ushort port;
+
+    for (uint i = 0; i < curr_channel_->local_addres_size; i++)
+    {
+        curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
+        curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
+            curr_trans_addr_.local_saddr->sin.sin_port = htons(localPort) :
+            curr_trans_addr_.local_saddr->sin6.sin6_port = htons(localPort);
+        saddr2str(curr_trans_addr_.local_saddr,str,128,&port);
+        EVENTLOG3(DEBUG, "local_saddr %i = %s:%d",i,str,port);
+    }
+    for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
+    {
+        curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+        saddr2str(curr_trans_addr_.peer_saddr, str, 128,&port);
+        EVENTLOG3(DEBUG, "peer_saddr %i = %s:%d",ii,str,port);
+    }
 
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
 	{
@@ -6465,9 +6550,13 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
 			curr_trans_addr_.local_saddr->sin.sin_port = htons(localPort) :
 			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(localPort);
+        saddr2str(curr_trans_addr_.local_saddr,str,128,&port);
+        EVENTLOG2(DEBUG, "curr_trans_addr_.local_saddr=%s:%d",str, port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+	        saddr2str(curr_trans_addr_.peer_saddr,str,128,&port);
+	        EVENTLOG2(DEBUG, "curr_trans_addr_.peer_saddr=%s:%d",str, port);
             if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
                 continue;
             if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
