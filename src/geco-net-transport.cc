@@ -604,10 +604,13 @@ static void mtra_fire_event(int num_of_events) {
 			if (socket_despts[i].revents == POLLERR)
 				return;
 		}
+
+        char* curr = internal_dctp_buffer;
+
 #ifdef _WIN32
 		cb_dispatcher :
 #endif
-					  switch (event_callbacks[i].eventcb_type) {
+					 switch (event_callbacks[i].eventcb_type) {
 					  case EVENTCB_TYPE_USER:
 						  EVENTLOG1(VERBOSE,
 							  "Activity on user fd %d - Activating USER callback\n",
@@ -620,77 +623,32 @@ static void mtra_fire_event(int num_of_events) {
 
 					  case EVENTCB_TYPE_UDP:
 						  recvlen_ = mtra_recv_udpsocks(socket_despts[i].fd,
-							  internal_udp_buffer_, MAX_MTU_SIZE, &src, &dest);
+						          curr, MAX_MTU_SIZE, &src, &dest);
 						  if (recvlen_ < 0)
 							  break;
 						  if (event_callbacks[i].action.socket_cb_fun != NULL)
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-								  internal_udp_buffer_, recvlen_, &src, &dest);
-						  mdis_recv_geco_packet(socket_despts[i].fd, internal_dctp_buffer,
+							          curr, recvlen_, &src, &dest);
+						  mdis_recv_geco_packet(socket_despts[i].fd, curr,
 							  recvlen_, &src, &dest);
 						  break;
 
 					  case EVENTCB_TYPE_SCTP:
 						  recvlen_ = mtra_recv_rawsocks(socket_despts[i].fd,
-							  internal_dctp_buffer, MAX_MTU_SIZE, &src, &dest);
+							  &curr, MAX_MTU_SIZE, &src, &dest);
 						  // if <0, mus be something thing wrong with UDP length or
 						  // port number is not USED_UDP_PORT, if so, just skip this msg
 						  // as if we never receive it
-						  if (recvlen_ < 0)
-							  break;
-
-						  //                if (saddr_family(&src) == AF_INET)
-						  //                {
-						  //                    EVENTLOG4(VERBOSE,
-						  //                            "EVENTCB_TYPE_SCTP\n, recv a IPV4/DCTP-Messag from raw socket %u "
-						  //                                    "%d bytes of data from %s:%d, port is zero as this is raw socket\n",
-						  //                            socket_despts[i].fd, recvlen_, src_address, portnum_);
-						  //
-						  //                    iph = (struct iphdr *) internal_dctp_buffer;
-						  //#if defined (__linux__)
-						  //                    // 首部长度(4位):IP层头部包含多少个4字节 -- 32位
-						  //                    // <<2 to get the byte size
-						  //                    iphdrlen = iph->ihl << 2;
-						  //#elif defined (_WIN32)
-						  //                    iphdrlen = (iph->version_length & 0x0F) << 2;
-						  //#else
-						  //                    iphdrlen = iph->ip_hl << 2;
-						  //#endif
-						  //                    if (recvlen_ < iphdrlen)
-						  //                    {
-						  //                        ERRLOG1(WARNNING_ERROR,
-						  //                                "fire_event() : packet too short, less than a ip header (%d bytes)",
-						  //                                recvlen_);
-						  //                    }
-						  //                    else  // now we have at lest a enpty ip packet
-						  //                    {
-						  //                        // calculate ip payload size, which is DCTP packet size
-						  //                        recvlen_ -= iphdrlen;
-						  //                    }
-						  //                }
-						  //                else
-						  //                {
-						  //                    EVENTLOG4(VERBOSE,
-						  //                            "EVENTCB_TYPE_SCTP\n, recv a IPV6/DCTP-Messag,\nsocket %u , recvlen_ %d, bytes data from %s:%d\n",
-						  //                            socket_despts[i].fd, recvlen_, src_address, portnum_);
-						  //                    iphdrlen = 0;  // for ip6, we pass the whole ip packet to dispath layer
-						  //                }
-
-						  //                if (event_callbacks[i].action.socket_cb_fun != NULL)
-						  //                event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-						  //                        &internal_dctp_buffer[iphdrlen], recvlen_, src_address,
-						  //                        portnum_);
-
-						  //                mdis_recv_geco_packet(socket_despts[i].fd, &(internal_dctp_buffer[iphdrlen]),
-						  //                        recvlen_, &src, &dest);
+						  if (recvlen_ < 0) break;
 
 						  //recvlen_ = geco packet
 						  // internal_dctp_buffer = start point of  geco packet
 						  // src and dest port nums are carried in geco packet hdr at this moment
 						  if (event_callbacks[i].action.socket_cb_fun != NULL)
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-								  internal_dctp_buffer, recvlen_, &src, &dest);
-						  mdis_recv_geco_packet(socket_despts[i].fd, internal_dctp_buffer,
+							          curr, recvlen_, &src, &dest);
+
+						  mdis_recv_geco_packet(socket_despts[i].fd, curr,
 							  recvlen_, &src, &dest);
 						  break;
 
@@ -1769,22 +1727,24 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 	stat_send_event_size_++;
 	stat_send_bytes_ += txmt_len;
 
-	EVENTLOG3(VERBOSE, "send times %u, send total bytes_ %u, packet len %u",
+	EVENTLOG3(DEBUG, "send times %u, send total bytes_ %u, packet len %u",
 		stat_send_event_size_, stat_send_bytes_, len);
 
 	EVENTLOG(VERBOSE, "- - - - - -Leave mtra_send_rawsocks()- - - - - - ");
 	return txmt_len;
 }
-int mtra_recv_rawsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
-	sockaddrunion *to) {
+int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
+	sockaddrunion *to)
+{
 	assert(sfd >= 0);
-	assert(dest != 0);
+	assert(destptr != 0);
 	assert(maxlen > 0);
 	assert(from != 0);
 	assert(to != 0);
 
 	int len = -1;
 	int iphdrlen;
+	char* dest = *destptr;
 
 	if (sfd == mtra_ip4rawsock_) {
 		//recv packet = iphdr + [upphdr] + data
@@ -1875,10 +1835,12 @@ int mtra_recv_rawsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		return -1;
 	}
 
-	// currently  iphdr+udphdr + data, now we need move data to the front of this packet,
+	// currently  iphdr + data, now we need move data to the front of this packet,
 	// skipping all bytes in iphdr and updhdr as if hey  never exists
 	//memmove(dest, dest + iphdrlen, len - iphdrlen);
-	//len -= iphdrlen;
+	(*destptr)+=iphdrlen;
+	geco_packet_t* p = ((geco_packet_t*)((char*)(*destptr)));
+	len-= iphdrlen;
 
 #ifdef _DEBUG
 	char str[MAX_IPADDR_STR_LEN];
@@ -1888,7 +1850,6 @@ int mtra_recv_rawsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 	saddr2str(to, str, MAX_IPADDR_STR_LEN, &port);
 	EVENTLOG2(VERBOSE, "mtra_recv_rawsocks():: to(%s:%d)", str, port); // port zero raw socket
 #endif
-
 	return len;
 }
 

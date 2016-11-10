@@ -1411,9 +1411,9 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		i++;
 	}
 
-	for (; i < *numberOfNets; i++)
+	for (int j=i; j < *numberOfNets; j++)
 	{
-		memcpy(&buf[i], &(*addresses)[i-2], sizeof(sockaddrunion));
+		memcpy(&buf[j], &(*addresses)[j-i], sizeof(sockaddrunion));
 	}
 
 	free(*addresses);

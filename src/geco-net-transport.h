@@ -101,9 +101,9 @@ extern void mtra_set_tick_task_cb(task_cb_fun_t taskcb, void* userdata);
 
 //@pre  to->sin.sin_port MUST be assigned by caller with our well-knwon local port
 extern int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
-extern int mtra_recv_rawsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
+extern int mtra_recv_rawsocks(int sfd, char **dest, int maxlen, sockaddrunion *from, sockaddrunion *to);
 
 extern int mtra_send_udpscoks(int sfd, char* buf, int length, sockaddrunion* destsu, uchar tos);
-extern int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest, uchar tos);
+extern int mtra_send_rawsocks(int sfd, char* buf, int len, sockaddrunion *dest, uchar tos);
 
 #endif

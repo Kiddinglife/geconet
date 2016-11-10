@@ -2859,11 +2859,11 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], 
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			if (curr_trans_addr_.local_saddr->sa.sa_family == curr_trans_addr_.peer_saddr->sa.sa_family)
-			{
-				if (channel_map_.find(curr_trans_addr_) == channel_map_.end())
-					channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
-			}
+            if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
+                continue;
+            if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
+                continue;
+            channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
 }
@@ -3993,16 +3993,16 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 	{
 		curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
 		curr_trans_addr_.local_saddr->sa.sa_family == AF_INET ?
-			curr_trans_addr_.local_saddr->sin.sin_port == htons(curr_channel_->local_port) :
-			curr_trans_addr_.local_saddr->sin6.sin6_port == htons(curr_channel_->local_port);
+			curr_trans_addr_.local_saddr->sin.sin_port = htons(curr_channel_->local_port) :
+			curr_trans_addr_.local_saddr->sin6.sin6_port = htons(curr_channel_->local_port);
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			if (curr_trans_addr_.local_saddr->sa.sa_family == curr_trans_addr_.peer_saddr->sa.sa_family)
-			{
-				if (channel_map_.find(curr_trans_addr_) == channel_map_.end())
-					channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
-			}
+			if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
+			    continue;
+			if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
+                continue;
+			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
 	//for (int i = 0; i < curr_channel_->local_addres_size; i++)
@@ -6468,11 +6468,11 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 		for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
 		{
 			curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
-			if (curr_trans_addr_.local_saddr->sa.sa_family == curr_trans_addr_.peer_saddr->sa.sa_family)
-			{
-				if(channel_map_.find(curr_trans_addr_) == channel_map_.end())
-				channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
-			}
+            if (curr_trans_addr_.local_saddr->sa.sa_family != curr_trans_addr_.peer_saddr->sa.sa_family)
+                continue;
+            if (channel_map_.find(curr_trans_addr_) != channel_map_.end())
+                continue;
+            channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
 
