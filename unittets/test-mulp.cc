@@ -380,6 +380,8 @@ extern uint available_channel_ids_size_;
 extern geco_instance_t *curr_geco_instance_;
 extern channel_t *curr_channel_;
 extern timer_mgr mtra_timer_mgr_;
+extern bool mdi_connect_udp_sfd_;
+
 TEST(MULP, test_mdi_new_and_delete_channel)
 {
 	//precondition lib has been inited
@@ -731,12 +733,12 @@ TEST(MULP, test_connection_pharse)
 	curr_geco_instance_ = geco_instances_[instid];
 
 	// cline code
+	mdi_connect_udp_sfd_ = true;
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, (char*)"10.0.0.108", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
-	while(flag)
-		mtra_poll(0, 0, 0);
+	while(flag) mtra_poll(0, 0, 0);
 
 	// client code
 	msm_abort_channel();
