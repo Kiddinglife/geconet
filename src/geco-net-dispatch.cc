@@ -65,6 +65,7 @@ uint delayed_ack_interval_ = SACK_DELAY;  //ms
 bool send_abort_for_oob_packet_ = true;
 uint ipv4_sockets_geco_instance_users = 0;
 uint ipv6_sockets_geco_instance_users = 0;
+bool mdi_connect_udp_sfd_ = false;
 // inits along with library inits
 int defaultlocaladdrlistsize_;
 sockaddrunion* defaultlocaladdrlist_;
@@ -600,7 +601,7 @@ MYSTATIC bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* 
 	return false;
 }
 void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams, union sockaddrunion *destinationList,
-	unsigned int numDestAddresses, bool tryudp)
+	unsigned int numDestAddresses)
 {
 	smctrl_t* smctrl;
 	if ((smctrl = mdi_read_smctrl()) == NULL)
@@ -653,7 +654,7 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams, un
 		for (int count = 0; count < (int)numDestAddresses; count++)
 		{
 			// we firstly try raw socket if it fails we switch to udp-tunneld by setting to upd socks in on_connection_failed_cb()
-			if (tryudp)
+			if (mdi_connect_udp_sfd_)
 				destinationList[count].sa.sa_family == AF_INET ? mdi_socket_fd_ = mtra_read_ip4udpsock() : mdi_socket_fd_ = mtra_read_ip6udpsock();
 			else
 				destinationList[count].sa.sa_family == AF_INET ? mdi_socket_fd_ = mtra_read_ip4rawsock() : mdi_socket_fd_ = mtra_read_ip6rawsock();
@@ -6514,7 +6515,8 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 			channel_map_.insert(std::make_pair(curr_trans_addr_, curr_channel_->channel_id));
 		}
 	}
-	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses, true);
+	// we always try
+	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses);
 	uint channel_id = curr_channel_->channel_id;
 	curr_geco_instance_ = old_Instance;
 	curr_channel_ = old_assoc;

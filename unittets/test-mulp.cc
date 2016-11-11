@@ -715,7 +715,8 @@ TEST(MULP, test_connection_pharse)
 	ulp_cbs_t ULPcallbackFunctions;
 
 	//ip6 any and ip4 any
-	localPort = USED_UDP_PORT;
+	localPort = 9899;
+	//localPort = 123;
 	noOfInStreams = 32;
 	noOfOutStreams = 32;
 	noOfLocalAddresses = 2;
@@ -731,7 +732,7 @@ TEST(MULP, test_connection_pharse)
 
 	// cline code
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, "fe80::f98a:7d29:fe76:cc3b", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
 	while(flag)
