@@ -29,12 +29,7 @@ mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask,
 	cbunion_t action, void* userData);
 extern void
 mtra_add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb);
-extern int
-mtra_poll(void
-(*lock) (void* data),
-void
-(*unlock) (void* data),
-void* data);
+extern int mtra_poll(uint maxwait=0);
 extern int
 mtra_remove_stdin_cb();
 extern int
@@ -543,7 +538,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	mtra_set_tick_task_cb(task_cb, (void*) "this is user datta");
 	tid = mtra_timer_mgr_.add_timer(TIMER_TYPE_INIT, 300000, timer_cb, 0, 0);
 
-	while (flag) mtra_poll(0, 0, 0);
+	while (flag) mtra_poll();
 	mtra_destroy();
 }
 
