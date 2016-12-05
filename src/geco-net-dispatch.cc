@@ -6685,6 +6685,7 @@ int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* st
 		status->rtoMin = mpath_get_rto_min();
 		status->rtoMax = mpath_get_rto_max();
 		status->pathMaxRetransmits = mpath_get_max_retrans_per_path();
+		msm_get_cookielife();
 		//TODO 3172 DIS.CC status->validCookieLife = sci_getCookieLifeTime();
 	}
 	else

@@ -760,11 +760,6 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 	FD_ZERO(&wt_fdset);
 	FD_ZERO(&except_fdset);
 
-	if (lock != NULL)
-	{
-		lock(data);
-	}
-
 	for (i = 0; i < (*sfdsize); i++)
 	{
 		// max fd to feed to select()
@@ -786,10 +781,6 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 		fdcount++;
 	}
 
-	if (unlock)
-	{
-		unlock(data);
-	}
 
 	if (fdcount == 0)
 	{
@@ -797,10 +788,6 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 	}
 	else
 	{
-		if (lock != NULL)
-		{
-			lock(data);
-		}
 
 		//Set the revision number of all entries to the current revision.
 		for (i = 0; i < *sfdsize; i++)
@@ -814,19 +801,8 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 		 */
 		++revision_;
 
-		if (unlock)
-		{
-			unlock(data);
-		}
-
 		//  nfd is the max fd number plus one
 		ret = select(nfd + 1, &rd_fdset, &wt_fdset, &except_fdset, to);
-
-		if (lock)
-		{
-			lock(data);
-		}
-
 		for (i = 0; i < *sfdsize; i++)
 		{
 			despts[i].revents = 0;
@@ -874,10 +850,6 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 		}
 		else  // -1 error
 		{
-			if (unlock)
-			{
-				unlock(data);
-			}
 #ifdef _WIN32
 			ERRLOG1(MAJOR_ERROR,
 				"select():: failed! {%d} !\n",
@@ -885,11 +857,6 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 #else
 			ERRLOG1(MAJOR_ERROR, "select():: failed! {%d} !\n", errno);
 #endif
-		}
-
-		if (unlock)
-		{
-			unlock(data);
 		}
 	}
 	return ret;
