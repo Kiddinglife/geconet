@@ -317,8 +317,8 @@ static inline reltime_t timeout_rem(struct timeouts *T, struct timeout *to)
 
 static inline int timeout_wheel(timeout_t timeout)
 {
-	/* must be called with timeout != 0, so fls input is nonzero */
-	return (fls(MIN(timeout, TIMEOUT_MAX)) - 1) / WHEEL_BIT;
+	/* must be called with timeout != 0, so fls input is nonzero  ctz*/
+	return ((fls(MIN(timeout, TIMEOUT_MAX)) - 1) / WHEEL_BIT);
 } /* timeout_wheel() */
 
 static inline int timeout_slot(int wheel, timeout_t expires)
