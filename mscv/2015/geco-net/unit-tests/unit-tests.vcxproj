@@ -198,6 +198,7 @@
     <ClCompile Include="..\..\..\..\unittets\test-mbu.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mulp.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mtra.cpp" />
+    <ClCompile Include="..\..\..\..\unittets\test-wheel-timer.cc" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\..\..\docx\  Security Attacks Found Against.txt" />

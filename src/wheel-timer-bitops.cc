@@ -1,251 +1,553 @@
+#ifndef WHEEL_TIMER_BIT_OPS_H_
+#define WHEEL_TIMER_BIT_OPS_H_
+
+#define TIMEOUT_DISABLE_BUILTIN_BITOPS
+
 #include <stdint.h>
 #ifdef _MSC_VER
 #include <intrin.h>     /* _BitScanForward, _BitScanReverse */
 #endif
 
+///* First define ctz and clz functions; these are compiler-dependent if
+// * you want them to be fast. */
+//#if defined(__GNUC__) && !defined(TIMEOUT_DISABLE_GNUC_BITOPS)
+//
+// /* On GCC and clang and some others, we can use __builtin functions. They
+//  * are not defined for n==0, but timeout.s never calls them with n==0. */
+//
+//#define ctz64(n) __builtin_ctzll(n)
+//#define clz64(n) __builtin_clzll(n)
+//#if LONG_BITS == 32
+//#define ctz32(n) __builtin_ctzl(n)
+//#define clz32(n) __builtin_clzl(n)
+//#else
+//#define ctz32(n) __builtin_ctz(n)
+//#define clz32(n) __builtin_clz(n)
+//#endif
+//
+//#elif defined(_MSC_VER) && !defined(TIMEOUT_DISABLE_MSVC_BITOPS)
+//
+// /* On MSVC, we have these handy functions. We can ignore their return
+//  * values, since we will never supply val == 0. */
+//static __inline int ctz32(unsigned long val)
+//{
+//
+//	unsigned long zeros = 0;
+//	_BitScanForward(&zeros, val);
+//	return zeros;
+//}
+//static __inline int clz32(unsigned long val)
+//{
+//	unsigned long zeros = 0;
+//	_BitScanReverse(&zeros, val);
+//	return zeros;
+//}
+//#ifdef _WIN64
+///* According to the documentation, these only exist on Win64. */
+//static __inline int ctz64(uint64_t val)
+//{
+//	unsigned long zeros = 0;
+//	_BitScanForward64(&zeros, val);
+//	return zeros;
+//}
+//static __inline int clz64(uint64_t val)
+//{
+//	unsigned long zeros = 0;
+//	_BitScanReverse64(&zeros, val);
+//	return zeros;
+//}
+//#else
+//static __inline int ctz64(uint64_t val)
+//{
+//	uint32_t lo = (uint32_t)val;
+//	uint32_t hi = (uint32_t)(val >> 32);
+//	return lo ? ctz32(lo) : 32 + ctz32(hi);
+//}
+//static __inline int clz64(uint64_t val)
+//{
+//	uint32_t lo = (uint32_t)val;
+//	uint32_t hi = (uint32_t)(val >> 32);
+//	return hi ? clz32(hi) : 32 + clz32(lo);
+//}
+//#endif
+//
+///* End of MSVC case. */
+//
+//#else
+//
+// /* TODO: There are more clever ways to do this in the generic case. */
+//
+//
+//#define process_(one, cz_bits, bits)					\
+//	if (x < ( one << (cz_bits - bits))) { rv += bits; x <<= bits; }
+//
+//#define process64(bits) process_((UINT64_C(1)), 64, (bits))
+//static inline int clz64(uint64_t x)
+//{
+//	int rv = 0;
+//
+//	process64(32);
+//	process64(16);
+//	process64(8);
+//	process64(4);
+//	process64(2);
+//	process64(1);
+//	return rv;
+//}
+//#define process32(bits) process_((UINT32_C(1)), 32, (bits))
+//static inline int clz32(uint32_t x)
+//{
+//	int rv = 0;
+//
+//	process32(16);
+//	process32(8);
+//	process32(4);
+//	process32(2);
+//	process32(1);
+//	return rv;
+//}
+//
+//#undef process_
+//#undef process32
+//#undef process64
+//#define process_(one, bits)						\
+//	if ((x & ((one << (bits))-1)) == 0) { rv += bits; x >>= bits; }
+//
+//#define process64(bits) process_((UINT64_C(1)), bits)
+//static inline int ctz64(uint64_t x)
+//{
+//	int rv = 0;
+//
+//	process64(32);
+//	process64(16);
+//	process64(8);
+//	process64(4);
+//	process64(2);
+//	process64(1);
+//	return rv;
+//}
+//
+//#define process32(bits) process_((UINT32_C(1)), bits)
+//static inline int ctz32(uint32_t x)
+//{
+//	int rv = 0;
+//
+//	process32(16);
+//	process32(8);
+//	process32(4);
+//	process32(2);
+//	process32(1);
+//	return rv;
+//}
+//
+//#undef process32
+//#undef process64
+//#undef process_
+//
+///* End of generic case */
+//
+//#endif /* End of defining ctz */
+
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+//	                                      Section:  timer bit operations
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/**
+*  @return sizeofbits -1  if given 0, eg uint64_t a = 0, ctz64(a) returns 63
+*  other number will be fine
+* */
+#if defined(__GNUC__) && !defined(TIMEOUT_DISABLE_BUILTIN_BITOPS)
 /* First define ctz and clz functions; these are compiler-dependent if
- * you want them to be fast. */
-#if defined(__GNUC__) && !defined(TIMEOUT_DISABLE_GNUC_BITOPS)
-
- /* On GCC and clang and some others, we can use __builtin functions. They
-  * are not defined for n==0, but timeout.s never calls them with n==0. */
-
-#define ctz64(n) __builtin_ctzll(n)
-#define clz64(n) __builtin_clzll(n)
-#if LONG_BITS == 32
-#define ctz32(n) __builtin_ctzl(n)
-#define clz32(n) __builtin_clzl(n)
-#else
-#define ctz32(n) __builtin_ctz(n)
-#define clz32(n) __builtin_clz(n)
-#endif
-
-#elif defined(_MSC_VER) && !defined(TIMEOUT_DISABLE_MSVC_BITOPS)
-
- /* On MSVC, we have these handy functions. We can ignore their return
-  * values, since we will never supply val == 0. */
-#include <wtypes.h>
-static __inline int ctz32(unsigned long val)
+* you want them to be fast. On GCC and clang and some others,
+* we can use __builtin functions. They are not defined for n==0,
+* but timeout.s never calls them with n==0 */
+inline int ctz32(unsigned int val)
 {
-
-	DWORD zeros = 0;
-	_BitScanForward(&zeros, val);
-	return zeros;
+	return __builtin_ctz(val);
 }
-static __inline int clz32(unsigned long val)
+inline int clz32(unsigned int val)
 {
-	DWORD zeros = 0;
+	return __builtin_clz(val);
+}
+inline int ctz64(uint64_t val)
+{
+	return __builtin_ctzll(val);
+}
+inline int clz64(uint64_t val)
+{
+	return __builtin_clzll(val);
+}
+#elif defined(_MSC_VER) && !defined(TIMEOUT_DISABLE_BUILTIN_BITOPS)
+/* On MSVC, we have these handy functions. We can ignore their return
+* values, since we will never supply val == 0. */
+__inline int ctz32(unsigned long val)
+{
+	unsigned long zeros = 0;
+	_BitScanForward(&zeros, val);
+	return (int)zeros;
+}
+__inline int clz32(unsigned long val)
+{
+	unsigned long zeros = 0;
 	_BitScanReverse(&zeros, val);
-	return zeros;
+	return (int)zeros;
 }
 #ifdef _WIN64
 /* According to the documentation, these only exist on Win64. */
-static __inline int ctz64(uint64_t val)
+__inline int ctz64(uint64_t val)
 {
-	DWORD zeros = 0;
+	unsigned long zeros = 0;
 	_BitScanForward64(&zeros, val);
-	return zeros;
+	return (int)zeros;
 }
-static __inline int clz64(uint64_t val)
+__inline int clz64(uint64_t val)
 {
-	DWORD zeros = 0;
+	unsigned long zeros = 0;
 	_BitScanReverse64(&zeros, val);
-	return zeros;
+	return (int)zeros;
 }
 #else
-static __inline int ctz64(uint64_t val)
+__inline int ctz64(uint64_t val)
 {
 	uint32_t lo = (uint32_t)val;
 	uint32_t hi = (uint32_t)(val >> 32);
 	return lo ? ctz32(lo) : 32 + ctz32(hi);
 }
-static __inline int clz64(uint64_t val)
+__inline int clz64(uint64_t val)
 {
 	uint32_t lo = (uint32_t)val;
 	uint32_t hi = (uint32_t)(val >> 32);
 	return hi ? clz32(hi) : 32 + clz32(lo);
 }
 #endif
-
-/* End of MSVC case. */
-
 #else
+/*we have to impl these functions by ourselves*/
+/* uint64_t will take 8 times assignment to be reversed */
 
- /* TODO: There are more clever ways to do this in the generic case. */
-
-
-#define process_(one, cz_bits, bits)					\
-	if (x < ( one << (cz_bits - bits))) { rv += bits; x <<= bits; }
-
-#define process64(bits) process_((UINT64_C(1)), 64, (bits))
-static inline int clz64(uint64_t x)
+inline void reverse(unsigned char *src, const unsigned int length)
 {
-	int rv = 0;
-
-	process64(32);
-	process64(16);
-	process64(8);
-	process64(4);
-	process64(2);
-	process64(1);
-	return rv;
+	unsigned char temp;
+	for (unsigned int i = 0; i < (length >> 1); i++)
+	{
+		temp = src[i];
+		src[i] = src[length - i - 1];
+		src[length - i - 1] = temp;
+	}
 }
-#define process32(bits) process_((UINT32_C(1)), 32, (bits))
-static inline int clz32(uint32_t x)
+inline static int get_leading_zeros_size(char x)
 {
-	int rv = 0;
-
-	process32(16);
-	process32(8);
-	process32(4);
-	process32(2);
-	process32(1);
-	return rv;
+	return get_leading_zeros_size((unsigned char)x);
 }
-
-#undef process_
-#undef process32
-#undef process64
-#define process_(one, bits)						\
-	if ((x & ((one << (bits))-1)) == 0) { rv += bits; x >>= bits; }
-
-#define process64(bits) process_((UINT64_C(1)), bits)
-static inline int ctz64(uint64_t x)
+inline static int get_leading_zeros_size(unsigned char x)
 {
-	int rv = 0;
+	// x = 0000 0010, n = 8,
+	// y = x >>4 = 0000 0000
+	// y = x >>2 = 0000 0000
+	// y = x >>1 = 0000 0001 != 0 -> return 8-2 = 6
 
-	process64(32);
-	process64(16);
-	process64(8);
-	process64(4);
-	process64(2);
-	process64(1);
-	return rv;
+	// x = 0100 0000, n = 8,
+	// y = x >>4 = 0000 0100 != 0 -> n = 4, x = 0000 0100
+	// y = x >>2 = 0000 0001 != 0 -> n = 2, x = 0000 0001
+	// y = x >>1 = 0000 0000 != 0 -> return 2-1 = 1
+
+	unsigned char y;
+	int n;
+
+	n = 8;
+	y = x >> 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
+	}
+	y = x >> 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
+	}
+	y = x >> 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
 }
-
-#define process32(bits) process_((UINT32_C(1)), bits)
-static inline int ctz32(uint32_t x)
+inline static int get_trailing_zeros_size(unsigned char x)
 {
-	int rv = 0;
+	// x = 0000 1000,
+	// y = x << 4 = 1000 0000 != 0 -> n = 4, x = 1000 0000
+	// y = x <<2 = 0000 0000
+	// y = x <<1 = 0000 0000 == 0 -> return 4-1 = 3
+	// x = 0000 0010,
+	// y = x << 4 = 0010 0000 != 0 -> n = 4, x = 0010 0000
+	// y = x <<2 = 1000 0000 != 0 -> n = 2
+	// y = x <<1 = 0000 0000 == 0 -> return 2-1 = 1
+	// x = 0010 0000,
+	// y = x << 4 = 0000 0000
+	// y = x <<2 =  1000 0000 != 0, n = 6, x = 1000 0000
+	// y = x <<1 =  0000 0000 != 0 -> n-2 = 8-2 = 6
+	unsigned char y;
+	int n;
 
-	process32(16);
-	process32(8);
-	process32(4);
-	process32(2);
-	process32(1);
-	return rv;
+	n = 8;
+	y = x << 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
+	}
+	y = x << 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
+	}
+	y = x << 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
 }
-
-#undef process32
-#undef process64
-#undef process_
-
-/* End of generic case */
-
-#endif /* End of defining ctz */
-
-#ifdef TEST_BITOPS
-#include <stdio.h>
-#include <stdlib.h>
-
-static uint64_t testcases[] = {
-	13371337 * 10,
-	100,
-	385789752,
-	82574,
-	(((uint64_t)1) << 63) + (((uint64_t)1) << 31) + 10101
-};
-
-static int
-naive_clz(int bits, uint64_t v)
+inline static int get_leading_zeros_size(unsigned short x)
 {
-	int r = 0;
-	uint64_t bit = ((uint64_t)1) << (bits - 1);
-	while (bit && 0 == (v & bit)) {
-		r++;
-		bit >>= 1;
-	}
-	/* printf("clz(%d,%lx) -> %d\n", bits, v, r); */
-	return r;
-}
+	unsigned short y;
+	int n;
 
-static int
-naive_ctz(int bits, uint64_t v)
+	n = 16;
+	y = x >> 8;
+	if (y != 0)
+	{
+		n = n - 8;
+		x = y;
+	}
+	y = x >> 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
+	}
+	y = x >> 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
+	}
+	y = x >> 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
+}
+inline static int get_trailing_zeros_size(unsigned short x)
 {
-	int r = 0;
-	uint64_t bit = 1;
-	while (bit && 0 == (v & bit)) {
-		r++;
-		bit <<= 1;
-		if (r == bits)
-			break;
-	}
-	/* printf("ctz(%d,%lx) -> %d\n", bits, v, r); */
-	return r;
-}
+	unsigned short y;
+	int n;
 
-static int
-check(uint64_t vv)
+	n = 16;
+	y = x << 8;
+	if (y != 0)
+	{
+		n = n - 8;
+		x = y;
+	}
+	y = x << 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
+	}
+	y = x << 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
+	}
+	y = x << 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
+}
+inline static int get_leading_zeros_size(short x)
 {
-	uint32_t v32 = (uint32_t)vv;
-
-	if (vv == 0)
-		return 1; /* c[tl]z64(0) is undefined. */
-
-	if (ctz64(vv) != naive_ctz(64, vv)) {
-		printf("mismatch with ctz64: %d\n", ctz64(vv));
-		exit(1);
-		return 0;
-	}
-	if (clz64(vv) != naive_clz(64, vv)) {
-		printf("mismatch with clz64: %d\n", clz64(vv));
-		exit(1);
-		return 0;
-	}
-
-	if (v32 == 0)
-		return 1; /* c[lt]z(0) is undefined. */
-
-	if (ctz32(v32) != naive_ctz(32, v32)) {
-		printf("mismatch with ctz32: %d\n", ctz32(v32));
-		exit(1);
-		return 0;
-	}
-	if (clz32(v32) != naive_clz(32, v32)) {
-		printf("mismatch with clz32: %d\n", clz32(v32));
-		exit(1);
-		return 0;
-	}
-	return 1;
+	return get_leading_zeros_size((unsigned short)x);
 }
-
-int
-main(int c, char **v)
+inline static int get_leading_zeros_size(unsigned int x)
 {
-	unsigned int i;
-	const unsigned int n = sizeof(testcases) / sizeof(testcases[0]);
-	int result = 0;
+	unsigned int y;
+	int n;
 
-	for (i = 0; i <= 63; ++i) {
-		uint64_t x = 1 << i;
-		if (!check(x))
-			result = 1;
-		--x;
-		if (!check(x))
-			result = 1;
+	n = 32;
+	y = x >> 16;
+	if (y != 0)
+	{
+		n = n - 16;
+		x = y;
 	}
-
-	for (i = 0; i < n; ++i) {
-		if (!check(testcases[i]))
-			result = 1;
+	y = x >> 8;
+	if (y != 0)
+	{
+		n = n - 8;
+		x = y;
 	}
-	if (result) {
-		puts("FAIL");
+	y = x >> 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
 	}
-	else {
-		puts("OK");
+	y = x >> 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
 	}
-	return result;
+	y = x >> 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
 }
+inline static int get_trailing_zeros_size(unsigned int x)
+{
+	unsigned int y;
+	int n;
+
+	n = 32;
+	y = x << 16;
+	if (y != 0)
+	{
+		n = n - 16;
+		x = y;
+	}
+	y = x << 8;
+	if (y != 0)
+	{
+		n = n - 8;
+		x = y;
+	}
+	y = x << 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
+	}
+	y = x << 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
+	}
+	y = x << 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
+}
+inline static int get_leading_zeros_size(int x)
+{
+	return get_leading_zeros_size((unsigned int)x);
+}
+inline static int get_leading_zeros_size(uint64_t x)
+{
+	uint64_t y;
+	int n;
+
+	n = 64;
+	y = x >> 32;
+	if (y != 0)
+	{
+		n = n - 32;
+		x = y;
+	}
+	y = x >> 16;
+	if (y != 0)
+	{
+		n = n - 16;
+		x = y;
+	}
+	y = x >> 8;
+	if (y != 0)
+	{
+		n = n - 8;
+		x = y;
+	}
+	y = x >> 4;
+	if (y != 0)
+	{
+		n = n - 4;
+		x = y;
+	}
+	y = x >> 2;
+	if (y != 0)
+	{
+		n = n - 2;
+		x = y;
+	}
+	y = x >> 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
+}
+inline static int get_trailing_zeros_size(uint64_t x)
+{
+	// x = 8 = 7 zero chars 1000
+	// x = 3 zero char + 1000 ...
+	// x = 1 zero char + 1000 ...
+	//x = 0000 1000 ...
+	// x = 1000 ...
+	// x = 00 ...
+	uint64_t y;
+	int n = 64;
+
+	y = x << 32;
+	if (y != 0)
+	{
+		n -= 32;
+		x = y;
+	}
+	y = x << 16;
+	if (y != 0)
+	{
+		n -= 16;
+		x = y;
+	}
+	y = x << 8;
+	if (y != 0)
+	{
+		n -= 8;
+		x = y;
+	}
+	y = x << 4;
+	if (y != 0)
+	{
+		n -= 4;
+		x = y;
+	}
+	y = x << 2;
+	if (y != 0)
+	{
+		n -= 2;
+		x = y;
+	}
+	y = x << 1;
+	if (y != 0)
+		return (int)(n - 2);
+	return (int)(n - 1);
+}
+inline static int get_leading_zeros_size(int64_t x)
+{
+	return get_leading_zeros_size((uint64_t)x);
+}
+inline int clz32(unsigned int val)
+{
+	return get_leading_zeros_size(val);
+}
+inline int ctz32(unsigned int val)
+{
+	return get_trailing_zeros_size(val);
+}
+inline int clz64(uint64_t val)
+{
+	return get_leading_zeros_size(val);
+}
+inline int ctz64(uint64_t val)
+{
+	return get_trailing_zeros_size(val);
+}
+#endif
 #endif
 
