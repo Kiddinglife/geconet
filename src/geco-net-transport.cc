@@ -5,7 +5,7 @@
 
 #define STD_INPUT_FD 0
 
-static ushort udp_local_bind_port_ = 9899; // host order ulp can setup this
+static ushort udp_local_bind_port_ = USED_UDP_PORT; // host order ulp can setup this
 event_handler_t event_callbacks[MAX_FD_SIZE];
 socket_despt_t socket_despts[MAX_FD_SIZE];
 int socket_despts_size_;
@@ -1238,6 +1238,7 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 		me.sin.sin_family = AF_INET;
 		// bind any can recv all  ip packets
 		me.sin.sin_addr.s_addr = INADDR_ANY;
+		me.sin.sin_port = htons(udp_local_bind_port_);
 #ifdef HAVE_SIN_LEN
 		me.sin_len = htons(sizeof(me));
 #endif
@@ -1255,6 +1256,7 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 		me.sin6.sin6_family = AF_INET6;
 		// bind any can recv all  ip packets
 		me.sin6.sin6_addr = in6addr_any;
+		me.sin6.sin6_port = htons(udp_local_bind_port_);
 #ifdef HAVE_SIN_LEN
 		me.sin_len = htons(sizeof(me));
 #endif

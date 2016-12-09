@@ -8,7 +8,7 @@
 #ifndef MY_CONFIG_H_
 #define MY_CONFIG_H_
 
-#define USED_UDP_PORT 9899
+#define USED_UDP_PORT 45000
 //#define USE_UDP
 
 //comment those macros before running unit tests

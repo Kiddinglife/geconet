@@ -65,9 +65,9 @@ TIMEOUT_PUBLIC int timeout_v_api(void);
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define TIMEOUT_C(n) UINT64_C(n)
-#define TIMEOUT_PRIu PRIu64
-#define TIMEOUT_PRIx PRIx64
-#define TIMEOUT_PRIX PRIX64
+#define TIMEOUT_PRIu "PRIu64"
+#define TIMEOUT_PRIx "PRIx64"
+#define TIMEOUT_PRIX "PRIX64"
 
 #define TIMEOUT_mHZ TIMEOUT_C(1000)
 #define TIMEOUT_uHZ TIMEOUT_C(1000000)

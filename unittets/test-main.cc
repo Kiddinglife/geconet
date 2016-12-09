@@ -24,8 +24,8 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.*";
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_timer_mgr";
-     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_wheel_timer";
-	// ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_bitops";
+    //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_wheel_timer";
+    //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_bitops";
 
     // last pass on 31 Oct 2016
     // ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.*";
