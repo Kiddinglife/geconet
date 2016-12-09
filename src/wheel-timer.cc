@@ -47,10 +47,10 @@
 #define TO_SET_TIMEOUTS(to, T) ((to)->timeouts = (T))
 #endif
 
- /*
-  * A N C I L L A R Y  R O U T I N E S
-  *
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*
+ * A N C I L L A R Y  R O U T I N E S
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define abstime_t timeout_t /* for documentation purposes */
 #define reltime_t timeout_t /* "" */
@@ -89,34 +89,34 @@
 	    (var) = (tvar))
 #endif
 
-  /*
-   * B I T  M A N I P U L A T I O N  R O U T I N E S
-   *
-   * The macros and routines below implement wheel parameterization. The
-   * inputs are:
-   *
-   *   WHEEL_BIT - The number of value bits mapped in each wheel. The
-   *               lowest-order WHEEL_BIT bits index the lowest-order (highest
-   *               resolution) wheel, the next group of WHEEL_BIT bits the
-   *               higher wheel, etc.
-   *
-   *   WHEEL_NUM - The number of wheels. WHEEL_BIT * WHEEL_NUM = the number of
-   *               value bits used by all the wheels. For the default of 6 and
-   *               4, only the low 24 bits are processed. Any timeout value
-   *               larger than this will cycle through again.
-   *
-   * The implementation uses bit fields to remember which slot in each wheel
-   * is populated, and to generate masks of expiring slots according to the
-   * current update interval (i.e. the "tickless" aspect). The slots to
-   * process in a wheel are (populated-set & interval-mask).
-   *
-   * WHEEL_BIT cannot be larger than 6 bits because 2^6 -> 64 is the largest
-   * number of slots which can be tracked in a uint64_t integer bit field.
-   * WHEEL_BIT cannot be smaller than 3 bits because of our rotr and rotl
-   * routines, which only operate on all the value bits in an integer, and
-   * there's no integer smaller than uint8_t.
-   *
-   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*
+ * B I T  M A N I P U L A T I O N  R O U T I N E S
+ *
+ * The macros and routines below implement wheel parameterization. The
+ * inputs are:
+ *
+ *   WHEEL_BIT - The number of value bits mapped in each wheel. The
+ *               lowest-order WHEEL_BIT bits index the lowest-order (highest
+ *               resolution) wheel, the next group of WHEEL_BIT bits the
+ *               higher wheel, etc.
+ *
+ *   WHEEL_NUM - The number of wheels. WHEEL_BIT * WHEEL_NUM = the number of
+ *               value bits used by all the wheels. For the default of 6 and
+ *               4, only the low 24 bits are processed. Any timeout value
+ *               larger than this will cycle through again.
+ *
+ * The implementation uses bit fields to remember which slot in each wheel
+ * is populated, and to generate masks of expiring slots according to the
+ * current update interval (i.e. the "tickless" aspect). The slots to
+ * process in a wheel are (populated-set & interval-mask).
+ *
+ * WHEEL_BIT cannot be larger than 6 bits because 2^6 -> 64 is the largest
+ * number of slots which can be tracked in a uint64_t integer bit field.
+ * WHEEL_BIT cannot be smaller than 3 bits because of our rotr and rotl
+ * routines, which only operate on all the value bits in an integer, and
+ * there's no integer smaller than uint8_t.
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #if !defined WHEEL_BIT
 #define WHEEL_BIT 6
@@ -203,12 +203,12 @@ TAILQ_HEAD(timeout_list, timeout);
 
 struct timeouts
 {
-	struct timeout_list wheel[WHEEL_NUM][WHEEL_LEN], expired;
+		struct timeout_list wheel[WHEEL_NUM][WHEEL_LEN], expired;
 
-	wheel_t pending[WHEEL_NUM];
+		wheel_t pending[WHEEL_NUM];
 
-	timeout_t curtime;
-	timeout_t hertz;
+		timeout_t curtime;
+		timeout_t hertz;
 };
 /* struct timeouts */
 
@@ -317,8 +317,8 @@ static inline reltime_t timeout_rem(struct timeouts *T, struct timeout *to)
 
 static inline int timeout_wheel(timeout_t timeout)
 {
-	/* must be called with timeout != 0, so fls input is nonzero  ctz*/
-	return ((fls(MIN(timeout, TIMEOUT_MAX)) - 1) / WHEEL_BIT);
+	/* must be called with timeout != 0, so fls input is nonzero */
+	return (fls(MIN(timeout, TIMEOUT_MAX)) - 1) / WHEEL_BIT;
 } /* timeout_wheel() */
 
 static inline int timeout_slot(int wheel, timeout_t expires)
@@ -327,7 +327,7 @@ static inline int timeout_slot(int wheel, timeout_t expires)
 } /* timeout_slot() */
 
 static void timeouts_sched(struct timeouts *T, struct timeout *to,
-	timeout_t expires)
+		timeout_t expires)
 {
 	timeout_t rem;
 	int wheel, slot;
@@ -383,7 +383,7 @@ static void timeouts_readd(struct timeouts *T, struct timeout *to)
 #endif
 
 TIMEOUT_PUBLIC void timeouts_add(struct timeouts *T, struct timeout *to,
-	timeout_t timeout)
+		timeout_t timeout)
 {
 #ifndef TIMEOUT_DISABLE_INTERVALS
 	if (to->flags & TIMEOUT_INT)
@@ -428,7 +428,7 @@ TIMEOUT_PUBLIC void timeouts_update(struct timeouts *T, abstime_t curtime)
 		 */
 		if ((elapsed >> (wheel * WHEEL_BIT)) > WHEEL_MAX)
 		{
-			pending = (wheel_t)~WHEEL_C(0);
+			pending = (wheel_t) ~WHEEL_C(0);
 		}
 		else
 		{
@@ -445,7 +445,7 @@ TIMEOUT_PUBLIC void timeouts_update(struct timeouts *T, abstime_t curtime)
 
 			nslot = WHEEL_MASK & (curtime >> (wheel * WHEEL_BIT));
 			pending |= rotr(rotl(((WHEEL_C(1) << _elapsed) - 1), nslot),
-				_elapsed);
+					_elapsed);
 			pending |= WHEEL_C(1) << nslot;
 		}
 
@@ -497,6 +497,19 @@ TIMEOUT_PUBLIC bool timeouts_pending(struct timeouts *T)
 	return !!pending;
 } /* timeouts_pending() */
 
+TIMEOUT_PUBLIC bool timeouts_empty(struct timeouts *T)
+{
+	int wheel;
+	for (wheel = 0; wheel < WHEEL_NUM; wheel++)
+	{
+		if (T->pending[wheel] != 0)
+		{
+			return false;
+		}
+	}
+	return true;
+} /* timeouts_pending() */
+
 TIMEOUT_PUBLIC bool timeouts_expired(struct timeouts *T)
 {
 	return !TAILQ_EMPTY(&T->expired);
@@ -535,7 +548,7 @@ static timeout_t timeouts_int(struct timeouts *T)
 			/* ctz input cannot be zero: T->pending[wheel] is
 			 * nonzero, so rotr() is nonzero. */
 			_timeout = (ctz(rotr(T->pending[wheel], slot)) + !!wheel)
-				<< (wheel * WHEEL_BIT);
+					<< (wheel * WHEEL_BIT);
 			/* +1 to higher order wheels as those timeouts are one rotation in the future (otherwise they'd be on a lower wheel or expired) */
 
 			_timeout -= relmask & T->curtime;
@@ -634,18 +647,18 @@ TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *T, FILE *fp)
 	if ((to = timeouts_min(T)))
 	{
 		check(to->expires > T->curtime,
-			"missed timeout (expires:%" TIMEOUT_PRIu " <= curtime:%" TIMEOUT_PRIu ")\n",
-			to->expires, T->curtime);
+				"missed timeout (expires:%" TIMEOUT_PRIu " <= curtime:%" TIMEOUT_PRIu ")\n",
+				to->expires, T->curtime);
 
 		timeout = timeouts_int(T);
 		check(timeout <= to->expires - T->curtime,
-			"wrong soft timeout (soft:%" TIMEOUT_PRIu " > hard:%" TIMEOUT_PRIu ") (expires:%" TIMEOUT_PRIu "; curtime:%" TIMEOUT_PRIu ")\n",
-			timeout, (to->expires - T->curtime), to->expires, T->curtime);
+				"wrong soft timeout (soft:%" TIMEOUT_PRIu " > hard:%" TIMEOUT_PRIu ") (expires:%" TIMEOUT_PRIu "; curtime:%" TIMEOUT_PRIu ")\n",
+				timeout, (to->expires - T->curtime), to->expires, T->curtime);
 
 		timeout = timeouts_timeout(T);
 		check(timeout <= to->expires - T->curtime,
-			"wrong soft timeout (soft:%" TIMEOUT_PRIu " > hard:%" TIMEOUT_PRIu ") (expires:%" TIMEOUT_PRIu "; curtime:%" TIMEOUT_PRIu ")\n",
-			timeout, (to->expires - T->curtime), to->expires, T->curtime);
+				"wrong soft timeout (soft:%" TIMEOUT_PRIu " > hard:%" TIMEOUT_PRIu ") (expires:%" TIMEOUT_PRIu "; curtime:%" TIMEOUT_PRIu ")\n",
+				timeout, (to->expires - T->curtime), to->expires, T->curtime);
 	}
 	else
 	{
@@ -653,12 +666,12 @@ TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *T, FILE *fp)
 
 		if (!TAILQ_EMPTY(&T->expired))
 			check(timeout == 0,
-				"wrong soft timeout (soft:%" TIMEOUT_PRIu " != hard:%" TIMEOUT_PRIu ")\n",
-				timeout, TIMEOUT_C(0));
+					"wrong soft timeout (soft:%" TIMEOUT_PRIu " != hard:%" TIMEOUT_PRIu ")\n",
+					timeout, TIMEOUT_C(0));
 		else
 			check(timeout == ~TIMEOUT_C(0),
-				"wrong soft timeout (soft:%" TIMEOUT_PRIu " != hard:%" TIMEOUT_PRIu ")\n",
-				timeout, ~TIMEOUT_C(0));
+					"wrong soft timeout (soft:%" TIMEOUT_PRIu " != hard:%" TIMEOUT_PRIu ")\n",
+					timeout, ~TIMEOUT_C(0));
 	}
 
 	return 1;
@@ -686,75 +699,49 @@ TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *T, FILE *fp)
 	} while (0)
 
 TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *T,
-	struct timeouts_it *it)
+		struct timeouts_it *it)
 {
-	//struct timeout *to;
+	struct timeout *to;
 
-	////ENTER;
-	//do {
-	//	static const int pc0 = __LINE__;
-	//	switch (pc0 + it->pc)
-	//	{
-	//	case __LINE__: (void)0;
+	ENTER
+		;
 
-	//		if (it->flags & TIMEOUTS_EXPIRED)
-	//		{
-	//			if (it->flags & TIMEOUTS_CLEAR)
-	//			{
-	//				while ((to = timeouts_get(T)))
-	//				{
-	//					//YIELD(to);
-	//					do {
-	//						it->pc = __LINE__ - pc0;
-	//						return to;
-	//	case __LINE__: (void)0;
-	//					} while (0);
-	//				}
-	//			}
-	//			else
-	//			{
-	//				TAILQ_FOREACH_SAFE(to, &T->expired, tqe, it->to)
-	//				{
-	//					//YIELD(to);
-	//					do {
-	//						it->pc = __LINE__ - pc0;
-	//						return to;
-	//	case __LINE__: (void)0;
-	//					} while (0);
-	//				}
-	//			}
-	//		}
+		if (it->flags & TIMEOUTS_EXPIRED)
+		{
+			if (it->flags & TIMEOUTS_CLEAR)
+			{
+				while ((to = timeouts_get(T)))
+				{
+					YIELD(to);
+				}
+			}
+			else
+			{
+				TAILQ_FOREACH_SAFE(to, &T->expired, tqe, it->to)
+				{
+					YIELD(to);
+				}
+			}
+		}
 
-	//		if (it->flags & TIMEOUTS_PENDING)
-	//		{
-	//			for (it->i = 0; it->i < countof(T->wheel); it->i++)
-	//			{
-	//				for (it->j = 0; it->j < countof(T->wheel[it->i]); it->j++)
-	//				{
-	//					TAILQ_FOREACH_SAFE(to, &T->wheel[it->i][it->j], tqe, it->to)
-	//					{
-	//						//YIELD(to);
-	//						do {
-	//							it->pc = __LINE__ - pc0;
-	//							return to;
-	//	case __LINE__: (void)0;
-	//						} while (0);
-	//					}
-	//				}
-	//			}
-	//		}
+		if (it->flags & TIMEOUTS_PENDING)
+		{
+			for (it->i = 0; it->i < countof(T->wheel); it->i++)
+			{
+				for (it->j = 0; it->j < countof(T->wheel[it->i]); it->j++)
+				{
+					TAILQ_FOREACH_SAFE(to, &T->wheel[it->i][it->j], tqe, it->to)
+					{
+						YIELD(to);
+					}
+				}
+			}
+		}
 
-	//		//LEAVE;
-	//		//SAVE_AND_DO(break);
-	//		do {
-	//			it->pc = __LINE__ - pc0;
-	//			break;
-	//	case __LINE__: (void)0;
-	//		} while (0);
-	//	}
-	//} while (0);
+		LEAVE
+;
 
-	return NULL;
+return NULL;
 } /* timeouts_next */
 
 #undef LEAVE
@@ -769,25 +756,27 @@ TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *T,
 
 TIMEOUT_PUBLIC struct timeout *timeout_init(struct timeout *to, int flags)
 {
-	memset(to, 0, sizeof *to);
-	to->flags = flags;
-	return to;
+memset(to, 0, sizeof *to);
+
+to->flags = flags;
+
+return to;
 } /* timeout_init() */
 
 #ifndef TIMEOUT_DISABLE_RELATIVE_ACCESS
 TIMEOUT_PUBLIC bool timeout_pending(struct timeout *to)
 {
-	return to->pending && to->pending != &to->timeouts->expired;
+return to->pending && to->pending != &to->timeouts->expired;
 } /* timeout_pending() */
 
 TIMEOUT_PUBLIC bool timeout_expired(struct timeout *to)
 {
-	return to->pending && to->pending == &to->timeouts->expired;
+return to->pending && to->pending == &to->timeouts->expired;
 } /* timeout_expired() */
 
 TIMEOUT_PUBLIC void timeout_del(struct timeout *to)
 {
-	timeouts_del(to->timeouts, to);
+timeouts_del(to->timeouts, to);
 } /* timeout_del() */
 #endif
 
@@ -798,26 +787,25 @@ TIMEOUT_PUBLIC void timeout_del(struct timeout *to)
 
 TIMEOUT_PUBLIC int timeout_version(void)
 {
-	return TIMEOUT_VERSION;
+return TIMEOUT_VERSION;
 } /* timeout_version() */
 
 TIMEOUT_PUBLIC const char *timeout_vendor(void)
 {
-	return TIMEOUT_VENDOR;
+return TIMEOUT_VENDOR;
 } /* timeout_version() */
 
 TIMEOUT_PUBLIC int timeout_v_rel(void)
 {
-	return TIMEOUT_V_REL;
+return TIMEOUT_V_REL;
 } /* timeout_version() */
 
 TIMEOUT_PUBLIC int timeout_v_abi(void)
 {
-	return TIMEOUT_V_ABI;
+return TIMEOUT_V_ABI;
 } /* timeout_version() */
 
 TIMEOUT_PUBLIC int timeout_v_api(void)
 {
-	return TIMEOUT_V_API;
+return TIMEOUT_V_API;
 } /* timeout_version() */
-

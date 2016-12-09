@@ -112,6 +112,79 @@ ushort mtra_read_udp_local_bind_port()
 	return udp_local_bind_port_;
 }
 
+// cb that will be called pre and post recv_msg() system call which gives users chhance to do stats or filtering
+#include <functional>
+typedef std::function<int ((void* user_data))> socket_read_start_cb_t;
+typedef std::function<
+		int ((int sfd, bool isudpsocket, char* data, int datalen,
+				sockaddrunion* from, sockaddrunion* to, void* user_data))> socket_read_end_cb_t;
+struct mtra_socket_read_handler
+{
+		socket_read_start_cb_t mtra_socket_read_start_;
+		socket_read_end_cb_t mtra_socket_read_end_;
+		void* start_args_;
+		void* end_args_;
+};
+static mtra_socket_read_handler mtra_socket_read_handler_;
+static bool enable_socket_read_handler_;
+static bool socket_read_handler_not_null_;
+void mulp_set_socket_read_handler(
+		socket_read_start_cb_t& mtra_socket_read_start,
+		socket_read_end_cb_t& mtra_socket_read_end, void* start_arg,
+		void* end_args)
+{
+	mtra_socket_read_handler_.mtra_socket_read_start_ = mtra_socket_read_start;
+	mtra_socket_read_handler_.mtra_socket_read_end_ = mtra_socket_read_end;
+	mtra_socket_read_handler_.start_args_ = start_arg;
+	mtra_socket_read_handler_.end_args_ = end_args;
+	socket_read_handler_not_null_ = true;
+}
+void mulp_enable_socket_read_handler()
+{
+	if (socket_read_handler_not_null_)
+		enable_socket_read_handler_ = true;
+	else
+		enable_socket_read_handler_ = false;
+}
+void mulp_disable_socket_read_handler()
+{
+	enable_socket_read_handler_ = false;
+}
+
+// cn that will be called pre and post select which gives the user chance to do stats
+#include <functional>
+typedef std::function<int ((void* user_data))> select_cb_t;
+struct mtra_select_handler
+{
+		select_cb_t mtra_select_cb_start_;
+		select_cb_t mtra_select_cb_end_;
+		void* start_args_;
+		void* end_args_;
+};
+static mtra_select_handler mtra_select_handler_;
+static bool enable_mtra_select_handler_;
+static bool select_handler_not_null_;
+void mulp_set_mtra_select_handler(select_cb_t& mtra_socket_read_start,
+		select_cb_t& mtra_socket_read_end, void* start_arg, void* end_args)
+{
+	mtra_select_handler_.mtra_select_cb_start_ = mtra_socket_read_start;
+	mtra_select_handler_.mtra_select_cb_end_ = mtra_socket_read_end;
+	mtra_select_handler_.start_args_ = start_arg;
+	mtra_select_handler_.end_args_ = end_args;
+	select_handler_not_null_ = true;
+}
+void mulp_enable_mtra_select_handler()
+{
+	if (select_handler_not_null_)
+		enable_mtra_select_handler_ = true;
+	else
+		enable_mtra_select_handler_ = false;
+}
+void mulp_disable_mtra_select_handler()
+{
+	enable_mtra_select_handler_ = false;
+}
+
 static void errorno(uint level)
 {
 #ifdef _WIN32
@@ -130,7 +203,7 @@ static void safe_close_soket(int sfd)
 
 #ifdef WIN32
 	if (sfd == 0)
-		return;
+	return;
 
 	if (closesocket(sfd) < 0)
 	{
@@ -140,11 +213,11 @@ static void safe_close_soket(int sfd)
 #endif
 #ifdef _WIN32
 		ERRLOG1(MAJOR_ERROR,
-			"safe_cloe_soket()::close socket failed! {%d} !\n",
-			WSAGetLastError());
+				"safe_cloe_soket()::close socket failed! {%d} !\n",
+				WSAGetLastError());
 #else
 		ERRLOG1(MAJOR_ERROR, "safe_cloe_soket()::close socket failed! {%d} !\n",
-			errno);
+				errno);
 #endif
 	}
 }
@@ -176,18 +249,18 @@ static LPFN_WSARECVMSG getwsarecvmsg()
 	DWORD dwBytes = 0;
 	sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	if (SOCKET_ERROR == WSAIoctl(sock,
-		SIO_GET_EXTENSION_FUNCTION_POINTER,
-		&guidWSARecvMsg,
-		sizeof(guidWSARecvMsg),
-		&lpfnWSARecvMsg,
-		sizeof(lpfnWSARecvMsg),
-		&dwBytes,
-		NULL,
-		NULL
-	))
+					SIO_GET_EXTENSION_FUNCTION_POINTER,
+					&guidWSARecvMsg,
+					sizeof(guidWSARecvMsg),
+					&lpfnWSARecvMsg,
+					sizeof(lpfnWSARecvMsg),
+					&dwBytes,
+					NULL,
+					NULL
+			))
 	{
 		ERRLOG(MAJOR_ERROR,
-			"WSAIoctl SIO_GET_EXTENSION_FUNCTION_POINTER\n");
+				"WSAIoctl SIO_GET_EXTENSION_FUNCTION_POINTER\n");
 		return NULL;
 	}
 	safe_close_soket(sock);
@@ -198,7 +271,7 @@ static DWORD WINAPI stdin_read_thread(void *param)
 	stdin_data_t *indata = (struct stdin_data_t *) param;
 	int i = 1;
 	while (ReadFile(indata->event, indata->buffer, sizeof(indata->buffer),
-		&indata->len, NULL) && indata->len > 0)
+					&indata->len, NULL) && indata->len > 0)
 	{
 		SetEvent(indata->event);
 		WaitForSingleObject(indata->eventback, INFINITE);
@@ -210,45 +283,58 @@ static DWORD WINAPI stdin_read_thread(void *param)
 #endif
 
 static void read_stdin(int fd, short int revents, int* settled_events,
-	void* usrdata)
+		void* usrdata)
 {
 	if (fd != 0)
 		ERRLOG1(FALTAL_ERROR_EXIT, "this sgould be stdin fd 0! instead of %d",
-			fd);
+				fd);
 
-	stdin_data_t* indata = (stdin_data_t*)usrdata;
+	stdin_data_t* indata = (stdin_data_t*) usrdata;
+
+	if (enable_socket_read_handler_)
+		mtra_socket_read_handler_.mtra_socket_read_start_(
+				mtra_socket_read_handler_.start_args_);
 
 #ifndef _WIN32
-	indata->len = read(STD_INPUT_FD, indata->buffer, sizeof(indata->buffer));
+	indata->len = read(fd, indata->buffer, sizeof(indata->buffer));
 #endif
 	int i = 1;
 	while (indata->buffer[indata->len - i] == '\r'
-		|| indata->buffer[indata->len - i] == '\n')
+			|| indata->buffer[indata->len - i] == '\n')
 	{
 		i++;
 		if (i > indata->len)
 		{
 			indata->len = 0;
+			if (enable_socket_read_handler_)
+				mtra_socket_read_handler_.mtra_socket_read_end_(fd, false,
+						indata->buffer, 0, 0, 0,
+						mtra_socket_read_handler_.end_args_);
 			return;
 		}
 	}
 	indata->buffer[indata->len - i + 1] = '\0';
 	indata->stdin_cb_(indata->buffer, indata->len - i + 2);
+
+	if (enable_socket_read_handler_)
+		mtra_socket_read_handler_.mtra_socket_read_end_(fd, false,
+				indata->buffer, indata->len - i + 2, 0, 0,
+				mtra_socket_read_handler_.end_args_);
 }
 
 static uint udp_checksum(const void* ptr, size_t count)
 {
-	ushort* addr = (ushort*)ptr;
+	ushort* addr = (ushort*) ptr;
 	uint sum = 0;
 
 	while (count > 1)
 	{
-		sum += *(ushort*)addr++;
+		sum += *(ushort*) addr++;
 		count -= 2;
 	}
 
 	if (count > 0)
-		sum += *(uchar*)addr;
+		sum += *(uchar*) addr;
 
 	while (sum >> 16)
 		sum = (sum & 0xffff) + (sum >> 16);
@@ -259,7 +345,7 @@ static uint udp_checksum(const void* ptr, size_t count)
 int str2saddr(sockaddrunion *su, const char * str, ushort hs_port)
 {
 	int ret;
-	memset((void*)su, 0, sizeof(union sockaddrunion));
+	memset((void*) su, 0, sizeof(union sockaddrunion));
 
 	if (hs_port < 0)
 	{
@@ -293,7 +379,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port)
 
 	if (str != NULL && strlen(str) > 0)
 	{
-		ret = inet_pton(AF_INET6, (const char *)str, &su->sin6.sin6_addr);
+		ret = inet_pton(AF_INET6, (const char *) str, &su->sin6.sin6_addr);
 	}
 	else
 	{
@@ -342,7 +428,7 @@ int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum)
 				ifname = (char*)ConvertInterfaceLuidToNameA(&luid, (char*)&ifnamebuffer, IFNAMSIZ);
 #else
 				ifname = if_indextoname(su->sin6.sin6_scope_id,
-					(char*)&ifnamebuffer);
+						(char*) &ifnamebuffer);
 #endif
 				if (ifname == NULL)
 				{
@@ -365,7 +451,7 @@ int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum)
 }
 
 void mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask,
-	cbunion_t action, void* userData)
+		cbunion_t action, void* userData)
 {
 
 	if (sfd < 0)
@@ -509,7 +595,7 @@ static int mtra_remove_socket_despt(int sfd)
 					socket_despts[i].revision = socket_despts[j].revision;
 					int temp = socket_despts[i].event_handler_index;
 					socket_despts[i].event_handler_index =
-						socket_despts[j].event_handler_index;
+							socket_despts[j].event_handler_index;
 
 					socket_despts[j].event_handler_index = temp;
 					socket_despts[j].fd = POLL_FD_UNUSED;
@@ -534,7 +620,7 @@ static int mtra_remove_socket_despt(int sfd)
 		mtra_ip6udpsock_ = -1;
 
 	EVENTLOG2(VERBOSE, "remove sfd(%d), remaining socks size(%d)", sfd,
-		socket_despts_size_);
+			socket_despts_size_);
 	return counter;
 }
 int mtra_remove_event_handler(int sfd)
@@ -550,7 +636,7 @@ void mtra_add_stdin_cb(stdin_data_t::stdin_cb_func_t stdincb)
 	stdin_input_data_.stdin_cb_ = stdincb;
 	cbunion_.user_cb_fun = read_stdin;
 	mtra_set_expected_event_on_fd(STD_INPUT_FD, EVENTCB_TYPE_USER,
-		POLLIN | POLLPRI, cbunion_, &stdin_input_data_);
+	POLLIN | POLLPRI, cbunion_, &stdin_input_data_);
 
 #ifdef _WIN32
 	hStdIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -579,46 +665,41 @@ int mtra_remove_stdin_cb()
 
 static int mtra_poll_timers()
 {
+#if !defined(FIXED_WHEEL_NOT_WOKING_IN_WIN32)
+	if (mtra_timer_mgr_.empty())
+		return -1;
+	int result = mtra_timer_mgr_.timeouts();
+	if (result == 0)  // this timer has timeouts
+	{
+		timer_id_t tid = mtra_timer_mgr_.get_front_timer();
+		int ret = tid->action(tid, tid->arg1, tid->arg2);
+		if (ret == NOT_RESET_TIMER_FROM_CB)
+			mtra_timer_mgr_.delete_timer(tid);
+		if (mtra_timer_mgr_.empty())
+			return -1;
+		else
+			result = mtra_timer_mgr_.timeouts();
+	}
+	return result;
+#else
 	time_t now;
 	gettimenow_ms(&now);
 	timeouts_update(tos_, now);
-
-	//if (!timeouts_expired(tos_))
-	//	return -1;
-	//if (mtra_timer_mgr_.empty())  return -1;
-
-	bool ret;
+	// 1. timeouted timer will be removed from pending-wheel queue and insert to expired queue
+	// 2. then timeouted timer will also be removed from expired queue
 	while (NULL != (to_ = timeouts_get(tos_)))
 	{
-		// timeouted timer will be automatically removed
-		ret = to_->callback.action(to_, to_->callback.arg1, to_->callback.arg2);
+		to_->callback.action(to_, to_->callback.type, to_->callback.arg1,
+				to_->callback.arg2);
 		// @remember me as caller may have different alloca and free methods
 		// and so better to let caller decides free or not free
-		//if (ret == NOT_RESET_TIMER_FROM_CB)
-		//{
-		//geco_free_ext(to_, __FILE__, __LINE__);
-		//}
 	}
-
 	// the interval before next timeout
-	// int nexttimeout = mtra_timer_mgr_.timeouts();
 	timeout_t nexttimeout = timeouts_timeout(tos_);
-
-	//	if (result == 0)  // this timer has timeouts
-	//	{
-	//		timer_id_t tid = mtra_timer_mgr_.get_front_timer();
-	//		bool ret = tid->action(tid, tid->arg1, tid->arg2);
-	//		if (ret == NOT_RESET_TIMER_FROM_CB)
-	//			mtra_timer_mgr_.delete_timer(tid);
-	//
-	//		if (mtra_timer_mgr_.empty())
-	//			return -1;
-	//		else
-	//			result = mtra_timer_mgr_.timeouts();
-	//	}
-
 	return nexttimeout;
+#endif
 }
+
 static void mtra_fire_event(int num_of_events)
 {
 	int i = 0;
@@ -628,7 +709,7 @@ static void mtra_fire_event(int num_of_events)
 	if (stdin_input_data_.len > 0)
 	{
 		if (event_callbacks[socket_despts_size_].action.user_cb_fun != NULL)
-			event_callbacks[socket_despts_size_].action.user_cb_fun(
+		event_callbacks[socket_despts_size_].action.user_cb_fun(
 				socket_despts[socket_despts_size_].fd, socket_despts[socket_despts_size_].revents,
 				&socket_despts[socket_despts_size_].events, event_callbacks[socket_despts_size_].userData);
 		SetEvent(stdin_input_data_.eventback);
@@ -655,7 +736,7 @@ static void mtra_fire_event(int num_of_events)
 			return;
 		}
 		if (socket_despts[i].trigger_event.lNetworkEvents & (FD_READ | FD_ACCEPT | FD_CLOSE))
-			goto cb_dispatcher;
+		goto cb_dispatcher;
 #endif
 
 		if (socket_despts[i].revents == 0)
@@ -675,17 +756,17 @@ static void mtra_fire_event(int num_of_events)
 			if (event_callbacks[i].eventcb_type == EVENTCB_TYPE_USER)
 			{
 				EVENTLOG1(VERBOSE, "Poll Error Condition on user fd %d\n",
-					socket_despts[i].fd);
+						socket_despts[i].fd);
 				event_callbacks[i].action.user_cb_fun(socket_despts[i].fd,
-					socket_despts[i].revents, &socket_despts[i].events,
-					event_callbacks[i].userData);
+						socket_despts[i].revents, &socket_despts[i].events,
+						event_callbacks[i].userData);
 			}
 			else
 			{
 				ERRLOG1(MINOR_ERROR, "Poll Error Condition on fd %d\n",
-					socket_despts[i].fd);
+						socket_despts[i].fd);
 				event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-					NULL, 0, NULL, NULL);
+				NULL, 0, NULL, NULL);
 			}
 
 			// we only have pollerr
@@ -696,56 +777,79 @@ static void mtra_fire_event(int num_of_events)
 #ifdef _WIN32
 		cb_dispatcher :
 #endif
-					  switch (event_callbacks[i].eventcb_type)
-					  {
-					  case EVENTCB_TYPE_USER:
-						  EVENTLOG1(VERBOSE,
-							  "Activity on user fd %d - Activating USER callback\n",
-							  socket_despts[i].fd);
-						  if (event_callbacks[i].action.user_cb_fun != NULL)
-							  event_callbacks[i].action.user_cb_fun(socket_despts[i].fd,
-								  socket_despts[i].revents, &socket_despts[i].events,
-								  event_callbacks[i].userData);
-						  break;
 
-					  case EVENTCB_TYPE_UDP:
-						  recvlen_ = mtra_recv_udpsocks(socket_despts[i].fd, curr,
-							  MAX_MTU_SIZE, &src, &dest);
-						  if (recvlen_ < 0)
-							  break;
-						  if (event_callbacks[i].action.socket_cb_fun != NULL)
-							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-								  curr, recvlen_, &src, &dest);
-						  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src,
-							  &dest);
-						  break;
+		switch (event_callbacks[i].eventcb_type)
+		{
+		case EVENTCB_TYPE_USER:
+			EVENTLOG1(VERBOSE,
+					"Activity on user fd %d - Activating USER callback\n",
+					socket_despts[i].fd);
+			if (event_callbacks[i].action.user_cb_fun != NULL)
+				event_callbacks[i].action.user_cb_fun(socket_despts[i].fd,
+						socket_despts[i].revents, &socket_despts[i].events,
+						event_callbacks[i].userData);
+			break;
 
-					  case EVENTCB_TYPE_SCTP:
-						  recvlen_ = mtra_recv_rawsocks(socket_despts[i].fd, &curr,
-							  MAX_MTU_SIZE, &src, &dest);
-						  // if <0, mus be something thing wrong with UDP length or
-						  // port number is not USED_UDP_PORT, if so, just skip this msg
-						  // as if we never receive it
-						  if (recvlen_ < 0)
-							  break;
+		case EVENTCB_TYPE_UDP:
 
-						  //recvlen_ = geco packet
-						  // internal_dctp_buffer = start point of  geco packet
-						  // src and dest port nums are carried in geco packet hdr at this moment
-						  if (event_callbacks[i].action.socket_cb_fun != NULL)
-							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
-								  curr, recvlen_, &src, &dest);
+			if (enable_socket_read_handler_)
+				mtra_socket_read_handler_.mtra_socket_read_start_(
+						mtra_socket_read_handler_.start_args_);
 
-						  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src,
-							  &dest);
-						  break;
+			recvlen_ = mtra_recv_udpsocks(socket_despts[i].fd, curr,
+			MAX_MTU_SIZE, &src, &dest);
 
-					  default:
-						  ERRLOG1(MAJOR_ERROR, "No such  eventcb_type %d",
-							  event_callbacks[i].eventcb_type);
-						  break;
-					  }
-					  socket_despts[i].revents = 0;
+			if (enable_socket_read_handler_)
+				mtra_socket_read_handler_.mtra_socket_read_end_(
+						socket_despts[i].fd, true, curr, recvlen_, &src, &dest,
+						mtra_socket_read_handler_.end_args_);
+
+			if (event_callbacks[i].action.socket_cb_fun != NULL)
+				event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
+						curr, recvlen_, &src, &dest);
+
+			if (recvlen_ > 0)
+				mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src,
+						&dest);
+
+			break;
+
+		case EVENTCB_TYPE_SCTP:
+
+			if (enable_socket_read_handler_)
+				mtra_socket_read_handler_.mtra_socket_read_start_(
+						mtra_socket_read_handler_.start_args_);
+
+			recvlen_ = mtra_recv_rawsocks(socket_despts[i].fd, &curr,
+			MAX_MTU_SIZE, &src, &dest);
+
+			if (enable_socket_read_handler_)
+				mtra_socket_read_handler_.mtra_socket_read_end_(
+						socket_despts[i].fd, false, curr, 0, &src, &dest,
+						mtra_socket_read_handler_.end_args_);
+
+			//recvlen_ = geco packet
+			// internal_dctp_buffer = start point of  geco packet
+			// src and dest port nums are carried in geco packet hdr at this moment
+			if (event_callbacks[i].action.socket_cb_fun != NULL)
+				event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd,
+						curr, recvlen_, &src, &dest);
+
+			// if <0, mus be something thing wrong with UDP length or
+			// port number is not USED_UDP_PORT, if so, just skip this msg
+			// as if we never receive it
+			if (recvlen_ > 0)
+				mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src,
+						&dest);
+
+			break;
+
+		default:
+			ERRLOG1(MAJOR_ERROR, "No such  eventcb_type %d",
+					event_callbacks[i].eventcb_type);
+			break;
+		}
+		socket_despts[i].revents = 0;
 	}
 }
 /**
@@ -850,8 +954,15 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 		 */
 		++revision_;
 
+		if (enable_mtra_select_handler_)
+			mtra_select_handler_.mtra_select_cb_start_(
+					mtra_select_handler_.start_args_);
 		//  nfd is the max fd number plus one
 		ret = select(nfd + 1, &rd_fdset, &wt_fdset, &except_fdset, to);
+		if (enable_mtra_select_handler_)
+			mtra_select_handler_.mtra_select_cb_end_(
+					mtra_select_handler_.end_args_);
+
 		for (i = 0; i < *sfdsize; i++)
 		{
 			despts[i].revents = 0;
@@ -871,8 +982,8 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 		if (ret > 0)
 		{
 			EVENTLOG1(VERBOSE,
-				"############### event %d occurred, dispatch it#############",
-				(unsigned int)ret);
+					"############### event %d occurred, dispatch it#############",
+					(unsigned int )ret);
 
 			for (i = 0; i < *sfdsize; i++)
 			{
@@ -880,17 +991,17 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 				if (despts[i].revision < revision_)
 				{
 					if ((despts[i].events & POLLIN)
-						&& FD_ISSET(despts[i].fd, &rd_fdset))
+							&& FD_ISSET(despts[i].fd, &rd_fdset))
 					{
 						despts[i].revents |= POLLIN;
 					}
 					if ((despts[i].events & POLLOUT)
-						&& FD_ISSET(despts[i].fd, &wt_fdset))
+							&& FD_ISSET(despts[i].fd, &wt_fdset))
 					{
 						despts[i].revents |= POLLOUT;
 					}
 					if ((despts[i].events & (POLLIN | POLLOUT))
-						&& FD_ISSET(despts[i].fd, &except_fdset))
+							&& FD_ISSET(despts[i].fd, &except_fdset))
 					{
 						despts[i].revents |= POLLERR;
 					}
@@ -906,8 +1017,8 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 		{
 #ifdef _WIN32
 			ERRLOG1(MAJOR_ERROR,
-				"select():: failed! {%d} !\n",
-				WSAGetLastError());
+					"select():: failed! {%d} !\n",
+					WSAGetLastError());
 #else
 			ERRLOG1(MAJOR_ERROR, "select():: failed! {%d} !\n", errno);
 #endif
@@ -923,7 +1034,7 @@ void mtra_set_tick_task_cb(task_cb_fun_t taskcb, void* userdata)
 	task_cb_fun_ = taskcb;
 	tick_task_user_data_ = userdata;
 }
-int mtra_poll(uint maxwait_ms = 0)
+int mtra_poll(int maxwait_ms = -1)
 {
 	// handle loop-tasks
 	if (task_cb_fun_ != NULL)
@@ -935,7 +1046,7 @@ int mtra_poll(uint maxwait_ms = 0)
 	{
 		if (msecs < 0)
 			msecs = maxwait_ms;
-		else if (msecs > maxwait_ms)
+		else if (msecs > (int) maxwait_ms)
 			msecs = maxwait_ms;
 	}
 	// no timers or too long, we use default timeout 10ms for select
@@ -988,15 +1099,20 @@ void mtra_ctor()
 	test_dummy_.enable_stub_error_ = true;
 #endif
 
-	internal_udp_buffer_ = (char*)malloc(1500);
-	internal_dctp_buffer = (char*)malloc(1500);
-	if ((uintptr_t)internal_udp_buffer_ % 4 > 0
-		|| (uintptr_t)internal_dctp_buffer % 4 > 0)
+	internal_udp_buffer_ = (char*) malloc(1500);
+	internal_dctp_buffer = (char*) malloc(1500);
+	if ((uintptr_t) internal_udp_buffer_ % 4 > 0
+			|| (uintptr_t) internal_dctp_buffer % 4 > 0)
 	{
 		perror(
-			"mtra_ctor()::internal_udp_buffer_ or internal_dctp_buffer not aligned !!");
+				"mtra_ctor()::internal_udp_buffer_ or internal_dctp_buffer not aligned !!");
 		exit(0);
 	}
+
+	enable_socket_read_handler_ = false;
+	enable_mtra_select_handler_ = false;
+	select_handler_not_null_ = false;
+	socket_read_handler_not_null_ = false;
 
 	socket_despts_size_ = 0;
 	revision_ = 0;
@@ -1012,7 +1128,7 @@ void mtra_ctor()
 		// this is init and so we set it to null
 		socket_despts[fd_index].event = NULL;
 		socket_despts[fd_index].trigger_event =
-		{ 0 };
+		{	0};
 #endif
 		socket_despts[fd_index].event_handler_index = fd_index;
 		socket_despts[fd_index].fd = -1; /* file descriptor */
@@ -1030,6 +1146,9 @@ void mtra_ctor()
 	//init wheel timer module
 	int error;
 	tos_ = timeouts_open(0, &error);
+	time_t now;
+	gettimenow_ms(&now);
+	timeouts_update(tos_, now);
 }
 
 void mtra_dtor()
@@ -1049,28 +1168,28 @@ static int mtra_set_sockdespt_recvbuffer_size(int sfd, int new_size)
 {
 	int new_sizee = 0;
 	socklen_t opt_size = sizeof(int);
-	if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*)&new_sizee, &opt_size)
-		< 0)
+	if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*) &new_sizee, &opt_size)
+			< 0)
 	{
 		return -1;
 	}
 	EVENTLOG1(VERBOSE, "init receive buffer size is : %d bytes", new_sizee);
 
-	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*)&new_size,
-		sizeof(new_size)) < 0)
+	if (setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*) &new_size,
+			sizeof(new_size)) < 0)
 	{
 		return -1;
 	}
 
 	// then test if we set it correctly
-	if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*)&new_sizee, &opt_size)
-		< 0)
+	if (getsockopt(sfd, SOL_SOCKET, SO_RCVBUF, (char*) &new_sizee, &opt_size)
+			< 0)
 	{
 		return -1;
 	}
 
 	EVENTLOG2(VERBOSE, "line 648 expected buffersize %d, actual buffersize %d",
-		new_size, new_sizee);
+			new_size, new_sizee);
 	return new_sizee;
 }
 
@@ -1147,8 +1266,8 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 		 * by setting the required configuration flag in rc.conf you won't be able to use it.
 		 * */
 		optval = 1;
-		setsockopt(sockdespt, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&optval,
-			opt_size);
+		setsockopt(sockdespt, IPPROTO_IPV6, IPV6_V6ONLY, (const char*) &optval,
+				opt_size);
 #endif
 
 		/*
@@ -1162,23 +1281,23 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 		 */
 		optval = 1;
 		if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_PKTINFO,
-			(const char*)&optval, sizeof(optval)) < 0)
+				(const char*) &optval, sizeof(optval)) < 0)
 		{
 			// no problem we can try IPV6_RECVPKTINFO next
 			EVENTLOG(DEBUG,
-				"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
+					"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
 		}
 		else
-			EVENTLOG(DEBUG, "setsockopt(IPV6_PKTINFO) good");
+		EVENTLOG(DEBUG, "setsockopt(IPV6_PKTINFO) good");
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
 		optval = 1;
 		if (setsockopt(sockdespt, level, IPV6_RECVPKTINFO,
-			(const char*)&optval, opt_size) < 0)
+				(const char*) &optval, opt_size) < 0)
 		{
 			safe_close_soket(sockdespt);
 			ERRLOG(FALTAL_ERROR_EXIT,
-				"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
+					"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
 		}
 		EVENTLOG(VERBOSE, "setsockopt(IPV6_RECVPKTINFO) good");
 #endif
@@ -1194,16 +1313,16 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 	 * The don't fragment flag is set on all outgoing datagrams.
 	 * */
 	if (setsockopt(sockdespt, level, optname_ippmtudisc,
-		(const char *)&optval_ippmtudisc_do, sizeof(optval_ippmtudisc_do))
-		< 0)
+			(const char *) &optval_ippmtudisc_do, sizeof(optval_ippmtudisc_do))
+			< 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"setsockopt: Try to set IP_MTU_DISCOVER but failed ! ");
+				"setsockopt: Try to set IP_MTU_DISCOVER but failed ! ");
 	}
 	// test to make sure we set it correctly
-	if (getsockopt(sockdespt, level, optname_ippmtudisc, (char*)&optval,
-		&opt_size) < 0)
+	if (getsockopt(sockdespt, level, optname_ippmtudisc, (char*) &optval,
+			&opt_size) < 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT, "getsockopt: IP_MTU_DISCOVER failed");
@@ -1231,22 +1350,22 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"setsockopt: Try to set SO_RCVBUF but failed ! {%d} ! ");
+				"setsockopt: Try to set SO_RCVBUF but failed ! {%d} ! ");
 	}
 
 	optval = 1;
-	if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval,
-		opt_size) < 0)
+	if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (const char*) &optval,
+			opt_size) < 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"setsockopt: Try to set SO_REUSEADDR but failed ! {%d} ! ");
+				"setsockopt: Try to set SO_REUSEADDR but failed ! {%d} ! ");
 	}
 
 	if (bind(sockdespt, &me.sa, sockaddr_size) < 0)
 	{
 		ERRLOG3(FALTAL_ERROR_EXIT, "bind  %s sockdespt %d but failed %d!",
-			af == AF_INET ? "ip4" : "ip6", sockdespt, errno);
+				af == AF_INET ? "ip4" : "ip6", sockdespt, errno);
 	}
 	EVENTLOG(DEBUG, "bind() good");
 	return sockdespt;
@@ -1299,14 +1418,14 @@ static int mtra_open_geco_udp_socket(int af, int* rwnd)
 		me.sin_len = htons(sizeof(me));
 #endif
 		optval = 1;
-		if (setsockopt(sockdespt, IPPROTO_IP, IP_PKTINFO, (const char*)&optval,
-			sizeof(optval)) < 0)
+		if (setsockopt(sockdespt, IPPROTO_IP, IP_PKTINFO, (const char*) &optval,
+				sizeof(optval)) < 0)
 		{
 			// no problem we can try IPV_RECVPKTINFO next
 			EVENTLOG(DEBUG, "setsockopt: Try to set IP_PKTINFO but failed ! ");
 		}
 		else
-			EVENTLOG(DEBUG, "setsockopt(IP_PKTINFO) good");
+		EVENTLOG(DEBUG, "setsockopt(IP_PKTINFO) good");
 	}
 	else  //IP6
 	{
@@ -1334,8 +1453,8 @@ static int mtra_open_geco_udp_socket(int af, int* rwnd)
 		 * by setting the required configuration flag in rc.conf you won't be able to use it.
 		 * */
 		optval = 1;
-		setsockopt(sockdespt, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&optval,
-			opt_size);
+		setsockopt(sockdespt, IPPROTO_IPV6, IPV6_V6ONLY, (const char*) &optval,
+				opt_size);
 #endif
 
 		/*
@@ -1349,23 +1468,23 @@ static int mtra_open_geco_udp_socket(int af, int* rwnd)
 		 */
 		optval = 1;
 		if (setsockopt(sockdespt, IPPROTO_IPV6, IPV6_PKTINFO,
-			(const char*)&optval, sizeof(optval)) < 0)
+				(const char*) &optval, sizeof(optval)) < 0)
 		{
 			// no problem we can try IPV6_RECVPKTINFO next
 			EVENTLOG(DEBUG,
-				"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
+					"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
 		}
 		else
-			EVENTLOG(DEBUG, "setsockopt(IPV6_PKTINFO) good");
+		EVENTLOG(DEBUG, "setsockopt(IPV6_PKTINFO) good");
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
 		optval = 1;
 		if (setsockopt(sockdespt, level, IPV6_RECVPKTINFO,
-			(const char*)&optval, opt_size) < 0)
+				(const char*) &optval, opt_size) < 0)
 		{
 			safe_close_soket(sockdespt);
 			ERRLOG(FALTAL_ERROR_EXIT,
-				"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
+					"setsockopt: Try to set IPV6_PKTINFO but failed ! ");
 		}
 		EVENTLOG(VERBOSE, "setsockopt(IPV6_RECVPKTINFO) good");
 #endif
@@ -1381,16 +1500,16 @@ static int mtra_open_geco_udp_socket(int af, int* rwnd)
 	 * The don't fragment flag is set on all outgoing datagrams.
 	 * */
 	if (setsockopt(sockdespt, level, optname_ippmtudisc,
-		(const char *)&optval_ippmtudisc_do, sizeof(optval_ippmtudisc_do))
-		< 0)
+			(const char *) &optval_ippmtudisc_do, sizeof(optval_ippmtudisc_do))
+			< 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"setsockopt: Try to set IP_MTU_DISCOVER but failed ! ");
+				"setsockopt: Try to set IP_MTU_DISCOVER but failed ! ");
 	}
 	// test to make sure we set it correctly
-	if (getsockopt(sockdespt, level, optname_ippmtudisc, (char*)&optval,
-		&opt_size) < 0)
+	if (getsockopt(sockdespt, level, optname_ippmtudisc, (char*) &optval,
+			&opt_size) < 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT, "getsockopt: IP_MTU_DISCOVER failed");
@@ -1418,33 +1537,33 @@ static int mtra_open_geco_udp_socket(int af, int* rwnd)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"setsockopt: Try to set SO_RCVBUF but failed ! {%d} ! ");
+				"setsockopt: Try to set SO_RCVBUF but failed ! {%d} ! ");
 	}
 
 	optval = 1;
-	if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval,
-		opt_size) < 0)
+	if (setsockopt(sockdespt, SOL_SOCKET, SO_REUSEADDR, (const char*) &optval,
+			opt_size) < 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"setsockopt: Try to set SO_REUSEADDR but failed ! {%d} ! ");
+				"setsockopt: Try to set SO_REUSEADDR but failed ! {%d} ! ");
 	}
 
 	if (bind(sockdespt, &me.sa, sockaddr_size) < 0)
 	{
 		safe_close_soket(sockdespt);
 		ERRLOG3(FALTAL_ERROR_EXIT, "bind  %s sockdespt %d but failed %d!",
-			af == AF_INET ? "ip4" : "ip6", sockdespt, errno);
+				af == AF_INET ? "ip4" : "ip6", sockdespt, errno);
 	}
 	EVENTLOG(DEBUG, "bind() good");
 	return sockdespt;
 }
 static int mtra_add_udpsock_ulpcb(const char* addr, ushort my_port,
-	socket_cb_fun_t scb)
+		socket_cb_fun_t scb)
 {
 #ifdef _WIN32
 	ERRLOG(MAJOR_ERROR,
-		"WIN32: Registering ULP-Callbacks for UDP not installed !\n");
+			"WIN32: Registering ULP-Callbacks for UDP not installed !\n");
 	return -1;
 #endif
 
@@ -1453,15 +1572,15 @@ static int mtra_add_udpsock_ulpcb(const char* addr, ushort my_port,
 	if (mtra_ip4rawsock_ > 0)
 	{
 		EVENTLOG2(VERBOSE,
-			"Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
-			my_port);
+				"Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
+				my_port);
 		str2saddr(&my_address, addr, my_port);
 	}
 	else if (mtra_ip6rawsock_ > 0)
 	{
 		EVENTLOG2(VERBOSE,
-			"Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
-			my_port);
+				"Registering ULP-Callback for UDP socket on {%s :%u}\n", addr,
+				my_port);
 		str2saddr(&my_address, addr, my_port);
 	}
 	else
@@ -1480,21 +1599,21 @@ static int mtra_add_udpsock_ulpcb(const char* addr, ushort my_port,
 	return 1;
 }
 void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData,
-	short int eventMask)
+		short int eventMask)
 {
 #ifdef _WIN32
 	ERRLOG(MAJOR_ERROR,
-		"WIN32: Registering User Callbacks not installed !\n");
+			"WIN32: Registering User Callbacks not installed !\n");
 #endif
 	cbunion_.user_cb_fun = cbfun;
 	/* 0 is the standard input ! */
 	mtra_set_expected_event_on_fd(fd, EVENTCB_TYPE_USER, eventMask, cbunion_,
-		userData);
+			userData);
 	EVENTLOG2(VERBOSE, "Registered User Callback: fd=%d eventMask=%d\n", fd,
-		eventMask);
+			eventMask);
 }
 int mtra_send_udpscoks(int sfd, char* buf, int len, sockaddrunion* dest,
-	uchar tos)
+		uchar tos)
 {
 	assert(sfd >= 0 && dest != 0 && buf != 0 && len > 0);
 
@@ -1506,14 +1625,14 @@ int mtra_send_udpscoks(int sfd, char* buf, int len, sockaddrunion* dest,
 	if (sfd == mtra_ip4udpsock_)
 	{
 		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-			sizeof(struct sockaddr_in));
+				sizeof(struct sockaddr_in));
 		if (txmt_len < 0)
 			return txmt_len;
 	}
 	else if (sfd == mtra_ip6udpsock_)
 	{
 		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-			sizeof(struct sockaddr_in6));
+				sizeof(struct sockaddr_in6));
 		if (txmt_len < 0)
 			return txmt_len;
 	}
@@ -1527,13 +1646,13 @@ int mtra_send_udpscoks(int sfd, char* buf, int len, sockaddrunion* dest,
 	stat_send_event_size_++;
 	stat_send_bytes_ += txmt_len;
 	EVENTLOG3(VERBOSE, "send times %u, send total bytes_ %u, packet len %u",
-		stat_send_event_size_, stat_send_bytes_, len);
+			stat_send_event_size_, stat_send_bytes_, len);
 #endif
 
 	return txmt_len;
 }
 int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
-	uchar tos)
+		uchar tos)
 {
 	assert(sfd >= 0 && dest != 0 && buf != 0 && len > 0);
 
@@ -1547,7 +1666,7 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 		ushort old = dest->sin.sin_port;
 		dest->sin.sin_port = 0;
 		opt_len = sizeof(old_tos);
-		tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, (char*)&old_tos, &opt_len);
+		tmp = getsockopt(sfd, IPPROTO_IP, IP_TOS, (char*) &old_tos, &opt_len);
 		if (tmp < 0)
 		{
 			ERRLOG(MAJOR_ERROR, "getsockopt(tos) failed!\n");
@@ -1555,8 +1674,8 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 		}
 		else if (old_tos != tos)
 		{
-			tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, (char*)&tos,
-				sizeof(char));
+			tmp = setsockopt(sfd, IPPROTO_IP, IP_TOS, (char*) &tos,
+					sizeof(char));
 			if (tmp < 0)
 			{
 				ERRLOG(MAJOR_ERROR, "setsockopt(tos) failed!\n");
@@ -1564,11 +1683,11 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 			}
 		}
 		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-			sizeof(struct sockaddr_in));
+				sizeof(struct sockaddr_in));
 		EVENTLOG6(DEBUG,
-			"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
-			sfd, len, inet_ntoa(dest->sin.sin_addr),
-			ntohs(dest->sin.sin_port), tos, txmt_len);
+				"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
+				sfd, len, inet_ntoa(dest->sin.sin_addr),
+				ntohs(dest->sin.sin_port), tos, txmt_len);
 		dest->sin.sin_port = old;
 		if (txmt_len < 0)
 			return txmt_len;
@@ -1578,40 +1697,40 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 		ushort old = dest->sin6.sin6_port;
 		dest->sin6.sin6_port = 0; //reset to zero otherwise invalidate argu error
 #ifdef _WIN32
-		opt_len = sizeof(old_tos);
-		tmp = getsockopt(sfd, IPPROTO_IPV6, IP_TOS, (char*)&old_tos, &opt_len);
-		if (tmp < 0)
-		{
-			ERRLOG(FALTAL_ERROR_EXIT, "getsockopt(tos) failed!\n");
-			return -1;
-		}
-		else if (old_tos != tos)
-		{
-			int tosint = tos;
-			tmp = setsockopt(sfd, IPPROTO_IPV6, IP_TOS, (char*)&tosint, sizeof(int));
-			if (tmp < 0)
-			{
-				ERRLOG(FALTAL_ERROR_EXIT, "setsockopt(tos) failed!\n");
-				return -1;
-			}
-		}
+				opt_len = sizeof(old_tos);
+				tmp = getsockopt(sfd, IPPROTO_IPV6, IP_TOS, (char*)&old_tos, &opt_len);
+				if (tmp < 0)
+				{
+					ERRLOG(FALTAL_ERROR_EXIT, "getsockopt(tos) failed!\n");
+					return -1;
+				}
+				else if (old_tos != tos)
+				{
+					int tosint = tos;
+					tmp = setsockopt(sfd, IPPROTO_IPV6, IP_TOS, (char*)&tosint, sizeof(int));
+					if (tmp < 0)
+					{
+						ERRLOG(FALTAL_ERROR_EXIT, "setsockopt(tos) failed!\n");
+						return -1;
+					}
+				}
 #endif
 		txmt_len = sendto(sfd, buf, len, 0, &(dest->sa),
-			sizeof(struct sockaddr_in6));
+				sizeof(struct sockaddr_in6));
 		dest->sin6.sin6_port = old;
 		if (txmt_len < 0)
 			return txmt_len;
 #ifdef _DEBUG
 		char hostname[MAX_IPADDR_STR_LEN];
-		if (inet_ntop(AF_INET6, s6addr(dest), (char *)hostname,
-			MAX_IPADDR_STR_LEN) == NULL)
+		if (inet_ntop(AF_INET6, s6addr(dest), (char *) hostname,
+		MAX_IPADDR_STR_LEN) == NULL)
 		{
 			ERRLOG(MAJOR_ERROR, "inet_ntop()  buffer is too small !\n");
 			return -1;
 		}
 		EVENTLOG6(DEBUG,
-			"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
-			sfd, len, hostname, ntohs(dest->sin6.sin6_port), tos, txmt_len);
+				"sendto(sfd %d,len %d,destination %s::%u,IP_TOS %u) returns txmt_len %d",
+				sfd, len, hostname, ntohs(dest->sin6.sin6_port), tos, txmt_len);
 #endif
 	}
 	else
@@ -1624,13 +1743,13 @@ int mtra_send_rawsocks(int sfd, char *buf, int len, sockaddrunion *dest,
 	stat_send_event_size_++;
 	stat_send_bytes_ += txmt_len;
 	EVENTLOG3(DEBUG, "send times %u, send total bytes_ %u, packet len %u",
-		stat_send_event_size_, stat_send_bytes_, len);
+			stat_send_event_size_, stat_send_bytes_, len);
 #endif
 
 	return txmt_len;
 }
 int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
-	sockaddrunion *to)
+		sockaddrunion *to)
 {
 	assert(sfd >= 0 && destptr != 0 && maxlen > 0 && from != 0 && to != 0);
 
@@ -1645,7 +1764,7 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
 	static char m6buf[(CMSG_SPACE(sizeof(struct in6_pktinfo)))];
 	static struct cmsghdr *rcmsgp = (struct cmsghdr *) m6buf;
 	static struct in6_pktinfo *pkt6info =
-		(struct in6_pktinfo *) (MY_CMSG_DATA(rcmsgp));
+			(struct in6_pktinfo *) (MY_CMSG_DATA(rcmsgp));
 
 	if (sfd == mtra_ip4rawsock_)
 	{
@@ -1703,7 +1822,7 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
 		rmsghdr.msg_iovlen = 1;
 		rmsghdr.msg_name = (caddr_t) &(from->sin6);
 		rmsghdr.msg_namelen = sizeof(struct sockaddr_in6);
-		rmsghdr.msg_control = (caddr_t)m6buf;
+		rmsghdr.msg_control = (caddr_t) m6buf;
 		rmsghdr.msg_controllen = sizeof(m6buf);
 		len = recvmsg(sfd, &rmsghdr, 0);
 #endif
@@ -1716,7 +1835,7 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
 		to->sin6.sin6_port = 0;
 		to->sin6.sin6_flowinfo = 0;
 		memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr),
-			sizeof(struct in6_addr));
+				sizeof(struct in6_addr));
 	}
 	else
 	{
@@ -1748,7 +1867,7 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
 }
 
 int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
-	sockaddrunion *to)
+		sockaddrunion *to)
 {
 	assert(sfd >= 0 && dest != 0 && maxlen > 0 && from != 0 && to != 0);
 
@@ -1761,10 +1880,10 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 
 	static struct cmsghdr *rcmsgp4 = (struct cmsghdr *) m4buf;
 	static struct in_pktinfo *pkt4info =
-		(struct in_pktinfo *) (MY_CMSG_DATA(rcmsgp4));
+			(struct in_pktinfo *) (MY_CMSG_DATA(rcmsgp4));
 	static struct cmsghdr *rcmsgp6 = (struct cmsghdr *) m6buf;
 	static struct in6_pktinfo *pkt6info =
-		(struct in6_pktinfo *) (MY_CMSG_DATA(rcmsgp6));
+			(struct in6_pktinfo *) (MY_CMSG_DATA(rcmsgp6));
 
 	if (sfd == mtra_ip4udpsock_)
 	{
@@ -1794,7 +1913,7 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		rmsghdr.msg_iovlen = 1;
 		rmsghdr.msg_name = (caddr_t) &(from->sa);
 		rmsghdr.msg_namelen = sizeof(struct sockaddr_in);
-		rmsghdr.msg_control = (caddr_t)m4buf;
+		rmsghdr.msg_control = (caddr_t) m4buf;
 		rmsghdr.msg_controllen = sizeof(m4buf);
 		len = recvmsg(sfd, &rmsghdr, 0);
 #endif
@@ -1830,7 +1949,7 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		rmsghdr.msg_iovlen = 1;
 		rmsghdr.msg_name = (caddr_t) &(from->sa);
 		rmsghdr.msg_namelen = sizeof(struct sockaddr_in6);
-		rmsghdr.msg_control = (caddr_t)m6buf;
+		rmsghdr.msg_control = (caddr_t) m6buf;
 		rmsghdr.msg_controllen = sizeof(m6buf);
 		len = recvmsg(sfd, &rmsghdr, 0);
 #endif
@@ -1839,7 +1958,7 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 		to->sin6.sin6_flowinfo = 0;
 		to->sin6.sin6_scope_id = 0;
 		memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr),
-			sizeof(struct in6_addr));
+				sizeof(struct in6_addr));
 	}
 	else
 	{
@@ -1852,7 +1971,7 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from,
 	ushort port;
 	saddr2str(from, str, MAX_IPADDR_STR_LEN, &port);
 	EVENTLOG3(DEBUG, "mtra_recv_udpsocks(sfd %d):: from(%s:%d)", sfd, str,
-		port);
+			port);
 	str[0] = '\0';
 	saddr2str(to, str, MAX_IPADDR_STR_LEN, &port);
 	EVENTLOG3(DEBUG, "mtra_recv_udpsocks(sfd %d):: to(%s:%d)", sfd, str, port);
@@ -1914,13 +2033,13 @@ int mtra_init(int * myRwnd)
 	/* we should - in a later revision - add back the a function that opens
 	 appropriate ICMP sockets (IPv4 and/or IPv6) and registers these with
 	 callback functions that also set PATH MTU correctly */
-	 /* icmp_socket_despt = int open_icmp_socket(); */
-	 /* adl_register_socket_cb(icmp_socket_despt, adl_icmp_cb); */
+	/* icmp_socket_despt = int open_icmp_socket(); */
+	/* adl_register_socket_cb(icmp_socket_despt, adl_icmp_cb); */
 
-	 /* #if defined(HAVE_SETUID) && defined(HAVE_GETUID) */
-	 /* now we could drop privileges, if we did not use setsockopt() calls for IP_TOS etc. later */
-	 /* setuid(getuid()); */
-	 /* #endif   */
+	/* #if defined(HAVE_SETUID) && defined(HAVE_GETUID) */
+	/* now we could drop privileges, if we did not use setsockopt() calls for IP_TOS etc. later */
+	/* setuid(getuid()); */
+	/* #endif   */
 
 	return 0;
 }

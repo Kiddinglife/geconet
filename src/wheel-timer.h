@@ -29,12 +29,13 @@
 #include <stdbool.h>    /* bool */
 #include <stdio.h>      /* FILE */
 #include <inttypes.h>   /* PRIu64 PRIx64 PRIX64 uint64_t */
-#include "wheel-timer-queue.h"
+//#include <sys/queue.h>  /* TAILQ(3) */
+#include "wheel-timer-queue.h" /* TAILQ(3) */
 
- /*
-  * V E R S I O N  I N T E R F A C E S
-  *
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*
+ * V E R S I O N  I N T E R F A C E S
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #if !defined TIMEOUT_PUBLIC
 #define TIMEOUT_PUBLIC
@@ -57,6 +58,7 @@ TIMEOUT_PUBLIC int timeout_v_abi(void);
 
 TIMEOUT_PUBLIC int timeout_v_api(void);
 
+
 /*
  * I N T E G E R  T Y P E  I N T E R F A C E S
  *
@@ -75,6 +77,7 @@ typedef uint64_t timeout_t;
 
 #define timeout_error_t int /* for documentation purposes */
 
+
 /*
  * C A L L B A C K  I N T E R F A C E
  *
@@ -84,20 +87,19 @@ typedef uint64_t timeout_t;
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef TIMEOUT_CB_OVERRIDE
-#include "geco-net-common.h"
-
+//struct timeout_cb {
+//	void (*fn)();
+//	void *arg;
+//}; /* struct timeout_cb */
 struct timeout;
 struct timeout_cb
 {
-	struct timeval action_time; /* the time when it is to go off*/
-	int timer_type;
-
-	typedef bool(*Action)(timeout* handle, void *, void *);
-	Action action;/*the callback function, arranged in a sorted, linked listuser specify*/
-	void *arg1; /* pointer to possible arguments */
-	void *arg2;
+        typedef int(*Action)(timeout* id, int type, void* arg1, void* arg2);
+        Action action;
+        void *arg1;
+        void *arg2;
+        int type;
 };
-/* struct timeout_cb */
 #endif
 
 /*
@@ -117,8 +119,7 @@ struct timeout_cb
 	(to)->callback.arg = (arg);     \
 } while (0)
 
-struct timeout
-{
+struct timeout {
 	int flags;
 
 	timeout_t expires;
@@ -127,8 +128,7 @@ struct timeout
 	struct timeout_list *pending;
 	/* timeout list if pending on wheel or expiry queue */
 
-	TAILQ_ENTRY(timeout)
-		tqe;
+	TAILQ_ENTRY(timeout) tqe;
 	/* entry member for struct timeout_list lists */
 
 #ifndef TIMEOUT_DISABLE_CALLBACKS
@@ -145,8 +145,8 @@ struct timeout
 	struct timeouts *timeouts;
 	/* timeouts collection if member of */
 #endif
-};
-/* struct timeout */
+}; /* struct timeout */
+
 
 TIMEOUT_PUBLIC struct timeout *timeout_init(struct timeout *, int);
 /* initialize timeout structure (same as TIMEOUT_INITIALIZER) */
@@ -187,8 +187,7 @@ TIMEOUT_PUBLIC void timeouts_step(struct timeouts *, timeout_t);
 TIMEOUT_PUBLIC timeout_t timeouts_timeout(struct timeouts *);
 /* return interval to next required update */
 
-TIMEOUT_PUBLIC void timeouts_add(struct timeouts *, struct timeout *,
-	timeout_t);
+TIMEOUT_PUBLIC void timeouts_add(struct timeouts *, struct timeout *, timeout_t);
 /* add timeout to timing wheel */
 
 TIMEOUT_PUBLIC void timeouts_del(struct timeouts *, struct timeout *);
@@ -218,16 +217,13 @@ TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *, FILE *);
 	(cur)->pc = 0;                                                  \
 } while (0)
 
-struct timeouts_it
-{
+struct timeouts_it {
 	int flags;
 	unsigned pc, i, j;
 	struct timeout *to;
-};
-/* struct timeouts_it */
+}; /* struct timeouts_it */
 
-TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *,
-	struct timeouts_it *);
+TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *, struct timeouts_it *);
 /* return next timeout in pending wheel or expired queue. caller can delete
  * the returned timeout, but should not otherwise manipulate the timing
  * wheel. in particular, caller SHOULD NOT delete any other timeout as that
@@ -238,16 +234,17 @@ TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *,
 	struct timeouts_it _it = TIMEOUTS_IT_INITIALIZER((flags));      \
 	while (((var) = timeouts_next((T), &_it)))
 
- /*
-  * B O N U S  W H E E L  I N T E R F A C E S
-  *
-  * I usually use floating point timeouts in all my code, but it's cleaner to
-  * separate it to keep the core algorithmic code simple.
-  *
-  * Using macros instead of static inline routines where <math.h> routines
-  * might be used to keep -lm linking optional.
-  *
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/*
+ * B O N U S  W H E E L  I N T E R F A C E S
+ *
+ * I usually use floating point timeouts in all my code, but it's cleaner to
+ * separate it to keep the core algorithmic code simple.
+ *
+ * Using macros instead of static inline routines where <math.h> routines
+ * might be used to keep -lm linking optional.
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <math.h> /* ceil(3) */
 
