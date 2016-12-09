@@ -137,7 +137,7 @@
 #else
 #define ctz(n) ctz64(n)
 #define clz(n) clz64(n)
-#define fls(n) (clz64(n))
+#define fls(n) (clz64(n)-1)
 #endif
 #else
 #if !defined( _WIN32) || defined(TIMEOUT_DISABLE_BUILTIN_BITOPS) 
@@ -147,7 +147,7 @@
 #else
 #define ctz(n) ((int)(32 - ctz32(n)))
 #define clz(n) ((int)(32 - clz32(n)))
-#define fls(n) (clz64(n))
+#define fls(n) (clz64(n)-1)
 #endif
 #endif
 
