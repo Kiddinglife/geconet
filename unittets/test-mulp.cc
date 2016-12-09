@@ -716,7 +716,7 @@ TEST(MULP, test_connection_pharse)
 	ulp_cbs_t ULPcallbackFunctions;
 
 	//ip6 any and ip4 any
-	localPort = 9899;
+	localPort = USED_UDP_PORT;
 	//localPort = 123;
 	noOfInStreams = 32;
 	noOfOutStreams = 32;
@@ -732,9 +732,9 @@ TEST(MULP, test_connection_pharse)
 	curr_geco_instance_ = geco_instances_[instid];
 
 	// cline code
-	mdi_connect_udp_sfd_ = true;
+	mdi_connect_udp_sfd_ = false;
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, (char*)"10.0.0.114", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
 	while(flag) mtra_poll();

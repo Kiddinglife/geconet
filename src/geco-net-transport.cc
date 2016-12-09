@@ -743,11 +743,6 @@ static void mtra_fire_event(int num_of_events)
 		if (socket_despts[i].revents == 0)
 			continue;
 
-		// fixme this is for debug can be removed
-		//socket_despts[i].revents = 0;
-		//socket_despts[i].revents |= POLLERR;
-		//socket_despts[i].revents |= POLLERR;
-
 		// handle error event
 		if (socket_despts[i].revents & POLLERR)
 		{
@@ -1238,7 +1233,8 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 		me.sin.sin_family = AF_INET;
 		// bind any can recv all  ip packets
 		me.sin.sin_addr.s_addr = INADDR_ANY;
-		me.sin.sin_port = htons(udp_local_bind_port_);
+		//it wont't work to bind port on raw sock as it has no business with port field
+		//me.sin.sin_port = htons(udp_local_bind_port_);
 #ifdef HAVE_SIN_LEN
 		me.sin_len = htons(sizeof(me));
 #endif
@@ -1256,7 +1252,7 @@ static int mtra_open_geco_raw_socket(int af, int* rwnd)
 		me.sin6.sin6_family = AF_INET6;
 		// bind any can recv all  ip packets
 		me.sin6.sin6_addr = in6addr_any;
-		me.sin6.sin6_port = htons(udp_local_bind_port_);
+		//me.sin6.sin6_port = htons(udp_local_bind_port_);
 #ifdef HAVE_SIN_LEN
 		me.sin_len = htons(sizeof(me));
 #endif

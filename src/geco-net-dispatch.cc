@@ -6126,7 +6126,7 @@ void free_library(void)
  */
 unsigned short unused(unsigned short port)
 {
-	if (port == UINT16_MAX || (short)port < 0)
+	if (port == UINT16_MAX ||port < 0)
 		ERRLOG(FALTAL_ERROR_EXIT, "port=%d must less than 65535");
 	if (portsSeized[port] == 0)
 	{
