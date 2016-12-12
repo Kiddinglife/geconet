@@ -1,7 +1,11 @@
-﻿  wheel-timer-bitops.cc
-  Generating Code...
-  Skipping... (no relevant changes detected)
-  wheel-timer.cc
+﻿  timestamp.cc
+d:\vs-workspace\geconet\src\timestamp.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+d:\vs-workspace\geconet\src\timestamp.cc(47): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+d:\vs-workspace\geconet\src\timestamp.cc(51): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+d:\vs-workspace\geconet\src\timestamp.cc(53): warning C4244: '=': conversion from 'uint64' to 'uint32', possible loss of data
+d:\vs-workspace\geconet\src\timestamp.cc(66): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+d:\vs-workspace\geconet\src\timestamp.cc(202): warning C4244: 'initializing': conversion from 'double' to 'uint64', possible loss of data
+d:\vs-workspace\geconet\src\timestamp.cc(203): warning C4244: 'return': conversion from 'uint64' to 'double', possible loss of data
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\geconetDebugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(lib) does not match the Library's OutputFile property value (geconetDebugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored

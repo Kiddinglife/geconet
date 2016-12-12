@@ -134,10 +134,6 @@
 #  define Q_OS_UNIX
 #endif
 
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned int uint;
-
 /*-------------- basic type defs -------------*/
 /// This type is an unsigned character.
 typedef unsigned char uchar;
@@ -176,9 +172,9 @@ typedef unsigned __int32 uint32;
 typedef __int64 int64;
 typedef unsigned __int64 uint64;
 /// This type is an integer with the size of a pointer.
-typedef INT_PTR intptr;
+//typedef INT_PTR intptr;
 /// This type is an unsigned integer with the size of a pointer.
-typedef UINT_PTR uintptr;
+//typedef UINT_PTR uintptr;
 #define PRId64 "lld"
 #define PRIu64 "llu"
 #define PRIx64 "llx"

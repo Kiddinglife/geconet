@@ -197,6 +197,7 @@
     <ClInclude Include="..\..\..\..\src\geco-net-transport.h" />
     <ClInclude Include="..\..\..\..\src\geco-net.h" />
     <ClInclude Include="..\..\..\..\src\geco-thread.h" />
+    <ClInclude Include="..\..\..\..\src\timestamp.h" />
     <ClInclude Include="..\..\..\..\src\wheel-timer-debug.h" />
     <ClInclude Include="..\..\..\..\src\wheel-timer-queue.h" />
     <ClInclude Include="..\..\..\..\src\wheel-timer.h" />
@@ -209,6 +210,7 @@
     <ClCompile Include="..\..\..\..\src\geco-net-dispatch.cc" />
     <ClCompile Include="..\..\..\..\src\geco-net-timer.cc" />
     <ClCompile Include="..\..\..\..\src\geco-net-transport.cc" />
+    <ClCompile Include="..\..\..\..\src\timestamp.cc" />
     <ClCompile Include="..\..\..\..\src\wheel-timer-bitops.cc" />
     <ClCompile Include="..\..\..\..\src\wheel-timer.cc" />
   </ItemGroup>

@@ -120,6 +120,13 @@ uint64 stamps_per_sec();
  *	time, however that call may take some time.
  */
 double stamps_per_sec_double();
+
+uint64 stamps_per_ms();
+double stamps_per_ms_double();
+
+uint64 stamps_per_us();
+double stamps_per_us_double();
+
 double stamps2sec(uint64 stamps);
 /** This class stores a value in stamps but has access functions in seconds.*/
 struct time_stamp_t

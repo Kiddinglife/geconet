@@ -1097,9 +1097,6 @@ void mtra_ctor()
 	//init wheel timer module
 	int error;
 	tos_ = timeouts_open(0, &error,&when_timeouts_closed);
-	//time_t now;
-	//gettimenow_ms(&now);
-	//timeouts_update(tos_, now);
 	timeouts_update(tos_, gettimestamp());
 }
 

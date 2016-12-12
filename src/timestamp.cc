@@ -58,6 +58,7 @@ static uint32 availableProcessor(uint32 processorHint)
 	return ret;
 }
 
+#include <stdio.h>
 void affinity_set(uint32 processorHint)
 {
 	// get an available processor
@@ -66,7 +67,7 @@ void affinity_set(uint32 processorHint)
 	if (processor_mask != processorHint)
 	{
 		fprintf(stderr, "ProcessorAffinity::set - unable to set processor "
-				"affinity to %d setting to %d instead\n", processorHint, processor_mask);
+			"affinity to %d setting to %d instead\n", processorHint, processor_mask);
 	}
 }
 uint32 affinity_get()
@@ -191,6 +192,28 @@ static uint64 calc_stamps_pe_sec()
 }
 #endif
 
+uint64 stamps_per_us()
+{
+	static uint64 stampsPerUSCache = ((uint64)(stamps_per_sec_double() / 1000000));
+	return stampsPerUSCache;
+}
+double stamps_per_us_double()
+{
+	static uint64 stampsPerUSCacheD = ((double)(stamps_per_sec_double() / 1000000));
+	return stampsPerUSCacheD;
+}
+
+uint64 stamps_per_ms()
+{
+	static uint64 stampsPerMSCache = ((uint64)(stamps_per_sec_double() / 1000));
+	return stampsPerMSCache;
+}
+double stamps_per_ms_double()
+{
+	static double stampsPerMSCacheD = ((double)(stamps_per_sec_double() / 1000));
+	return stampsPerMSCacheD;
+}
+
 uint64 stamps_per_sec()
 {
 	static uint64 stampsPerSecondCache = calc_stamps_pe_sec();
@@ -206,6 +229,7 @@ double stamps2sec(uint64 stamps)
 	static double val = stamps_per_sec_double();
 	return stamps / val;
 }
+
 time_stamp_t time_stamp_t::fromSecs(double seconds)
 {
 	return uint64(seconds * stamps_per_sec_double());
