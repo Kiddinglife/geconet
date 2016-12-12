@@ -29,7 +29,6 @@
 #include <stdbool.h>    /* bool */
 #include <stdio.h>      /* FILE */
 #include <inttypes.h>   /* PRIu64 PRIx64 PRIX64 uint64_t */
-//#include <sys/queue.h>  /* TAILQ(3) */
 #include "wheel-timer-queue.h" /* TAILQ(3) */
 
 /*
@@ -58,11 +57,11 @@ TIMEOUT_PUBLIC int timeout_v_abi(void);
 
 TIMEOUT_PUBLIC int timeout_v_api(void);
 
-
 /*
  * I N T E G E R  T Y P E  I N T E R F A C E S
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+struct timeout;
 
 #define TIMEOUT_C(n) UINT64_C(n)
 #define TIMEOUT_PRIu "PRIu64"
@@ -74,9 +73,8 @@ TIMEOUT_PUBLIC int timeout_v_api(void);
 #define TIMEOUT_nHZ TIMEOUT_C(1000000000)
 
 typedef uint64_t timeout_t;
-
 #define timeout_error_t int /* for documentation purposes */
-
+typedef void (*on_timeouts_closed)(timeout* id); /* provide this cb to free all existing pended and exppired timout that are allocated in heap */
 
 /*
  * C A L L B A C K  I N T E R F A C E
@@ -85,20 +83,20 @@ typedef uint64_t timeout_t;
  * applications easier.
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 #ifndef TIMEOUT_CB_OVERRIDE
+#include "timestamp.h"
+
 //struct timeout_cb {
 //	void (*fn)();
 //	void *arg;
 //}; /* struct timeout_cb */
-struct timeout;
 struct timeout_cb
 {
-        typedef int(*Action)(timeout* id, int type, void* arg1, void* arg2);
-        Action action;
-        void *arg1;
-        void *arg2;
-        int type;
+		typedef int (*Action)(timeout* id, int type, void* arg1, void* arg2);
+		Action action;
+		void *arg1;
+		void *arg2;
+		int type;
 };
 #endif
 
@@ -111,53 +109,44 @@ struct timeout_cb
 #define TIMEOUT_INT 0x01 /* interval (repeating) timeout */
 #endif
 #define TIMEOUT_ABS 0x02 /* treat timeout values as absolute */
-
 #define TIMEOUT_INITIALIZER(flags) { (flags) }
-
 #define timeout_setcb(to, fn, arg) do { \
 	(to)->callback.fn = (fn);       \
 	(to)->callback.arg = (arg);     \
 } while (0)
 
-struct timeout {
-	int flags;
-
-	timeout_t expires;
-	/* absolute expiration time */
-
-	struct timeout_list *pending;
-	/* timeout list if pending on wheel or expiry queue */
-
-	TAILQ_ENTRY(timeout) tqe;
-	/* entry member for struct timeout_list lists */
-
+struct timeout
+{
+		int flags;
+		timeout_t expires;
+		/* absolute expiration time */
+		struct timeout_list *pending;
+		/* timeout list if pending on wheel or expiry queue */
+		TAILQ_ENTRY(timeout)
+		tqe;
+		/* entry member for struct timeout_list lists */
 #ifndef TIMEOUT_DISABLE_CALLBACKS
-	struct timeout_cb callback;
-	/* optional callback information */
+		struct timeout_cb callback;
+		/* optional callback information */
 #endif
-
 #ifndef TIMEOUT_DISABLE_INTERVALS
-	timeout_t interval;
-	/* timeout interval if periodic */
+		timeout_t interval;
+		/* timeout interval if periodic */
 #endif
-
 #ifndef TIMEOUT_DISABLE_RELATIVE_ACCESS
-	struct timeouts *timeouts;
-	/* timeouts collection if member of */
+		struct timeouts *timeouts;
+		/* timeouts collection if member of */
 #endif
-}; /* struct timeout */
+};
 
-
+/* struct timeout */
 TIMEOUT_PUBLIC struct timeout *timeout_init(struct timeout *, int);
 /* initialize timeout structure (same as TIMEOUT_INITIALIZER) */
-
 #ifndef TIMEOUT_DISABLE_RELATIVE_ACCESS
 TIMEOUT_PUBLIC bool timeout_pending(struct timeout *);
 /* true if on timing wheel, false otherwise */
-
 TIMEOUT_PUBLIC bool timeout_expired(struct timeout *);
 /* true if on expired queue, false otherwise */
-
 TIMEOUT_PUBLIC void timeout_del(struct timeout *);
 /* remove timeout from any timing wheel (okay if not member of any) */
 #endif
@@ -169,39 +158,28 @@ TIMEOUT_PUBLIC void timeout_del(struct timeout *);
 
 struct timeouts;
 
-TIMEOUT_PUBLIC struct timeouts *timeouts_open(timeout_t, timeout_error_t *);
+TIMEOUT_PUBLIC struct timeouts *timeouts_open(timeout_t, timeout_error_t*, on_timeouts_closed on_closed = 0);
 /* open a new timing wheel, setting optional HZ (for float conversions) */
-
 TIMEOUT_PUBLIC void timeouts_close(struct timeouts *);
 /* destroy timing wheel */
-
 TIMEOUT_PUBLIC timeout_t timeouts_hz(struct timeouts *);
 /* return HZ setting (for float conversions) */
-
 TIMEOUT_PUBLIC void timeouts_update(struct timeouts *, timeout_t);
 /* update timing wheel with current absolute time */
-
 TIMEOUT_PUBLIC void timeouts_step(struct timeouts *, timeout_t);
 /* step timing wheel by relative time */
-
 TIMEOUT_PUBLIC timeout_t timeouts_timeout(struct timeouts *);
 /* return interval to next required update */
-
 TIMEOUT_PUBLIC void timeouts_add(struct timeouts *, struct timeout *, timeout_t);
 /* add timeout to timing wheel */
-
 TIMEOUT_PUBLIC void timeouts_del(struct timeouts *, struct timeout *);
 /* remove timeout from any timing wheel or expired queue (okay if on neither) */
-
 TIMEOUT_PUBLIC struct timeout *timeouts_get(struct timeouts *);
 /* return any expired timeout (caller should loop until NULL-return) */
-
 TIMEOUT_PUBLIC bool timeouts_pending(struct timeouts *);
 /* return true if any timeouts pending on timing wheel */
-
 TIMEOUT_PUBLIC bool timeouts_expired(struct timeouts *);
 /* return true if any timeouts on expired queue */
-
 TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *, FILE *);
 /* return true if invariants hold. describes failures to optional file handle. */
 
@@ -209,19 +187,19 @@ TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *, FILE *);
 #define TIMEOUTS_EXPIRED 0x20
 #define TIMEOUTS_ALL     (TIMEOUTS_PENDING|TIMEOUTS_EXPIRED)
 #define TIMEOUTS_CLEAR   0x40
-
 #define TIMEOUTS_IT_INITIALIZER(flags) { (flags), 0, 0, 0, 0 }
-
 #define TIMEOUTS_IT_INIT(cur, _flags) do {                              \
 	(cur)->flags = (_flags);                                        \
 	(cur)->pc = 0;                                                  \
 } while (0)
 
-struct timeouts_it {
-	int flags;
-	unsigned pc, i, j;
-	struct timeout *to;
-}; /* struct timeouts_it */
+struct timeouts_it
+{
+		int flags;
+		unsigned pc, i, j;
+		struct timeout *to;
+};
+/* struct timeouts_it */
 
 TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *, struct timeouts_it *);
 /* return next timeout in pending wheel or expired queue. caller can delete
@@ -233,7 +211,6 @@ TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *, struct timeouts_
 #define TIMEOUTS_FOREACH(var, T, flags)                                 \
 	struct timeouts_it _it = TIMEOUTS_IT_INITIALIZER((flags));      \
 	while (((var) = timeouts_next((T), &_it)))
-
 
 /*
  * B O N U S  W H E E L  I N T E R F A C E S

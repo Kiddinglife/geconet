@@ -46,6 +46,8 @@ extern int
 mtra_read_icmp_socket ();
 extern int
 mtra_init (int * myRwnd);
+extern timeouts*
+mtra_read_timeouts ();
 
 struct alloc_t
 {
@@ -501,13 +503,14 @@ socket_cb (int sfd, char* data, int datalen, sockaddrunion* from,
   }
 }
 
-static bool
-timer_cb (timer_id_t& tid, void* a1, void* a2)
+static int
+wheel_timer_cb (timeout* id, int type, void* arg1, void* arg2)
 {
-  EVENTLOG2(DEBUG, "timeouts, BYE!", tid->timer_id, tid->timer_type);
+  EVENTLOG(DEBUG, "wheel timer timeouts, BYE!");
   flag = false;
   return true;
 }
+
 static void
 task_cb (void* userdata)
 {
@@ -549,6 +552,9 @@ select_end (void* user_data)
   mulp_disable_mtra_select_handler ();
   return 0;
 }
+
+#include "wheel-timer.h"
+
 TEST(TRANSPORT_MODULE, test_process_stdin)
 {
   int rcwnd = 512;
@@ -571,11 +577,13 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 
   //you have to put stdin as last because we test it
   mtra_add_stdin_cb (stdin_cb);
+  //mtra_set_tick_task_cb (task_cb, (void*) "this is user datta");
 
-  mtra_set_tick_task_cb (task_cb, (void*) "this is user datta");
-
-  //mulp_set_mtra_select_handler();
-  tid = mtra_timer_mgr_.add_timer (TIMER_TYPE_INIT, 300000, timer_cb, 0, 0);
+  timeout* tout = (timeout*)geco_malloc_ext(sizeof(timeout),__FILE__,__LINE__);;
+  tout->callback.action = &wheel_timer_cb;
+  tout->callback.type = TIMER_TYPE_INIT;
+  tout->flags = TIMEOUT_INT;
+  timeouts_add(mtra_read_timeouts(), tout, 1800*stamps_per_sec());
 
   socket_read_start_cb_t mtra_socket_read_start = socket_read_start;
   socket_read_end_cb_t mtra_socket_read_end = socket_read_end;

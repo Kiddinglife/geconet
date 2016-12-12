@@ -38,42 +38,7 @@
 		<link>
 			<name>unittets</name>
 			<type>2</type>
-			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
-			<name>unittets/main.txt</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/main.txt</locationURI>
-		</link>
-		<link>
-			<name>unittets/readme.md</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/readme.md</locationURI>
-		</link>
-		<link>
-			<name>unittets/test-main.cc</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/test-main.cc</locationURI>
-		</link>
-		<link>
-			<name>unittets/test-mbu.cc</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/test-mbu.cc</locationURI>
-		</link>
-		<link>
-			<name>unittets/test-mdi.cpp</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/test-mdi.cpp</locationURI>
-		</link>
-		<link>
-			<name>unittets/test-mtra.cpp</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/test-mtra.cpp</locationURI>
-		</link>
-		<link>
-			<name>unittets/test-mulp.cc</name>
-			<type>1</type>
-			<locationURI>PARENT-2-PROJECT_LOC/unittets/test-mulp.cc</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/unittets</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>

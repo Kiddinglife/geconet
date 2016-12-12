@@ -136,7 +136,6 @@ int gettimenow_ms(time_t* ret)
 	struct timeval now;
 	if (gettimenow(&now) > -1)
 	{
-		EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
 		*ret = ((time_t)now.tv_sec) * 1000 + ((time_t)now.tv_usec) / 1000;
 		return 0;
 	}
@@ -198,6 +197,7 @@ void sum_time(timeval* a, time_t inteval, timeval* result)
 	fills_timeval(&tv, inteval);
 	sum_time(a, &tv, result);
 }
+
 void subtract_time(timeval* a, time_t inteval, timeval* result)
 {
 	timeval tv;

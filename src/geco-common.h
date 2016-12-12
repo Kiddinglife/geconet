@@ -138,22 +138,96 @@ typedef unsigned char uchar;
 typedef unsigned short ushort;
 typedef unsigned int uint;
 
-#if defined(__GNUC__) || defined(__GCCXML__) || defined(__SNC__) || defined(__S3E__)
-#include <stdint.h>
+/*-------------- basic type defs -------------*/
+/// This type is an unsigned character.
+typedef unsigned char uchar;
+/// This type is an unsigned short.
+typedef unsigned short ushort;
+/// This type is an unsigned integer.
+typedef unsigned int uint;
+/// This type is an unsigned longer.
+typedef unsigned long ulong;
+
+#if defined( PLAYSTATION3 )
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+typedef intptr_t intptr;
+typedef uintptr_t uintptr;
+#define PRId64 "lld"
+#define PRIu64 "llu"
+#define PRIx64 "llx"
+#define PRIX64 "llX"
+#define PRIu32 "lu"
+#define PRId32 "ld"
 #else
-typedef char int8;
-typedef unsigned char uint8;
-typedef short int16;
-typedef unsigned short uint16;
+#ifdef _WIN32
+typedef __int8 int8;
+typedef unsigned __int8 uint8;
+typedef __int16 int16;
+typedef unsigned __int16 uint16;
 typedef __int32 int32;
 typedef unsigned __int32 uint32;
-#   if defined(_MSC_VER) && _MSC_VER < 1300
+typedef __int64 int64;
 typedef unsigned __int64 uint64;
-typedef signed __int64 int64;
-#  else
-typedef long long int64;
-typedef unsigned long long uint64;
-#  endif
+/// This type is an integer with the size of a pointer.
+typedef INT_PTR intptr;
+/// This type is an unsigned integer with the size of a pointer.
+typedef UINT_PTR uintptr;
+#define PRId64 "lld"
+#define PRIu64 "llu"
+#define PRIx64 "llx"
+#define PRIX64 "llX"
+#define PRIu32 "lu"
+#define PRId32 "ld"
+#define GECO_FAST_CALL __fastcall
+#else //unix or linux
+#define GECO_FAST_CALL
+#include <stdint.h>
+/// This type is an integer with a size of 8 bits.
+typedef int8_t int8;
+/// This type is an unsigned integer with a size of 8 bits.
+typedef uint8_t uint8;
+/// This type is an integer with a size of 16 bits.
+typedef int16_t int16;
+/// This type is an unsigned integer with a size of 16 bits.
+typedef uint16_t uint16;
+/// This type is an integer with a size of 32 bits.
+typedef int32_t int32;
+/// This type is an unsigned integer with a size of 32 bits.
+typedef uint32_t uint32;
+/// This type is an integer with a size of 64 bits.
+typedef int64_t int64;
+/// This type is an unsigned integer with a size of 64 bits.
+typedef uint64_t uint64;
+#ifdef _LP64
+typedef int64 intptr;
+typedef uint64 uintptr;
+#define PRId64 "ld"
+#define PRIu64 "lu"
+#define PRIx64 "lx"
+#define PRIX64 "lX"
+#else
+typedef int32 intptr;
+typedef uint32 uintptr;
+#define PRId64 "lld"
+#define PRIu64 "llu"
+#define PRIx64 "llx"
+#define PRIX64 "llX"
+#endif
+#ifndef PRId32
+#define PRId32 "zd"
+#endif
+#ifndef PRIu32
+#define PRIu32 "zu"
+#endif
+#endif
+
 #endif
 
 #endif//end
