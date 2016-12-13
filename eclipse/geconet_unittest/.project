@@ -28,12 +28,12 @@
 		<link>
 			<name>docx</name>
 			<type>2</type>
-			<location>/home/jackiez/20160219/geconet/docx</location>
+			<locationURI>PARENT-2-PROJECT_LOC/docx</locationURI>
 		</link>
 		<link>
 			<name>sctp_original_src</name>
 			<type>2</type>
-			<location>/home/jackiez/20160219/geconet/sctp_original_src</location>
+			<locationURI>PARENT-2-PROJECT_LOC/thirdparty/sctp_original_src</locationURI>
 		</link>
 		<link>
 			<name>unittets</name>

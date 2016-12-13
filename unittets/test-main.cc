@@ -50,14 +50,14 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // current unit test summary
     // locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168....
     // cross-machina connection NOT ok
-    //::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
+    ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MBU.*";
     //::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
     // last pass on 31 Oct 2016
-    ::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
+    //::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
 
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_bundle_ctrl_chunk";

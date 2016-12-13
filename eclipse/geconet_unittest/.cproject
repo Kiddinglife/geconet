@@ -63,8 +63,18 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="cdt.managedbuild.config.gnu.cross.exe.debug.1853752798.1778528326" name="/" resourcePath="sctp_original_src">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.cross.exe.debug.1102104057" name="Cross GCC" superClass="cdt.managedbuild.toolchain.gnu.cross.exe.debug" unusedChildren="">
+							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.1818323358" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler.1480931801"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.2101822880" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler.770210783"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.151435162" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker.1021595831"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.926266332" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker.198628198"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.1795611151" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver.611822967"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.815420412" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler.37163165"/>
+						</toolChain>
+					</folderInfo>
 					<sourceEntries>
-						<entry excluding="docx|sctp_original_src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="sctp_original_src|docx" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

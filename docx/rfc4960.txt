@@ -1064,7 +1064,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 19]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -1120,7 +1119,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 20]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -1369,7 +1367,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    The INIT chunk contains the following parameters.  Unless otherwise
    noted, each parameter MUST only be included once in the INIT chunk.
 
-            Fixed Parameters                     Status
+            Fixed Parameters                    Status
             ----------------------------------------------
             Initiate Tag                        Mandatory
             Advertised Receiver Window Credit   Mandatory
@@ -1377,13 +1375,14 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
             Number of Inbound Streams           Mandatory
             Initial TSN                         Mandatory
 
-          Variable Parameters                  Status     Type Value
-          -------------------------------------------------------------
-          IPv4 Address (Note 1)               Optional    5 IPv6 Address
-          (Note 1)               Optional    6 Cookie Preservative
-          Optional    9 Reserved for ECN Capable (Note 2)   Optional
-          32768 (0x8000) Host Name Address (Note 3)          Optional
-          11 Supported Address Types (Note 4)    Optional    12
+          Variable Parameters                   Status     Type         
+          ------------------------------------------------------
+          IPv4 Address (Note 1)                 Optional    5 
+          IPv6 Address (Note 1)                 Optional    6 
+          Cookie Preservative                   Optional    9 
+          Reserved for ECN Capable (Note 2)     Optional    32768 (0x8000) 
+          Host Name Address (Note 3)            Optional    11 
+          Supported Address Types (Note 4)      Optional    12
 
    Note 1: The INIT chunks can contain multiple addresses that can be
    IPv4 and/or IPv6 in any combination.
@@ -1400,7 +1399,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 25]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -1501,18 +1499,7 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
       encoded.
 
 
-
-
-
-
-
-
-
-
-
-
 Stewart                     Standards Track                    [Page 27]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
@@ -1568,7 +1555,6 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
 Stewart                     Standards Track                    [Page 28]
-
 RFC 4960          Stream Control Transmission Protocol    September 2007
 
 
