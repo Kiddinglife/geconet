@@ -579,7 +579,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
 	mtra_add_stdin_cb(stdin_cb);
 	//mtra_set_tick_task_cb (task_cb, (void*) "this is user datta");
 
-	timeout* tout = (timeout*)geco_malloc_ext(sizeof(timeout), __FILE__, __LINE__);;
+	timeout* tout = (timeout*)geco_malloc_ext(sizeof(timeout), __FILE__, __LINE__);
 	tout->callback.action = &wheel_timer_cb;
 	tout->callback.type = TIMER_TYPE_INIT;
 	tout->flags = TIMEOUT_INT;

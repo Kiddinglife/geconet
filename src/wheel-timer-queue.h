@@ -158,7 +158,7 @@ struct {								\
 #define	LIST_END(head)			NULL
 #define	LIST_EMPTY(head)		(LIST_FIRST(head) == LIST_END(head))
 #define	LIST_NEXT(elm, field)		((elm)->field.le_next)
-
+#define LIST_PRE(elm, field)    ((elm)->field.le_pre)
 #define LIST_FOREACH(var, head, field)					\
 	for((var) = LIST_FIRST(head);					\
 	    (var)!= LIST_END(head);					\
