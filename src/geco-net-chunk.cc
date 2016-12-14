@@ -1066,6 +1066,7 @@ static int mch_write_hmac(cookie_fixed_t* cookieString, ushort cookieLength, uch
   return 0;
 }
 
+static MD5_CTX ctx;
 /** computes a cookie signature.*/
 int mch_write_hmac(cookie_param_t* cookieString)
 {
@@ -1084,11 +1085,11 @@ int mch_write_hmac(cookie_param_t* cookieString)
     return -1;
   }
 
-  MD5_CTX ctx;
   MD5Init(&ctx);
   MD5Update(&ctx, (uchar*) &cookieString->ck, cookieLength);
   MD5Update(&ctx, (uchar*) key, SECRET_KEYSIZE);
   MD5Final(cookieString->ck.hmac, &ctx);
+  return 0;
 }
 
 bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk)
