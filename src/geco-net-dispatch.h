@@ -330,8 +330,8 @@ struct congestion_parameters_t
     unsigned int partial_bytes_acked;
     unsigned int ssthresh;
     unsigned int mtu;
-    struct timeval time_of_cwnd_adjustment;
-    struct timeval last_send_time;
+    uint64 time_of_cwnd_adjustment;
+    uint64 last_send_time;
 };
 
 struct flow_controller_t

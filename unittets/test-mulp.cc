@@ -498,7 +498,7 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 
 	smctrl_t* msm = curr_channel_->state_machine_control;
 	ASSERT_EQ(msm->channel_state, ChannelState::Closed);
-	ASSERT_EQ(msm->init_timer_id, mtra_timer_mgr_.timers.end());
+	ASSERT_EQ(msm->init_timer_id, (timeout*)NULL);
 	ASSERT_EQ(msm->init_timer_interval, RTO_INITIAL);
 	ASSERT_EQ(msm->init_retrans_count, 0);
 	ASSERT_EQ(msm->channel_id, curr_channel_->channel_id);
@@ -732,9 +732,9 @@ TEST(MULP, test_connection_pharse)
 	curr_geco_instance_ = geco_instances_[instid];
 
 	// cline code
-	mdi_connect_udp_sfd_ = false;
+	mdi_connect_udp_sfd_ = true;
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, (char*)"10.0.0.114", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
 	while(flag) mtra_poll();
