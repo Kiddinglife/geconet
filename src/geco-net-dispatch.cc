@@ -3401,10 +3401,7 @@ ushort mdi_restart_channel(uint new_rwnd, ushort noOfInStreams, ushort noOfOutSt
 	return 0;
 }
 /*
- @what
  sctlr_initAck is called by bundling when a init acknowledgement was received from the peer.
- @how
- @why
  @note
  The following data are retrieved from the init-data and saved for this association:
  - remote tag from the initiate tag field
@@ -4049,6 +4046,7 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 	print_addrlist(addresses, noOfAddresses);
 #endif
 }
+
 /**
  sctlr_cookie_echo is called by bundling when a cookie echo chunk was received from  the peer.
  The following data is retrieved from the cookie and saved for this association:
@@ -4150,7 +4148,7 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	chunk_id_t errorCID;
 	cookiesendtime_ = ntohl(cookie_echo->cookie.sendingTime);
 	currtime_ = get_safe_time_ms();
-	cookielifetime_ = cookiesendtime_ - currtime_;
+	cookielifetime_ = currtime_ - cookiesendtime_;
 	if (cookielifetime_ > ntohl(cookie_echo->cookie.cookieLifetime))
 	{
 		bool senderror = true;
@@ -4196,7 +4194,7 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			return;
 		}
 		smctrl = mdi_read_smctrl();
-		assert(smctrl == NULL);
+		assert(smctrl != NULL);
 	}
 
 	ChannelState newstate = UnknownChannelState;
@@ -5931,6 +5929,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 				clear();
 				return recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk;
 			}
+
 			if (curr_geco_instance_ == NULL)
 			{ // cannot find inst for this packet, it does not belong to us. discard it!
 				EVENTLOG(VERBOSE, "but cannot found inst for it ---> send abort with ecc");
@@ -5941,11 +5940,10 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 					ECC_PEER_NOT_LISTENNING_PORT;
 				curr_ecc_reason_ = (uchar*)last_dest_addr_;
 				curr_ecc_len_ = sizeof(sockaddrunion);
-				chunkflag2use_ = FLAG_TBIT_UNSET;
 				send_abort_ = true;
 			}
-			clear();
-			return discard;
+			//clear();
+			//return discard;
 		}
 		else  //Found unecpected chunks in ootb packet
 		{
@@ -5996,6 +5994,7 @@ SEND_ABORT:
 		mch_free_simple_chunk(abort_cid);
 		mdi_unlock_bundle_ctrl();
 		mdi_send_bundled_chunks();
+
 		clear();
 		return reply_abort;
 	}  // 23 send_abort_ == true

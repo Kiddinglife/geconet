@@ -248,7 +248,7 @@ enum geco_return_enum
 extern geco_return_enum global_ret_val;
 
 const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
-
+const uint OVERFLOW_MS = (15 * 24 * 60 * 60 * 1000);
 enum SENDING_DEST_ADDR_TYPE
 	: int
 {
@@ -488,7 +488,8 @@ extern void error_log_sys1(short error_loglvl, const char *module_name, int line
  @return unsigned 32 bit value representing system time in milliseconds.
  span of time id 15 days
  */
-extern uint get_safe_time_ms(void);
+#include "timestamp.h"
+#define get_safe_time_ms() ((uint)(((uint64)(gettimestamp() / stamps_per_ms())) % OVERFLOW_MS))
 
 /*helper to init timeval struct with ms interval*/
 #define fills_timeval(timeval_ptr, time_t_inteval)\

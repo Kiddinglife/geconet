@@ -97,14 +97,6 @@ static int is_module_traced(const char* modulename)
 	return -1;
 }
 
-uint get_safe_time_ms(void)
-{
-	struct timeval cur_tval;
-	gettimenow(&cur_tval);
-	/* modulo overflows every every 15 days*/
-	return ((cur_tval.tv_sec % OVERFLOW_SECS) * 1000 + cur_tval.tv_usec);
-}
-
 //int adl_gettime(struct timeval *tv)
 int gettimenow(struct timeval *tv)
 {
@@ -1411,9 +1403,9 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		i++;
 	}
 
-	for (int j=i; j < *numberOfNets; j++)
+	for (int j = i; j < *numberOfNets; j++)
 	{
-		memcpy(&buf[j], &(*addresses)[j-i], sizeof(sockaddrunion));
+		memcpy(&buf[j], &(*addresses)[j - i], sizeof(sockaddrunion));
 	}
 
 	free(*addresses);
