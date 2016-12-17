@@ -53,6 +53,7 @@
 # define __INCLUDE_CHUNK_BUILDER_H
 
 #include "geco-net-common.h"
+#include <assert.h>
 
   /**
    *  check if this is a good cookie, i.e. verify HMAC signature
@@ -62,16 +63,15 @@ bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk);
 int mch_validate_init_vlps(uint src_cid, uint dest_cid);
 
 
-
 /**
 * @brief returns a pointer to the beginning of a simple chunk,
 * internally fillup chunk length.
 */
-extern simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
+simple_chunk_t *mch_complete_simple_chunk(uint chunkID);
 /**
 * mch_free_simple_chunk removes the chunk from the array of simple_chunks_ and frees the
 * memory allocated for that chunk*/
-extern void mch_free_simple_chunk(uint chunkID);
+void mch_free_simple_chunk(uint chunkID);
 /**
 removes the chunk from the array of simple_chunks_ without freeing the
 memory allocated for that chunk.
@@ -80,8 +80,8 @@ Used in the following 2 cases:
 2) the chunk was created with uchar mch_make_simple_chunk(simple_chunk_t* chunk)
 and the pointer to the chunk points into an geco packet from recv_geco_packet(),
 which was allocated as a whole. In this case the chunk can not be freed here.*/
-extern void mch_remove_simple_chunk(uchar chunkID);
-extern chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL);
+void mch_remove_simple_chunk(uchar chunkID);
+chunk_id_t add2chunklist(simple_chunk_t * chunk, const char *log_text = NULL);
 
 
 simple_chunk_t *mch_read_simple_chunk(uint chunkID);
@@ -92,16 +92,19 @@ uint mch_read_itsn(uint initcid);
 init_chunk_fixed_t* mch_read_init_fixed(uint initcid);
 /* reads the simple_chunks_ type of a chunk.*/
 uchar mch_read_chunkid(uchar chunkID);
+uchar mch_read_chunk_type(chunk_id_t chunkID);
 /*reads the number of output streams from an init or initAck */
 ushort mch_read_ostreams(uchar init_chunk_id);
 /*reads the number of input streams from an init or initAck */
 ushort mch_read_instreams(uchar init_chunk_id);
 uint mch_read_itag(uchar init_chunk_id);
-/**
-*  @brief returns the suggested cookie lifespan increment if a cookie
-*  preservative is present in a init chunk.
-*/
+uchar* mch_find_first_chunk_of(uchar * packet_value, uint packet_val_len, uint chunk_type);
+// @brief returns the suggested cookie lifespan increment if a cookie preservative is present in a init chunk.
 uint mch_read_cookie_preserve(uint chunkID, bool ignore_cookie_life_spn_from_init_chunk_, uint defaultcookielife);
+// ch_enterCookiePreservative appends a cookie preservative with the suggested cookie lifespan to an init chunk.
+void mch_write_cookie_preserve(chunk_id_t chunkID, uint lifespanIncrement);
+uint mch_read_cookie_staleness(chunk_id_t errorCID);
+
 /**
 * @brief scans for a parameter of a certain type in a message string.
 * The message string must point to a parameter header.

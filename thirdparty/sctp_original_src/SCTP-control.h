@@ -52,7 +52,7 @@
 #include "messages.h"
 #include "sctp.h"
 
-/* The states of SCTP-control */
+ /* The states of SCTP-control */
 #define CLOSED           SCTP_CLOSED
 #define COOKIE_WAIT      SCTP_COOKIE_WAIT
 #define COOKIE_ECHOED    SCTP_COOKIE_ECHOED
@@ -81,17 +81,17 @@
    Together with the parameters of the function, they are used to create the init-message.
    This data are also stored in a newly created association-record.
    Params: noOfOutStreams:              # of send streams.
-           noOfInStreams:               # of receive streams.
-           primaryDestinationAddress:   primary destination address, the init message is sent to this
-                                        address.
-           noOfDestinationAddresses:    # of destination addresses if multihoming is used
-           DestinationAddressList:      list destination addresses if multihoming is used
+		   noOfInStreams:               # of receive streams.
+		   primaryDestinationAddress:   primary destination address, the init message is sent to this
+										address.
+		   noOfDestinationAddresses:    # of destination addresses if multihoming is used
+		   DestinationAddressList:      list destination addresses if multihoming is used
 */
 void msm_associate(unsigned short noOfOutStreams,
-                   unsigned short noOfInStreams,
-                   union sockunion* destinationList,
-                   unsigned int numDestAddresses,
-                   bool withPRSCTP);
+	unsigned short noOfInStreams,
+	union sockunion* destinationList,
+	unsigned int numDestAddresses,
+	bool withPRSCTP);
 
 
 /* initiates the shutdown of this association.
@@ -112,11 +112,11 @@ void scu_abort(short error_type, unsigned short error_param_length, unsigned cha
    New data must not be allocated for this new association.
    The following data are created and included in the init acknowledgement:
    - cookie: contains init-data, local tag, initial TSN, # of send streams, # of receive streams
-     and a signature.
+	 and a signature.
    - local tag: randomly generated, is included in the cookie and the initiate tag field of the
-                init acknowledgement.
+				init acknowledgement.
    - inititial TSN: randomly generated, is included in the cookie and the initial TSN field of the
-                    init acknowledgement.
+					init acknowledgement.
    Params: init:    data of init-chunk including optional parameters without chunk header
 */
 int sctlr_init(SCTP_init * init);
@@ -128,7 +128,7 @@ int sctlr_init(SCTP_init * init);
    - remote tag from the initiate tag field
    - receiver window credit of the peer
    - # of send streams of the peer, must be lower or equal the # of receive streams this host
-     has 'announced' with the init-chunk.
+	 has 'announced' with the init-chunk.
    - # of receive streams the peer allows the receiver of this initAck to use.
 
    The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
@@ -139,20 +139,20 @@ int sctlr_initAck(SCTP_init * initAck);
 
 
 
-/* process_cookie_echo_chunk is called by bundling when a cookie chunk was received from  the peer.
+/* msm_process_cookie_echo_chunk is called by bundling when a cookie chunk was received from  the peer.
    The following data are retrieved from the cookie and saved for this association:
    - from the init chunk: + peers tag.
-                          + peers receiver window credit.
-                          + peers initial TSN.
-                          + peers network address list if multihoming is used.
+						  + peers receiver window credit.
+						  + peers initial TSN.
+						  + peers network address list if multihoming is used.
    - local tag generated before the initAck was sent.
    - this side initial TSN generated before the initAck was sent.
    - # of send streams this side uses, must be lower or equal to peers # of receive streams from init
-     chunk
+	 chunk
    - # of receive streams this side uses, can be lower than peers # of send streams the requested in
-     the init chunk.
+	 the init chunk.
 */
-void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie);
+void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie);
 
 
 
@@ -190,11 +190,11 @@ int sctlr_abort(void);
 
 
 
-/* sctlr_staleCookie is called by bundling when a error chunk with cause 'stale cookie'
+/* msm_read_cookie_staleness is called by bundling when a error chunk with cause 'stale cookie'
    was received from  the peer.
    Params: staleness: microseconds the cookie life time was exceeded.
 */
-void sctlr_staleCookie(SCTP_simple_chunk * error_chunk);
+void msm_read_cookie_staleness(SCTP_simple_chunk * error_chunk);
 
 
 

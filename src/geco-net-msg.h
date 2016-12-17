@@ -109,10 +109,10 @@ struct chunk_fixed_t
 	uchar chunk_flags; /* usually 0    */
 	ushort chunk_length; /* sizeof(SCTP_chunk_header)+ number of bytes in the chunk */
 };
-#define FLAG_TBIT_UNSET       0x00
-#define FLAG_DELETED_CHANNEL  0x00
-#define FLAG_TBIT_SET         0x01
-#define FLAG_UNFOUND_CHANNEL  0x01
+#define FLAG_TBIT_UNSET       0x00 // perr has our itag setup
+#define FLAG_DELETED_CHANNEL  0x00 
+#define FLAG_TBIT_SET         0x01 // peer has no our itag setup
+#define FLAG_UNFOUND_CHANNEL  0x00
 #define FLAG_FOUND_CHANNEL  0x01
 
 /**************** chunk_value chunk *******************/

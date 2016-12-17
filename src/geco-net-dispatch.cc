@@ -1799,10 +1799,6 @@ void mdi_cb_connection_lost(uint status)
 	assert(curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif != NULL);
 	char str[128];
 	ushort port;
-	//    for(auto i : channel_map_)
-	//    {
-	//        channel_t* c = channels_[i.second];
-	//    }
 	for (uint i = 0; i < curr_channel_->remote_addres_size; i++)
 	{
 		saddr2str(&curr_channel_->remote_addres[i], str, 128, &port);
@@ -2165,16 +2161,17 @@ static void mdi_print_channel()
  * either COMM_UP_RECEIVED_VALID_COOKIE, COMM_UP_RECEIVED_COOKIE_ACK
  * or COMM_UP_RECEIVED_COOKIE_RESTART
  */
-void on_connection_up(uint status)
+void on_peer_connected(uint status)
 {
-	EVENTLOG1(INFO, "on_connection_up %d", status);
+	//@TODO
+	EVENTLOG1(INFO, "on_peer_connected %d", status);
 	mdi_print_channel();
 }
 /**
  * indicates that a restart has occured(chapter 10.2.G).
  * Calls the respective ULP callback function.
  */
-void on_peer_restart(void)
+void on_peer_restarted(void)
 {
 	//todo
 }
@@ -2278,9 +2275,9 @@ bool do_we_support_addip(void)
  * that is returned then. Returns -1 if unrecognized chunk forces termination of chunk parsing
  * without any further action, 1 for an error that stops chunk parsing, but returns error to
  * the peer and 0 for normal continuation */
-int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx = 0);
+int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx = 0);
 
-int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
+int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
 	return 0;
 }
@@ -2290,10 +2287,10 @@ int process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 /* 4) If INIT recv in cookie-wait or cookie-echoed */
 /* 5) else if  INIT recv in state other than cookie-wait or cookie-echoed */
 /* 6) remove NOT free INIT CHUNK */
-int process_init_chunk(init_chunk_t * init)
+int msm_process_init_chunk(init_chunk_t * init)
 {
 #if defined(_DEBUG)
-	EVENTLOG(VERBOSE, "- - - - Enter process_init_chunk() - - -");
+	EVENTLOG(VERBOSE, "- - - - Enter msm_process_init_chunk() - - -");
 #endif
 
 	/*1) put init chunk into chunk  array */
@@ -2389,7 +2386,7 @@ int process_init_chunk(init_chunk_t * init)
 			curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_, true, false);
 		if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
 		{
-			EVENTLOG(NOTICE, "process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
+			EVENTLOG(NOTICE, "msm_process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
 			chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT,
 				FLAG_TBIT_UNSET);
 			const char* errstr = "peer does not supports your adress types !";
@@ -2586,7 +2583,7 @@ int process_init_chunk(init_chunk_t * init)
 				curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_, true, false);
 			if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
 			{
-				EVENTLOG(NOTICE, "process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
+				EVENTLOG(NOTICE, "msm_process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
 				chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT,
 					FLAG_TBIT_UNSET);
 				char* errstr = "peer does not supports your adress types !";
@@ -2699,7 +2696,7 @@ int process_init_chunk(init_chunk_t * init)
 			 addresses as used in transport addresses assigned to an endpoint but
 			 with a different port number indicates the initialization of a
 			 separate association.*/
-			EVENTLOG1(VERBOSE, "at line 1 process_init_chunk():CURR BUNDLE SIZE (%d)", get_bundle_total_size(mdi_read_mbu()));
+			EVENTLOG1(VERBOSE, "at line 1 msm_process_init_chunk():CURR BUNDLE SIZE (%d)", get_bundle_total_size(mdi_read_mbu()));
 			// send all bundled chunks to ensure init ack is the only chunk sent
 			mdi_unlock_bundle_ctrl();
 			mdi_send_bundled_chunks();
@@ -2735,7 +2732,7 @@ int process_init_chunk(init_chunk_t * init)
 				curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_, true, false);
 			if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
 			{
-				EVENTLOG(NOTICE, "process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
+				EVENTLOG(NOTICE, "msm_process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
 				chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT,
 					FLAG_TBIT_UNSET);
 				char* errstr = "peer does not supports your adress types !";
@@ -2819,7 +2816,7 @@ int process_init_chunk(init_chunk_t * init)
 				 * unnormal connection handling precedures*/
 
 				 /*send all bundled chunks to ensure init ack is the only chunk sent*/
-				EVENTLOG1(VERBOSE, "at line 1674 process_init_chunk():CURR BUNDLE SIZE (%d)",
+				EVENTLOG1(VERBOSE, "at line 1674 msm_process_init_chunk():CURR BUNDLE SIZE (%d)",
 					get_bundle_total_size(mdi_read_mbu()));
 				assert(get_bundle_total_size(mdi_read_mbu()) == UDP_GECO_PACKET_FIXED_SIZES);
 				mdi_unlock_bundle_ctrl();
@@ -2840,13 +2837,13 @@ int process_init_chunk(init_chunk_t * init)
 	mch_remove_simple_chunk(init_cid);
 	return ret;
 }
-int process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen)
+int msm_process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen)
 {
-	EVENTLOG(VERBOSE, "Enter process_sack_chunk()");
+	EVENTLOG(VERBOSE, "Enter msm_process_sack_chunk()");
 	int ret = 0;
 
 leave:
-	EVENTLOG(VERBOSE, "Leave process_sack_chunk()");
+	EVENTLOG(VERBOSE, "Leave msm_process_sack_chunk()");
 	return ret;
 }
 
@@ -3371,9 +3368,14 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams, ush
 	EVENTLOG(DEBUG, "- - - Enter mdi_init_channel()");
 	assert(curr_channel_ != NULL);
 
+	/**
+	 * if  mdi_init_channel has already be called, delete modules and make new ones
+	 *  with possibly new data. Multiple calls of of mdi_init_channel can occur on the
+	 * a-side in the case of stale cookie errors.
+	 */
 	if (curr_channel_->remote_tag != 0)
 	{
-		/* channel init was already completed */
+		// channel init was already completed 
 		EVENTLOG(INFO, "mdi_init_channel()::reset channel members!");
 		mfc_free(curr_channel_->flow_control);
 		mreltx_free(curr_channel_->reliable_transfer_control);
@@ -3413,7 +3415,7 @@ ushort mdi_restart_channel(uint new_rwnd, ushort noOfInStreams, ushort noOfOutSt
  The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
  Params: initAck: data of initAck-chunk including optional parameters without chunk header
  */
-ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
+ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
 {
 	assert(initAck->chunk_header.chunk_id == CHUNK_INIT_ACK);
 	ChunkProcessResult return_state = ChunkProcessResult::Good;
@@ -3424,7 +3426,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 	if (smctrl == NULL)
 	{
 		mch_remove_simple_chunk(initAckCID);
-		ERRLOG(MINOR_ERROR, "process_init_ack_chunk(): mdi_read_smctrl() returned NULL!");
+		ERRLOG(MINOR_ERROR, "msm_process_init_ack_chunk(): mdi_read_smctrl() returned NULL!");
 		return return_state;
 	}
 
@@ -3478,7 +3480,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 			if (smctrl == NULL)
 			{
 				mdi_clear_current_channel();
-				return_state = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
+				return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
 				return return_state;
 			}
 			else
@@ -3492,7 +3494,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 				mdi_delete_curr_channel();
 				mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
 				mdi_clear_current_channel();
-				return_state = ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError;
+				return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
 				return return_state;
 			}
 		}
@@ -3527,7 +3529,7 @@ ChunkProcessResult process_init_ack_chunk(init_chunk_t * initAck)
 		mdi_init_channel(peer_rwnd, inbound_stream, outbound_stream, peer_itsn, peer_itag, my_init_itag, peersupportpr,
 			peersupportaddip);
 
-		EVENTLOG2(VERBOSE, "process_init_ack_chunk()::called mdi_init_channel(in-streams=%u, out-streams=%u)",
+		EVENTLOG2(VERBOSE, "msm_process_init_ack_chunk()::called mdi_init_channel(in-streams=%u, out-streams=%u)",
 			inbound_stream, outbound_stream);
 
 		// make cookie echo to en to peer
@@ -4066,9 +4068,9 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
  \end{itemiz}
  @param  cookie_echo pointer to the received cookie echo chunk
  */
-static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
+static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 {
-	EVENTLOG(VERBOSE, "Enter process_cookie_echo_chunk()");
+	EVENTLOG(VERBOSE, "Enter msm_process_cookie_echo_chunk()");
 
 	/*
 	 @rememberme:
@@ -4113,6 +4115,7 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	uint cookie_local_tag = mch_read_itag(initAckCID);
 	uint local_tag = mdi_read_local_tag();
 	uint remote_tag = mdi_read_remote_tag();
+
 	bool valid = true;
 	if (last_veri_tag_ != cookie_local_tag)
 	{
@@ -4129,12 +4132,13 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		EVENTLOG(NOTICE, "validate cookie echo failed as last_src_port_ != cookie.src_port -> return");
 		valid = false;
 	}
+
 	if (valid == false)
 	{
 		mch_remove_simple_chunk(cookie_echo_cid);
 		mch_free_simple_chunk(initCID);
 		mch_free_simple_chunk(initAckCID);
-		EVENTLOG(NOTICE, "validate cookie echo failed ! -> return");
+		EVENTLOG(NOTICE, "line 4137 msm_process_cookie_echo_chunk()::validate cookie echo failed ! -> return");
 		return;
 	}
 
@@ -4149,6 +4153,7 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	cookiesendtime_ = ntohl(cookie_echo->cookie.sendingTime);
 	currtime_ = get_safe_time_ms();
 	cookielifetime_ = currtime_ - cookiesendtime_;
+
 	if (cookielifetime_ > ntohl(cookie_echo->cookie.cookieLifetime))
 	{
 		bool senderror = true;
@@ -4159,7 +4164,7 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		if (senderror == true)
 		{
 			EVENTLOG2(NOTICE,
-				curr_channel_ == NULL ? "process_cookie_echo_chunk()::curr_channel_ == NULL and actual cookielifetime_ %u ms > cookie cookielifetime_ %u -> send error chunk of stale cookie! -> discard packet!" : "process_cookie_echo_chunk()::curr_channel_ != NULL and actual cookielifetime_ %u ms > cookie cookielifetime_ %u" "and veri tags not matched (local_tag %u : cookie_local_tag %u, remote_tag %u : cookie_remote_tag %u)->" "send error chunk of stale cookie! -> discard packet!",
+				curr_channel_ == NULL ? "msm_process_cookie_echo_chunk()::curr_channel_ == NULL and actual cookielifetime_ %u ms > cookie cookielifetime_ %u -> send error chunk of stale cookie! -> discard packet!" : "msm_process_cookie_echo_chunk()::curr_channel_ != NULL and actual cookielifetime_ %u ms > cookie cookielifetime_ %u" "and veri tags not matched (local_tag %u : cookie_local_tag %u, remote_tag %u : cookie_remote_tag %u)->" "send error chunk of stale cookie! -> discard packet!",
 				cookie_echo->cookie.cookieLifetime, cookielifetime_);
 
 			last_init_tag_ = cookie_remote_tag; // peer's init tag in previously sent INIT chunk to us
@@ -4181,13 +4186,14 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	smctrl_t* smctrl = mdi_read_smctrl();
 	if (smctrl == NULL)
 	{
-		EVENTLOG(NOTICE, "process_cookie_echo_chunk(): mdi_read_smctrl() returned NULL -> call mdi_new_channel() !");
-		if (mdi_new_channel(curr_geco_instance_, last_dest_port_, last_src_port_, cookie_local_tag,/*local tag*/
+		if (!mdi_new_channel(curr_geco_instance_,
+			last_dest_port_, last_src_port_,
+			cookie_local_tag,/*local tag*/
 			0,/*primaryDestinationAddress*/
 			1, /*noOfDestinationAddresses*/
-			last_source_addr_) == false)
+			last_source_addr_))
 		{
-			EVENTLOG(NOTICE, "mdi_new_channel() failed ! -> discard!");
+			EVENTLOG(NOTICE, "line 4191 msm_process_cookie_echo_chunk()::mdi_new_channel() failed ! -> discard!");
 			mch_remove_simple_chunk(cookie_echo_cid);
 			mch_free_simple_chunk(initCID);
 			mch_free_simple_chunk(initAckCID);
@@ -4197,15 +4203,21 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		assert(smctrl != NULL);
 	}
 
+	int SendCommUpNotification = 0;
 	ChannelState newstate = UnknownChannelState;
 	ChannelState state = smctrl->channel_state;
 	EVENTLOG5(DEBUG, "State: %u, cookie_remote_tag: %u , cookie_local_tag: %u, remote_tag: %u , local_tag : %u", state,
 		cookie_remote_tag, cookie_local_tag, remote_tag, local_tag);
 
-	int SendCommUpNotification = 0;
+	// Normal Case recv COOKIE_ECHO at CLOSE state
 	if (smctrl->channel_state == Closed)
-	{  // Normal Case recv COOKIE_ECHO at CLOSE state
-		EVENTLOG(DEBUG, "event: process_cookie_echo_chunk in state CLOSED -> Normal Case");
+	{
+		EVENTLOG(DEBUG, "event: msm_process_cookie_echo_chunk in state CLOSED -> Normal Case");
+
+		// tie tags are only populated at connecting end in process_init_ack()
+		// here they must be all zeros as this is normal connection case
+		assert(smctrl->local_tie_tag == 0 && smctrl->peer_tie_tag == 0);
+
 		tmp_peer_addreslist_size_ = mch_read_addrlist_from_cookie(cookie_echo, curr_geco_instance_->supportedAddressTypes,
 			tmp_peer_addreslist_, &tmp_peer_supported_types_, last_source_addr_);
 		if (tmp_peer_addreslist_size_ > 0)
@@ -4216,16 +4228,18 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		mdi_init_channel(mch_read_rwnd(initCID), mch_read_instreams(initAckCID), mch_read_ostreams(initAckCID),
 			mch_read_itsn(initCID), cookie_remote_tag, mch_read_itsn(initAckCID), peer_supports_pr(cookie_echo),
 			peer_supports_addip(cookie_echo));
+
 		smctrl->outbound_stream = mch_read_ostreams(initAckCID);
 		smctrl->inbound_stream = mch_read_instreams(initAckCID);
+
 		EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u", smctrl->outbound_stream,
 			smctrl->inbound_stream);
 
 		//bundle and send cookie ack
-		cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK,
-			FLAG_TBIT_UNSET);
+		cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
 		mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(cookie_ack_cid_));
 		mch_free_simple_chunk(cookie_ack_cid_);
+
 		mdi_unlock_bundle_ctrl();
 		mdi_send_bundled_chunks();
 
@@ -4233,9 +4247,11 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		SendCommUpNotification = COMM_UP_RECEIVED_VALID_COOKIE;
 		newstate = ChannelState::Connected;
 	}
+
+	//Sick Cases Recv COOKIE_ECHO when channel presents
 	else
-	{  //Sick Cases Recv COOKIE_ECHO when channel presents
-		EVENTLOG(DEBUG, "event: process_cookie_echo_chunk in state other than CLOSED -> Sick Case");
+	{
+		EVENTLOG(DEBUG, "event: msm_process_cookie_echo_chunk in state other than CLOSED -> Sick Case");
 
 		cookie_local_tie_tag_ = ntohl(cookie_echo->cookie.local_tie_tag);
 		cookie_remote_tie_tag_ = ntohl(cookie_echo->cookie.peer_tie_tag);
@@ -4407,17 +4423,134 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 		}
 #endif
 	}
+
 	mch_remove_simple_chunk(cookie_echo_cid);
 	mch_free_simple_chunk(initCID);
 	mch_free_simple_chunk(initAckCID);
+
 	if (newstate != UnknownChannelState)
 		smctrl->channel_state = newstate;
-	if (SendCommUpNotification == COMM_UP_RECEIVED_VALID_COOKIE)
-		on_connection_up(SendCommUpNotification);  //@TODO
-	else if (SendCommUpNotification == COMM_UP_RECEIVED_COOKIE_RESTART)
-		on_peer_restart();
 
-	EVENTLOG(VERBOSE, "Leave process_cookie_echo_chunk()");
+	if (SendCommUpNotification == COMM_UP_RECEIVED_VALID_COOKIE)
+		on_peer_connected(SendCommUpNotification);
+	else if (SendCommUpNotification == COMM_UP_RECEIVED_COOKIE_RESTART)
+		on_peer_restarted();
+
+	EVENTLOG(VERBOSE, "Leave msm_process_cookie_echo_chunk()");
+}
+
+int msm_process_abort_chunk()
+{
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "msm_abort_channel()::smctrl is NULL!");
+		return -1;
+	}
+	if (smctrl->channel_state == ChannelState::Closed)
+	{
+		EVENTLOG(DEBUG, "event: recv abort chunk  in state CLOSED ---> discard");
+		return ChunkProcessResult::Good;
+	}
+
+	if (smctrl->init_timer_id != NULL)
+	{  //stop init timer
+		mtra_timeouts_del(smctrl->init_timer_id);
+		smctrl->init_timer_id = NULL;
+	}
+
+	mdi_unlock_bundle_ctrl();
+	mdi_cb_connection_lost(ConnectionLostReason::PeerAbortConnection);
+	mdi_delete_curr_channel();
+	mdi_clear_current_channel();
+
+	return ChunkProcessResult::StopProcessAndDeleteChannel;
+}
+
+static void msm_process_stale_cookie(simple_chunk_t* error_chunk)
+{
+	chunk_id_t errorCID = mch_make_simple_chunk(error_chunk);
+	if (mch_read_chunk_type(errorCID) != CHUNK_ERROR)
+	{
+		/* error logging */
+		mch_remove_simple_chunk(errorCID);
+		EVENTLOG(NOTICE, "msm_process_stale_cookie()::wrong chunk type ---> return !");
+		return;
+	}
+
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "msm_abort_channel()::smctrl is NULL!");
+	}
+
+	if (smctrl->channel_state != ChannelState::CookieEchoed)
+	{
+		EVENTLOG(NOTICE, "msm_process_stale_cookie()::recv stale_cookie error chunk  in state other than CookieEchoed ---> discard!");
+	}
+	else
+	{
+		// make chunkHandler init chunk from stored init chunk string 
+		chunk_id_t initCID = mch_make_simple_chunk((simple_chunk_t*)smctrl->my_init_chunk);
+		/* read staleness from error chunk and enter it into the cookie preserv. */
+		uint staleness = mch_read_cookie_staleness(errorCID);
+
+		if (staleness > 0)
+		{
+			mch_write_cookie_preserve(initCID, staleness);
+			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(initCID)); // resend init 
+			mdi_send_bundled_chunks();
+			mch_remove_simple_chunk(initCID);
+			smctrl->channel_state = ChannelState::CookieWait;
+		}
+	}
+}
+
+static void msm_process_error_chunk(simple_chunk_t* errchunk)
+{
+	vlparam_fixed_t* header;
+	error_chunk_t* chunk = (error_chunk_t *)errchunk;
+	error_cause_t *cause = (error_cause_t *)chunk->chunk_value;
+	uchar* data = cause->error_reason;
+	ushort err_cause = ntohs(cause->error_reason_code);
+	ushort cause_len = ntohs(cause->error_reason_length);
+
+	switch (err_cause)
+	{
+	case ECC_INVALID_STREAM_ID:
+		EVENTLOG1(NOTICE, "Invalid Stream Id Error with Len %u ", cause_len);
+		break;
+	case ECC_MISSING_MANDATORY_PARAM:
+		EVENTLOG1(NOTICE, "Missing Mandatory Parameter Error, Len %u ", cause_len);
+		break;
+	case ECC_STALE_COOKIE_ERROR:
+		EVENTLOG1(NOTICE, "Stale Cookie Error, Len %u ", cause_len);
+		msm_process_stale_cookie(errchunk);
+		break;
+	case ECC_OUT_OF_RESOURCE_ERROR:
+		EVENTLOG1(NOTICE, "Out Of Resource Error with Len %u ", cause_len);
+		break;
+	case ECC_UNRESOLVABLE_ADDRESS:
+		EVENTLOG1(NOTICE, "Unresovable Address Error with Len %u ", cause_len);
+		break;
+	case ECC_UNRECOGNIZED_CHUNKTYPE:
+		EVENTLOG1(NOTICE, "Unrecognized Chunk Type Len %u ", cause_len);
+		break;
+	case ECC_INVALID_MANDATORY_PARAM:
+		EVENTLOG1(NOTICE, "Invalid Mandatory Parameter : Len %u ", cause_len);
+		break;
+	case ECC_UNRECOGNIZED_PARAMS:
+		EVENTLOG1(NOTICE, "Unrecognized Params Error with Len %u ", cause_len);
+		break;
+	case ECC_NO_USER_DATA:
+		EVENTLOG1(NOTICE, "No User Data Error with Len %u ", cause_len);
+		break;
+	case ECC_COOKIE_RECEIVED_DURING_SHUTDWN:
+		EVENTLOG1(NOTICE, "Error : Cookie Received During Shutdown, Len: %u ", cause_len);
+		break;
+	default:
+		EVENTLOG2(MINOR_ERROR, "Unrecognized Error Cause %u with Len %u ", err_cause, cause_len);
+	}
 }
 
 /**
@@ -4427,18 +4560,18 @@ static void process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
  Communication up is signalled to the upper layer in this case.
  @param cookieAck pointer to the received cookie ack chunk
  */
-static void process_cookie_ack_chunk(simple_chunk_t* cookieAck)
+static void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 {
 	EVENTLOG(INFO, "****************** RECV CHUNK_COOKIE_ACK AT COOKIE_ECHOED STATE ********************");
 	if (cookieAck->chunk_header.chunk_id != CHUNK_COOKIE_ACK)
 	{
-		ERRLOG(MINOR_ERROR, "process_cookie_ack_chunk():  NOT CHUNK_COOKIE_ACK -> RETURN!");
+		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk():  NOT CHUNK_COOKIE_ACK -> RETURN!");
 		return;
 	}
 	smctrl_t* smctrl = mdi_read_smctrl();
 	if (smctrl == NULL)
 	{
-		ERRLOG(MINOR_ERROR, "process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
 		return;
 	}
 
@@ -4462,7 +4595,7 @@ static void process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 	smctrl->peer_cookie_chunk = NULL;
 	mch_remove_simple_chunk(cookieAckCID);
 	smctrl->channel_state = ChannelState::Connected;
-	on_connection_up(COMM_UP_RECEIVED_COOKIE_ACK);
+	on_peer_connected(COMM_UP_RECEIVED_COOKIE_ACK);
 }
 
 /*
@@ -4501,8 +4634,6 @@ int mdi_disassemle_packet()
 	bool data_chunk_received = false;
 	int handle_ret = ChunkProcessResult::Good;
 
-	mdi_lock_bundle_ctrl();
-
 	while (read_len < curr_geco_packet_value_len_)
 	{
 		if (curr_geco_packet_value_len_ - read_len < CHUNK_FIXED_SIZE)
@@ -4531,31 +4662,48 @@ int mdi_disassemle_packet()
 		 */
 		switch (chunk->chunk_header.chunk_id)
 		{
+
 		case CHUNK_DATA:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
-			handle_ret = process_data_chunk((data_chunk_t*)chunk, -2);
+			handle_ret = msm_process_data_chunk((data_chunk_t*)chunk, -2);
 			data_chunk_received = true;
 			break;
+
 		case CHUNK_INIT:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_INIT");
-			handle_ret = process_init_chunk((init_chunk_t *)chunk);
+			handle_ret = msm_process_init_chunk((init_chunk_t *)chunk);
 			break;
+
 		case CHUNK_INIT_ACK:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_INIT_ACK");
-			handle_ret = process_init_ack_chunk((init_chunk_t *)chunk);
+			handle_ret = msm_process_init_ack_chunk((init_chunk_t *)chunk);
 			break;
+
 		case CHUNK_COOKIE_ECHO:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_COOKIE_ECHO");
-			process_cookie_echo_chunk((cookie_echo_chunk_t*)chunk);
+			msm_process_cookie_echo_chunk((cookie_echo_chunk_t*)chunk);
 			break;
+
 		case CHUNK_COOKIE_ACK:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_COOKIE_ACK");
-			process_cookie_ack_chunk((simple_chunk_t*)chunk);
+			msm_process_cookie_ack_chunk((simple_chunk_t*)chunk);
 			break;
+
 		case CHUNK_SACK:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_SACK");
-			handle_ret = process_sack_chunk(-2, chunk, curr_geco_packet_value_len_);
+			handle_ret = msm_process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
 			break;
+
+		case CHUNK_ABORT:
+			EVENTLOG(DEBUG, "******************* Diassemble received ABORT chunk");
+			handle_ret = msm_process_abort_chunk();
+			break;
+
+		case CHUNK_ERROR:
+			EVENTLOG(DEBUG, "******************* Diassemble received ERROR chunk");
+			msm_process_error_chunk(chunk);
+			break;
+
 		default:
 			/*
 			 00 - Stop processing this SCTP packet and discard it,
@@ -4606,8 +4754,7 @@ int mdi_disassemle_packet()
 		EVENTLOG2(VERBOSE, "end process chunk with read_len %u,chunk_len %u", read_len, chunk_len);
 	}
 
-	if (handle_ret != ChunkProcessResult::StopAndDeleteChannel_LastSrcPortNullError
-		&& handle_ret != ChunkProcessResult::StopAndDeleteChannel_ValidateInitParamFailedError)
+	if (handle_ret != ChunkProcessResult::StopProcessAndDeleteChannel)
 	{
 		if (data_chunk_received)
 		{
@@ -4628,8 +4775,8 @@ int mdi_disassemle_packet()
 			//se_doNotifications();
 			//if (send_it == TRUE) bu_sendAllChunks(&address_index);
 		}
-		mdi_unlock_bundle_ctrl();
 	}
+
 	return 0;
 }
 
@@ -4989,50 +5136,7 @@ bool validate_dest_addr(sockaddrunion * dest_addr)
 	}
 	return false;
 }
-uchar* find_first_chunk_of(uchar * packet_value, uint packet_val_len, uint chunk_type)
-{
-	uint chunk_len = 0;
-	uint read_len = 0;
-	uint padding_len;
-	chunk_fixed_t* chunk;
-	uchar* curr_pos = packet_value;
 
-	while (read_len < packet_val_len)
-	{
-		EVENTLOG3(VVERBOSE, "find_first_chunk_of(%u)::packet_val_len=%d, read_len=%d", chunk_type, packet_val_len,
-			read_len);
-
-		if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
-		{
-			ERRLOG(MINOR_ERROR, "find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
-			return NULL;
-		}
-
-		chunk = (chunk_fixed_t*)curr_pos;
-		chunk_len = get_chunk_length(chunk);
-
-		if (chunk_len < CHUNK_FIXED_SIZE)
-		{
-			ERRLOG1(MINOR_ERROR, "find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!", chunk_len);
-			return NULL;
-		}
-		if (chunk_len + read_len > packet_val_len)
-		{
-			ERRLOG3(MINOR_ERROR, "find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!", chunk_len,
-				read_len, packet_val_len);
-			return NULL;
-		}
-
-		if (chunk->chunk_id == chunk_type)
-			return curr_pos;
-
-		read_len += chunk_len;
-		while (read_len & 3)
-			++read_len;
-		curr_pos = packet_value + read_len;
-	}
-	return NULL;
-}
 void clear()
 {
 	last_source_addr_ = NULL;
@@ -5399,7 +5503,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		if (curr_geco_instance_ != NULL || is_there_at_least_one_equal_dest_port_)
 		{
 
-			curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+			curr_uchar_init_chunk_ = mch_find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
 				CHUNK_INIT_ACK);
 			if (curr_uchar_init_chunk_ != NULL)
 			{
@@ -5420,7 +5524,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			}
 			else // as there is only one init chunk in an packet, we use else for efficiency
 			{
-				curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+				curr_uchar_init_chunk_ = mch_find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
 					CHUNK_INIT);
 				if (curr_uchar_init_chunk_ != NULL)
 				{
@@ -5511,10 +5615,10 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		 INIT chunk.  Otherwise, the receiver MUST silently should_discard_curr_geco_packet_ the
 		 packet.*/
 		if (curr_uchar_init_chunk_ == NULL) // we MAY have found it from 11) at line 290
-			curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+			curr_uchar_init_chunk_ = mch_find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
 				CHUNK_INIT);
 
-		/*process_init_chunk() will furtherly handle this INIT chunk in the follwing method
+		/*msm_process_init_chunk() will furtherly handle this INIT chunk in the follwing method
 		 here we just validate some fatal errors*/
 		if (curr_uchar_init_chunk_ != NULL)
 		{
@@ -5583,7 +5687,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		 */
 		if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0)
 		{
-			uchar* abortchunk = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_, CHUNK_ABORT);
+			uchar* abortchunk = mch_find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_, CHUNK_ABORT);
 			bool is_tbit_set = (((chunk_fixed_t*)abortchunk)->chunk_flags & 0x01);
 			if ((is_tbit_set && last_veri_tag_ == curr_channel_->remote_tag)
 				|| (!is_tbit_set && last_veri_tag_ == curr_channel_->local_tag))
@@ -5625,7 +5729,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 				clear();
 				return recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate;
 			}
-			uchar* shutdowncomplete = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+			uchar* shutdowncomplete = mch_find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
 				CHUNK_SHUTDOWN_COMPLETE);
 			bool is_tbit_set = (((chunk_fixed_t*)shutdowncomplete)->chunk_flags & FLAG_TBIT_SET);
 			if ((is_tbit_set && last_veri_tag_ == curr_channel_->remote_tag)
@@ -5844,7 +5948,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		 // at line 260 will not actually run, that is why we find it again here
 		if (curr_uchar_init_chunk_ == NULL)
 		{
-			curr_uchar_init_chunk_ = find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
+			curr_uchar_init_chunk_ = mch_find_first_chunk_of(curr_geco_packet_->chunk, curr_geco_packet_value_len_,
 				CHUNK_INIT);
 		}
 
@@ -5999,8 +6103,11 @@ SEND_ABORT:
 		return reply_abort;
 	}  // 23 send_abort_ == true
 
+
 	// forward packet value to bundle ctrl module for disassemblings
+	mdi_lock_bundle_ctrl();
 	mdi_disassemle_packet();
+	mdi_unlock_bundle_ctrl();
 
 	// no need to clear last_src_port_ and last_dest_port_ MAY be used by other functions
 	last_src_path_ = -1;

@@ -376,9 +376,9 @@ void msm_associate(unsigned short noOfOutStreams,
 		/* enter enter local addresses to message. I send an Init here, so
 				 * I will include all of my addresses !
 				 void mdi_validate_localaddrs_before_write_to_init(union sockunion laddresses[MAX_NUM_ADDRESSES],
-				 guint16 * noOfAddresses, 
+				 guint16 * noOfAddresses,
 				 union sockunion *peerAddress,
-				 unsigned int numPeerAddresses, 
+				 unsigned int numPeerAddresses,
 				 unsigned int addressTypes,
 				 bool receivedFromPeer)
 				 */
@@ -1282,7 +1282,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 }
 
 /**
-  process_cookie_echo_chunk is called by bundling when a cookie echo chunk was received from  the peer.
+  msm_process_cookie_echo_chunk is called by bundling when a cookie echo chunk was received from  the peer.
   The following data is retrieved from the cookie and saved for this association:
   \begin{itemize}
   \item  from the init chunk:
@@ -1299,9 +1299,9 @@ bool sctlr_initAck(SCTP_init *initAck)
   the init chunk
   \end{itemiz}
   @param  cookie_echo pointer to the received cookie echo chunk
-  process_cookie_echo_chunk
+  msm_process_cookie_echo_chunk
   */
-void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
+void msm_process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 {
 	union sockunion destAddress;
 	union sockunion dAddresses[MAX_NUM_ADDRESSES];
@@ -1327,7 +1327,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 
 	int SendCommUpNotification = -1;
 
-	event_log(INTERNAL_EVENT_0, "process_cookie_echo_chunk() is being executed");
+	event_log(INTERNAL_EVENT_0, "msm_process_cookie_echo_chunk() is being executed");
 
 	cookieCID = mch_make_simple_chunk((SCTP_simple_chunk *)cookie_echo);
 
@@ -1335,7 +1335,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	{
 		/* error logging */
 		mch_remove_simple_chunk(cookieCID);
-		error_log(ERROR_MAJOR, "process_cookie_echo_chunk: wrong chunk type");
+		error_log(ERROR_MAJOR, "msm_process_cookie_echo_chunk: wrong chunk type");
 		return;
 	}
 	/* section 5.2.4. 1) and 2.) */
@@ -1397,7 +1397,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	result = mdi_readLastFromAddress(&destAddress);
 	if (result != 0)
 	{
-		error_log(ERROR_MAJOR, "process_cookie_echo_chunk: mdi_readLastFromAddress failed !");
+		error_log(ERROR_MAJOR, "msm_process_cookie_echo_chunk: mdi_readLastFromAddress failed !");
 		ch_deleteChunk(initCID);
 		ch_deleteChunk(initAckCID);
 		mch_remove_simple_chunk(cookieCID);
@@ -1419,7 +1419,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		if (noSuccess)
 		{
 			/* new association could not be entered in the list of associations */
-			error_log(ERROR_MAJOR, "process_cookie_echo_chunk: Creation of association failed");
+			error_log(ERROR_MAJOR, "msm_process_cookie_echo_chunk: Creation of association failed");
 			ch_deleteChunk(initCID);
 			ch_deleteChunk(initAckCID);
 			mch_remove_simple_chunk(cookieCID);
@@ -1446,7 +1446,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 	{
 	case CLOSED:
 		/*----------------- Normal association setup -----------------------------------------*/
-		event_log(EXTERNAL_EVENT, "event: process_cookie_echo_chunk in state CLOSED");
+		event_log(EXTERNAL_EVENT, "event: msm_process_cookie_echo_chunk in state CLOSED");
 		mySupportedTypes = mdi_getSupportedAddressTypes();
 		/* retrieve destination addresses from cookie */
 		ndAddresses = ch_read_addrlist_from_cookie(cookieCID, mySupportedTypes, dAddresses, &peerAddressTypes, &destAddress);
@@ -1709,7 +1709,7 @@ void process_cookie_echo_chunk(cookie_echo_chunk_t *cookie_echo)
 		break;
 	default:
 		/* error logging: unknown event */
-		error_logi(EXTERNAL_EVENT_X, "process_cookie_echo_chunk : unknown state %02u", state);
+		error_logi(EXTERNAL_EVENT_X, "msm_process_cookie_echo_chunk : unknown state %02u", state);
 		break;
 	}
 
@@ -2240,10 +2240,10 @@ int sctlr_abort()
 }
 
 /**
-   sctlr_staleCookie is called by bundling when a 'stale cookie' error chunk was received.
+   msm_read_cookie_staleness is called by bundling when a 'stale cookie' error chunk was received.
    @param error_chunk pointer to the received error chunk
    */
-void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
+void msm_read_cookie_staleness(SCTP_simple_chunk *error_chunk)
 {
 	unsigned int state;
 	ChunkID errorCID;
@@ -2255,14 +2255,14 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 	{
 		/* error logging */
 		mch_remove_simple_chunk(errorCID);
-		error_log(ERROR_MAJOR, "sctlr_staleCookie: wrong chunk type");
+		error_log(ERROR_MAJOR, "msm_read_cookie_staleness: wrong chunk type");
 		return;
 	}
 
 	if ((smctrl = (smctrl_t *)mdi_readSCTP_control()) == NULL)
 	{
 		/* error log */
-		error_log(ERROR_MAJOR, "sctlr_staleCookie: read SCTP-control failed");
+		error_log(ERROR_MAJOR, "msm_read_cookie_staleness: read SCTP-control failed");
 		return;
 	}
 
@@ -2276,7 +2276,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 		initCID = mch_make_simple_chunk((SCTP_simple_chunk *)smctrl->initChunk);
 
 		/* read staleness from error chunk and enter it into the cookie preserv. */
-		ch_enterCookiePreservative(initCID, ch_stalenessOfCookieError(errorCID));
+		mch_write_cookie_preservative(initCID, mch_read_cookie_staleness(errorCID));
 
 		/* resend init */
 		bu_put_Ctrl_Chunk(ch_chunkString(initCID), NULL);
@@ -2288,7 +2288,7 @@ void sctlr_staleCookie(SCTP_simple_chunk *error_chunk)
 
 	default:
 		/* error logging */
-		event_logi(EXTERNAL_EVENT_X, "sctlr_staleCookie in state %02d: unexpected event", state);
+		event_logi(EXTERNAL_EVENT_X, "msm_read_cookie_staleness in state %02d: unexpected event", state);
 		break;
 	}
 	smctrl->association_state = state;

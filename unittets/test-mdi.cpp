@@ -68,7 +68,7 @@ find_chunk_types(uchar* packet_value, uint packet_val_len,
 extern int
 contains_chunk(uint chunk_type, uint chunk_types);
 extern uchar*
-find_first_chunk_of(uchar * packet_value, uint packet_val_len,
+mch_find_first_chunk_of(uchar * packet_value, uint packet_val_len,
 	uint chunk_type);
 extern uchar*
 mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
@@ -941,13 +941,13 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
 //	wt += chunklen;
 //
-//	EXPECT_EQ(find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
+//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
 //		geco_packet.chunk);
-//	EXPECT_EQ(find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
+//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
 //		wt - chunklen);
-//	EXPECT_EQ(find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
+//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
 //		(uchar*)NULL);
-//	EXPECT_EQ(find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
+//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
 //		(uchar*)NULL);
 //
 //	//　branchtest:  chunk_len < CHUNK_FIXED_SIZE
@@ -963,7 +963,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
 //	wt += chunklen;
 //	EXPECT_EQ(
-//		find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK),
+//		mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK),
 //		(uchar*)NULL);
 //
 //	// branchtest: chunk_len + read_len > packet_val_len
@@ -981,7 +981,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	EXPECT_EQ(offset, 216);
 //	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
 //	wt += chunklen;
-//	EXPECT_EQ(find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK),
+//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK),
 //		(uchar*)NULL);
 //}
 //// last run and passed on 22 Agu 2016

@@ -65,10 +65,10 @@ void ch_enterSupportedAddressTypes(ChunkID chunkID, gboolean with_ipv4,
 
 unsigned int ch_getSupportedAddressTypes(ChunkID chunkID);
 
-/* ch_enterCookiePreservative enters a cookie preservative with the suggested cookie lifespan 
+/* mch_write_cookie_preservative enters a cookie preservative with the suggested cookie lifespan 
  into an init chunk.
  */
-void ch_enterCookiePreservative(ChunkID chunkID,
+void mch_write_cookie_preservative(ChunkID chunkID,
         unsigned int lifespanIncrement);
 
 /* ch_enterIPaddresses enters local IP-addresses to an init or initAck */
@@ -227,7 +227,7 @@ void ch_enterErrorCauseData(ChunkID chunkID, unsigned short code,
 /* enters the staleness of a cookie into an error chunk. */
 void ch_enterStaleCookieError(ChunkID chunkID, unsigned int staleness);
 
-unsigned int ch_stalenessOfCookieError(ChunkID chunkID);
+unsigned int mch_read_cookie_staleness(ChunkID chunkID);
 
 /***** create and read from shutdown chunk ******************************************************/
 

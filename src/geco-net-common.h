@@ -491,7 +491,7 @@ extern void error_log_sys1(short error_loglvl, const char *module_name, int line
 #include "timestamp.h"
 #define get_safe_time_ms() ((uint)(((uint64)(gettimestamp() / stamps_per_ms())) % OVERFLOW_MS))
 
-/*helper to init timeval struct with ms interval*/
+ /*helper to init timeval struct with ms interval*/
 #define fills_timeval(timeval_ptr, time_t_inteval)\
 (timeval_ptr)->tv_sec = (time_t_inteval) / 1000;\
 (timeval_ptr)->tv_usec = ((time_t_inteval) % 1000) * 1000;

@@ -10,11 +10,16 @@ bool completed_chunks_[MAX_CHUNKS_SIZE];/*if a chunk is completely constructed*/
 uint simple_chunk_index_ = 0; /* current simple chunk index */
 simple_chunk_t* simple_chunk_t_ptr_ = NULL; /* current simple chunk ptr */
 
+uchar mch_read_chunk_type(chunk_id_t chunkID)
+{
+	assert(simple_chunks_[chunkID] != NULL);
+	return simple_chunks_[chunkID]->chunk_header.chunk_id;
+}
 simple_chunk_t* mch_read_simple_chunk(uint chunkID)
 {
 	return simple_chunks_[chunkID];
 }
-simple_chunk_t** mch_read_simple_chunks()
+ simple_chunk_t** mch_read_simple_chunks()
 {
 	return simple_chunks_;
 }
@@ -284,7 +289,7 @@ uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len)
 	ushort vlp_len;
 	uint padding_len;
 	uint read_len = 0;
-	uint vlptype;
+	ushort vlptype;
 	vlparam_fixed_t* vlp;
 
 	while (read_len < len)
@@ -1104,4 +1109,99 @@ bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk)
 	mch_write_hmac(cookie, cookieLength, ourSignature); // recalculate and store hmac
 
 	return (memcmp(cookieSignature, ourSignature, HMAC_LEN) == 0); //compare noth hmacs
+}
+
+void mch_write_cookie_preserve(chunk_id_t chunkID, uint lifespanIncrement)
+{
+	assert(simple_chunks_[chunkID] != NULL);
+	assert(completed_chunks_[chunkID] == false);
+	assert(simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_INIT);
+
+	init_chunk_t* initchunk = (init_chunk_t*)simple_chunks_[chunkID];
+	ushort vl_param_total_length = initchunk->chunk_header.chunk_length - INIT_CHUNK_FIXED_SIZES;
+	uchar* cookie_preservative_ptr = mch_read_vlparam(VLPARAM_COOKIE_PRESEREASONV,
+		initchunk->variableParams, vl_param_total_length); 	/* check if init chunk already contains a cookie preserv. */
+
+	cookie_preservative_t*  preserv;
+	if (cookie_preservative_ptr == NULL)
+	{
+		/* append the new parameter */
+		preserv = (cookie_preservative_t*)&(initchunk->variableParams[curr_write_pos_[chunkID]]);
+		/* _might_ be overflow here, at some time... */
+		curr_write_pos_[chunkID] += sizeof(cookie_preservative_t);
+		if (curr_write_pos_[chunkID] > MAX_INIT_CHUNK_OPTIONS_SIZE)
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "mch_write_cookie_preserve():: curr_write_pos_[chunkID] > MAX_INIT_CHUNK_OPTIONS_SIZE, nor enough space");
+		}
+	}
+
+	/* enter cookie preservative */
+	preserv->vlparam_header.param_type = htons(VLPARAM_COOKIE_PRESEREASONV);
+	preserv->vlparam_header.param_length = htons(sizeof(cookie_preservative_t));
+	preserv->cookieLifetimeInc = htonl(lifespanIncrement);
+}
+
+uchar* mch_find_first_chunk_of(uchar * packet_value, uint packet_val_len, uint chunk_type)
+{
+	uint chunk_len = 0;
+	uint read_len = 0;
+	uint padding_len;
+	chunk_fixed_t* chunk;
+	uchar* curr_pos = packet_value;
+
+	while (read_len < packet_val_len)
+	{
+		EVENTLOG3(VVERBOSE, "mch_find_first_chunk_of(%u)::packet_val_len=%d, read_len=%d", chunk_type, packet_val_len,
+			read_len);
+
+		if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
+		{
+			ERRLOG(MINOR_ERROR, "mch_find_first_chunk_of():not enough for CHUNK_FIXED_SIZE(4 bytes) invalid !");
+			return NULL;
+		}
+
+		chunk = (chunk_fixed_t*)curr_pos;
+		chunk_len = get_chunk_length(chunk);
+
+		if (chunk_len < CHUNK_FIXED_SIZE)
+		{
+			ERRLOG1(MINOR_ERROR, "mch_find_first_chunk_of():chunk_len (%u) < CHUNK_FIXED_SIZE(4 bytes)!", chunk_len);
+			return NULL;
+		}
+		if (chunk_len + read_len > packet_val_len)
+		{
+			ERRLOG3(MINOR_ERROR, "mch_find_first_chunk_of():chunk_len(%u) + read_len(%u) < packet_val_len(%u)!", chunk_len,
+				read_len, packet_val_len);
+			return NULL;
+		}
+
+		if (chunk->chunk_id == chunk_type)
+			return curr_pos;
+
+		read_len += chunk_len;
+		while (read_len & 3)
+			++read_len;
+		curr_pos = packet_value + read_len;
+	}
+	return NULL;
+}
+
+uint mch_read_cookie_staleness(chunk_id_t errorCID)
+{
+	assert(simple_chunks_[errorCID] != NULL);
+	assert(simple_chunks_[errorCID]->chunk_header.chunk_id == CHUNK_ERROR);
+
+	ushort vl_param_total_length = simple_chunks_[errorCID]->chunk_header.chunk_length - CHUNK_FIXED_SIZE;
+	stale_cookie_err_t* staleCE = (stale_cookie_err_t*)mch_read_vlparam(ECC_STALE_COOKIE_ERROR,
+		simple_chunks_[errorCID]->chunk_value, vl_param_total_length); 	/* check if init chunk already contains STALE_COOKIE*/
+	if (staleCE == NULL)
+	{
+		EVENTLOG(NOTICE, "mch_read_cookie_staleness()::error chunk does not contain a cookie stalenes");
+	}
+	else
+	{
+		/* found cookie staleness of cookie */
+		return ntohl(staleCE->staleness);
+	}
+	return 0;
 }
