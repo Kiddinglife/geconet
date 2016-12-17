@@ -82,12 +82,12 @@ enum ConnectionLostReason
 {
 	PeerAbortConnection,
 	PeerUnreachable,
-	exceed_max_retrans_count,
-	no_tcb,
-	invalid_param,
-	unknown_param,
+	ExceedMaxRetransCount,
+	NO_TCB,
+	InvalidParam,
+	UnknownParam,
 	/* maybe some others............. */
-	ConnectionLostReasonSize  // number od reasons
+	NumofLostReasons  // number od reasons
 };
 
 const uint COMM_UP_RECEIVED_VALID_COOKIE = 1;

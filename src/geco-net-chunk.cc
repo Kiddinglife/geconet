@@ -1205,3 +1205,8 @@ uint mch_read_cookie_staleness(chunk_id_t errorCID)
 	}
 	return 0;
 }
+
+chunk_id_t mch_make_shutdown_chunk(uint acked_cum_tsn)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}

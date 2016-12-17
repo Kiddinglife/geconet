@@ -87,7 +87,7 @@ typedef struct SCTP_CONTROLDATA
 	/** stores timer-ID of init/cookie-timer, used to stop this timer */
 	TimerID initTimer;
 	/** */
-	unsigned int initTimerDuration;
+	unsigned int init_timer_interval;
 	/**  stores the association id (==tag) of this association */
 	unsigned int associationID;
 	/** Counter for init and cookie retransmissions */
@@ -107,7 +107,7 @@ typedef struct SCTP_CONTROLDATA
 	/** value for maximum retransmissions per association */
 	int assocMaxRetransmissions;
 	/** value for maximum initial retransmissions per association */
-	int assocMaxInitRetransmissions;
+	int max_assoc_retrans_count;
 	/** value for the current cookie lifetime */
 	int cookieLifeTime;
 	/** the sctp instance */
@@ -170,18 +170,18 @@ static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 
 		event_log(EXTERNAL_EVENT, "init timer expired in state COOKIE_WAIT");
 
-		if (smctrl->initRetransCounter < smctrl->assocMaxInitRetransmissions)
+		if (smctrl->initRetransCounter < smctrl->max_assoc_retrans_count)
 		{
 			/* increase retransmissission-counter, resend init and restart init-timer */
 			smctrl->initRetransCounter++;
 			bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->initChunk, NULL);
 			bu_sendAllChunks(NULL);
 			/* restart init timer after timer backoff */
-			smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+			smctrl->init_timer_interval = min(smctrl->init_timer_interval * 2, (unsigned int)pm_getRtoMax());
 			event_logi(INTERNAL_EVENT_0, "init timer backedoff %d msecs",
-				smctrl->initTimerDuration);
+				smctrl->init_timer_interval);
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_INIT,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_INIT,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -203,19 +203,19 @@ static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 
 		event_log(EXTERNAL_EVENT, "cookie timer expired in state COOKIE_ECHOED");
 
-		if (smctrl->initRetransCounter < smctrl->assocMaxInitRetransmissions)
+		if (smctrl->initRetransCounter < smctrl->max_assoc_retrans_count)
 		{
 			/* increase retransmissission-counter, resend init and restart init-timer */
 			smctrl->initRetransCounter++;
 			bu_put_Ctrl_Chunk((SCTP_simple_chunk *)smctrl->peer_cookie_chunk, NULL);
 			bu_sendAllChunks(NULL);
 			/* restart cookie timer after timer backoff */
-			smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+			smctrl->init_timer_interval = min(smctrl->init_timer_interval * 2, (unsigned int)pm_getRtoMax());
 			event_logi(INTERNAL_EVENT_0, "cookie timer backedoff %d msecs",
-				smctrl->initTimerDuration);
+				smctrl->init_timer_interval);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_INIT,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_INIT,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -251,12 +251,12 @@ static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 			ch_deleteChunk(shutdownCID);
 
 			/* restart shutdown timer after timer backoff */
-			smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+			smctrl->init_timer_interval = min(smctrl->init_timer_interval * 2, (unsigned int)pm_getRtoMax());
 			event_logi(INTERNAL_EVENT_0, "shutdown timer backed off %d msecs",
-				smctrl->initTimerDuration);
+				smctrl->init_timer_interval);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -294,11 +294,11 @@ static void msm_timer_expired(TimerID timerID, void *associationIDvoid, void *un
 			/* ch_deleteChunk(shutdown_complete_CID); */
 
 			/* restart shutdown timer after timer backoff */
-			smctrl->initTimerDuration = min(smctrl->initTimerDuration * 2, (unsigned int)pm_getRtoMax());
+			smctrl->init_timer_interval = min(smctrl->init_timer_interval * 2, (unsigned int)pm_getRtoMax());
 			event_logi(INTERNAL_EVENT_0, "shutdown timer backed off %d msecs",
-				smctrl->initTimerDuration);
+				smctrl->init_timer_interval);
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 		}
 		else
@@ -438,12 +438,12 @@ void msm_associate(unsigned short noOfOutStreams,
 		smctrl->peer_tie_tag = 0;
 
 		/* start init timer */
-		smctrl->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
+		smctrl->init_timer_interval = pm_readRTO(pm_readPrimaryPath());
 
 		if (smctrl->initTimer != 0)
 			sctp_stopTimer(smctrl->initTimer);
 
-		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
+		smctrl->initTimer = adl_startTimer(smctrl->init_timer_interval,
 			&msm_timer_expired,
 			TIMER_TYPE_INIT,
 			(void *)&smctrl->associationID, NULL);
@@ -498,13 +498,13 @@ void scu_shutdown()
 			ch_deleteChunk(shutdownCID);
 
 			/* start shutdown timer */
-			smctrl->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
+			smctrl->init_timer_interval = pm_readRTO(pm_readPrimaryPath());
 
 			if (smctrl->initTimer != 0)
 				sctp_stopTimer(smctrl->initTimer);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 
 			smctrl->initRetransCounter = 0;
@@ -1253,7 +1253,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 
 		/* start cookie timer */
 		state = COOKIE_ECHOED;
-		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
+		smctrl->initTimer = adl_startTimer(smctrl->init_timer_interval,
 			&msm_timer_expired, TIMER_TYPE_INIT,
 			(void *)&smctrl->associationID, NULL);
 		break;
@@ -1897,7 +1897,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 				sctp_stopTimer(smctrl->initTimer);
 
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 			new_state = SHUTDOWNACKSENT;
 		}
@@ -1928,7 +1928,7 @@ int sctlr_shutdown(SCTP_simple_chunk *shutdown_chunk)
 			if (smctrl->initTimer != 0)
 				sctp_stopTimer(smctrl->initTimer);
 			smctrl->initTimer =
-				adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
+				adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 				(void *)&smctrl->associationID, NULL);
 
 			new_state = SHUTDOWNACKSENT;
@@ -2386,12 +2386,12 @@ void sci_allChunksAcked()
 		ch_deleteChunk(shutdownCID);
 
 		/* start shutdown timer */
-		smctrl->initTimerDuration = pm_readRTO(pm_readPrimaryPath());
+		smctrl->init_timer_interval = pm_readRTO(pm_readPrimaryPath());
 
 		if (smctrl->initTimer != 0)
 			sctp_stopTimer(smctrl->initTimer);
 
-		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration,
+		smctrl->initTimer = adl_startTimer(smctrl->init_timer_interval,
 			&msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 			(void *)&smctrl->associationID, NULL);
 
@@ -2419,7 +2419,7 @@ void sci_allChunksAcked()
 		if (smctrl->initTimer != 0)
 			sctp_stopTimer(smctrl->initTimer);
 
-		smctrl->initTimer = adl_startTimer(smctrl->initTimerDuration, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
+		smctrl->initTimer = adl_startTimer(smctrl->init_timer_interval, &msm_timer_expired, TIMER_TYPE_SHUTDOWN,
 			(void *)&smctrl->associationID, NULL);
 
 		state = SHUTDOWNACKSENT;
@@ -2456,7 +2456,7 @@ void *msm_new(void *sctpInstance)
 
 	tmp->association_state = CLOSED;
 	tmp->initTimer = 0;
-	tmp->initTimerDuration = RTO_INITIAL;
+	tmp->init_timer_interval = RTO_INITIAL;
 	tmp->initRetransCounter = 0;
 	tmp->initChunk = NULL;
 	tmp->peer_cookie_chunk = NULL;
@@ -2467,7 +2467,7 @@ void *msm_new(void *sctpInstance)
 	tmp->peer_tie_tag = 0;
 
 	tmp->assocMaxRetransmissions = mdi_getDefaultAssocMaxRetransmits(sctpInstance);
-	tmp->assocMaxInitRetransmissions = mdi_getDefaultMaxInitRetransmits(sctpInstance);
+	tmp->max_assoc_retrans_count = mdi_getDefaultMaxInitRetransmits(sctpInstance);
 	tmp->cookieLifeTime = mdi_getDefaultValidCookieLife(sctpInstance);
 	tmp->instance = sctpInstance;
 
@@ -2518,7 +2518,7 @@ int sci_getMaxAssocRetransmissions(void)
 }
 
 /**
- * get current parameter value for assocMaxInitRetransmissions
+ * get current parameter value for max_assoc_retrans_count
  * @return current value, -1 on error
  */
 int sci_getMaxInitRetransmissions(void)
@@ -2532,7 +2532,7 @@ int sci_getMaxInitRetransmissions(void)
 		smctrl = old_data;
 		return -1;
 	}
-	max = smctrl->assocMaxInitRetransmissions;
+	max = smctrl->max_assoc_retrans_count;
 	smctrl = old_data;
 	return max;
 }
@@ -2594,7 +2594,7 @@ int sci_setMaxInitRetransmissions(int new_max)
 		smctrl = old_data;
 		return -1;
 	}
-	smctrl->assocMaxInitRetransmissions = new_max;
+	smctrl->max_assoc_retrans_count = new_max;
 	smctrl = old_data;
 	return 0;
 }

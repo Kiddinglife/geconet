@@ -166,5 +166,6 @@ chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam);
 error_chunk_t* mch_make_error_chunk();
 chunk_id_t mch_make_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk);
 chunk_id_t mch_make_init_ack_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk);
+chunk_id_t mch_make_shutdown_chunk(uint acked_cum_tsn);
 
 #endif

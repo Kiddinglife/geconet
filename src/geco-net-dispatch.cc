@@ -234,7 +234,7 @@ ushort mdm_get_ostreams(void);
 ///////////////////////////// mpath  path_controller_t module////////////////////////////////////////
 int mpath_get_rto_initial(void);
 int mpath_get_rto_min(void);
-int mpath_get_rto_max(void);
+uint mpath_get_rto_max(void);
 int mpath_get_max_retrans_per_path(void);
 /**
  * pm_readRTO returns the currently set RTO value in msecs for a certain path.
@@ -340,7 +340,7 @@ void mdi_clear_current_channel();
  * Calls the respective ULP callback function.
  * @param  status  type of event, that has caused the association to be terminated
  */
-void mdi_cb_connection_lost(uint status);
+void on_disconnected(uint status);
 /**
  * helper function, that simply sets the chunksSent flag of this path management instance to true
  * @param path_param_id  index of the address, where flag is set*/
@@ -372,6 +372,13 @@ void mdi_unlock_bundle_ctrl(int* ad_idx = NULL);
 int mdi_stop_hb_timer(short pathID);
 channel_t* mdi_find_channel();
 /////////////////////////////////////////  mdis  dispatcher module  /////////////////////////////////////////
+
+
+
+/////////////////////////////////////////  receive module  /////////////////////////////////////////
+uint  mrecv_read_cummulative_tsn_acked();
+/////////////////////////////////////////  receive module  /////////////////////////////////////////
+
 
 //\\ IMPLEMENTATIONS \\//
 inline unsigned int mfc_get_queued_chunks_count(void)
@@ -491,7 +498,7 @@ inline int mpath_get_rto_min(void)
 	}
 	return pmData->rto_min;
 }
-inline int mpath_get_rto_max(void)
+inline uint mpath_get_rto_max(void)
 {
 	path_controller_t* pmData = mdis_read_mpath();
 	if (pmData == NULL)
@@ -555,11 +562,17 @@ inline int msm_get_cookielife(void)
 	return smctrl_->cookie_lifetime;
 }
 
+
+uint mrecv_read_cummulative_tsn_acked()
+{
+	//@TODO
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
 // we firstly try raw socket if it fails we switch to udp-tunneld by setting to upd socks in on_connection_failed_cb()
 static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, void* unused)
 {
 	EVENTLOG(DEBUG, "msm_timer_expired() called ---not implemented !!!!");
-	return NOT_RESET_TIMER_FROM_CB;
 
 	// retrieve association from list
 	curr_channel_ = channels_[*(int*)&associationID];
@@ -573,31 +586,174 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 	smctrl_t* smctrl = mdi_read_smctrl();
 	if (smctrl == NULL)
 	{
-		ERRLOG(MAJOR_ERROR, "no smctrl with channel presents -> return");
+		ERRLOG(WARNNING_ERROR, "no smctrl with channel presents -> return");
 		return false;
 	}
 
-	ushort primary_path = mpath_read_primary_path();
+	int primary_path = mpath_read_primary_path();
 	EVENTLOG3(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, PrimaryPath=%u", (*(unsigned int *)associationID),
 		smctrl->channel_state, primary_path);
 
 	switch (smctrl->channel_state)
-		//TODO
 	{
-	case CookieWait:
+	case ChannelState::CookieWait:
+		EVENTLOG(NOTICE, "init timer expired in state COOKIE_WAIT");
+		if (ttype != TIMER_TYPE_INIT)
+		{
+			ERRLOG(WARNNING_ERROR, "timer type (TIMER_TYPE_INIT) not matched channel_state  COOKIE_WAIT");
+			return false;
+		}
+
+		if (smctrl->init_retrans_count < smctrl->max_assoc_retrans_count)
+		{
+			// resend init
+			mdis_bundle_ctrl_chunk((simple_chunk_t*)smctrl->my_init_chunk);
+			mdi_send_bundled_chunks();
+
+			// restart init timer after timer backoff 
+			smctrl->init_retrans_count++;
+			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
+			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
+		}
+		else
+		{
+			EVENTLOG(WARNNING_ERROR, "init retransmission counter exeeded threshold in state COOKIE_WAIT");
+
+			// del timer and call lost first because we need channel ptr but mdi_delete_curr_channel will zero it
+			geco_free_ext(smctrl->my_init_chunk, __FILE__, __LINE__);
+			smctrl->my_init_chunk = NULL;
+			mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = NULL;
+			on_disconnected(ConnectionLostReason::ExceedMaxRetransCount); //report error to ULP
+
+			mdi_delete_curr_channel();
+			mdi_clear_current_channel();
+		}
 		break;
-	case CookieEchoed:
+	case ChannelState::CookieEchoed:
+		EVENTLOG(NOTICE, "init timer expired in state CookieEchoed");
+		if (ttype != TIMER_TYPE_INIT)
+		{
+			ERRLOG(WARNNING_ERROR, "timer type (TIMER_TYPE_INIT) not matched channel_state  CookieEchoed");
+			return false;
+		}
+
+		if (smctrl->init_retrans_count < smctrl->max_assoc_retrans_count)
+		{
+			// resend init
+			mdis_bundle_ctrl_chunk((simple_chunk_t*)smctrl->my_init_chunk);
+			mdi_send_bundled_chunks();
+
+			// restart init timer after timer backoff 
+			smctrl->init_retrans_count++;
+			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
+			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
+		}
+		else
+		{
+			EVENTLOG(NOTICE, "init retransmission counter exeeded threshold in state CookieEchoed");
+
+			// del timer and call lost first because we need channel ptr but mdi_delete_curr_channel will zero it
+			geco_free_ext(smctrl->peer_cookie_chunk, __FILE__, __LINE__);
+			smctrl->peer_cookie_chunk = NULL;
+			mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = NULL;
+			on_disconnected(ConnectionLostReason::ExceedMaxRetransCount); //report error to ULP
+
+			mdi_delete_curr_channel();
+			mdi_clear_current_channel();
+		}
 		break;
-	case ShutdownSent:
+	case ChannelState::ShutdownSent:
+		EVENTLOG(NOTICE, "init timer expired in state ShutdownSent");
+		if (ttype != TIMER_TYPE_INIT)
+		{
+			ERRLOG(WARNNING_ERROR, "timer type (TIMER_TYPE_SHUTDOWN) not matched channel_state  ShutdownSent");
+			return false;
+		}
+
+		if (smctrl->init_retrans_count < smctrl->max_assoc_retrans_count)
+		{
+			/* make and send shutdown again, with updated TSN (section 9.2)     */
+			//@TODO mch_make_shutdown_chunk AND mrecv_read_cummulative_tsn_acked
+			chunk_id_t shutdownCID = mch_make_shutdown_chunk(mrecv_read_cummulative_tsn_acked());
+			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownCID), &primary_path);
+			mdi_send_bundled_chunks(&primary_path);
+			mch_free_simple_chunk(shutdownCID);
+
+			// restart init timer after timer backoff 
+			smctrl->init_retrans_count++;
+			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
+			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
+		}
+		else
+		{
+			EVENTLOG(NOTICE, "init retransmission counter exeeded threshold in state ShutdownSent");
+
+			// del timer and call lost first because we need channel ptr but mdi_delete_curr_channel will zero it
+			mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = NULL;
+			on_disconnected(ConnectionLostReason::ExceedMaxRetransCount); //report error to ULP
+
+			mdi_delete_curr_channel();
+			mdi_clear_current_channel();
+		}
 		break;
-	case ShutdownAckSent:
+	case ChannelState::ShutdownAckSent:
+		EVENTLOG(NOTICE, "init timer expired in state ShutdownAckSent");
+		if (ttype != TIMER_TYPE_INIT)
+		{
+			ERRLOG(WARNNING_ERROR, "timer type (TIMER_TYPE_SHUTDOWN) not matched channel_state  ShutdownAckSent");
+			return false;
+		}
+
+		if (smctrl->init_retrans_count < smctrl->max_assoc_retrans_count)
+		{
+			// resend ShutdownAck
+			chunk_id_t shutdownAckCID = mch_make_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_TBIT_UNSET);
+			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownAckCID), &primary_path);
+			mdi_send_bundled_chunks(&primary_path);
+			mch_free_simple_chunk(shutdownAckCID);
+
+			/* COMMENTED OUT BECAUSE PROBABLY VERY WRONG............. */
+			/* make and send shutdown_complete again */
+			/* shutdown_complete_CID = ch_makeSimpleChunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_NONE); */
+			/* bu_put_Ctrl_Chunk(ch_chunkString(shutdown_complete_CID)); */
+			/* bu_sendAllChunks(&primary); */
+			/* ch_deleteChunk(shutdown_complete_CID); */
+
+			// restart init timer after timer backoff 
+			smctrl->init_retrans_count++;
+			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
+			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
+		}
+		else
+		{
+			EVENTLOG(NOTICE, "init retransmission counter exeeded threshold in state ShutdownAckSent");
+
+			// del timer and call lost first because we need channel ptr but mdi_delete_curr_channel will zero it
+			geco_free_ext(smctrl->peer_cookie_chunk, __FILE__, __LINE__);
+			smctrl->peer_cookie_chunk = NULL;
+			mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = NULL;
+			on_disconnected(ConnectionLostReason::ExceedMaxRetransCount); //report error to ULP
+
+			mdi_delete_curr_channel();
+			mdi_clear_current_channel();
+		}
 		break;
 	default:
-		ERRLOG1(MAJOR_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
+		ERRLOG(WARNNING_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
+		mtra_timeouts_del(smctrl->init_timer_id);
 		smctrl->init_timer_id = NULL;
+		return false;
 		break;
 	}
-	return false;
+	return true;
 }
 void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams, union sockaddrunion *destinationList,
 	unsigned int numDestAddresses)
@@ -720,7 +876,7 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 		smctrl->init_timer_id = NULL;
 	}
 
-	mdi_cb_connection_lost(ConnectionLostReason::PeerAbortConnection);
+	on_disconnected(ConnectionLostReason::PeerAbortConnection);
 
 	// delete all data of channel
 	mdi_delete_curr_channel();
@@ -1115,8 +1271,8 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
+			}
 		}
-	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -1165,7 +1321,7 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-}
+	}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
 	uint numPeerAddresses, uint supported_types, bool receivedFromPeer)
 {
@@ -1793,7 +1949,7 @@ void mdi_delete_curr_channel(void)
 	}
 }
 
-void mdi_cb_connection_lost(uint status)
+void on_disconnected(uint status)
 {
 	assert(curr_channel_ != NULL);
 	assert(curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif != NULL);
@@ -1802,16 +1958,16 @@ void mdi_cb_connection_lost(uint status)
 	for (uint i = 0; i < curr_channel_->remote_addres_size; i++)
 	{
 		saddr2str(&curr_channel_->remote_addres[i], str, 128, &port);
-		EVENTLOG2(DEBUG, "mdi_cb_connection_lost()::remote_addres %s:%d", str, port);
+		EVENTLOG2(DEBUG, "on_disconnected()::remote_addres %s:%d", str, port);
 	}
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
 	{
 		saddr2str(&curr_channel_->local_addres[i], str, 128, &port);
-		EVENTLOG2(DEBUG, "mdi_cb_connection_lost()::local_addres %s:%d", str, port);
+		EVENTLOG2(DEBUG, "on_disconnected()::local_addres %s:%d", str, port);
 	}
 	geco_instance_t* old_ginst = curr_geco_instance_;
 	channel_t* old_channel = curr_channel_;
-	EVENTLOG2(INTERNAL_TRACE, "mdi_cb_connection_lost(assoc %u, status %u)", curr_channel_->channel_id, status);
+	EVENTLOG2(INTERNAL_TRACE, "on_disconnected(assoc %u, status %u)", curr_channel_->channel_id, status);
 	//ENTER_CALLBACK("communicationLostNotif");
 	curr_geco_instance_->applicaton_layer_cbs.communicationLostNotif(curr_channel_->channel_id, status,
 		curr_channel_->application_layer_dataptr);
@@ -2325,7 +2481,7 @@ int msm_process_init_chunk(init_chunk_t * init)
 		if (smctrl != NULL)
 		{
 			mdi_delete_curr_channel();
-			mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+			on_disconnected(ConnectionLostReason::InvalidParam);
 			mdi_clear_current_channel();
 		}
 		return STOP_PROCESS_CHUNK_FOR_INVALID_MANDORY_INIT_PARAMS;
@@ -2349,7 +2505,7 @@ int msm_process_init_chunk(init_chunk_t * init)
 			}
 			mdi_unlock_bundle_ctrl();
 			mdi_delete_curr_channel();
-			mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+			on_disconnected(ConnectionLostReason::InvalidParam);
 			mdi_clear_current_channel();
 			return STOP_PROCESS_CHUNK_FOR_NULL_SRC_ADDR;
 		}
@@ -3466,7 +3622,7 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
 			if (smctrl != NULL)
 			{
 				mdi_delete_curr_channel();
-				mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+				on_disconnected(ConnectionLostReason::InvalidParam);
 				mdi_clear_current_channel();
 			}
 			return_state = ChunkProcessResult::StopAndDeleteChannel_ValidateInitParamFailedError;
@@ -3492,7 +3648,7 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
 				}
 				mdi_unlock_bundle_ctrl();
 				mdi_delete_curr_channel();
-				mdi_cb_connection_lost(ConnectionLostReason::invalid_param);
+				on_disconnected(ConnectionLostReason::InvalidParam);
 				mdi_clear_current_channel();
 				return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
 				return return_state;
@@ -3574,7 +3730,7 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
 			}
 			mdi_unlock_bundle_ctrl();
 			mdi_delete_curr_channel();
-			mdi_cb_connection_lost(ConnectionLostReason::unknown_param);
+			on_disconnected(ConnectionLostReason::UnknownParam);
 			mdi_clear_current_channel();
 			smctrl->channel_state = ChannelState::Closed;
 			return_state = ChunkProcessResult::StopProcessAndDeleteChannel;
@@ -4460,7 +4616,7 @@ int msm_process_abort_chunk()
 	}
 
 	mdi_unlock_bundle_ctrl();
-	mdi_cb_connection_lost(ConnectionLostReason::PeerAbortConnection);
+	on_disconnected(ConnectionLostReason::PeerAbortConnection);
 	mdi_delete_curr_channel();
 	mdi_clear_current_channel();
 
@@ -6149,7 +6305,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
