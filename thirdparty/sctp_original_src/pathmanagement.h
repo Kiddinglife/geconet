@@ -78,12 +78,12 @@ void pm_heartbeat(SCTP_heartbeat * heartbeatChunk, unsigned int source_address);
 
 /*------------------- Signals from the Unix-Interface --------------------------------------------*/
 
-/* pm_heartbeatTimer is called by the adaption-layer when the heartbeat timer expires.
+/* mpath_heartbeat_timer_expired is called by the adaption-layer when the heartbeat timer expires.
    params: timerID:            ID of timer
            associationIDvoid:  pointer to the association-ID
            pathIDvoid:         pointer to the path-ID
 */
-void pm_heartbeatTimer(TimerID timerID, void *associationIDvoid, void *pathIDvoid);
+void mpath_heartbeat_timer_expired(TimerID timerID, void *associationIDvoid, void *pathIDvoid);
 
 
 

@@ -10,6 +10,7 @@
 
 #define USED_UDP_PORT 45000
 //#define USE_UDP
+#define  MD5_HMAC
 
 //comment those macros before running unit tests
 //uncomment those macros after running unit tests

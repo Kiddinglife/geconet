@@ -3,7 +3,9 @@
 
 #include <string>
 #include <iostream>
+
 #include "geco-common.h"
+#include "geco-net-config.h"
 
 /**
 * CRC32Ϊ32bit�ļ�hash��MD5Ϊ128bit�ϸ��ӵ�hash�㷨��
@@ -18,7 +20,7 @@
 * ĿǰSHA1��Ӧ�ý�Ϊ�㷺����ҪӦ����CA������֤���У�
 * ������Ŀǰ�����������е�BT����У�Ҳ��ʹ��SHA1�������ļ�У��ġ�
 */
-#define  MD5_HMAC
+
 #undef   SHA20_HMAC
 #undef   SHA32_HMAC
 #undef   SHA48_HMAC
@@ -43,8 +45,8 @@
 #endif
 #define MAX_DEST    16
 
-extern void (*gset_checksum)(char *buffer, int length);
-extern int (*gvalidate_checksum)(char *buffer, int length);
+extern void(*gset_checksum)(char *buffer, int length);
+extern int(*gvalidate_checksum)(char *buffer, int length);
 
 extern int validate_md5_checksum(char *buffer, int length);
 extern void set_md5_checksum(char *buffer, int length);
@@ -59,9 +61,9 @@ extern uchar* get_secre_key(int operation_code);
 /* MD5 context. */
 typedef struct
 {
-    unsigned int state[4]; /* state (ABCD) */
-    unsigned int count[2]; /* number of bits, modulo 2^64 (lsb first) */
-    unsigned char buffer[64]; /* input buffer */
+	unsigned int state[4]; /* state (ABCD) */
+	unsigned int count[2]; /* number of bits, modulo 2^64 (lsb first) */
+	unsigned char buffer[64]; /* input buffer */
 } MD5_CTX;
 extern void MD5Init(MD5_CTX *);
 extern void MD5Update(MD5_CTX *, unsigned char * src, unsigned int len);

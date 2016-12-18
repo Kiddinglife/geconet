@@ -1,4 +1,5 @@
 #include "geco-net-chunk.h"
+#include "geco-net-config.h"
 #include "geco-malloc.h"
 #include <cassert>
 
@@ -1220,4 +1221,68 @@ chunk_id_t mch_make_shutdown_chunk(uint acked_cum_tsn)
 	*cummTSNacked = htonl(acked_cum_tsn);
 
 	return add2chunklist(shutdown_chunk, "created shutdown_chunk %u ");
+}
+
+uint mch_read_path_idx_from_heartbeat(chunk_id_t chunkID)
+{
+	assert(simple_chunks_[chunkID] != NULL);
+	assert(completed_chunks_[chunkID] == false);
+	assert(simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_HBREQ || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_HBACK);
+	return ntohl(((heartbeat_chunk_t*)simple_chunks_[chunkID])->pathID);
+}
+
+uint mch_read_sendtime_from_heartbeat(chunk_id_t chunkID)
+{
+	assert(simple_chunks_[chunkID] != NULL);
+	assert(completed_chunks_[chunkID] == false);
+	assert(simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_HBREQ || simple_chunks_[chunkID]->chunk_header.chunk_id == CHUNK_HBACK);
+	return ntohl(((heartbeat_chunk_t*)simple_chunks_[chunkID])->sendingTime);
+}
+
+bool mch_verify_heartbeat(chunk_id_t heartbeatCID)
+{
+	assert(simple_chunks_[heartbeatCID] != NULL);
+	assert(simple_chunks_[heartbeatCID]->chunk_header.chunk_id == CHUNK_HBACK);
+
+	uchar hbSignature[HMAC_LEN];
+	bool res = false;
+
+	heartbeat_chunk_t* heartbeatChunk = (heartbeat_chunk_t*)simple_chunks_[heartbeatCID];
+	uchar * key = get_secre_key(KEY_READ);
+
+	// store HMAC 
+	memcpy(hbSignature, heartbeatChunk->hmac, HMAC_LEN);
+#ifdef _DEBUG
+	int i;
+	EVENTLOG(VERBOSE, "Got signature: ");
+	for (i = 0; i < 4; i++)
+	{
+		EVENTLOG4(VERBOSE, "%2.2x %2.2x %2.2x %2.2x",
+			heartbeatChunk->hmac[i * 4],
+			heartbeatChunk->hmac[i * 4 + 1],
+			heartbeatChunk->hmac[i * 4 + 2],
+			heartbeatChunk->hmac[i * 4 + 3]);
+	}
+#endif
+	memset(heartbeatChunk->hmac, 0, HMAC_LEN);
+
+	MD5_CTX ctx;
+	MD5Init(&ctx);
+	MD5Update(&ctx, (uchar *)&heartbeatChunk->HB_Info, sizeof(heartbeat_chunk_t) - sizeof(chunk_fixed_t));
+	MD5Update(&ctx, key, SECRET_KEYSIZE);
+	MD5Final(heartbeatChunk->hmac, &ctx);
+
+#ifdef _DEBUG
+	EVENTLOG(VERBOSE, "Computed signature: ");
+	for (i = 0; i < 4; i++)
+	{
+		EVENTLOG4(VERBOSE, "%2.2x %2.2x %2.2x %2.2x",
+			heartbeatChunk->hmac[i * 4],
+			heartbeatChunk->hmac[i * 4 + 1],
+			heartbeatChunk->hmac[i * 4 + 2],
+			heartbeatChunk->hmac[i * 4 + 3]);
+	}
+#endif
+
+	return memcmp(hbSignature, heartbeatChunk->hmac, HMAC_LEN) == 0 ? true : false;
 }

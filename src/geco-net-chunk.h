@@ -53,7 +53,6 @@
 # define __INCLUDE_CHUNK_BUILDER_H
 
 #include "geco-net-common.h"
-#include <assert.h>
 
   /**
    *  check if this is a good cookie, i.e. verify HMAC signature
@@ -61,7 +60,11 @@
    */
 bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk);
 int mch_validate_init_vlps(uint src_cid, uint dest_cid);
-
+/**
+* mch_verify_heartbeat checks the signature of the received heartbeat.
+* @return TRUE, if HB signature was okay, else FALSE
+*/
+bool mch_verify_heartbeat(chunk_id_t heartbeatCID);
 
 /**
 * @brief returns a pointer to the beginning of a simple chunk,
@@ -104,7 +107,6 @@ uint mch_read_cookie_preserve(uint chunkID, bool ignore_cookie_life_spn_from_ini
 // ch_enterCookiePreservative appends a cookie preservative with the suggested cookie lifespan to an init chunk.
 void mch_write_cookie_preserve(chunk_id_t chunkID, uint lifespanIncrement);
 uint mch_read_cookie_staleness(chunk_id_t errorCID);
-
 /**
 * @brief scans for a parameter of a certain type in a message string.
 * The message string must point to a parameter header.
@@ -125,8 +127,10 @@ uchar* mch_read_vlparam(uint vlp_type, uchar* vlp_fixed, uint len);
 * only used for finding some vlparam in init or init ack chunks
 * NULL no geco_instance_params, otherwise have geco_instance_params, return vlp fixed*/
 uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, ushort param_type);
-
-
+// mch_read_path_idx reads the path heartbeat on which the heartbeat was sent.
+uint mch_read_path_idx_from_heartbeat(chunk_id_t chunkID);
+// mch_read_sendtime_from_heartbeat reads the sending time of a heartbeat.
+unsigned int mch_read_sendtime_from_heartbeat(chunk_id_t chunkID);
 
 void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6, bool with_dns);
 void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode, uchar* data = 0, ushort dataLength = 0);

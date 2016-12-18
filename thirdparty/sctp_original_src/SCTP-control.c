@@ -342,7 +342,7 @@ void msm_associate(unsigned short noOfOutStreams,
 	bool withPRSCTP)
 {
 	unsigned int state;
-	guint16 nlAddresses;
+	unsigned short nlAddresses;
 	union sockunion lAddresses[MAX_NUM_ADDRESSES];
 	ChunkID initCID;
 	unsigned int supportedTypes = 0, count;
@@ -376,7 +376,7 @@ void msm_associate(unsigned short noOfOutStreams,
 		/* enter enter local addresses to message. I send an Init here, so
 				 * I will include all of my addresses !
 				 void mdi_validate_localaddrs_before_write_to_init(union sockunion laddresses[MAX_NUM_ADDRESSES],
-				 guint16 * noOfAddresses,
+				 unsigned short * noOfAddresses,
 				 union sockunion *peerAddress,
 				 unsigned int numPeerAddresses,
 				 unsigned int addressTypes,
@@ -690,9 +690,9 @@ int sctlr_init(SCTP_init *init)
 	   */
 
 	unsigned int state;
-	guint16 nlAddresses;
+	unsigned short nlAddresses;
 	union sockunion lAddresses[MAX_NUM_ADDRESSES];
-	guint16 nrAddresses;
+	unsigned short nrAddresses;
 	union sockunion rAddresses[MAX_NUM_ADDRESSES];
 	union sockunion last_source;
 
@@ -1055,7 +1055,7 @@ bool sctlr_initAck(SCTP_init *initAck)
 	bool peerSupportsIPV4 = FALSE;
 	bool peerSupportsIPV6 = FALSE;
 	short preferredPath;
-
+	
 	initAckCID = mch_make_simple_chunk((SCTP_simple_chunk *)initAck);
 
 	if (ch_chunkType(initAckCID) != CHUNK_INIT_ACK)

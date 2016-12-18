@@ -228,6 +228,14 @@ ushort mdm_get_ostreams(void);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////// mpath  path_controller_t module////////////////////////////////////////
+/* The states of pathmanagement, also used for network status change */
+#define  PM_ACTIVE                            0
+#define  PM_INACTIVE                        1
+#define  PM_ADDED                            2
+#define  PM_REMOVED                       3
+#define  PM_PATH_UNCONFIRMED    5
+#define  PM_INITIAL_HB_INTERVAL    30000
+
 int mpath_get_rto_initial(void);
 int mpath_get_rto_min(void);
 uint mpath_get_rto_max(void);
@@ -249,12 +257,12 @@ bundle_controller_t* mdi_read_mbu(channel_t* channel = NULL);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
-reltransfer_controller_t* mdi_read_mrtx(void);
-deliverman_controller_t* mdi_read_mdm(void);
+reltransfer_controller_t* mdi_read_mreltsf(void);
+deliverman_controller_t* mdi_read_mdlm(void);
 /**
  * function to return a pointer to the path management module of this association
  * @return  pointer to the pathmanagement data structure, null in case of error.*/
-path_controller_t* mdis_read_mpath();
+path_controller_t* mdi_read_mpath();
 flow_controller_t* mdi_read_mfc(void);
 /**
  * function to return a pointer to the state machine controller of this association
@@ -417,7 +425,7 @@ inline int mfc_get_outstanding_bytes(void)
 inline unsigned int mreltx_get_peer_rwnd()
 {
 	reltransfer_controller_t *rtx;
-	if ((rtx = mdi_read_mrtx()) == NULL)
+	if ((rtx = mdi_read_mreltsf()) == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "mreltx_get_peer_rwnd()::reltransfer_controller_t instance not set !");
 		return 0;
@@ -428,7 +436,7 @@ inline unsigned int mreltx_get_peer_rwnd()
 inline int mreltx_set_peer_arwnd(uint new_arwnd)
 {
 	reltransfer_controller_t *rtx;
-	if ((rtx = (reltransfer_controller_t *)mdi_read_mrtx()) == NULL)
+	if ((rtx = (reltransfer_controller_t *)mdi_read_mreltsf()) == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "retransmit_controller_t instance not set !");
 		return -1;
@@ -441,7 +449,7 @@ inline int mreltx_set_peer_arwnd(uint new_arwnd)
 inline unsigned int rtx_get_unacked_chunks_count()
 {
 	reltransfer_controller_t *rtx;
-	if ((rtx = (reltransfer_controller_t *)mdi_read_mrtx()) == NULL)
+	if ((rtx = (reltransfer_controller_t *)mdi_read_mreltsf()) == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "reltransfer_controller_t instance not set !");
 		return -1;
@@ -453,7 +461,7 @@ inline unsigned int rtx_get_unacked_chunks_count()
 inline int mdm_get_queued_chunks_count()
 {
 	int i, num_of_chunks = 0;
-	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdm();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdlm();
 	if (se == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -468,7 +476,7 @@ inline int mdm_get_queued_chunks_count()
 }
 inline ushort mdm_get_istreams(void)
 {
-	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdm();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdlm();
 	if (se == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -478,7 +486,7 @@ inline ushort mdm_get_istreams(void)
 }
 inline ushort mdm_get_ostreams(void)
 {
-	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdm();
+	deliverman_controller_t* se = (deliverman_controller_t *)mdi_read_mdlm();
 	if (se == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -489,7 +497,7 @@ inline ushort mdm_get_ostreams(void)
 
 inline int mpath_get_rto_initial(void)
 {
-	path_controller_t* pmData = mdis_read_mpath();
+	path_controller_t* pmData = mdi_read_mpath();
 	if (pmData == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -499,7 +507,7 @@ inline int mpath_get_rto_initial(void)
 }
 inline int mpath_get_rto_min(void)
 {
-	path_controller_t* pmData = mdis_read_mpath();
+	path_controller_t* pmData = mdi_read_mpath();
 	if (pmData == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -509,7 +517,7 @@ inline int mpath_get_rto_min(void)
 }
 inline uint mpath_get_rto_max(void)
 {
-	path_controller_t* pmData = mdis_read_mpath();
+	path_controller_t* pmData = mdi_read_mpath();
 	if (pmData == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -519,7 +527,7 @@ inline uint mpath_get_rto_max(void)
 }
 inline int mpath_get_max_retrans_per_path(void)
 {
-	path_controller_t* pmData = mdis_read_mpath();
+	path_controller_t* pmData = mdi_read_mpath();
 	if (pmData == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
@@ -529,7 +537,7 @@ inline int mpath_get_max_retrans_per_path(void)
 }
 inline int mpath_read_rto(short pathID)
 {
-	path_controller_t* pmData = mdis_read_mpath();
+	path_controller_t* pmData = mdi_read_mpath();
 	if (pmData == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "Could not get path_controller_t Instance !");
@@ -551,7 +559,7 @@ inline int mpath_read_rto(short pathID)
 }
 inline int mpath_read_primary_path()
 {
-	path_controller_t* path_ctrl = mdis_read_mpath();
+	path_controller_t* path_ctrl = mdi_read_mpath();
 	if (path_ctrl == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
@@ -892,17 +900,17 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 	mdi_clear_current_channel();
 }
 
-inline reltransfer_controller_t* mdi_read_mrtx(void)
+inline reltransfer_controller_t* mdi_read_mreltsf(void)
 {
 	return curr_channel_ == NULL ?
 		NULL :
 		curr_channel_->reliable_transfer_control;
 }
-inline deliverman_controller_t* mdi_read_mdm(void)
+inline deliverman_controller_t* mdi_read_mdlm(void)
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->deliverman_control;
 }
-inline path_controller_t* mdis_read_mpath()
+inline path_controller_t* mdi_read_mpath()
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->path_control;
 }
@@ -1986,7 +1994,7 @@ void on_disconnected(uint status)
 }
 inline void mdi_data_chunk_set_sent_flag(int path_param_id)
 {
-	path_controller_t* path_ctrl = mdis_read_mpath();
+	path_controller_t* path_ctrl = mdi_read_mpath();
 	if (path_ctrl == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
@@ -2008,7 +2016,7 @@ inline void mdi_data_chunk_set_sent_flag(int path_param_id)
 
 int mdi_stop_hb_timer(short pathID)
 {
-	path_controller_t* pathctrl = mdis_read_mpath();
+	path_controller_t* pathctrl = mdi_read_mpath();
 	if (pathctrl == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "pm_disableHB: get_path_controller() failed");
@@ -4719,6 +4727,118 @@ static void msm_process_error_chunk(simple_chunk_t* errchunk)
 }
 
 /**
+pm_heartbeat is called when a heartbeat was received from the peer.
+This function just takes that chunk, and sends it back.
+@param heartbeatChunk pointer to the heartbeat chunk
+@param source_address address we received the HB chunk from (and where it is echoed)
+*/
+void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address)
+{
+	heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
+	mdis_bundle_ctrl_chunk((simple_chunk_t*)heartbeatChunk, &source_address);
+	mdi_send_bundled_chunks(&source_address);
+}
+
+/**
+* Function is used to update RTT, SRTT, RTO values after chunks have been acked.
+* CHECKME : this function is called too often with RTO == 0;
+* Is there one update per RTT ?
+* @param  pathID index of the path where data was acked
+* @param  newRTT new RTT measured, when data was acked, or zero if it was retransmitted
+*/
+void mpath_on_chunks_acked(short pathID, uint roundtripTime)
+{
+	//@TODO
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void on_path_state_changed(short pathID, int path_status)
+{
+	// @TODO
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+/**
+pm_heartbeatTimer is called by the adaption-layer when the heartbeat timer expires.
+It may set the path to inactive, or restart timer, or even cause COMM LOST
+As all timer callbacks, it takes three arguments  (two pointers to necessary data)
+@param timerID  ID of the HB timer that expired.
+@param associationIDvoid  pointer to the association-ID
+@param pathIDvoid         pointer to the path-ID
+*/
+int mpath_heartbeat_timer_expired(timeout* timerID)
+{
+
+}
+
+/**
+* pm_heartbeatAck is called when a heartbeat acknowledgement was received from the peer.
+* checks RTTs, normally resets error counters, may set path back to ACTIVE state
+* @param heartbeatChunk pointer to the received heartbeat ack chunk
+*/
+void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
+{
+	path_controller_t* pmData = (path_controller_t *)mdi_read_mpath();
+	if (pmData == NULL)
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "mpath_process_heartbeat_ack_chunk():: mdi_read_mpath() failed");
+	}
+	if (pmData->path_params == NULL)
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "mpath_process_heartbeat_ack_chunk():: path_params is NULL !");
+	}
+
+	chunk_id_t heartbeatCID = mch_make_simple_chunk((simple_chunk_t*)heartbeatChunk);
+	bool hbSignatureOkay = mch_verify_heartbeat(heartbeatCID);
+	if (!hbSignatureOkay)
+	{
+		EVENTLOG(NOTICE, "unmathced HB Signature ---> return");
+		mch_remove_simple_chunk(heartbeatCID);
+		return;
+	}
+
+	short pathID = mch_read_path_idx_from_heartbeat(heartbeatCID);
+	uint sendingTime = mch_read_sendtime_from_heartbeat(heartbeatCID);
+	uint roundtripTime = get_safe_time_ms() - sendingTime;
+	EVENTLOG2(INFO, "HBAck for path %u, RTT = %u msecs", pathID, roundtripTime);
+
+	mch_remove_simple_chunk(heartbeatCID);
+
+	if (!(pathID >= 0 && pathID < pmData->path_num))
+	{
+		EVENTLOG1(NOTICE, "pm_heartbeatAck: invalid path ID %d", pathID);
+		return;
+	}
+
+	/* this also resets error counters */
+	mpath_on_chunks_acked(pathID, roundtripTime);
+
+	// Handling of acked heartbeats is the simular that that of acked data chunks. 
+	path_controller_t* old_pmData;
+	short state = pmData->path_params[pathID].state;
+	if (state == PM_INACTIVE || state == PM_PATH_UNCONFIRMED)
+	{
+		// change to the active state 
+		pmData->path_params[pathID].state = PM_ACTIVE;
+		EVENTLOG1(INFO, "pathID %d changed to ACTIVE", pathID);
+		old_pmData = pmData;
+		on_path_state_changed(pathID, PM_ACTIVE);
+		pmData = old_pmData;
+
+		/* restart timer with new RTO */
+		mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
+		pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
+			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto,
+			&mpath_heartbeat_timer_expired,
+			(void *)&pmData->channel_id,
+			(void *)&pmData->path_params[pathID].path_id);
+	}
+
+	pmData->path_params[pathID].heartbeatAcked = true;
+	pmData->path_params[pathID].timer_backoff = false;
+}
+
+/**
  sctlr_cookieAck is called by bundling when a cookieAck chunk was received from  the peer.
  The only purpose is to inform the active side that peer has received the cookie chunk.
  The association is in established state after this function is called.
@@ -4827,13 +4947,6 @@ int mdi_disassemle_packet()
 		 */
 		switch (chunk->chunk_header.chunk_id)
 		{
-
-		case CHUNK_DATA:
-			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
-			handle_ret = msm_process_data_chunk((data_chunk_t*)chunk, -2);
-			data_chunk_received = true;
-			break;
-
 		case CHUNK_INIT:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_INIT");
 			handle_ret = msm_process_init_chunk((init_chunk_t *)chunk);
@@ -4854,9 +4967,25 @@ int mdi_disassemle_packet()
 			msm_process_cookie_ack_chunk((simple_chunk_t*)chunk);
 			break;
 
+		case CHUNK_DATA:
+			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
+			handle_ret = msm_process_data_chunk((data_chunk_t*)chunk, -2);
+			data_chunk_received = true;
+			break;
+
 		case CHUNK_SACK:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_SACK");
 			handle_ret = msm_process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
+			break;
+
+		case CHUNK_HBREQ:
+			EVENTLOG(DEBUG, "*******************  Bundling received HB_REQ chunk");
+			mpath_process_heartbeat_chunk((heartbeat_chunk_t*)chunk, last_src_path_);
+			break;
+
+		case CHUNK_HBACK:
+			EVENTLOG(DEBUG, "*******************  Bundling received HB_ACK chunk");
+			mpath_process_heartbeat_ack_chunk((heartbeat_chunk_t*)chunk);
 			break;
 
 		case CHUNK_ABORT:
