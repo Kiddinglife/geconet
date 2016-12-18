@@ -504,7 +504,7 @@ socket_cb(int sfd, char* data, int datalen, sockaddrunion* from,
 }
 
 static int
-wheel_timer_cb(timeout* id, int type, void* arg1, void* arg2)
+wheel_timer_cb(timeout* id)
 {
 	EVENTLOG(DEBUG, "wheel timer timeouts, BYE!");
 	//flag = false;

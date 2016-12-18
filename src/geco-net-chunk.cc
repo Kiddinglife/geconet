@@ -19,7 +19,7 @@ simple_chunk_t* mch_read_simple_chunk(uint chunkID)
 {
 	return simple_chunks_[chunkID];
 }
- simple_chunk_t** mch_read_simple_chunks()
+simple_chunk_t** mch_read_simple_chunks()
 {
 	return simple_chunks_;
 }
@@ -1208,5 +1208,16 @@ uint mch_read_cookie_staleness(chunk_id_t errorCID)
 
 chunk_id_t mch_make_shutdown_chunk(uint acked_cum_tsn)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	assert(sizeof(simple_chunk_t) == SIMPLE_CHUNK_SIZE);
+	simple_chunk_t* shutdown_chunk = (simple_chunk_t*)geco_malloc_ext(SIMPLE_CHUNK_SIZE, __FILE__, __LINE__);
+	if (shutdown_chunk == NULL) ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
+
+	memset(shutdown_chunk, 0, SIMPLE_CHUNK_SIZE);
+	shutdown_chunk->chunk_header.chunk_id = CHUNK_SHUTDOWN;
+	shutdown_chunk->chunk_header.chunk_flags = 0x00;
+	shutdown_chunk->chunk_header.chunk_length = 0x0008;
+	uint* cummTSNacked = (uint*)(shutdown_chunk->chunk_value);
+	*cummTSNacked = htonl(acked_cum_tsn);
+
+	return add2chunklist(shutdown_chunk, "created shutdown_chunk %u ");
 }

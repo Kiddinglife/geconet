@@ -257,7 +257,7 @@ enum SENDING_DEST_ADDR_TYPE
 
 /* ms default interval to timeout when no timers in poll
  * it is alos the resolution of wheel-timer*/
-#define GRANULARITY 10
+#define GRANULARITY 10 //ms
 
  /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
  /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */

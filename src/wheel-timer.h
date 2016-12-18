@@ -92,7 +92,7 @@ typedef void (*on_timeouts_closed)(timeout* id); /* provide this cb to free all 
 //}; /* struct timeout_cb */
 struct timeout_cb
 {
-		typedef int (*Action)(timeout* id, int type, void* arg1, void* arg2);
+		typedef int (*Action)(timeout* id);
 		Action action;
 		void *arg1;
 		void *arg2;

@@ -5,9 +5,7 @@
 #include "geco-ds-malloc.h"
 #include "geco-net.h"
 
-// this prevents mscv reports complie errors when we use std::min and max safe way for shipping codes
-#undef min
-#undef max
+#define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
 static void print_addrlist(sockaddrunion* list, uint nAddresses)
 {
@@ -19,8 +17,6 @@ static void print_addrlist(sockaddrunion* list, uint nAddresses)
 		EVENTLOG2(DEBUG, "+++ ip addr=%s:%d", addrstr, port);
 	}
 }
-
-#define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
 struct transportaddr_hash_functor
 {
@@ -371,12 +367,25 @@ void mdi_unlock_bundle_ctrl(int* ad_idx = NULL);
  */
 int mdi_stop_hb_timer(short pathID);
 channel_t* mdi_find_channel();
+
+inline static recv_controller_t* mdi_read_recvctrl()
+{
+	return curr_channel_ == NULL ? NULL : curr_channel_->receive_control;
+}
 /////////////////////////////////////////  mdis  dispatcher module  /////////////////////////////////////////
 
 
 
 /////////////////////////////////////////  receive module  /////////////////////////////////////////
-uint  mrecv_read_cummulative_tsn_acked();
+inline uint mrecv_read_cummulative_tsn_acked()
+{
+	recv_controller_t* mrxc = mdi_read_recvctrl();
+	if (mrxc == NULL)
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "no smctrl with channel presents -> return");
+	}
+	return (mrxc->cumulative_tsn);
+}
 /////////////////////////////////////////  receive module  /////////////////////////////////////////
 
 
@@ -562,20 +571,16 @@ inline int msm_get_cookielife(void)
 	return smctrl_->cookie_lifetime;
 }
 
-
-uint mrecv_read_cummulative_tsn_acked()
-{
-	//@TODO
-	throw std::logic_error("The method or operation is not implemented.");
-}
-
 // we firstly try raw socket if it fails we switch to udp-tunneld by setting to upd socks in on_connection_failed_cb()
-static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, void* unused)
+static int msm_timer_expired(timeout* timerID)
 {
 	EVENTLOG(DEBUG, "msm_timer_expired() called ---not implemented !!!!");
 
+	int ttype = timerID->callback.type;
+	void* associationID = timerID->callback.arg1;
+
 	// retrieve association from list
-	curr_channel_ = channels_[*(int*)&associationID];
+	curr_channel_ = channels_[*(int*)associationID];
 	if (curr_channel_ == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "init timer expired but association %u does not exist -> return");
@@ -589,6 +594,7 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 		ERRLOG(WARNNING_ERROR, "no smctrl with channel presents -> return");
 		return false;
 	}
+	assert(smctrl->init_timer_id == timerID);
 
 	int primary_path = mpath_read_primary_path();
 	EVENTLOG3(VERBOSE, "msm_timer_expired(AssocID=%u,  state=%u, PrimaryPath=%u", (*(unsigned int *)associationID),
@@ -614,6 +620,7 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 			smctrl->init_retrans_count++;
 			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
 			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			mtra_timeouts_del(smctrl->init_timer_id);
 			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
 		}
 		else
@@ -649,6 +656,7 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 			smctrl->init_retrans_count++;
 			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
 			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			mtra_timeouts_del(smctrl->init_timer_id);
 			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
 		}
 		else
@@ -676,8 +684,7 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 
 		if (smctrl->init_retrans_count < smctrl->max_assoc_retrans_count)
 		{
-			/* make and send shutdown again, with updated TSN (section 9.2)     */
-			//@TODO mch_make_shutdown_chunk AND mrecv_read_cummulative_tsn_acked
+			// make and send shutdown again, with updated TSN (section 9.2) 
 			chunk_id_t shutdownCID = mch_make_shutdown_chunk(mrecv_read_cummulative_tsn_acked());
 			mdis_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownCID), &primary_path);
 			mdi_send_bundled_chunks(&primary_path);
@@ -687,6 +694,7 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 			smctrl->init_retrans_count++;
 			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
 			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			mtra_timeouts_del(smctrl->init_timer_id);
 			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
 		}
 		else
@@ -729,6 +737,7 @@ static int msm_timer_expired(timeout* timerID, int ttype, void* associationID, v
 			smctrl->init_retrans_count++;
 			smctrl->init_timer_interval = std::min(smctrl->init_timer_interval * 2, mpath_get_rto_max());
 			EVENTLOG1(NOTICE, "init timer backedoff %d msecs", smctrl->init_timer_interval);
+			mtra_timeouts_del(smctrl->init_timer_id);
 			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
 		}
 		else
@@ -835,7 +844,7 @@ void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams, un
 		}
 		// start T1 init timer
 		EVENTLOG(DEBUG, "msm_connect()::start t1-init timer");
-		mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, (void*)smctrl->channel);
+		smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, (void*)smctrl->channel);
 		EVENTLOG(DEBUG, "********************** ENTER CookieWait State ***********************");
 		smctrl->channel_state = ChannelState::CookieWait;
 	}
@@ -1271,8 +1280,8 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
-			}
 		}
+	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -1321,7 +1330,7 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-	}
+}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
 	uint numPeerAddresses, uint supported_types, bool receivedFromPeer)
 {
@@ -6305,7 +6314,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-}
+	}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
