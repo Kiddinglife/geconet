@@ -1742,7 +1742,8 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
     to->sa.sa_family = AF_INET6;
     to->sin6.sin6_port = 0;
     to->sin6.sin6_flowinfo = 0;
-    memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
+    //memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
+    memcpy_fast(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
   }
   else
   {
@@ -1861,7 +1862,8 @@ int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, soc
     to->sin6.sin6_port = htons(udp_local_bind_port_); //our well-kown port that clients use to send data to us
     to->sin6.sin6_flowinfo = 0;
     to->sin6.sin6_scope_id = 0;
-    memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
+    //memcpy(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
+    memcpy_fast(&(to->sin6.sin6_addr), &(pkt6info->ipi6_addr), sizeof(struct in6_addr));
   }
   else
   {
