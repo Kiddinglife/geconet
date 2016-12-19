@@ -198,9 +198,9 @@ struct path_params_t
     bool data_chunks_sent_in_last_rto;
     //set to true when a hb is sent
     bool hb_sent;
-	/** set to true when a hearbeat is acknowledged and to false when a
-	heartbeat is sent when the heartbeat timer expires. */
-	bool heartbeatAcked;
+    /*set to true when a hearbeat is acknowledged and to false when a
+     heartbeat is sent when the heartbeat timer expires. */
+    bool heartbeatAcked;
     // conuter for retrans on a single path
     uint retrans_count;
     // rto
@@ -211,6 +211,8 @@ struct path_params_t
     uint rttvar;
     //defines the rate at which hb is sent
     uint hb_interval;
+    //current mtu of this path
+    uint pmtu;
     // id of hb timer
     timeout* hb_timer_id;
     //time of last RTO update
