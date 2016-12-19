@@ -68,10 +68,10 @@
 int pm_doHB(gshort pathID);
 
 
-/* pm_heartbeat is called when a heartbeat was received from the peer.
+/* mpath_process_heartbeat_chunk is called when a heartbeat was received from the peer.
    params: heartbeatChunk: the heartbeat chunk
 */
-void pm_heartbeat(SCTP_heartbeat * heartbeatChunk, unsigned int source_address);
+void mpath_process_heartbeat_chunk(SCTP_heartbeat * heartbeatChunk, unsigned int source_address);
 
 
 /******************** Signals *********************************************************************/
