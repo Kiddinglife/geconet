@@ -378,7 +378,6 @@ extern uint* available_channel_ids_; /*store all frred channel ids, can be reuse
 extern uint available_channel_ids_size_;
 extern geco_instance_t *curr_geco_instance_;
 extern channel_t *curr_channel_;
-extern timer_mgr mtra_timer_mgr_;
 extern bool mdi_connect_udp_sfd_;
 
 TEST(MULP, test_mdi_new_and_delete_channel)
@@ -733,7 +732,7 @@ TEST(MULP, test_connection_pharse)
 	// cline code
 	mdi_connect_udp_sfd_ = true;
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, (char*)"10.0.0.107", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
 	while(flag) 

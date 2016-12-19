@@ -19,7 +19,6 @@ using namespace geco::ds;
 #define mysleep sleep
 #endif
 
-extern timer_mgr mtra_timer_mgr_;
 extern int mtra_icmp_rawsock_; /* socket fd for ICMP messages */
 extern int socket_despts_size_;
 extern socket_despt_t socket_despts[MAX_FD_SIZE];
@@ -60,33 +59,6 @@ TEST(test_case_logging, test_read_trace_levels)
 	read_trace_levels();
 }
 
-static bool
-action(timer_id_t& id, void*, void*)
-{
-	EVENTLOG(VERBOSE, "timer triggered\n");
-	return NOT_RESET_TIMER_FROM_CB;
-}
-
-TEST(TIMER_MODULE, test_timer_mgr)
-{
-	timer_mgr tm;
-	timer_id_t ret1 = tm.add_timer(TIMER_TYPE_INIT, 1000, action);
-	timer_id_t ret3 = tm.add_timer(TIMER_TYPE_SACK, 15, action);
-	timer_id_t ret2 = tm.add_timer(TIMER_TYPE_SACK, 1, action);
-	tm.print(VERBOSE);
-
-	mysleep(20);
-	EVENTLOG1(VERBOSE, "timeouts %d", tm.timeouts());
-	tm.delete_timer(ret3);
-	tm.delete_timer(ret2);
-	tm.delete_timer(ret1);
-	EVENTLOG1(VERBOSE, "timeouts %d", tm.timeouts());
-
-	tm.print(VERBOSE);
-
-	int err = 0;
-	struct timeouts *tos = timeouts_open(0, &err);
-}
 TEST(TIMER_MODULE, test_operations_on_time)
 {
 	timeval tv;
@@ -411,7 +383,6 @@ TEST(AUTH_MODULE, test_crc32_checksum)
 }
 
 static bool flag = true;
-static timer_id_t tid;
 static char inputs[1024];
 static int len;
 static void
@@ -425,8 +396,6 @@ stdin_cb(char* data, size_t datalen)
 		flag = false;
 		return;
 	}
-
-	mtra_timer_mgr_.reset_timer(tid, 1000000);
 
 	int sentsize;
 	uchar tos = IPTOS_DEFAULT;

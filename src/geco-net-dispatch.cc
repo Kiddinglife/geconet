@@ -4,6 +4,7 @@
 #include "geco-net-auth.h"
 #include "geco-ds-malloc.h"
 #include "geco-net.h"
+#include <algorithm>
 
 #define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
@@ -307,14 +308,6 @@ int mdi_send_bundled_chunks1();
 
 int mdi_send_bundled_chunks(int * ad_idx = NULL);
 void mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
-/**
- * Defines the callback function that is called when an (INIT, COOKIE, SHUTDOWN etc.) timer expires.
- * @param timerID               ID of timer
- * @param associationIDvoid     pointer to param1, here to an Association ID value, it may be used
- *                              to identify the association, to which the timer function belongs
- * @param unused                pointer to param2 - timers have two geco_instance_params, by default. Not needed here.
- */
-bool msm_timer_expired(timer_id_t& timerID, void* associationID, void* unused);
 /**
  * This function is called to initiate the setup an association.
  * The local tag and the initial TSN are randomly generated.
@@ -764,7 +757,7 @@ static int msm_timer_expired(timeout* timerID)
 		}
 		break;
 	default:
-		ERRLOG(WARNNING_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
+		ERRLOG1(WARNNING_ERROR, "unexpected event: timer expired in state %02d", smctrl->channel_state);
 		mtra_timeouts_del(smctrl->init_timer_id);
 		smctrl->init_timer_id = NULL;
 		return false;

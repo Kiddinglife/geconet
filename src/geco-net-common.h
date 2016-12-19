@@ -471,15 +471,15 @@ extern void error_log1(short error_loglvl, const char *module_name, int line_no,
 extern void error_log_sys1(short error_loglvl, const char *module_name, int line_no, short errnumber);
 
 //<---------------- time-------------------->
-#define   TIMER_TYPE_INIT       0
-#define   TIMER_TYPE_SHUTDOWN   1
-#define   TIMER_TYPE_RTXM       3
-#define   TIMER_TYPE_SACK       2
-#define   TIMER_TYPE_CWND       4
-#define   TIMER_TYPE_HEARTBEAT  5
-#define   TIMER_TYPE_USER       6
-#define   MAX(a,b) (a>b)?(a):(b)
-
+#define   TIMER_TYPE_INIT       ((uint)0)
+#define   TIMER_TYPE_SHUTDOWN   ((uint)1)
+#define   TIMER_TYPE_RTXM       ((uint)3)
+#define   TIMER_TYPE_SACK       ((uint)2)
+#define   TIMER_TYPE_CWND       ((uint)4)
+#define   TIMER_TYPE_HEARTBEAT  ((uint)5)
+#define   TIMER_TYPE_USER       ((uint)6)
+#define   MY_MAX(a,b) (a>b)?(a):(b)
+#define   MY_MIN(a,b) (a<b)?(a):(b)
 /**
  return the current system time converted to a value of  milliseconds.
  to make representation in millisecs possible.

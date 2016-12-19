@@ -19,15 +19,13 @@
 #ifndef __INCLUDE_POLLER_H
 #define __INCLUDE_POLLER_H
 
-#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
 
 #include "geco-net-common.h"
-#include "geco-ds-timer.h"
 #include "geco-net-dispatch.h"
-
+#include "wheel-timer.h"
 /**
  * Structure for callback events. The function "action" is called by the event-handler,
  * when an event occurs on the file-descriptor.
@@ -77,16 +75,6 @@ struct test_dummy_t
     uchar out_tos_;
 };
 
-/*
-  if (smctrl->init_timer_id != NULL)
-  {  //stop init timer
-    timeouts_del(tos_, smctrl->init_timer_id);
-    smctrl->init_timer_id = NULL;
-  }
-
-     mtra_timeouts_add(TIMER_TYPE_INIT, smctrl->init_timer_interval, &msm_timer_expired, (void*) smctrl->channel);
- * */
-#include "wheel-timer.h"
 extern timeout* mtra_timeouts_add(uint timer_type, uint timout_ms, timeout_cb::Action action, void *arg1 = 0,
     void *arg2 = 0, bool repeated = false);
 extern void mtra_timeouts_del(timeout* tid);
