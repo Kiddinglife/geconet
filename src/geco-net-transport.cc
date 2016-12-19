@@ -850,36 +850,31 @@ static void mtra_fire_event(int num_of_events)
  *      fails.
  *      0 timer timeouts >0 event number
  */
+static int ret;
+static int i;
+static struct timeval tv;
+static int fdcount = 0;
+static int nfd = 0;
+static fd_set rd_fdset;
+static fd_set wt_fdset;
+static fd_set except_fdset;
 static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
 {
-  int ret;
+
 #ifdef _WIN32
-// winevents arr = one or more sfds + stdin, total size = sfdsize+1
-// socket_despt_ = one or more sfds, total size = sfdsize
-//if ((despts+(*sfdsize)) ->fd == STD_INPUT_FD)
-//{
-//	*sfdsize += 1;
-//}
+  // winevents arr = one or more sfds + stdin, total size = sfdsize+1
+  // socket_despt_ = one or more sfds, total size = sfdsize
   ret = MsgWaitForMultipleObjects(*sfdsize, win32events_, false, timeout, QS_KEY);
   ret -= WAIT_OBJECT_0;
-//EVENTLOG1(DEBUG, "MsgWaitForMultipleObjects return fd=%d", ret == (*sfdsize) ? 0 : socket_despts[ret].fd);
+  // EVENTLOG1(DEBUG, "MsgWaitForMultipleObjects return fd=%d", ret == (*sfdsize) ? 0 : socket_despts[ret].fd);
   mtra_fire_event(ret);
   return 1;
 #else
-  static int i;
-  static struct timeval tv;
-  static struct timeval* to;
-  static int fdcount = 0;
-  static int nfd = 0;
-  static fd_set rd_fdset;
-  static fd_set wt_fdset;
-  static fd_set except_fdset;
 
-  to = &tv;
-  fills_timeval(to, timeout);
-
+  fills_timeval(&tv, timeout);
   fdcount = 0;
   nfd = 0;
+
   FD_ZERO(&rd_fdset);
   FD_ZERO(&wt_fdset);
   FD_ZERO(&except_fdset);
@@ -913,38 +908,37 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
   {
 
     //Set the revision number of all entries to the current revision.
-    for (i = 0; i < *sfdsize; i++)
-    {
-      despts[i].revision = revision_;
-    }
+//    for (i = 0; i < *sfdsize; i++)
+//    {
+//      despts[i].revision = revision_;
+//    }
 
     /*
      * Increment the revision_ number by one -> New entries made by
      * another thread during select() call will get this new revision_ number.
      */
-    ++revision_;
-
+    //++revision_;
     if (enable_mtra_select_handler_)
       mtra_select_handler_.mtra_select_cb_start_(mtra_select_handler_.start_args_);
     //  nfd is the max fd number plus one
-    ret = select(nfd + 1, &rd_fdset, &wt_fdset, &except_fdset, to);
+    ret = select(nfd + 1, &rd_fdset, &wt_fdset, &except_fdset, &tv);
     if (enable_mtra_select_handler_)
       mtra_select_handler_.mtra_select_cb_end_(mtra_select_handler_.end_args_);
 
-    for (i = 0; i < *sfdsize; i++)
-    {
-      despts[i].revents = 0;
-      /*If despts's revision is equal or greater than the current revision, then the despts entry
-       * has been added by another thread during the poll() call.
-       * If this is the case, clr all fdsets to skip the event results
-       * (they will be reported again when select() is called the next timeout).*/
-      if (despts[i].revision >= revision_)
-      {
-        FD_CLR(despts[i].fd, &rd_fdset);
-        FD_CLR(despts[i].fd, &wt_fdset);
-        FD_CLR(despts[i].fd, &except_fdset);
-      }
-    }
+//    for (i = 0; i < *sfdsize; i++)
+//    {
+//      despts[i].revents = 0;
+//      /*If despts's revision is equal or greater than the current revision, then the despts entry
+//       * has been added by another thread during the poll() call.
+//       * If this is the case, clr all fdsets to skip the event results
+//       * (they will be reported again when select() is called the next timeout).*/
+//      if (despts[i].revision >= revision_)
+//      {
+//        FD_CLR(despts[i].fd, &rd_fdset);
+//        FD_CLR(despts[i].fd, &wt_fdset);
+//        FD_CLR(despts[i].fd, &except_fdset);
+//      }
+//    }
 
     // ret >0 means some events occured, we need handle them
     if (ret > 0)
@@ -954,21 +948,21 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
       for (i = 0; i < *sfdsize; i++)
       {
         despts[i].revents = 0;
-        if (despts[i].revision < revision_)
+        //if (despts[i].revision < revision_)
+        //{
+        if ((despts[i].events & POLLIN) && FD_ISSET(despts[i].fd, &rd_fdset))
         {
-          if ((despts[i].events & POLLIN) && FD_ISSET(despts[i].fd, &rd_fdset))
-          {
-            despts[i].revents |= POLLIN;
-          }
-          if ((despts[i].events & POLLOUT) && FD_ISSET(despts[i].fd, &wt_fdset))
-          {
-            despts[i].revents |= POLLOUT;
-          }
-          if ((despts[i].events & (POLLIN | POLLOUT)) && FD_ISSET(despts[i].fd, &except_fdset))
-          {
-            despts[i].revents |= POLLERR;
-          }
+          despts[i].revents |= POLLIN;
         }
+        if ((despts[i].events & POLLOUT) && FD_ISSET(despts[i].fd, &wt_fdset))
+        {
+          despts[i].revents |= POLLOUT;
+        }
+        if ((despts[i].events & (POLLIN | POLLOUT)) && FD_ISSET(despts[i].fd, &except_fdset))
+        {
+          despts[i].revents |= POLLERR;
+        }
+        //}
       }
       mtra_fire_event(ret);
     }
