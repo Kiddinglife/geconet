@@ -710,7 +710,9 @@ static void mtra_fire_event(int num_of_events)
   }
 #endif
 
-  char* curr = internal_dctp_buffer;
+  //char* curr = internal_dctp_buffer;
+  // use pool buffer to save  mem copy
+  char* curr = (char*)geco_malloc_ext(MAX_MTU_SIZE, __FILE__, __LINE__);
 
 //handle network events  individually right here
 //socket_despts_size_ = socket fd size with stdin excluded
@@ -984,6 +986,7 @@ static int mtra_poll_fds(socket_despt_t* despts, int* sfdsize, int timeout)
   return ret;
 #endif
 }
+
 static task_cb_fun_t task_cb_fun_ = 0;
 static void* tick_task_user_data_ = 0;
 void mtra_set_tick_task_cb(task_cb_fun_t taskcb, void* userdata)
@@ -1108,7 +1111,6 @@ void mtra_dtor()
 {
   free(internal_udp_buffer_);
   free(internal_dctp_buffer);
-//mtra_timer_mgr_.timers.clear();
   timeouts_close(tos_);
   mtra_remove_stdin_cb();
   mtra_remove_event_handler(mtra_read_ip4udpsock());
@@ -1904,18 +1906,8 @@ int mtra_init(int * myRwnd)
   }
 #endif
 
-// generate random number
-  struct timeval curTime;
-  if (gettimenow(&curTime) != 0)
-  {
-    ERRLOG(FALTAL_ERROR_EXIT, "gettimenow() failed!\n");
-    return -1;
-  }
-  else
-  {
-    /* FIXME: this may be too weak (better than nothing however) */
-    srand(curTime.tv_usec);
-  }
+  // set random number seed
+  srand(gettimestamp() % UINT32_MAX);
 
   /*open two sockets for ip4 and ip6 */
   if ((mtra_ip4rawsock_ = mtra_open_geco_raw_socket(AF_INET, myRwnd)) < 0)

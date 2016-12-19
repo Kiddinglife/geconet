@@ -407,11 +407,6 @@ uchar* get_secre_key(int operation_code)
 
 uint generate_random_uint32()
 {
-	static bool seed_init = false;
-	if (!seed_init)
-	{
-		srand(gettimestamp() % UINT32_MAX);
-		seed_init = true;
-	}
-	return rand();
+  //srand(gettimestamp() % UINT32_MAX); is called in mtra_init()
+  return rand();
 }
