@@ -357,7 +357,8 @@ void mpath_heartbeat_timer_expired(TimerID timerID, void *associationIDvoid, voi
 	}
 	event_logi(INTERNAL_EVENT_0, "Heartbeat timer expired for path %u", pathID);
 
-	if (pmData->pathData[pathID].heartbeatSent && !pmData->pathData[pathID].heartbeatAcked) {
+	if (pmData->pathData[pathID].heartbeatSent && !pmData->pathData[pathID].heartbeatAcked)
+	{
 		/* Heartbeat has been sent and not acknowledged: handle as retransmission */
 		if (pmData->pathData[pathID].state == PM_ACTIVE) {
 			/* Handling of unacked heartbeats is the same as that of unacked data chunks.
@@ -366,24 +367,28 @@ void mpath_heartbeat_timer_expired(TimerID timerID, void *associationIDvoid, voi
 			if (removed_association)
 				event_logi(INTERNAL_EVENT_0, "Association was removed by handleChunksRetransmitted(%u)!!!!", pathID);
 		}
-		else if (pmData->pathData[pathID].state == PM_INACTIVE) {
+		else if (pmData->pathData[pathID].state == PM_INACTIVE)
+		{
 			/* path already inactive, dont increase counter etc. */
-			;
 		}
 
-		if (!removed_association) {
-			if (!pmData->pathData[pathID].timerBackoff) {
+		if (!removed_association)
+		{
+			if (!pmData->pathData[pathID].timerBackoff)
+			{
 				/* Timer backoff */
 				pmData->pathData[pathID].rto = min(2 * pmData->pathData[pathID].rto, (unsigned int)pmData->rto_max);
 				event_logii(VERBOSE, "Backing off timer : Path %d, RTO= %u", pathID, pmData->pathData[pathID].rto);
 			}
 		}
+
 	}
 
 	if (!removed_association &&
 		!pmData->pathData[pathID].data_chunk_acked &&
 		pmData->pathData[pathID].heartbeatEnabled &&
-		!pmData->pathData[pathID].data_chunks_sent_in_last_rto) {
+		!pmData->pathData[pathID].data_chunks_sent_in_last_rto)
+	{
 		/* Remark: If commLost is detected in handleChunksRetransmitted, the current association
 		   is marked for deletetion. Doing so, all timers are stop. The HB-timers are
 		   stopped by calling pm_disableHB in mdi_deleteCurrentAssociation. This is why
@@ -397,12 +402,15 @@ void mpath_heartbeat_timer_expired(TimerID timerID, void *associationIDvoid, voi
 		ch_deleteChunk(heartbeatCID);
 		pmData->pathData[pathID].heartbeatSent = TRUE;
 	}
-	else if (!removed_association) {
+	else if (!removed_association)
+	{
 		pmData->pathData[pathID].heartbeatSent = FALSE;
 	}
 
-	if (!removed_association) {
-		if (pmData->pathData[pathID].heartbeatEnabled) {
+	if (!removed_association)
+	{
+		if (pmData->pathData[pathID].heartbeatEnabled)
+		{
 			/* heartbeat could have been disabled when the association went down after commLost
 			   detected in handleChunksRetransmitted */
 			pmData->pathData[pathID].hearbeatTimer =
