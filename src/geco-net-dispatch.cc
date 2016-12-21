@@ -582,20 +582,44 @@ bool mpath_handle_chunks_retx(short pathID)
 
   if (pmData->retrans_count >= msm_read_max_assoc_retrans_count())
   {
-    on_disconnected (SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
+    on_disconnected(ConnectionLostReason::ExceedMaxRetransCount);
     mdi_delete_curr_channel();
     mdi_clear_current_channel();
     EVENTLOG(DEBUG, "mpath_handle_chunks_retx: communication lost");
     return true;
   }
 
+  bool allPathsInactive = true;
   if (pmData->path_params[pathID].retrans_count >= pmData->max_retrans_per_path)
   {
-    /* Set state of this path to inactive and notify change of state to ULP */
+    // Set state of this path to inactive and notify change of state to ULP
     pmData->path_params[pathID].state = PM_INACTIVE;
-    EVENTLOG1(DEBUG,"mpath_handle_chunks_retx: path %d to INACTIVE ", pathID);
-  }
+    EVENTLOG1(DEBUG, "mpath_handle_chunks_retx: path %d to INACTIVE ", pathID);
 
+    // check if an active path is left
+    for (int pID = 0; pID < pmData->path_num; pID++)
+    {
+      if (pmData->path_params[pID].state == PM_ACTIVE)
+      {
+        allPathsInactive = false;
+        break;
+      }
+    }
+
+    if (allPathsInactive)
+    {
+      /* No active parts are left, communication lost to ULP */
+      on_disconnected(ConnectionLostReason::PeerUnreachable);
+      mdi_delete_curr_channel();
+      mdi_clear_current_channel();
+      /* will be called later anyway !
+       mdi_clearAssociationData(); */
+      EVENTLOG(DEBUG, "mpath_handle_chunks_retx: communication lost (all paths are INACTIVE)");
+      return true;
+    }
+    mdi_on_path_status_changed(pathID, PM_INACTIVE);
+  }
+  return false;
 }
 
 inline int mpath_get_rto_initial(void)
