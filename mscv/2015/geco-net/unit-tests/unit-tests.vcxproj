@@ -201,16 +201,15 @@
     <ClCompile Include="..\..\..\..\unittets\test-wheel-timer.cc" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\..\..\docx\  Security Attacks Found Against.txt" />
-    <Text Include="..\..\..\..\docx\ A New Data Chunk for SCTP.txt" />
-    <Text Include="..\..\..\..\docx\ Load Sharing in Stream Control Transmission Protocol.txt" />
-    <Text Include="..\..\..\..\docx\ Mobile SCTP.txt" />
-    <Text Include="..\..\..\..\docx\ Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt" />
-    <Text Include="..\..\..\..\docx\ SCTP NAT Traversal Considerations.txt" />
-    <Text Include="..\..\..\..\docx\(SCTP) - Dynamic Address Reconfiguration.txt" />
     <Text Include="..\..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt" />
+    <Text Include="..\..\..\..\docx\A New Data Chunk for SCTP.txt" />
+    <Text Include="..\..\..\..\docx\conn_procedures.txt" />
     <Text Include="..\..\..\..\docx\Cumulative ASCONF chunk.txt" />
     <Text Include="..\..\..\..\docx\draft-hohendorf-secure-sctp-22.txt" />
+    <Text Include="..\..\..\..\docx\Dynamic Address Reconfiguration.txt" />
+    <Text Include="..\..\..\..\docx\Load Sharing in Stream Control Transmission Protocol.txt" />
+    <Text Include="..\..\..\..\docx\Mobile SCTP.txt" />
+    <Text Include="..\..\..\..\docx\Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt" />
     <Text Include="..\..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt" />
     <Text Include="..\..\..\..\docx\Quick Failover Algorithm in SCTP.txt" />
     <Text Include="..\..\..\..\docx\rfc1191- ICMP Path MTU Discovery.txt" />
@@ -231,6 +230,8 @@
     <Text Include="..\..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt" />
     <Text Include="..\..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt" />
     <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt" />
+    <Text Include="..\..\..\..\docx\SCTP NAT Traversal Considerations.txt" />
+    <Text Include="..\..\..\..\docx\Security Attacks Found Against.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

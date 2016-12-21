@@ -46,34 +46,31 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\..\..\docx\  Security Attacks Found Against.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\ A New Data Chunk for SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\ Load Sharing in Stream Control Transmission Protocol.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\ Mobile SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\ Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\ SCTP NAT Traversal Considerations.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\(SCTP) - Dynamic Address Reconfiguration.txt">
-      <Filter>docs</Filter>
-    </Text>
     <Text Include="..\..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\A New Data Chunk for SCTP.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\conn_procedures.txt">
       <Filter>docs</Filter>
     </Text>
     <Text Include="..\..\..\..\docx\Cumulative ASCONF chunk.txt">
       <Filter>docs</Filter>
     </Text>
     <Text Include="..\..\..\..\docx\draft-hohendorf-secure-sctp-22.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\Dynamic Address Reconfiguration.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\Load Sharing in Stream Control Transmission Protocol.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\Mobile SCTP.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt">
       <Filter>docs</Filter>
     </Text>
     <Text Include="..\..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt">
@@ -134,6 +131,12 @@
       <Filter>docs</Filter>
     </Text>
     <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\SCTP NAT Traversal Considerations.txt">
+      <Filter>docs</Filter>
+    </Text>
+    <Text Include="..\..\..\..\docx\Security Attacks Found Against.txt">
       <Filter>docs</Filter>
     </Text>
   </ItemGroup>

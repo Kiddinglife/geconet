@@ -403,7 +403,7 @@ mpath_heartbeat_timer_expired (TimerID timerID, void *associationIDvoid,
     if (pmData->pathData[pathID].state == PM_ACTIVE)
     {
       /* Handling of unacked heartbeats is the same as that of unacked data chunks.
-       The state after calling handleChunksRetransmitted may have changed to inactive. */
+       The state after calling pm_chunksRetransmitted may have changed to inactive. */
       removed_association = handleChunksRetransmitted ((short) pathID);
       if (removed_association)
         event_logi(
