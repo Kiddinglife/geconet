@@ -134,20 +134,13 @@ unsigned int pm_getTime(void);
 */
 int pm_enableHB(short pathID, unsigned int hearbeatIntervall);
 
-
-
 /* pm_disableAllHB is called when on shutdown to disable all heartbeats.
 */
 void pm_disableAllHB(void);
 
-
-
 /* pm_disableHB is called when ULP wants to disable heartbeat.
 */
 int pm_disableHB(short pathID);
-
-
-
 
 /* pm_setPrimaryPath sets the primary path.
    Params: primaryPathID:      path-ID
@@ -160,7 +153,6 @@ int  pm_setRtoInitial(int new_rto_initial);
 
 int  pm_getRtoInitial(void);
 
-
 int  pm_setRtoMin(int new_rto_min);
 
 int  pm_getRtoMin(void);
@@ -172,7 +164,6 @@ int  pm_getRtoMax(void);
 int  pm_setHBInterval(unsigned int new_interval);
 
 int pm_getHBInterval(short pathID, unsigned int* current_interval);
-
 
 int  pm_setMaxPathRetransmisions(int new_max);
 

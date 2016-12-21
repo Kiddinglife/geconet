@@ -216,7 +216,7 @@ struct path_params_t
     // id of hb timer
     timeout* hb_timer_id;
     //time of last RTO update
-    struct timeval last_rto_update_time;
+    time_stamp_t last_rto_update_time;
 };
 
 /**
