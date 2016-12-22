@@ -708,6 +708,11 @@ void mpath_chunks_acked(short pathID, unsigned int newRTT)
 	if (pmData->path_params[pathID].state == PM_ACTIVE)
 	{
 		// Update RTO only if is the first data chunk acknowldged in this RTT intervall. 
+		// rtt is mesured by a pair of send and ack. 
+		// But we may have more than send at diffrent time and more than one ack received at different time.
+		// we must use right matched send and ack to caculate the rtt. otherwise, do not update rto.
+		// when t3-rtx timer expired, we set resend to true to show there are two sends happening 
+		// when the time receiving ack is earlier than gussed rto_update_time, we believe this is ack for the older send not the recent send and not update rtt
 		uint64 now = gettimestamp();
 		if (now < pmData->path_params[pathID].last_rto_update_time)
 		{
