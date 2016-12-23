@@ -137,7 +137,7 @@ mpath_t *pmData;
 
 /*------------------- Internal Functions --------------------------------------------------------*/
 
-/**
+/** done
  return the current system time converted to a value of  milliseconds.
  MSB of tv_sec field are removed in order
  to make representation in millisecs possible. This done by taking the remainder of
@@ -158,7 +158,7 @@ pm_getTime (void)
   return curTimeMilli;
 } /* end: pm_ sctp_getTime */
 
-/**
+/** done
  *  handleChunksRetransmitted is called whenever datachunks are retransmitted or a hearbeat-request
  *  has not been acknowledged within the current heartbeat-intervall. It increases path- and peer-
  *  retransmission counters and compares these counters to the corresonding thresholds.
@@ -258,7 +258,7 @@ handleChunksRetransmitted (short pathID)
   return FALSE;
 } /* end: handleChunksRetransmitted */
 
-/**
+/** done
  * Function is used to update RTT, SRTT, RTO values after chunks have been acked.
  * CHECKME : this function is called too often with RTO == 0;
  * Is there one update per RTT ?
@@ -332,7 +332,7 @@ handleChunksAcked (short pathID, unsigned int newRTT)
 
 /*----------------- Functions to answer peer HB requests -----------------------------------------*/
 
-/**
+/** done
  mpath_process_heartbeat_chunk is called when a heartbeat was received from the peer.
  This function just takes that chunk, and sends it back.
  @param heartbeatChunk pointer to the heartbeat chunk
@@ -352,7 +352,7 @@ mpath_process_heartbeat_chunk (SCTP_heartbeat * heartbeatChunk,
 
 /*------------------- Signals from the Unix-Interface --------------------------------------------*/
 
-/**
+/** done
  mpath_heartbeat_timer_expired is called by the adaption-layer when the heartbeat timer expires.
  It may set the path to inactive, or restart timer, or even cause COMM LOST
  As all timer callbacks, it takes three arguments  (two pointers to necessary data)
@@ -360,7 +360,7 @@ mpath_process_heartbeat_chunk (SCTP_heartbeat * heartbeatChunk,
  @param associationIDvoid  pointer to the association-ID
  @param pathIDvoid         pointer to the path-ID
  */
-void
+void 
 mpath_heartbeat_timer_expired (TimerID timerID, void *associationIDvoid,
                                void *pathIDvoid)
 {
@@ -487,7 +487,7 @@ mpath_heartbeat_timer_expired (TimerID timerID, void *associationIDvoid,
   mdi_clearAssociationData ();
 } /* end: mpath_heartbeat_timer_expired */
 
-/**
+/** done
  * simple function that sends a heartbeat chunk to the indicated address
  * @param  pathID index to the address, where HB is to be sent to
  */
@@ -528,7 +528,7 @@ pm_doHB (gshort pathID)
   return SCTP_SUCCESS;
 }
 
-/**
+/** done
  * pm_heartbeatAck is called when a heartbeat acknowledgement was received from the peer.
  * checks RTTs, normally resets error counters, may set path back to ACTIVE state
  * @param heartbeatChunk pointer to the received heartbeat ack chunk
@@ -614,7 +614,7 @@ pm_heartbeatAck (SCTP_heartbeat * heartbeatChunk)
 
 /*------------------- Signals from SCTP internal modules -----------------------------------------*/
 
-/**
+/** done
  * pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged.
  * @param pathID   last path-ID where chunks were sent to (and thus probably acked from)
  * @param newRTT   the newly determined RTT in milliseconds, and 0 if retransmitted chunks had been acked
@@ -691,7 +691,7 @@ pm_chunksAcked (short pathID, unsigned int newRTT)
   }
 } /* end: pm_chunksAcked */
 
-/**
+/** done
  * helper function, that simply sets the data_chunks_sent_in_last_rto flag of this path management instance to TRUE
  * @param pathID  index of the address, where flag is set
  */
@@ -721,10 +721,9 @@ pm_chunksSentOn (short pathID)
   }
   event_logi(VERBOSE, "Calling pm_chunksSentOn(%d)", pathID);
   pmData->pathData[pathID].data_chunks_sent_in_last_rto = TRUE;
-
 }
 
-/**
+/** done
  pm_chunksRetransmitted is called by reliable transfer whenever chunks have been retransmitted.
  @param  pathID  address index, where timeout has occurred (i.e. which caused retransmission)
  */
@@ -904,7 +903,7 @@ pm_enableHB (short pathID, unsigned int hearbeatIntervall)
   return SCTP_SUCCESS;
 } /* end: pm_enableHB */
 
-/**
+/** done
  pm_disableAllHB is usually called on shutdown to disable all heartbeats.
  */
 void
@@ -939,7 +938,7 @@ pm_disableAllHB (void)
   }
 } /* end: pm_disableAllHB */
 
-/**
+/** done
  pm_disableHB is called to disable heartbeat for one specific path id.
  @param  pathID index of  address, where HBs should not be sent anymore
  @return error code: 0 for success, 1 for error (i.e. pathID too large)
@@ -978,7 +977,7 @@ pm_disableHB (short pathID)
   return SCTP_SUCCESS;
 } /* end: pm_disableHB */
 
-/**
+/** done
  pm_setPrimaryPath sets the primary path.
  @param pathID     index of the address that is to become primary path
  @return 0 if okay, else 1 if there was some error

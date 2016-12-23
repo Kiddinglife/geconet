@@ -289,7 +289,7 @@ bool mpath_handle_chunks_retx(short pathid);
 pm_chunksRetransmitted is called by reliable transfer whenever chunks have been retransmitted.
 @param  pathID  address index, where timeout has occurred (i.e. which caused retransmission)
 */
-bool mpm_chunks_retx(short pathID);
+bool mpath_chunks_retx(short pathID);
 /**
  pm_heartbeatTimer is called by the adaption-layer when the heartbeat timer expires.
  It may set the path to inactive, or restart timer, or even cause COMM LOST
@@ -305,6 +305,31 @@ int mpath_heartbeat_timer_expired(timeout* timerID);
  * @param heartbeatChunk pointer to the received heartbeat ack chunk
  */
 void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk);
+/**
+* helper function, that simply sets the data_chunks_sent_in_last_rto flag of this path management instance to TRUE
+* @param pathID  index of the address, where flag is set
+*/
+void mpath_data_chunk_sent(short pathID);
+/**
+pm_setPrimaryPath sets the primary path.
+@param pathID     index of the address that is to become primary path
+@return 0 if okay, else 1 if there was some error
+*/
+short mpath_set_primary_path(short pathID);
+/**
+pm_disableHB is called to disable heartbeat for one specific path id.
+@param  pathID index of  address, where HBs should not be sent anymore
+@return error code: 0 for success, 1 for error (i.e. pathID too large)
+*/
+int mpath_disable_hb(short pathID);
+int mpath_disable_all_hb();
+/**
+pm_enableHB is called when ULP wants to enable heartbeat.
+@param  pathID index of address, where we sent the HBs to
+@param  hearbeatIntervall time in msecs, that is to be added to the RTT, before sending HB
+@return error code, 0 for success, 1 for error (i.e. address index too large)
+*/
+int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////// mdis  dispatcher module  ///////////////////////////////////////////////
@@ -562,6 +587,107 @@ inline ushort mdm_get_ostreams(void)
 	return se->numSendStreams;
 }
 
+int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall)
+{
+	path_controller_t* pmData = mdi_read_mpath();
+	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
+	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
+
+	pmData->path_params[pathID].hb_interval = hearbeatIntervall;
+	EVENTLOG2(VERBOSE, "mpath_enable_hb: chose interval %u msecs for path %d", hearbeatIntervall,pathID);
+
+	if (pathID >= 0 && pathID < pmData->path_num)
+	{
+		if (pmData->path_params[pathID].hb_enabled)
+		{
+			if (pmData->path_params[pathID].hb_timer_id != NULL)
+			{
+				mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
+				pmData->path_params[pathID].hb_timer_id = NULL;
+			}
+			pmData->path_params[pathID].hb_enabled = false;
+			EVENTLOG1(INFO, "mpath_disable_hb: path %d is primary", pathID);
+		}
+		return GECONET_ERRNO::SUCESS;
+	}
+	EVENTLOG1(VERBOSE, "mpath_do_hb: invalid path ID %d", pathID);
+	return GECONET_ERRNO::ILLEGAL_FUNC_PARAM;
+}
+int mpath_disable_hb(short pathID)
+{
+	path_controller_t* pmData = mdi_read_mpath();
+	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
+	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
+
+	if (pathID >= 0 && pathID < pmData->path_num)
+	{
+		if (pmData->path_params[pathID].hb_enabled)
+		{
+			if (pmData->path_params[pathID].hb_timer_id != NULL)
+			{
+				mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
+				pmData->path_params[pathID].hb_timer_id = NULL;
+			}
+			pmData->path_params[pathID].hb_enabled = false;
+			EVENTLOG1(INFO, "mpath_disable_hb: path %d is primary", pathID);
+		}
+		return GECONET_ERRNO::SUCESS;
+	}
+	EVENTLOG1(VERBOSE, "mpath_do_hb: invalid path ID %d", pathID);
+	return GECONET_ERRNO::ILLEGAL_FUNC_PARAM;
+}
+int mpath_disable_all_hb()
+{
+	path_controller_t* pmData = mdi_read_mpath();
+	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
+	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
+
+	for (int pathID = 0; pathID < pmData->path_num; pathID++)
+	{
+		if (pmData->path_params[pathID].hb_enabled)
+		{
+			if (pmData->path_params[pathID].hb_timer_id != NULL)
+			{
+				mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
+				pmData->path_params[pathID].hb_timer_id = NULL;
+			}
+			pmData->path_params[pathID].hb_enabled = false;
+			EVENTLOG1(INFO, "mpath_disable_hb: path %d is primary", pathID);
+		}
+	}
+	return GECONET_ERRNO::SUCESS;
+}
+short mpath_set_primary_path(short pathID)
+{
+	path_controller_t* pmData = mdi_read_mpath();
+	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
+	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
+
+	if (pathID >= 0 && pathID < pmData->path_num)
+	{
+		if (pmData->path_params[pathID].state == PM_ACTIVE)
+		{
+			pmData->primary_path = pathID;
+			pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
+			EVENTLOG1(INFO, "pm_setPrimaryPath: path %d is primary", pathID);
+			return GECONET_ERRNO::SUCESS;
+		}
+		return GECONET_ERRNO::INACTIVE_PATH;
+	}
+
+	EVENTLOG1(VERBOSE, "mpath_do_hb: invalid path ID %d", pathID);
+	return GECONET_ERRNO::ILLEGAL_FUNC_PARAM;
+}
+
+void mpath_data_chunk_sent(short pathID)
+{
+	path_controller_t* pmData = mdi_read_mpath();
+	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
+	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
+	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_do_hb: invalid path ID");
+	EVENTLOG1(VERBOSE, "mpath_data_chunk_sent(%d)", pathID);
+	pmData->path_params[pathID].data_chunks_sent_in_last_rto = true;
+}
 inline int mpath_get_rto_initial(void)
 {
 	path_controller_t* pmData = mdi_read_mpath();
@@ -814,7 +940,7 @@ bool mpath_handle_chunks_retx(short pathID)
 	}
 	return false;
 }
-bool mpm_chunks_retx(short pathID)
+bool mpath_chunks_retx(short pathID)
 {
 	return false;
 }
@@ -2310,10 +2436,8 @@ int mdi_send_bundled_chunks(int* ad_idx)
 		goto leave;
 	}
 
-	if (bundle_ctrl->data_in_buffer && path_param_id > 0)
-	{
-		mdi_data_chunk_set_sent_flag(path_param_id);
-	}
+	if (bundle_ctrl->data_in_buffer && path_param_id > -1)
+		mpath_data_chunk_sent(path_param_id);
 
 	EVENTLOG2(VERBOSE, "sending message len==%u to adress idx=%d", send_len, path_param_id);
 
@@ -2455,27 +2579,6 @@ void on_disconnected(uint status)
 	//LEAVE_CALLBACK("communicationLostNotif");
 	curr_geco_instance_ = old_ginst;
 	curr_channel_ = old_channel;
-}
-inline void mdi_data_chunk_set_sent_flag(int path_param_id)
-{
-	path_controller_t* path_ctrl = mdi_read_mpath();
-	if (path_ctrl == NULL)
-	{
-		ERRLOG(MAJOR_ERROR, "set_path_chunk_sent_on: GOT path_ctrl NULL");
-		return;
-	}
-	if (path_ctrl->path_params == NULL)
-	{
-		ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on(%d): path_params NULL !", path_param_id);
-		return;
-	}
-	if (!(path_param_id >= 0 && path_param_id < path_ctrl->path_num))
-	{
-		ERRLOG1(MAJOR_ERROR, "set_path_chunk_sent_on: invalid path ID: %d", path_param_id);
-		return;
-	}
-	EVENTLOG1(VERBOSE, "Calling set_path_chunk_sent_on(%d)", path_param_id);
-	path_ctrl->path_params[path_param_id].data_chunks_sent_in_last_rto = true;
 }
 
 int mdi_stop_hb_timer(short pathID)

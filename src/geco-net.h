@@ -90,6 +90,14 @@ enum ConnectionLostReason
 	NumofLostReasons  // number od reasons
 };
 
+enum GECONET_ERRNO : int
+{
+	SUCESS = 0,
+	NULL_MODULE = -1,
+	ILLEGAL_FUNC_PARAM = -2,
+	INACTIVE_PATH = -3,
+};
+
 const uint COMM_UP_RECEIVED_VALID_COOKIE = 1;
 const uint COMM_UP_RECEIVED_COOKIE_ACK = 2;
 const uint COMM_UP_RECEIVED_COOKIE_RESTART = 3;
