@@ -237,7 +237,7 @@ void mdlm_read_streams(ushort* inStreams, ushort* outStreams);
 #define  PM_ADDED                            2
 #define  PM_REMOVED                       3
 #define  PM_PATH_UNCONFIRMED    5
-#define  PM_INITIAL_HB_INTERVAL    30000
+#define  PM_INITIAL_HB_INTERVAL    1 //30000
 #define  RTO_ALPHA            0.125f
 #define  RTO_BETA              0.25f
 
@@ -1075,6 +1075,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		switch (pmData->path_params[pathID].state)
 		{
 		case PM_ACTIVE:
+		case PM_PATH_UNCONFIRMED:
 			/* Handling of unacked heartbeats is the same as that of unacked data chunks.
 			 The state after calling pm_chunksRetransmitted may have changed to inactive. */
 			removed_association = mpath_handle_chunks_retx((short)pathID);
@@ -1084,15 +1085,6 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		case PM_INACTIVE:
 			/* path already inactive, dont increase counter etc. */
 			EVENTLOG1(NOTICE, "path %d already inactive, dont increase counter etc", pathID);
-			break;
-		case PM_PATH_UNCONFIRMED:
-			EVENTLOG1(NOTICE, "path %d  unconfirmed", pathID);
-			break;
-		case PM_ADDED:
-			EVENTLOG1(NOTICE, "path %d added", pathID);
-			break;
-		case PM_REMOVED:
-			EVENTLOG1(NOTICE, "path %d removed", pathID);
 			break;
 		default:
 			ERRLOG1(WARNNING_ERROR, "no such pm state %d", pmData->path_params[pathID].state);
@@ -1163,6 +1155,7 @@ void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source
 {
 	heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
 	mdi_bundle_ctrl_chunk((simple_chunk_t*)heartbeatChunk);
+	mdi_unlock_bundle_ctrl();
 	mdi_send_bundled_chunks();
 }
 void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
@@ -2328,6 +2321,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 				EVENTLOG(VERBOSE, "dispatch_layer::mdi_send_geco_packet(): : last_source_addr_ was not NULL");
 				//memcpy(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
 				//memcpy_fast(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
+				//dest_addr_ptr = &dest_addr;
 				dest_addr_ptr = last_source_addr_;
 			}
 		}
