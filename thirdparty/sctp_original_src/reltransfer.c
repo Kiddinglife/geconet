@@ -113,7 +113,7 @@ typedef struct rtx_buffer_struct
  * reliable transfer must be reset
  * @param rtx   pointer to a reltransfer_controller_t, where acked bytes per address will be reset to 0
  */
-void reset_rtx_bytecounters(reltransfer_controller_t * rtx)
+void mreltx_zero_newly_acked_bytes(reltransfer_controller_t * rtx)
 {
 	rtx->newly_acked_bytes = 0L;
 	return;
@@ -160,7 +160,7 @@ void *mreltrans_new(unsigned int number_of_destination_addresses, unsigned int i
 	event_logi(VVERBOSE, "RTX : Association-ID== %d ", tmp->my_association);
 	if (tmp->my_association == 0)
 		error_log(ERROR_FATAL, "Association was not set, should be......");
-	reset_rtx_bytecounters(tmp);
+	mreltx_zero_newly_acked_bytes(tmp);
 	return (tmp);
 }
 
@@ -765,7 +765,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
 	if (rtx_necessary == FALSE) {
 		fc_sack_info(adr_index, advertised_rwnd, ctsna, all_acked, new_acked,
 			rtx->newly_acked_bytes, rtx->numofdestaddrlist);
-		reset_rtx_bytecounters(rtx);
+		mreltx_zero_newly_acked_bytes(rtx);
 	}
 	else {
 		/* retval = */
@@ -775,7 +775,7 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
 			rtx->newly_acked_bytes,
 			rtx->numofdestaddrlist,
 			chunks_to_rtx, rtx_chunks);
-		reset_rtx_bytecounters(rtx);
+		mreltx_zero_newly_acked_bytes(rtx);
 	}
 
 	if (before(rtx->advancedPeerAckPoint, ctsna)) {
@@ -1221,7 +1221,7 @@ unsigned int rtx_rcv_shutdown_ctsna(unsigned int ctsna)
 		if (rtx_queue_len == 0) all_acked = TRUE;
 		fc_sack_info(0, rtx->peer_arwnd, ctsna, (boolean)all_acked, (boolean)new_acked,
 			rtx->newly_acked_bytes, rtx->numofdestaddrlist);
-		reset_rtx_bytecounters(rtx);
+		mreltx_zero_newly_acked_bytes(rtx);
 	}
 	else {
 		rtx_queue_len = g_list_length(rtx->chunk_list_tsn_ascended);

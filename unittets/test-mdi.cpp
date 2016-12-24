@@ -24,7 +24,7 @@ extern std::vector<geco_instance_t*> geco_instances_; /* store all instances, in
 /* whenever an external event (ULP-call, socket-event or timer-event) this variable must
  * contain the addressed channel. This pointer must be reset to null after the event
  * has been handled.*/
-extern channel_t *curr_channel_;
+extern geco_channel_t *curr_channel_;
 extern bool is_found_abort_chunk_;
 extern uint curr_write_pos_[MAX_CHUNKS_SIZE]; /* where is the next write starts */
 extern simple_chunk_t* simple_chunks_[MAX_CHUNKS_SIZE]; /* simple ctrl chunks to send*/
@@ -52,13 +52,13 @@ extern uint last_init_tag_;
 extern uint last_veri_tag_;
 
 /* many diferent channels belongs to a same geco instance*/
-extern channel_t** channels_; /*store all channels, channel id as key*/
+extern geco_channel_t** channels_; /*store all channels, channel id as key*/
 extern uint channels_size_;
 extern uint* available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
 extern uint available_channel_ids_size_;
 extern geco_instance_t*
 mdis_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port);
-extern channel_t*
+extern geco_channel_t*
 mdi_find_channel(sockaddrunion * src_addr, ushort src_port, ushort dest_port);
 extern bool
 validate_dest_addr(sockaddrunion * dest_addr);
@@ -74,7 +74,7 @@ extern uchar*
 mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len,
 	ushort param_type);
 extern int
-mdis_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
+mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uchar * chunk, uint len,
 	uint my_supported_addr_types,
 	uint* peer_supported_addr_types, bool ignore_dups,
@@ -88,7 +88,7 @@ mch_complete_simple_chunk(uint chunkID);
 extern void
 mch_free_simple_chunk(uint chunkID);
 extern void
-mdis_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
+mdi_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
 extern uint
 get_bundle_total_size(bundle_controller_t* buf);
 
@@ -158,7 +158,7 @@ get_bundle_total_size(bundle_controller_t* buf);
            geco_packet.pk_comm_hdr.dest_port = htons(sender_dest_port);  \
            geco_packet.pk_comm_hdr.src_port = htons(sender_src_port);  \
            geco_packet.pk_comm_hdr.verification_tag = 0;\
-           channel_t channel;\
+           geco_channel_t channel;\
            geco_instance_t inst;\
            channels_.push_back(&channel);\
            geco_instances_.push_back(&inst);\
@@ -205,7 +205,7 @@ init_inst(geco_instance_t& inst, ushort destport, const char** src_ips,
 	geco_instances_.push_back(&inst);
 }
 static void
-init_channel(channel_t& channel, ushort srcport, ushort destport,
+init_channel(geco_channel_t& channel, ushort srcport, ushort destport,
 	const char** src_ips, uint src_ips_len, const char** dest_ips,
 	uint dest_ips_len, sockaddrunion* srclist, sockaddrunion* destlist)
 {
@@ -320,7 +320,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
 
 // last run and passed on 22 Agu 2016
 extern void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
-extern channel_t* mdi_find_channel();
+extern geco_channel_t* mdi_find_channel();
 struct transportaddr_hash_functor
 {
 	size_t operator()(const transport_addr_t &addr) const
@@ -356,7 +356,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 	sockaddrunion remote_addres[src_ips_len];
 	sockaddrunion local_addres[dest_ips_len];
 
-	channel_t channel;
+	geco_channel_t channel;
 	//init_channel(channel, ports[0], ports[1], src_ips, src_ips_len, dest_ips,dest_ips_len, remote_addres, local_addres);
 	for (uint i = 0; i < src_ips_len; i++)
 	{
@@ -378,14 +378,14 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 	channel.is_INADDR_ANY = false;
 
 	// stub the related variables 
-	channel_t* chanids[8] = { 0 };
+	geco_channel_t* chanids[8] = { 0 };
 	channels_ = chanids;
 	curr_channel_ = &channel;
 	channels_[5] = curr_channel_;
 	mdi_set_channel_remoteaddrlist(remote_addres, src_ips_len);
 
 	//temps
-	channel_t* found;
+	geco_channel_t* found;
 	sockaddrunion* last_src_addr;
 	sockaddrunion* last_dest_addr;
 	ushort last_src_port = channel.remote_port;
@@ -418,7 +418,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//2) if dest port not equal
@@ -433,7 +433,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//3) if dest and src port not equal
@@ -449,7 +449,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//4) if dest addr not equal
@@ -465,7 +465,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//5) if  src addr not equal
@@ -481,7 +481,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//6) if  dest and addr not equal
@@ -500,7 +500,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//7) if dest addr family not equal
@@ -518,7 +518,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//8) if src addr family not equal
@@ -537,7 +537,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//6) if  dest and addr not equal
@@ -561,7 +561,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (channel_t*)NULL);
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 }
@@ -598,7 +598,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //		}
 //	}
 //
-//	channel_t channel;
+//	geco_channel_t channel;
 //	channel.remote_addres = remote_addres;
 //	channel.local_addres = local_addres;
 //	channel.remote_port = ports[0];
@@ -1037,7 +1037,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	//////////////////////////////////////////////////////////////////////////////
 //	uint peersupportedtypes = 0;
 //	str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0);
-//	ret = mdis_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+//	ret = mdi_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
 //		offset + INIT_CHUNK_FIXED_SIZES,
 //		SUPPORT_ADDRESS_TYPE_IPV4,
 //		&peersupportedtypes, true, false);
@@ -1056,7 +1056,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	}
 //	//////////////////////////////////////////////////////////////////////////////
 //	str2saddr(&last_source_addr, "192.168.5.123", 0);
-//	ret = mdis_read_peer_addreslist(
+//	ret = mdi_read_peer_addreslist(
 //		peer_addreslist, geco_packet.chunk, offset + INIT_CHUNK_FIXED_SIZES,
 //		SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6, NULL, true, false);
 //	EXPECT_EQ(ret, 6);
@@ -1071,7 +1071,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	}
 //	EXPECT_TRUE(saddr_equals(&peer_addreslist[5], &last_source_addr, true));
 //	str2saddr(&last_source_addr, "2607:f0d0:1002:0051:0000:0000:0000:0005", 0);
-//	ret = mdis_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
+//	ret = mdi_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
 //		offset + INIT_CHUNK_FIXED_SIZES,
 //		SUPPORT_ADDRESS_TYPE_IPV6, NULL, true, false);
 //	EXPECT_EQ(ret, 3);  //2 + last_source_addr_ = 3
@@ -1212,7 +1212,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //		FLAG_TBIT_UNSET);
 //	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
 //	//  1.1) if dest_index == NULL
-//	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, NULL);
+//	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, NULL);
 //	//      1.1.1) got_send_address shoul be false && requested_destination should be zero
 //	EXPECT_FALSE(default_bundle_ctrl_.got_send_address);
 //	EXPECT_EQ(default_bundle_ctrl_.requested_destination, 0);
@@ -1223,7 +1223,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 //		FLAG_TBIT_UNSET);
 //	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
-//	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
+//	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 //	//      1.2.1) got_send_address shoul be true && requested_destination should be 6
 //	EXPECT_TRUE(default_bundle_ctrl_.got_send_address);
 //	EXPECT_EQ(default_bundle_ctrl_.requested_destination, path);
@@ -1240,7 +1240,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 //		UDP_GECO_PACKET_FIXED_SIZES);
 //	//  2.1 should not force send
-//	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
+//	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 //	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 //		MAX_GECO_PACKET_SIZE);
 //	mch_free_simple_chunk(cid);
@@ -1251,7 +1251,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 8);
 //	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_), 1480);
 //	//  3.1 should force send && get_bundle_total_size == UDP_GECO_PACKET_FIXED_SIZES+8
-//	mdis_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
+//	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 //	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 //		UDP_GECO_PACKET_FIXED_SIZES + 8);
 //	mch_free_simple_chunk(cid);
@@ -1391,7 +1391,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //					last_src_addr, last_dest_addr);
 //				//1.3.2) should NOT find an existed channel
 //				ASSERT_EQ(ret, geco_return_enum::good);
-//				ASSERT_EQ(curr_channel_, (channel_t*)NULL);
+//				ASSERT_EQ(curr_channel_, (geco_channel_t*)NULL);
 //			}
 //		}
 //	}

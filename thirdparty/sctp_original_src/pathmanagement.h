@@ -105,7 +105,7 @@ void pm_chunksAcked(short pathID, unsigned int newRTO);
  * function to be called every time we send data to a path
  * to keep it from becoming "idle"
  */
-void pm_chunksSentOn(short pathID);
+void mpath_data_chunk_sent(short pathID);
 
 
 /* pm_chunksRetransmitted is called by reliable transfer whenever chunks have been 

@@ -82,7 +82,7 @@ void se_delete_stream_engine(void *instancePtr);
 
 
 /* returns the number of in- and out-streams */
-int se_readNumberOfStreams(unsigned short *inStreams, unsigned short *outStreams);
+int se_read_streams(unsigned short *inStreams, unsigned short *outStreams);
 
 
 

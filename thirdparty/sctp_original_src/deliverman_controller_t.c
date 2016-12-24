@@ -268,13 +268,12 @@ se_delete_stream_engine(void *septr)
 
 
 
-int
-se_readNumberOfStreams(unsigned short *inStreams, unsigned short *outStreams)
+int se_read_streams(unsigned short *inStreams, unsigned short *outStreams)
 {
 	deliverman_controller_t* se = (deliverman_controller_t*)mdi_readStreamEngine();
 	if (se == NULL)
 	{
-		error_log(ERROR_MINOR, "Called se_readNumberOfStreams, but no Streamengine is there !");
+		error_log(ERROR_MINOR, "Called se_read_streams, but no Streamengine is there !");
 		*inStreams = 0;
 		*outStreams = 0;
 		return -1;

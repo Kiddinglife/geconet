@@ -109,7 +109,7 @@ typedef struct PATHMANDATA
   /** the number of paths used by this assoc. */
   short numberOfPaths;
   /** Counter for all retransmissions over all paths */
-  unsigned int peerRetranscount;
+  unsigned int total_retrans_count;
   /** pointer to path-specific data */
   path_params_t *pathData;
   /** association-ID */
@@ -185,7 +185,7 @@ handleChunksRetransmitted (short pathID)
       INTERNAL_EVENT_0,
       "handleChunksRetransmitted(%d) : path-rtx-count==%u, peer-rtx-count==%u",
       pathID, pmData->pathData[pathID].pathRetranscount,
-      pmData->peerRetranscount);
+      pmData->total_retrans_count);
 
   if (pmData->pathData[pathID].state == PM_PATH_UNCONFIRMED)
   {
@@ -197,7 +197,7 @@ handleChunksRetransmitted (short pathID)
   {
 
     pmData->pathData[pathID].pathRetranscount++;
-    pmData->peerRetranscount++;
+    pmData->total_retrans_count++;
 
   }
   else
@@ -207,7 +207,7 @@ handleChunksRetransmitted (short pathID)
     return FALSE;
   }
 
-  if (pmData->peerRetranscount
+  if (pmData->total_retrans_count
       >= (unsigned int) sci_getMaxAssocRetransmissions ())
   {
     mdi_deleteCurrentAssociation ();
@@ -327,7 +327,7 @@ handleChunksAcked (short pathID, unsigned int newRTT)
 
   /* reset counters */
   pmData->pathData[pathID].pathRetranscount = 0;
-  pmData->peerRetranscount = 0;
+  pmData->total_retrans_count = 0;
 } /* end: handleChunksAcked */
 
 /*----------------- Functions to answer peer HB requests -----------------------------------------*/
@@ -696,30 +696,30 @@ pm_chunksAcked (short pathID, unsigned int newRTT)
  * @param pathID  index of the address, where flag is set
  */
 void
-pm_chunksSentOn (short pathID)
+mpath_data_chunk_sent (short pathID)
 {
   pmData = (mpath_t *) mdi_readPathMan ();
 
   if (pmData == NULL)
   {
-    error_log(ERROR_MAJOR, "pm_chunksSentOn: mdi_readPathMan failed");
+    error_log(ERROR_MAJOR, "mpath_data_chunk_sent: mdi_readPathMan failed");
     return;
   }
   if (pmData->pathData == NULL)
   {
     error_logi(
         ERROR_MAJOR,
-        "pm_chunksSentOn(%d): Path Data Structures not initialized yet, returning !",
+        "mpath_data_chunk_sent(%d): Path Data Structures not initialized yet, returning !",
         pathID);
     return;
   }
 
   if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
   {
-    error_logi(ERROR_MAJOR, "pm_chunksSentOn: invalid path ID: %d", pathID);
+    error_logi(ERROR_MAJOR, "mpath_data_chunk_sent: invalid path ID: %d", pathID);
     return;
   }
-  event_logi(VERBOSE, "Calling pm_chunksSentOn(%d)", pathID);
+  event_logi(VERBOSE, "Calling mpath_data_chunk_sent(%d)", pathID);
   pmData->pathData[pathID].data_chunks_sent_in_last_rto = TRUE;
 }
 
@@ -862,7 +862,7 @@ pm_enableHB (short pathID, unsigned int hearbeatIntervall)
 
     pmData->pathData[pathID].firstRTO = TRUE;
     pmData->pathData[pathID].pathRetranscount = 0;
-    pmData->peerRetranscount = 0;
+    pmData->total_retrans_count = 0;
 
     pmData->pathData[pathID].heartbeatSent = FALSE;
     pmData->pathData[pathID].heartbeatAcked = FALSE;
@@ -1378,6 +1378,11 @@ pm_getHBInterval (short pathID, unsigned int* current_interval)
 
 /*------------------- Functions called to create, init and delete pathman-instances --------------*/
 
+uint mdi_read_default_max_burst()
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
 /**
  pm_setPaths modufies number of paths and sets the primary path.
  This is required for association setup, where the local ULP provides
@@ -1411,7 +1416,7 @@ pm_setPaths (short noOfPaths, short primaryPathID)
   {
     pmData->primaryPath = primaryPathID;
     pmData->numberOfPaths = noOfPaths;
-    pmData->peerRetranscount = 0;
+    pmData->total_retrans_count = 0;
 
     for (i = 0; i < noOfPaths; i++)
     {

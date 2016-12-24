@@ -346,12 +346,14 @@ struct ulp_cbs_t
 	 *  @param 3 number of destination addresses
 	 *  @param 4 number input streamns
 	 *  @param 5 number output streams
-	 *  @param 6 int  supportPRmulp (0=FALSE, 1=TRUE)
-	 *  @param 7 pointer to ULP data, usually NULL
+	 *  @param 6 int  do I supportPR (0=FALSE, 1=TRUE)
+	 *  @param 7 int  do peer supportPR (0=FALSE, 1=TRUE)
+	 *  @param 8 int  do I support addip (0=FALSE, 1=TRUE)
+	 *  @param 9 int  do peer support addip (0=FALSE, 1=TRUE)
+	 *  @param 10 pointer to ULP data, usually NULL
 	 *  @return the callback is to return a pointer, that will be transparently returned with every callback
 	 */
-	void* (*communicationUpNotif)(unsigned int, int, unsigned int,
-		unsigned short, unsigned short, int, void*);
+	void* (*communicationUpNotif)(unsigned int, int, unsigned int,unsigned short, unsigned short, int, int, int, int,void*);
 	/**
 	 * indicates that communication was lost to peer (chapter 10.2.E).
 	 *  @param 1 connectionid

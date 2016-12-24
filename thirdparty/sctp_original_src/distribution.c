@@ -3158,7 +3158,7 @@ int sctp_getAssocStatus(unsigned int associationID,
 			&(curr_channel_->destinationAddresses[status->primaryAddressIndex]),
 			&(status->primaryDestinationAddress[0]), SCTP_MAX_IP_LEN);
 
-		se_readNumberOfStreams(&(status->inStreams), &(status->outStreams));
+		se_read_streams(&(status->inStreams), &(status->outStreams));
 		status->currentReceiverWindowSize = rtx_get_peer_rwnd();
 		status->outstandingBytes = fc_get_outstanding_bytes();
 		status->noOfChunksInSendQueue = fc_get_queued_chunks_count();
@@ -4311,7 +4311,7 @@ void mdi_communicationUpNotif(unsigned short status)
 		/* set number of paths and primary path at pathmanegement and start heartbeat */
 		pm_setPaths(curr_channel_->noOfNetworks, primaryPath);
 
-		se_readNumberOfStreams(&noOfInStreams, &noOfOutStreams);
+		se_read_streams(&noOfInStreams, &noOfOutStreams);
 
 		event_logiii(VERBOSE,
 			"Distribution: COMM-UP, assocId: %u, status: %u, noOfNetworks: %u",

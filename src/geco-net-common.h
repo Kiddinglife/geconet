@@ -776,7 +776,7 @@ extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int e
 
 #define DEFAULT_MAX_SENDQUEUE   0       /* unlimited send queue */
 #define DEFAULT_MAX_RECVQUEUE   0       /* unlimited recv queue - unused really */
-#define DEFAULT_MAX_BURST       4       /* maximum burst parameter */
+#define DEFAULT_MAX_BURST       8       /* maximum burst parameter */
 #define DEFAULT_ENDPOINT_SIZE   10000 // max connections is up to 10000
 
 #define free_flowctrl_data_chunk(list_element)\

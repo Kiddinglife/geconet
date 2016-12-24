@@ -62,7 +62,7 @@ struct geco_instance_t
     bool use_ip4;
     bool use_ip6;
 
-    ulp_cbs_t applicaton_layer_cbs; /*setup by app layer*/
+    ulp_cbs_t ulp_callbacks; /*setup by app layer*/
 
     /*maximum number of incoming streams that this instance will take */
     ushort noOfInStreams;
@@ -223,12 +223,12 @@ struct path_params_t
  * this struct contains all necessary data for one instance of the path management
  * module. There is one such module per existing channel.
  */
-struct channel_t;
+struct geco_channel_t;
 struct path_controller_t
 {
     //channel id
     uint channel_id;
-    channel_t* channel_ptr;
+    geco_channel_t* channel_ptr;
 
     // store the current primary path
     int primary_path;
@@ -237,7 +237,7 @@ struct path_controller_t
     //the number of paths used by this channel
     int path_num;
     //counter for all retransmittions over all paths
-    uint retrans_count;
+    uint total_retrans_count;
     //pointer to path-secific prams maybe more than one
     path_params_t* path_params;
     //max retrans per path
@@ -286,7 +286,7 @@ struct smctrl_t
     uint cookie_lifetime;
     /** the geco instance */
     geco_instance_t* instance;
-    channel_t* channel;
+    geco_channel_t* channel;
     /*@} */
 };
 
@@ -427,7 +427,7 @@ struct deliverman_controller_t
  * 一个偶联。由于偶联由两个 端点的传送地址来定义，所以通过数据配置本地IP 地址、
  * 本地SCTP 端口号、对端 IP 地址、对端SCTP 端口号等四个参数，可以唯一标识一个SCTP 偶联
  */
-struct channel_t
+struct geco_channel_t
 {
     /*The current ID of this channel,
      it is used as a key to find a channel in the list,
@@ -475,7 +475,7 @@ struct channel_t
     bool remotely_supported_ADDIP;
 
     bool deleted; /** marks an association for deletion */
-    void * application_layer_dataptr; /* transparent pointer to some upper layer data */
+    void * ulp_dataptr; /* transparent pointer to some upper layer data */
 };
 
 /**

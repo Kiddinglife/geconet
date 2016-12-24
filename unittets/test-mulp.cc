@@ -372,12 +372,12 @@ extern bool mdi_new_channel(geco_instance_t* instance, ushort local_port, ushort
 	short primaryDestinitionAddress, ushort noOfDestinationAddresses, sockaddrunion *destinationAddressLis);
 extern int mtra_poll(int maxwait=-1);
 extern void msm_abort_channel(short error_type = 0, uchar* errordata = 0, ushort errordattalen = 0);
-extern channel_t** channels_; /*store all channels, channel id as key*/
+extern geco_channel_t** channels_; /*store all channels, channel id as key*/
 extern uint channels_size_;
 extern uint* available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
 extern uint available_channel_ids_size_;
 extern geco_instance_t *curr_geco_instance_;
-extern channel_t *curr_channel_;
+extern geco_channel_t *curr_channel_;
 extern bool mdi_connect_udp_sfd_;
 
 TEST(MULP, test_mdi_new_and_delete_channel)
@@ -625,7 +625,7 @@ TEST(MULP, test_mulp_connect)
 	noOfOutStreams = 12;
 	mulp_connect(instid, noOfOutStreams, "::1", localPort,
 		&ULPcallbackFunctions);
-	channel_t* curr_channel_ = channels_[0];
+	geco_channel_t* curr_channel_ = channels_[0];
 
 	ASSERT_EQ(curr_channel_->channel_id, 0);
 	ASSERT_EQ(curr_channel_->deleted, false);
@@ -714,7 +714,7 @@ TEST(MULP, test_connection_pharse)
 	unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN];
 	ulp_cbs_t ULPcallbackFunctions;
 
-	//ip6 any and ip4 any
+	//ip6 any and ip4 any 
 	localPort = USED_UDP_PORT;
 	noOfInStreams = 32;
 	noOfOutStreams = 32;
@@ -729,17 +729,17 @@ TEST(MULP, test_connection_pharse)
 		ULPcallbackFunctions);
 	curr_geco_instance_ = geco_instances_[instid];
 
-	// cline code
-	mdi_connect_udp_sfd_ = true;
-	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
+	// cline code 
+	//mdi_connect_udp_sfd_ = true;
+	//noOfOutStreams = 12;
+	//mulp_connect(instid, noOfOutStreams, (char*)"127.0.0.1", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
 	while(flag) 
 		mtra_poll();
 
 	// client code
-	msm_abort_channel();
+	//msm_abort_channel();
 
 	mulp_delete_geco_instance(instid);
 	free_library();

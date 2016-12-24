@@ -497,7 +497,7 @@ gint bu_sendAllChunks(guint * ad_idx)
         exit(-1);
     }
 
-    if ((bu_ptr->data_in_buffer) && (idx != -1)) pm_chunksSentOn(idx);
+    if ((bu_ptr->data_in_buffer) && (idx != -1)) mpath_data_chunk_sent(idx);
 
     event_logii(VERBOSE, "bu_sendAllChunks() : sending message len==%u to adress idx=%d", send_len,
             idx);
