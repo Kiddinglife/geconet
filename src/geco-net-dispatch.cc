@@ -268,13 +268,13 @@ void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source
  * @param  pathID index of the path where data was acked
  * @param  newRTT new RTT measured, when data was acked, or zero if it was retransmitted
  */
-void mpath_handle_chunks_acked(short pathID, uint roundtripTime);
+void mpath_handle_chunks_acked(short pathID, int roundtripTime);
 /**
 * pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged.
 * @param pathID   last path-ID where chunks were sent to (and thus probably acked from)
 * @param newRTT   the newly determined RTT in milliseconds, and 0 if retransmitted chunks had been acked
 */
-void mpath_chunks_acked(short pathID, unsigned int newRTT);
+void mpath_chunks_acked(short pathID, int newRTT);
 /**
  *  mpath_handle_chunks_retx is called whenever datachunks are retransmitted or a hearbeat-request
  *  has not been acknowledged within the current heartbeat-intervall. It increases path- and peer-
@@ -849,12 +849,10 @@ void mpath_start_hb_probe(uint noOfPaths, short primaryPathID)
 				timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
 			}
 
-			if (pmData->path_params[i].hb_timer_id != NULL)
-				mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
+			assert(pmData->path_params[i].hb_timer_id == NULL);
 			pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
-				timeout_ms,
-				&mpath_heartbeat_timer_expired,
-				&pmData->channel_id, &pmData->path_params[i].path_id);
+				timeout_ms, &mpath_heartbeat_timer_expired,
+				(void *)&pmData->channel_id, (void *)&pmData->path_params[i].path_id);
 
 			/* after RTO we can do next RTO update */
 			pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
@@ -868,7 +866,6 @@ void mpath_handle_chunks_acked(short pathID, int newRTT)
 	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_do_hb: invalid path ID");
 
-	newRTT = (int)(newRTT / stamps_per_ms_double()); // transform to ms
 	EVENTLOG2(DEBUG, "mpath_handle_chunks_acked: pathID: %u, new RTT: %u msecs", pathID, newRTT);
 
 	if (newRTT > 0) // newRTT = 0 if last send is retransmit.
@@ -900,7 +897,7 @@ void mpath_handle_chunks_acked(short pathID, int newRTT)
 	pmData->path_params[pathID].retrans_count = 0;
 	pmData->total_retrans_count = 0;
 }
-void mpath_chunks_acked(short pathID, unsigned int newRTT)
+void mpath_chunks_acked(short pathID, int newRTT)
 {
 	path_controller_t* pmData = mdi_read_mpath();
 
@@ -912,13 +909,18 @@ void mpath_chunks_acked(short pathID, unsigned int newRTT)
 		ERRLOG1(MINOR_ERROR, "pm_chunksAcked: invalid path ID: %d", pathID);
 		return;
 	}
+	if (newRTT < 0)
+	{
+		ERRLOG(MINOR_ERROR, "pm_chunksAcked: Warning: newRTT < 0");
+		return;
+	}
 	if (newRTT > pmData->rto_max)
 	{
 		ERRLOG1(MINOR_ERROR, "pm_chunksAcked: Warning: RTO > RTO_MAX: %d", newRTT);
 		return;
 	}
 
-	newRTT = std::min(newRTT, pmData->rto_max);
+	newRTT = std::min((uint)newRTT, pmData->rto_max);
 
 	if (pmData->path_params[pathID].state == PM_ACTIVE)
 	{
@@ -1115,11 +1117,9 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		mch_free_simple_chunk(heartbeatCID);
 
 		// heartbeat could have been disabled when the association went down after commLost detected in mpath_handle_chunks_retx()
-		if (pmData->path_params[pathID].hb_timer_id != NULL)
-			mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
-		pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
-			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, &mpath_heartbeat_timer_expired,
-			&pmData->channel_id, &pmData->path_params[pathID].path_id);
+		// just readd this timer back with different timeouts
+		mtra_timeouts_readd(timerID, pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto);
+
 		/* reset this flag, so we can check, whether the path was idle */
 		pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
 		EVENTLOG3(NOTICE, "Heartbeat timer started again with %u msecs for path %u, RTO=%u msecs",
@@ -1173,7 +1173,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	uint sendingTime = mch_read_sendtime_from_heartbeat(heartbeatCID);
 	int roundtripTime = get_safe_time_ms() - sendingTime;
 	mch_remove_simple_chunk(heartbeatCID);
-	EVENTLOG2(INFO, "HBAck for path %u, RTT = %f msecs", pathID, roundtripTime);
+	EVENTLOG2(INFO, "HBAck for path %u, RTT = %d msecs", pathID, roundtripTime);
 
 	if (!(pathID >= 0 && pathID < pmData->path_num))
 	{
@@ -1184,25 +1184,23 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	// reset error counters if received hback or sack
 	mpath_handle_chunks_acked(pathID, roundtripTime);
 
-	path_controller_t* old_pmData;
-	short state = pmData->path_params[pathID].state;
-
 	// Handling of acked heartbeats is the simular that that of acked data chunks.
+	short state = pmData->path_params[pathID].state;
 	if (state == PM_INACTIVE || state == PM_PATH_UNCONFIRMED)
 	{
 		// change to the active state
 		pmData->path_params[pathID].state = PM_ACTIVE;
 		EVENTLOG1(INFO, "pathID %d changed to ACTIVE", pathID);
-		old_pmData = pmData;
 		mdi_on_path_status_changed(pathID, (int)PM_ACTIVE);
-		pmData = old_pmData;
 
 		// restart timer with new RTO
-		if (pmData->path_params[pathID].hb_timer_id != NULL)
-			mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
-		pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
-			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, &mpath_heartbeat_timer_expired,
-			(void *)&pmData->channel_id, (void *)&pmData->path_params[pathID].path_id);
+		assert(pmData->path_params[pathID].hb_timer_id != NULL);
+		assert(pmData->path_params[pathID].hb_timer_id->callback.arg1 == (void *)&pmData->channel_id);
+		assert(pmData->path_params[pathID].hb_timer_id->callback.arg2 == (void *)&pmData->path_params[pathID].path_id);
+		assert(pmData->path_params[pathID].hb_timer_id->callback.action == &mpath_heartbeat_timer_expired);
+		assert(pmData->path_params[pathID].hb_timer_id->callback.type == TIMER_TYPE_HEARTBEAT);
+		assert(pmData->path_params[pathID].hb_timer_id->flags == 0);
+		mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id, pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto);
 	}
 
 	pmData->path_params[pathID].heartbeatAcked = true;
@@ -1941,8 +1939,8 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
+			}
 		}
-	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -1991,7 +1989,7 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-}
+	}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
 	uint numPeerAddresses, uint supported_types, bool receivedFromPeer)
 {
@@ -7063,7 +7061,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-}
+	}
 void free_library(void)
 {
 	mtra_destroy();

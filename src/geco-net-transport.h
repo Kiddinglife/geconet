@@ -77,6 +77,7 @@ struct test_dummy_t
 
 extern timeout* mtra_timeouts_add(uint timer_type, uint timout_ms, timeout_cb::Action action, void *arg1 = 0,
     void *arg2 = 0, bool repeated = false);
+extern timeout* mtra_timeouts_readd(timeout* tout, uint timout_ms);
 extern void mtra_timeouts_del(timeout* tid);
 
 extern int mtra_read_ip4rawsock();

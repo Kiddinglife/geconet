@@ -127,6 +127,12 @@ timeout* mtra_timeouts_add(uint timer_type, uint timout_ms, timeout_cb::Action a
   timeouts_add(tos_, tout, timout_ms * stamps_per_ms());
   return tout;
 }
+timeout* mtra_timeouts_readd(timeout* tout, uint timout_ms)
+{
+	timeouts_del(tos_,tout);
+	timeouts_add(tos_, tout, timout_ms * stamps_per_ms());
+	return tout;
+}
 void mtra_timeouts_del(timeout* tid)
 {
   timeouts_del(tos_, tid);
@@ -1010,9 +1016,11 @@ int mtra_poll(int maxwait_ms = -1)
     else if (msecs > (int) maxwait_ms)
       msecs = maxwait_ms;
   }
+
 // no timers or too long, we use default timeout 10ms for select
   if (msecs == 0 || msecs > GRANULARITY)
     msecs = GRANULARITY;
+
   int ret = mtra_poll_fds(socket_despts, &socket_despts_size_, msecs);
   return ret;
 }
