@@ -1115,11 +1115,11 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		mch_free_simple_chunk(heartbeatCID);
 
 		// heartbeat could have been disabled when the association went down after commLost detected in mpath_handle_chunks_retx()
-		//if (pmData->path_params[pathID].hb_timer_id != NULL)
-		//	mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
-		//pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
-		//	pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, &mpath_heartbeat_timer_expired,
-		//	&pmData->channel_id, &pmData->path_params[pathID].path_id);
+		if (pmData->path_params[pathID].hb_timer_id != NULL)
+			mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
+		pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
+			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, &mpath_heartbeat_timer_expired,
+			&pmData->channel_id, &pmData->path_params[pathID].path_id);
 		/* reset this flag, so we can check, whether the path was idle */
 		pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
 		EVENTLOG3(NOTICE, "Heartbeat timer started again with %u msecs for path %u, RTO=%u msecs",
