@@ -231,16 +231,6 @@ void mdlm_read_streams(ushort* inStreams, ushort* outStreams);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////// mpath  path_controller_t module////////////////////////////////////////
-/* The states of pathmanagement, also used for network status change */
-#define  PM_ACTIVE                            0
-#define  PM_INACTIVE                        1
-#define  PM_ADDED                            2
-#define  PM_REMOVED                       3
-#define  PM_PATH_UNCONFIRMED    5
-#define  PM_INITIAL_HB_INTERVAL    1 //30000
-#define  RTO_ALPHA            0.125f
-#define  RTO_BETA              0.25f
-
 /**
 pm_readState returns the current state of the path.
 @param pathID  index of the questioned address
@@ -800,7 +790,7 @@ int mpath_do_hb(int pathID)
 	mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID), &pathID);
 	int ret = mdi_send_bundled_chunks(&pathID);
 	mch_free_simple_chunk(heartbeatCID);
-	path_ctrl->path_params[pathID].hb_sent = ret > 0 ? true : false;
+	path_ctrl->path_params[pathID].hb_sent = ret > -1 ? true : false;
 	return ret;
 }
 void mpath_start_hb_probe(uint noOfPaths, short primaryPathID)
@@ -1121,7 +1111,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID);
 		mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID), &pathID);
 		ret = mdi_send_bundled_chunks(&pathID);
-		pmData->path_params[pathID].hb_sent = ret > 0 ? true : false;
+		pmData->path_params[pathID].hb_sent = ret > -1 ? true : false;
 		mch_free_simple_chunk(heartbeatCID);
 
 		// heartbeat could have been disabled when the association went down after commLost detected in mpath_handle_chunks_retx()
