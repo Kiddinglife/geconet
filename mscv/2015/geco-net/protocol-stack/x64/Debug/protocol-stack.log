@@ -25,76 +25,69 @@ d:\vs-workspace\geconet\src\geco-ds-malloc.h(869): warning C4819: The file conta
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(555): warning C4267: 'return': conversion from 'size_t' to 'unsigned int', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(570): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(808): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1168): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1177): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1466): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1476): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1968): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1984): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2109): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2138): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2816): warning C4101: 'padding_len': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2990): warning C4018: '<': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2998): warning C4018: '>=': signed/unsigned mismatch
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3248): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3261): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3362): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3459): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3511): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3609): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3656): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3324): warning C4101: 'init_i_sent_cid': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3714): warning C4102: 'leave': unreferenced label
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4287): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4308): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4367): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1171): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1180): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1467): warning C4800: 'uint': forcing value to bool 'true' or 'false' (performance warning)
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1477): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1969): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(1985): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2110): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2139): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2817): warning C4101: 'padding_len': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2991): warning C4018: '<': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(2999): warning C4018: '>=': signed/unsigned mismatch
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3249): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3262): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3363): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3460): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3512): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3610): warning C4267: 'argument': conversion from 'size_t' to 'uint', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3657): warning C4244: '=': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3325): warning C4101: 'init_i_sent_cid': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(3715): warning C4102: 'leave': unreferenced label
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4288): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4309): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4368): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4378): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4385): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4425): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4446): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4449): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4369): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4379): warning C4267: 'argument': conversion from 'size_t' to 'ushort', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4386): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4426): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4447): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4450): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4292): warning C4101: 'result': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4294): warning C4101: 'idx': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4298): warning C4101: 'preferredPath': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4294): warning C4101: 'state': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4299): warning C4101: 'prefered_primary_addr': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4953): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4965): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4977): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4451): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4293): warning C4101: 'result': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4295): warning C4101: 'idx': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4299): warning C4101: 'preferredPath': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4295): warning C4101: 'state': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4300): warning C4101: 'prefered_primary_addr': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4954): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4966): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4978): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5001): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5039): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5058): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5089): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5093): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(4979): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5002): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5040): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5059): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5090): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5094): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5132): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5192): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5196): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5095): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5133): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5193): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5197): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5245): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5198): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5246): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5253): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5247): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
 d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5254): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5288): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5337): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5365): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5373): warning C4101: 'header': unreferenced local variable
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5458): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5819): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5984): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(6948): warning C4102: 'SEND_ABORT': unreferenced label
-d:\vs-workspace\geconet\src\geco-net-dispatch.cc(7657): warning C4101: 'ret': unreferenced local variable
-  Generating Code...
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5255): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5289): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5338): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5366): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5374): warning C4101: 'header': unreferenced local variable
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5459): warning C4244: 'argument': conversion from 'chunk_id_t' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5820): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(5985): warning C4244: 'initializing': conversion from 'ADDRESS_FAMILY' to 'uchar', possible loss of data
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(6949): warning C4102: 'SEND_ABORT': unreferenced label
+d:\vs-workspace\geconet\src\geco-net-dispatch.cc(7658): warning C4101: 'ret': unreferenced local variable
 d:\vs-workspace\geconet\src\geco-net-common.h(697): warning C4715: 'saddr_equals': not all control paths return a value
-  Skipping... (no relevant changes detected)
-  geco-net-transport.cc
-  geco-net-timer.cc
-  geco-net-common.cc
-  geco-net-chunk.cc
-  geco-net-auth.cc
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1357,5): warning MSB8012: TargetPath(D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\lib.lib) does not match the Library's OutputFile property value (D:\vs-workspace\geconet\mscv\2015\geco-net\x64\Debug\geconetDebugx64.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(1359,5): warning MSB8012: TargetName(lib) does not match the Library's OutputFile property value (geconetDebugx64). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 Ws2_32.lib(WS2_32.dll) : warning LNK4006: __NULL_IMPORT_DESCRIPTOR already defined in Iphlpapi.lib(IPHLPAPI.DLL); second definition ignored

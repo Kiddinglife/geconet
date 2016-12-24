@@ -770,12 +770,12 @@ extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int e
 #define  PM_ADDED                            2
 #define  PM_REMOVED                       3
 #define  PM_PATH_UNCONFIRMED    5
-#define  PM_INITIAL_HB_INTERVAL    1 //30000
+#define  PM_INITIAL_HB_INTERVAL    6000 //30000
 #define  RTO_ALPHA            0.125f
 #define  RTO_BETA              0.25f
-#define ASSOCIATION_MAX_RETRANS_ATTEMPTS 1 //10
+#define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
 #define MAX_INIT_RETRANS_ATTEMPTS    8
-#define MAX_PATH_RETRANS_TIMES    1//5
+#define MAX_PATH_RETRANS_TIMES    5
 #define VALID_COOKIE_LIFE_TIME  10000 //MS
 
 #define SACK_DELAY    200

@@ -861,14 +861,14 @@ void mpath_start_hb_probe(uint noOfPaths, short primaryPathID)
 		}
 	}
 }
-void mpath_handle_chunks_acked(short pathID, uint newRTT)
+void mpath_handle_chunks_acked(short pathID, int newRTT)
 {
 	path_controller_t* pmData = mdi_read_mpath();
 	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
 	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_do_hb: invalid path ID");
 
-	newRTT = (uint)(newRTT / stamps_per_ms_double()); // transform to ms
+	newRTT = (int)(newRTT / stamps_per_ms_double()); // transform to ms
 	EVENTLOG2(DEBUG, "mpath_handle_chunks_acked: pathID: %u, new RTT: %u msecs", pathID, newRTT);
 
 	if (newRTT > 0) // newRTT = 0 if last send is retransmit.
@@ -877,7 +877,7 @@ void mpath_handle_chunks_acked(short pathID, uint newRTT)
 		{
 			pmData->path_params[pathID].srtt = newRTT;
 			pmData->path_params[pathID].rttvar = (uint)(std::max((float)(newRTT >> 1), (float)GRANULARITY));
-			pmData->path_params[pathID].rto = std::max(std::min(newRTT * 3, pmData->rto_max), pmData->rto_min);
+			pmData->path_params[pathID].rto = std::max(std::min((uint)newRTT * 3, pmData->rto_max), pmData->rto_min);
 			pmData->path_params[pathID].firstRTO = false;
 		}
 		else
@@ -1115,11 +1115,11 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		mch_free_simple_chunk(heartbeatCID);
 
 		// heartbeat could have been disabled when the association went down after commLost detected in mpath_handle_chunks_retx()
-		if (pmData->path_params[pathID].hb_timer_id != NULL)
-			mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
-		pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
-			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, &mpath_heartbeat_timer_expired,
-			&pmData->channel_id, &pmData->path_params[pathID].path_id);
+		//if (pmData->path_params[pathID].hb_timer_id != NULL)
+		//	mtra_timeouts_del(pmData->path_params[pathID].hb_timer_id);
+		//pmData->path_params[pathID].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT,
+		//	pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, &mpath_heartbeat_timer_expired,
+		//	&pmData->channel_id, &pmData->path_params[pathID].path_id);
 		/* reset this flag, so we can check, whether the path was idle */
 		pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
 		EVENTLOG3(NOTICE, "Heartbeat timer started again with %u msecs for path %u, RTO=%u msecs",
@@ -1143,9 +1143,9 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 }
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address)
 {
+	EVENTLOG1(INFO, "mpath_process_heartbeat_chunk()::source_address (%d)", source_address);
 	heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
 	mdi_bundle_ctrl_chunk((simple_chunk_t*)heartbeatChunk);
-	mdi_unlock_bundle_ctrl();
 	mdi_send_bundled_chunks();
 }
 void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
@@ -1171,10 +1171,9 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 
 	short pathID = mch_read_path_idx_from_heartbeat(heartbeatCID);
 	uint sendingTime = mch_read_sendtime_from_heartbeat(heartbeatCID);
-	uint roundtripTime = get_safe_time_ms() - sendingTime;
-	EVENTLOG2(INFO, "HBAck for path %u, RTT = %f msecs", pathID, (float)(roundtripTime / stamps_per_ms_double()));
-
+	int roundtripTime = get_safe_time_ms() - sendingTime;
 	mch_remove_simple_chunk(heartbeatCID);
+	EVENTLOG2(INFO, "HBAck for path %u, RTT = %f msecs", pathID, roundtripTime);
 
 	if (!(pathID >= 0 && pathID < pmData->path_num))
 	{
@@ -1231,8 +1230,6 @@ inline uint msm_read_max_assoc_retrans_count()
 // we firstly try raw socket if it fails we switch to udp-tunneld by setting to upd socks in on_connection_failed_cb()
 static int msm_timer_expired(timeout* timerID)
 {
-	EVENTLOG(DEBUG, "msm_timer_expired() called ---not implemented !!!!");
-
 	int ttype = timerID->callback.type;
 	void* associationID = timerID->callback.arg1;
 
