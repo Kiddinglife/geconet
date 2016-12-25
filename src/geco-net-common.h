@@ -257,7 +257,7 @@ enum SENDING_DEST_ADDR_TYPE
 
 /* ms default interval to timeout when no timers in poll
  * it is alos the resolution of wheel-timer*/
-#define GRANULARITY 10 //ms
+#define GRANULARITY 50 //ms
 
  /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
  /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
@@ -770,7 +770,7 @@ extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int e
 #define  PM_ADDED                            2
 #define  PM_REMOVED                       3
 #define  PM_PATH_UNCONFIRMED    5
-#define  PM_INITIAL_HB_INTERVAL    30000 //30000
+#define  PM_INITIAL_HB_INTERVAL    3000 //30000
 #define  RTO_ALPHA            0.125f
 #define  RTO_BETA              0.25f
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10

@@ -37,17 +37,17 @@ struct transportaddr_cmp_functor
 };
 struct sockaddr_hash_functor
 {
-	size_t operator()(const sockaddrunion*& addr) const
+	size_t operator()(const sockaddrunion& addr) const
 	{
-		return sockaddr2hashcode(addr);
+		return sockaddr2hashcode(&addr);
 	}
 };
 
 struct sockaddr_cmp_functor
 {
-	bool operator()(const sockaddrunion*& a, const sockaddrunion*& b) const
+	bool operator()(const sockaddrunion& a, const sockaddrunion& b) const
 	{
-		return saddr_equals(a, b);
+		return saddr_equals(&a, &b, true);
 	}
 };
 
@@ -85,6 +85,13 @@ std::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transport
 #else
 std::tr1::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
 #endif
+
+#ifdef _WIN32
+std::unordered_map<sockaddrunion, short, sockaddr_hash_functor, sockaddr_cmp_functor> path_map;
+#else
+std::tr1::unordered_map<sockaddrunion, short, sockaddr_hash_functor, sockaddr_cmp_functor> path_map;
+#endif
+
 /* many diferent channels belongs to a same geco instance*/
 geco_channel_t** channels_; /*store all channels, channel id as key*/
 uint channels_size_;
@@ -866,14 +873,14 @@ void mpath_handle_chunks_acked(short pathID, int newRTT)
 	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_do_hb: invalid path ID");
 
-	EVENTLOG2(DEBUG, "mpath_handle_chunks_acked: pathID: %u, new RTT: %u msecs", pathID, newRTT);
+	EVENTLOG2(NOTICE, "mpath_handle_chunks_acked: pathID: %u, new RTT: %u msecs", pathID, newRTT);
 
 	if (newRTT > 0) // newRTT = 0 if last send is retransmit.
 	{
 		if (pmData->path_params[pathID].firstRTO == true)
 		{
 			pmData->path_params[pathID].srtt = newRTT;
-			pmData->path_params[pathID].rttvar = (uint)(std::max((float)(newRTT >> 1), (float)GRANULARITY));
+			pmData->path_params[pathID].rttvar = std::max(newRTT >> 1, GRANULARITY);
 			pmData->path_params[pathID].rto = std::max(std::min((uint)newRTT * 3, pmData->rto_max), pmData->rto_min);
 			pmData->path_params[pathID].firstRTO = false;
 		}
@@ -885,7 +892,7 @@ void mpath_handle_chunks_acked(short pathID, int newRTT)
 			pmData->path_params[pathID].rto = pmData->path_params[pathID].srtt + 4 * pmData->path_params[pathID].rttvar;
 			pmData->path_params[pathID].rto = std::max(std::min(pmData->path_params[pathID].rto, pmData->rto_max), pmData->rto_min);
 		}
-		EVENTLOG3(DEBUG, "mpath_handle_chunks_acked: RTO update done: RTTVAR: %u msecs, SRTT: %u msecs, RTO: %u msecs",
+		EVENTLOG3(NOTICE, "mpath_handle_chunks_acked: RTO update done: RTTVAR: %u msecs, SRTT: %u msecs, RTO: %u msecs",
 			pmData->path_params[pathID].rttvar, pmData->path_params[pathID].srtt, pmData->path_params[pathID].rto);
 	}
 	else
@@ -1003,7 +1010,8 @@ bool mpath_handle_chunks_retx(short pathID)
 		EVENTLOG1(DEBUG, "mpath_handle_chunks_retx: path %d to INACTIVE ", pathID);
 
 		// check if an active path is left
-		for (int pID = 0; pID < pmData->path_num; pID++)
+		int pID;
+		for (pID = 0; pID < pmData->path_num; pID++)
 		{
 			if (pmData->path_params[pID].state == PM_ACTIVE)
 			{
@@ -1022,6 +1030,20 @@ bool mpath_handle_chunks_retx(short pathID)
 			EVENTLOG(DEBUG, "mpath_handle_chunks_retx: communication lost (all paths are INACTIVE)");
 			return true;
 		}
+
+		if (pathID == pmData->primary_path)
+		{
+			//reset alternative path data acked and sent to false and they will be chaged to true very quickly when send data chunks on it.
+			pmData->path_params[pID].data_chunks_sent_in_last_rto = false;
+			pmData->path_params[pID].data_chunk_acked = false;
+			pmData->primary_path = pID;
+
+			//reset primary path data acked and sent to false so that we can do hb for it again by seting hb timer in hb_timer_expired()
+			pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
+			pmData->path_params[pathID].data_chunk_acked = false;
+			EVENTLOG1(INFO, "mpath_handle_chunks_retx():: primary path %d becomes inactive, change path %d to primary", pathID, pID);
+		}
+
 		mdi_on_path_status_changed(pathID, PM_INACTIVE);
 	}
 	return false;
@@ -1056,7 +1078,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	assert(pmData != NULL && "mpath_process_heartbeat_ack_chunk():: mdi_read_mpath() failed");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_heartbeat_timer_expired: invalid path ID");
 
-	EVENTLOG1(NOTICE, "Heartbeat timer expired for path %u", pathID);
+	EVENTLOG1(INFO, "Heartbeat timer expired for path %u", pathID);
 	chunk_id_t heartbeatCID;
 	bool removed_association = false;
 	int ret = 0;
@@ -1076,7 +1098,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 			break;
 		case PM_INACTIVE:
 			/* path already inactive, dont increase counter etc. */
-			EVENTLOG1(NOTICE, "path %d already inactive, dont increase counter etc", pathID);
+			EVENTLOG1(VERBOSE, "path %d already inactive, dont increase counter etc", pathID);
 			break;
 		default:
 			ERRLOG1(WARNNING_ERROR, "no such pm state %d", pmData->path_params[pathID].state);
@@ -1089,7 +1111,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 			if (!pmData->path_params[pathID].timer_backoff)
 			{
 				pmData->path_params[pathID].rto = std::min(2 * pmData->path_params[pathID].rto, pmData->rto_max);
-				EVENTLOG2(NOTICE, "Backing off timer : Path %d, RTO= %u", pathID, pmData->path_params[pathID].rto);
+				EVENTLOG2(INFO, "Backing off timer : Path %d, RTO= %u", pathID, pmData->path_params[pathID].rto);
 			}
 		}
 	}
@@ -1122,7 +1144,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 
 		/* reset this flag, so we can check, whether the path was idle */
 		pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
-		EVENTLOG3(NOTICE, "Heartbeat timer started again with %u msecs for path %u, RTO=%u msecs",
+		EVENTLOG3(DEBUG, "Heartbeat timer started again with %u msecs for path %u, RTO=%u msecs",
 			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto, pathID,
 			pmData->path_params[pathID].rto);
 	}
@@ -1164,7 +1186,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	bool hbSignatureOkay = mch_verify_heartbeat(heartbeatCID);
 	if (!hbSignatureOkay)
 	{
-		EVENTLOG(NOTICE, "unmathced HB Signature ---> return");
+		EVENTLOG(DEBUG, "unmathced HB Signature ---> return");
 		mch_remove_simple_chunk(heartbeatCID);
 		return;
 	}
@@ -1177,7 +1199,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 
 	if (!(pathID >= 0 && pathID < pmData->path_num))
 	{
-		EVENTLOG1(NOTICE, "pm_heartbeatAck: invalid path ID %d", pathID);
+		EVENTLOG1(INFO, "pm_heartbeatAck: invalid path ID %d", pathID);
 		return;
 	}
 
@@ -1939,8 +1961,8 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
-			}
 		}
+	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -1989,7 +2011,7 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-	}
+}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
 	uint numPeerAddresses, uint supported_types, bool receivedFromPeer)
 {
@@ -2217,26 +2239,15 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 	return 0;
 #endif
 
-	int len = 0;
-
 	assert(geco_packet != NULL);
 	assert(length != 0);
 
-	//if( geco_packet == NULL || length == 0 )
-	//{
-	//	EVENTLOG(DEBUG, "dispatch_layer::mdi_send_geco_packet(): no message to send !!!");
-	//	len = -1;
-	//	goto leave;
-	//}
-
+	int len = 0;
 	geco_packet_t* geco_packet_ptr = (geco_packet_t*)geco_packet;
 	simple_chunk_t* chunk = ((simple_chunk_t*)(geco_packet_ptr->chunk));
 
-	/*1)
-	 * when sending OOB chunk without channel found, we use last_source_addr_
-	 * carried in OOB packet as the sending dest addr
-	 * see recv_geco_packet() for details*/
-	sockaddrunion dest_addr;
+	/*1)when sending OOB chunk without channel found, we use last_source_addr_
+	 * carried in OOB packet as the sending dest addr see recv_geco_packet() for details*/
 	sockaddrunion* dest_addr_ptr;
 	uchar tos;
 	int primary_path;
@@ -2248,19 +2259,11 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		assert(last_dest_port_ != 0);
 		assert(last_src_port_ != 0);
 
-		//if( last_source_addr_ == NULL || last_init_tag_ == 0 || last_dest_port_ == 0
-		//	|| last_src_port_ == 0 )
-		//{
-		//EVENTLOG(NOTICE, "dispatch_layer::mdi_send_geco_packet(): invalid geco_instance_params ");
-		//len = -1;
-		//goto leave;
-		//}
-
 		//memcpy(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
-		memcpy_fast(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
-		dest_addr_ptr = &dest_addr;
+		dest_addr_ptr = last_source_addr_;
 		geco_packet_ptr->pk_comm_hdr.verification_tag = htonl(last_init_tag_);
 		last_init_tag_ = 0;  //reset it
+
 		// swap port number
 		geco_packet_ptr->pk_comm_hdr.src_port = htons(last_dest_port_);
 		geco_packet_ptr->pk_comm_hdr.dest_port = htons(last_src_port_);
@@ -2269,6 +2272,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 			"mdi_send_geco_packet() : currchannel is null, use last src addr as dest addr, tos = %u, tag = %x, src_port = %u , dest_port = %u",
 			tos, last_init_tag_, last_dest_port_, last_src_port_);
 	}  // curr_channel_ == NULL
+
 	else  // curr_channel_ != NULL
 	{
 		/*2) normal send with channel found*/
@@ -2282,6 +2286,12 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		if (destAddressIndex != -1)  // 0<=destAddressIndex<remote_addres_size
 		{
 			/* 3) Use given destination address from current association */
+			// @remember me do we really nee this?
+			//uint channelstate = curr_channel_->state_machine_control->channel_state;
+			//if ((channelstate == CookieEchoed || channelstate == Connected) && curr_channel_->path_control->path_params[destAddressIndex].state != PM_ACTIVE)
+			//{
+			//	destAddressIndex = curr_channel_->path_control->primary_path;//primary path is always active
+			//}
 			dest_addr_ptr = curr_channel_->remote_addres + destAddressIndex;
 		}
 		else
@@ -2292,21 +2302,12 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 				primary_path = mpath_read_primary_path();
 				EVENTLOG2(VERBOSE, "dispatch_layer::mdi_send_geco_packet():sending to primary with index %u (with %u paths)",
 					primary_path, curr_channel_->remote_addres_size);
-				if (primary_path < 0 || primary_path >= (int)(curr_channel_->remote_addres_size))
-				{
-					EVENTLOG1(NOTICE, "dispatch_layer::mdi_send_geco_packet(): could not get primary address (%d)", primary_path);
-					len = -1;
-					goto leave;
-				}
 				dest_addr_ptr = curr_channel_->remote_addres + primary_path;
 			}
 			else
 			{
 				/*6) use last src addr*/
 				EVENTLOG(VERBOSE, "dispatch_layer::mdi_send_geco_packet(): : last_source_addr_ was not NULL");
-				//memcpy(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
-				//memcpy_fast(&dest_addr, last_source_addr_, sizeof(sockaddrunion));
-				//dest_addr_ptr = &dest_addr;
 				dest_addr_ptr = last_source_addr_;
 			}
 		}
@@ -2316,13 +2317,6 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		if (is_init_ack_chunk(chunk))
 		{
 			assert(last_init_tag_ != 0);
-			//if( last_init_tag_ == 0 )
-			//{
-			//	EVENTLOG(NOTICE,
-			//		"dispatch_layer_t::mdi_send_geco_packet(): invalid last_init_tag_ 0 !");
-			//	len = -1;
-			//	goto leave;
-			//}
 			geco_packet_ptr->pk_comm_hdr.verification_tag = htonl(last_init_tag_);
 		}
 		/*8) use normal tag stored in curr channel*/
@@ -2340,24 +2334,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 
 	/*9) calc checksum and insert it MD5*/
 	gset_checksum((geco_packet + UDP_PACKET_FIXED_SIZE), length - UDP_PACKET_FIXED_SIZE);
-
-	static const int ip4rawsock = mtra_read_ip4rawsock();
-	static const int ip6rawsock = mtra_read_ip6rawsock();
-	static const int ip4udpsock = mtra_read_ip4udpsock();
-	static const int ip6udpsock = mtra_read_ip6udpsock();
-
-	if (mdi_socket_fd_ == ip4rawsock || mdi_socket_fd_ == ip6rawsock)
-	{
-		len = mtra_send_rawsocks(mdi_socket_fd_, geco_packet, length, dest_addr_ptr, tos);
-	}
-	else if (mdi_socket_fd_ == ip4udpsock || mdi_socket_fd_ == ip6udpsock)
-	{
-		len = mtra_send_udpscoks(mdi_socket_fd_, geco_packet, length, dest_addr_ptr, tos);
-	}
-	else
-	{
-		ERRLOG(FALTAL_ERROR_EXIT, "dispatch_layer_t::mdi_send_geco_packet() : Unsupported AF_TYPE");
-	}
+	len = mtra_send(mdi_socket_fd_, geco_packet, length, dest_addr_ptr, tos);
 
 #ifdef _DEBUG
 	ushort port;
@@ -2444,6 +2421,7 @@ int mdi_send_bundled_chunks(int* ad_idx)
 			path_param_id = -1;  // use last src path OR primary path
 		}
 	}
+
 	EVENTLOG1(VERBOSE, "send to path %d ", path_param_id);
 
 	/* try to bundle ctrl or/and sack chunks with data chunks in an packet*/
@@ -2979,25 +2957,36 @@ void mdi_on_peer_connected(uint status)
 	assert(last_source_addr_ != NULL);
 
 	// find primary path
+	//short primaryPath;
+	//if (last_source_addr_ != NULL)
+	//{
+	//	for (primaryPath = 0;primaryPath < curr_channel_->remote_addres_size;primaryPath++)
+	//	{
+	//		if (saddr_equals(&(curr_channel_->remote_addres[primaryPath]), last_source_addr_, true))
+	//		{
+	//			break;
+	//		}
+	//	}
+	//	// if not found use zero
+	//	if (primaryPath >= curr_channel_->remote_addres_size)
+	//		primaryPath = 0;
+	//}
+	//else
+	//{
+	//	// if NULL use zero
+	//	primaryPath = 0;
+	//}
+
 	short primaryPath;
-	if (last_source_addr_ != NULL)
+	for (primaryPath = 0;primaryPath < curr_channel_->remote_addres_size;primaryPath++)
 	{
-		for (primaryPath = 0;primaryPath < curr_channel_->remote_addres_size;primaryPath++)
+		if (saddr_equals(&(curr_channel_->remote_addres[primaryPath]), last_source_addr_, true))
 		{
-			if (saddr_equals(&(curr_channel_->remote_addres[primaryPath]), last_source_addr_, true))
-			{
-				break;
-			}
+			break;
 		}
-		// if not found use zero
-		if (primaryPath >= curr_channel_->remote_addres_size)
-			primaryPath = 0;
 	}
-	else
-	{
-		// if NULL use zero
-		primaryPath = 0;
-	}
+	assert(last_source_addr_ != NULL);
+	assert(primaryPath < curr_channel_->remote_addres_size);
 
 	// set number of paths and primary path at pathmanegement and start heartbeat 
 	mpath_start_hb_probe(curr_channel_->remote_addres_size, primaryPath);
@@ -3030,11 +3019,14 @@ void mdi_on_peer_connected(uint status)
 		curr_channel_->ulp_dataptr = NULL;
 	}
 
-	for (uint pathNum = 0; pathNum < curr_channel_->remote_addres_size; pathNum++)
+	for (primaryPath = 0; primaryPath < curr_channel_->remote_addres_size; primaryPath++)
 	{
-		if (mpath_read_path_status((short)pathNum) == PM_ACTIVE)
+		//hash all remote addrs to path ids
+		path_map.insert(std::make_pair(curr_channel_->remote_addres[primaryPath], primaryPath));
+
+		if (mpath_read_path_status(primaryPath) == PM_ACTIVE)
 		{
-			mdi_on_path_status_changed((short)pathNum, (int)PM_ACTIVE);
+			mdi_on_path_status_changed(primaryPath, (int)PM_ACTIVE);
 		}
 	}
 }
@@ -4588,13 +4580,11 @@ bundle_controller_t* mbu_new(void)
 path_controller_t* mpath_new(short numberOfPaths, short primaryPath)
 {
 	assert(curr_channel_ != NULL);
+
 	path_controller_t* pmData = NULL;
-	if ((pmData = (path_controller_t*)geco_malloc_ext(sizeof(path_controller_t), __FILE__,
-		__LINE__)) == NULL)
-	{
+	if ((pmData = (path_controller_t*)geco_malloc_ext(sizeof(path_controller_t), __FILE__, __LINE__)) == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
-		return 0;
-	}
+
 	pmData->path_params = NULL;
 	pmData->primary_path = primaryPath;
 	pmData->path_num = numberOfPaths;
@@ -7061,7 +7051,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-	}
+}
 void free_library(void)
 {
 	mtra_destroy();

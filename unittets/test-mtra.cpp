@@ -402,25 +402,25 @@ stdin_cb(char* data, size_t datalen)
 	sockaddrunion saddr;
 
 	str2saddr(&saddr, "::1", USED_UDP_PORT);
-	sentsize = mtra_send_rawsocks(mtra_read_ip6rawsock(), inputs, datalen,
+	sentsize = mtra_send_rawsock_ip6(mtra_read_ip6rawsock(), inputs, datalen,
 		&saddr, tos);
 	assert(sentsize == datalen);
 	EXPECT_STRCASEEQ(data, inputs);
 
 	str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
-	sentsize = mtra_send_rawsocks(mtra_read_ip4rawsock(), inputs, datalen,
+	sentsize = mtra_send_rawsock_ip4(mtra_read_ip4rawsock(), inputs, datalen,
 		&saddr, tos);
 	assert(sentsize == datalen);
 	EXPECT_STRCASEEQ(data, inputs);
 
 	str2saddr(&saddr, "::1", USED_UDP_PORT);
-	sentsize = mtra_send_udpscoks(mtra_read_ip6udpsock(), inputs, datalen,
+	sentsize = mtra_send_udpsock_ip6(mtra_read_ip6udpsock(), inputs, datalen,
 		&saddr, tos);
 	assert(sentsize == datalen);
 	EXPECT_STRCASEEQ(data, inputs);
 
 	str2saddr(&saddr, "127.0.0.1", USED_UDP_PORT);
-	sentsize = mtra_send_udpscoks(mtra_read_ip4udpsock(), inputs, datalen,
+	sentsize = mtra_send_udpsock_ip4(mtra_read_ip4udpsock(), inputs, datalen,
 		&saddr, tos);
 	assert(sentsize == datalen);
 	EXPECT_STRCASEEQ(data, inputs);
