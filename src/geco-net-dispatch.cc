@@ -1166,9 +1166,15 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address)
 {
 	EVENTLOG1(INFO, "mpath_process_heartbeat_chunk()::source_address (%d)", source_address);
-	heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
-	mdi_bundle_ctrl_chunk((simple_chunk_t*)heartbeatChunk);
-	mdi_send_bundled_chunks();
+	assert(curr_channel_ != NULL);
+	if (curr_channel_->state_machine_control->channel_state == CookieEchoed ||
+		curr_channel_->state_machine_control->channel_state == Connected)
+	{
+
+		heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
+		mdi_bundle_ctrl_chunk((simple_chunk_t*)heartbeatChunk);
+		mdi_send_bundled_chunks();
+	}
 }
 void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 {
@@ -1961,8 +1967,8 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
-		}
-	}
+			}
+			}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -2011,7 +2017,7 @@ bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-}
+		}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
 	uint numPeerAddresses, uint supported_types, bool receivedFromPeer)
 {
@@ -2253,7 +2259,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 	int primary_path;
 
 	if (curr_channel_ == NULL)
-	{
+	{  // no need to test path activeness
 		assert(last_source_addr_ != NULL);
 		assert(last_init_tag_ != 0);
 		assert(last_dest_port_ != 0);
@@ -2271,44 +2277,60 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 		EVENTLOG4(VERBOSE,
 			"mdi_send_geco_packet() : currchannel is null, use last src addr as dest addr, tos = %u, tag = %x, src_port = %u , dest_port = %u",
 			tos, last_init_tag_, last_dest_port_, last_src_port_);
-	}  // curr_channel_ == NULL
-
+	}
 	else  // curr_channel_ != NULL
 	{
-		/*2) normal send with channel found*/
+		ChannelState channelstate;
+		//2) normal send with channel found
 		if (destAddressIndex < -1 || destAddressIndex >= (int)curr_channel_->remote_addres_size)
 		{
 			EVENTLOG1(NOTICE, "dispatch_layer::mdi_send_geco_packet(): invalid destAddressIndex (%d)!!!", destAddressIndex);
 			len = -1;
 			goto leave;
 		}
-
-		if (destAddressIndex != -1)  // 0<=destAddressIndex<remote_addres_size
-		{
-			/* 3) Use given destination address from current association */
-			// @remember me do we really nee this?
-			//uint channelstate = curr_channel_->state_machine_control->channel_state;
-			//if ((channelstate == CookieEchoed || channelstate == Connected) && curr_channel_->path_control->path_params[destAddressIndex].state != PM_ACTIVE)
-			//{
-			//	destAddressIndex = curr_channel_->path_control->primary_path;//primary path is always active
-			//}
+		//3) Use given destination address from current association
+		if (destAddressIndex != -1)
+		{// 0<=destAddressIndex<remote_addres_size
+			channelstate = curr_channel_->state_machine_control->channel_state;
+			if ((channelstate == CookieEchoed || channelstate == Connected) && curr_channel_->path_control->path_params[destAddressIndex].state != PM_ACTIVE)
+			{ // when CookieEchoed || Connected, connection pharse is finished followed which we will send either ctrl or data chunks. at this moment, primary must be available for transfer
+				destAddressIndex = curr_channel_->path_control->primary_path;//primary path is always active
+			}
 			dest_addr_ptr = curr_channel_->remote_addres + destAddressIndex;
 		}
 		else
 		{
+			dest_addr_ptr = last_source_addr_;
 			if (last_source_addr_ == NULL)
 			{
-				/*5) last src addr is NUll, we use primary path*/
-				primary_path = mpath_read_primary_path();
-				EVENTLOG2(VERBOSE, "dispatch_layer::mdi_send_geco_packet():sending to primary with index %u (with %u paths)",
-					primary_path, curr_channel_->remote_addres_size);
+				//5) last src addr is NUll, we use primary path
+				primary_path = curr_channel_->path_control->primary_path;//primary path is always active
 				dest_addr_ptr = curr_channel_->remote_addres + primary_path;
+				EVENTLOG2(VERBOSE,
+					"dispatch_layer::mdi_send_geco_packet()::last_source_addr_ is NULL ---> use to primary with index %u (with %u paths)",
+					primary_path, curr_channel_->remote_addres_size);
+				assert(curr_channel_->path_control->path_params[primary_path].state == PM_ACTIVE);
 			}
 			else
 			{
-				/*6) use last src addr*/
-				EVENTLOG(VERBOSE, "dispatch_layer::mdi_send_geco_packet(): : last_source_addr_ was not NULL");
-				dest_addr_ptr = last_source_addr_;
+				//6) use last src addr
+				EVENTLOG(VERBOSE, "dispatch_layer::mdi_send_geco_packet(): : use last_source_addr_");
+				channelstate = curr_channel_->state_machine_control->channel_state;
+				if (!path_map.empty())
+				{
+					// path map is filled in mdi_on_peer_connected() and so we know that 
+					// connection pharse is finished followed which we will send either ctrl or data chunks and primary must be active
+					const short& pid = path_map.at(*last_source_addr_);
+					if (curr_channel_->path_control->path_params[pid].state != PM_ACTIVE)
+					{
+						primary_path = curr_channel_->path_control->primary_path;//primary path is always active
+						dest_addr_ptr = curr_channel_->remote_addres + primary_path;
+						EVENTLOG2(VERBOSE,
+							"dispatch_layer::mdi_send_geco_packet()::but last_source_addr_ inactive ---> use primary with index %u (with %u paths)",
+							primary_path, curr_channel_->remote_addres_size);
+						assert(curr_channel_->path_control->path_params[primary_path].state == PM_ACTIVE);
+					}
+				}
 			}
 		}
 
