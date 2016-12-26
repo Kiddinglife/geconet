@@ -80,7 +80,7 @@ typedef struct flowcontrol_struct
     /** */
     unsigned int outstanding_bytes;
     /** */
-    unsigned int announced_rwnd;
+    unsigned int peer_arwnd;
     /** */
     unsigned int number_of_addresses;
     /** pointer to array of congestion window parameters */
@@ -168,7 +168,7 @@ void *fc_new_flowcontrol(unsigned int peer_rwnd,
         timerclear(&(tmp->cparams[count].last_send_time));
     }
     tmp->outstanding_bytes = 0;
-    tmp->announced_rwnd = peer_rwnd;
+    tmp->peer_arwnd = peer_rwnd;
     tmp->number_of_addresses = number_of_destination_addresses;
     tmp->waiting_for_sack = FALSE;
     tmp->shutdown_received = FALSE;
@@ -181,7 +181,7 @@ void *fc_new_flowcontrol(unsigned int peer_rwnd,
 
     mrtx_set_peer_arwnd(peer_rwnd);
 
-    tmp->my_association = get_curr_channel_id();
+    tmp->my_association = mdi_read_curr_channel_id();
     event_logi(VVERBOSE, "FlowControl : Association-ID== %d \n", tmp->my_association);
     if (tmp->my_association == 0)
         error_log(ERROR_FATAL, "Association was not set, should be......");
@@ -215,7 +215,7 @@ void fc_restart(guint32 new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
         timerclear(&(tmp->cparams[count].last_send_time));
     }
     tmp->outstanding_bytes = 0;
-    tmp->announced_rwnd = new_rwnd;
+    tmp->peer_arwnd = new_rwnd;
     tmp->waiting_for_sack = FALSE;
     tmp->shutdown_received = FALSE;
     tmp->t3_retransmission_sent = FALSE;

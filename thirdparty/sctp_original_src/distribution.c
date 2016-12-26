@@ -4537,11 +4537,11 @@ void *mdi_readSCTP_control(void)
  * @return   association-ID of the current association;
  *           0 means the association is not set (an error).
  */
-unsigned int get_curr_channel_id(void)
+unsigned int mdi_read_curr_channel_id(void)
 {
 	if (curr_channel_ == NULL)
 	{
-		error_log(ERROR_MINOR, "get_curr_channel_id: association not set");
+		error_log(ERROR_MINOR, "mdi_read_curr_channel_id: association not set");
 		return 0;
 	}
 	else
@@ -4578,7 +4578,7 @@ unsigned int mdi_readTagRemote(void)
 {
 	if (curr_channel_ == NULL)
 	{
-		error_log(ERROR_MINOR, "get_curr_channel_id: association not set");
+		error_log(ERROR_MINOR, "mdi_read_curr_channel_id: association not set");
 		return 0;
 	}
 	else

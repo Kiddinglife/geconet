@@ -156,7 +156,7 @@ void *mreltrans_new(unsigned int number_of_destination_addresses, unsigned int i
 	tmp->numofdestaddrlist = number_of_destination_addresses;
 	tmp->advancedPeerAckPoint = iTSN - 1;   /* a save bet */
 	tmp->prChunks = g_array_new(FALSE, TRUE, sizeof(pr_stream_data));
-	tmp->my_association = get_curr_channel_id();
+	tmp->my_association = mdi_read_curr_channel_id();
 	event_logi(VVERBOSE, "RTX : Association-ID== %d ", tmp->my_association);
 	if (tmp->my_association == 0)
 		error_log(ERROR_FATAL, "Association was not set, should be......");

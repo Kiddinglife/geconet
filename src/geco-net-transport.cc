@@ -3,6 +3,7 @@
 #include "geco-net-common.h"
 #include "wheel-timer.h"
 
+
 #define STD_INPUT_FD 0
 
 static ushort udp_local_bind_port_ = USED_UDP_PORT; // host order ulp can setup this
@@ -137,6 +138,10 @@ void mtra_timeouts_del(timeout* tid)
 {
 	timeouts_del(tos_, tid);
 	geco_free_ext(tid, __FILE__, __LINE__);
+}
+void mtra_timeouts_stop(timeout* tid)
+{
+	timeouts_del(tos_, tid);
 }
 // cb that will be called pre and post recv_msg() system call which gives users chhance to do stats or filtering
 #include <functional>
@@ -1912,7 +1917,7 @@ int mtra_recv_rawsocks(int sfd, char** destptr, int maxlen, sockaddrunion *from,
 	EVENTLOG2(VERBOSE, "mtra_recv_rawsocks():: to(%s:%d)", str, port); // port zero raw socket
 #endif
 	return len;
-	}
+}
 int mtra_recv_udpsocks(int sfd, char *dest, int maxlen, sockaddrunion *from, sockaddrunion *to)
 {
 	assert(sfd >= 0 && dest != 0 && maxlen > 0 && from != 0 && to != 0);

@@ -2460,7 +2460,7 @@ void *msm_new(void *sctpInstance)
 	tmp->initRetransCounter = 0;
 	tmp->initChunk = NULL;
 	tmp->peer_cookie_chunk = NULL;
-	tmp->associationID = get_curr_channel_id();
+	tmp->associationID = mdi_read_curr_channel_id();
 	tmp->outbound_stream = mdi_readLocalOutStreams();
 	tmp->inbound_stream = mdi_readLocalInStreams();
 	tmp->local_tie_tag = 0;

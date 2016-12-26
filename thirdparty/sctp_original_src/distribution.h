@@ -238,7 +238,7 @@ void *mdi_readSCTP_control(void);
  * returns: association-ID of the curent association
  *          0 means the association is not set (an error).
  */
-unsigned int get_curr_channel_id(void);
+unsigned int mdi_read_curr_channel_id(void);
 
 /* returns: a ID  for new association */
 unsigned int mdi_generateTag(void);

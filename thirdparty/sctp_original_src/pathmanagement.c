@@ -1512,7 +1512,7 @@ mpath_new (short numberOfPaths, short primaryPath, void* sctpInstance)
 
   pmData->primaryPath = primaryPath;
   pmData->numberOfPaths = numberOfPaths;
-  pmData->associationID = get_curr_channel_id ();
+  pmData->associationID = mdi_read_curr_channel_id ();
   pmData->max_retrans_per_path = mdi_getDefaultPathMaxRetransmits (
       sctpInstance);
   pmData->rto_initial = mdi_getDefaultRtoInitial (sctpInstance);
