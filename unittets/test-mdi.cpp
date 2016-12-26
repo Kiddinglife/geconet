@@ -57,7 +57,7 @@ extern uint channels_size_;
 extern uint* available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
 extern uint available_channel_ids_size_;
 extern geco_instance_t*
-mdis_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port);
+mdi_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port);
 extern geco_channel_t*
 mdi_find_channel(sockaddrunion * src_addr, ushort src_port, ushort dest_port);
 extern bool
@@ -80,7 +80,7 @@ mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uint* peer_supported_addr_types, bool ignore_dups,
 	bool ignore_last_src_addr);
 extern bool
-mdi_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
+mdi_contains_localhost(sockaddrunion* addr_list, uint addr_list_num);
 extern inline uint
 mch_make_simple_chunk(uint chunk_type, uchar flag);
 extern inline simple_chunk_t *
@@ -264,7 +264,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
 	for (uint i = 0; i < inst.local_addres_size; i++)
 	{
 		last_dest_addr = &inst.local_addres_list[i];
-		ret = mdis_find_geco_instance(last_dest_addr, last_dest_port);
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.1.1) should found this inst
 		EXPECT_EQ(ret, &inst);
 	}
@@ -273,7 +273,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
 	for (uint i = 0; i < inst.local_addres_size; i++)
 	{
 		last_dest_addr = &inst.local_addres_list[i];
-		ret = mdis_find_geco_instance(last_dest_addr, last_dest_port);
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.2.1) should NOT found this inst
 		EXPECT_EQ(ret, nullptr);
 	}
@@ -284,7 +284,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
 		sockaddrunion tmp = inst.local_addres_list[i];
 		s4addr(&tmp) -= 1;  // just minus to make it different
 		last_dest_addr = &tmp;
-		ret = mdis_find_geco_instance(last_dest_addr, last_dest_port);
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.3.1) should NOT found this inst
 		EXPECT_EQ(ret, nullptr);
 	}
@@ -297,7 +297,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
 			saddr_family(&tmp) = AF_INET6 :
 			saddr_family(&tmp) = AF_INET;
 		last_dest_addr = &tmp;
-		ret = mdis_find_geco_instance(last_dest_addr, last_dest_port);
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.4.1) should NOT found this inst
 		EXPECT_EQ(ret, nullptr);
 	}
@@ -312,7 +312,7 @@ TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
 			saddr_family(&tmp) = AF_INET6 :
 			saddr_family(&tmp) = AF_INET;
 		last_dest_addr = &tmp;
-		ret = mdis_find_geco_instance(last_dest_addr, last_dest_port);
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  2.1.1) should still found this inst
 		EXPECT_EQ(ret, &inst);
 	}
@@ -1118,26 +1118,26 @@ TEST(DISPATCHER_MODULE, test_mdis_find_channel)
 //	//////////////////////////////////////////////////////////////////////////////
 //	//1) test branch 1 curr geco_inst and curr channel both NULL
 //	//1.1) test no local addr presents
-//	EXPECT_FALSE(mdi_contain_localhost(local_addres, 3));
-//	EXPECT_FALSE(mdi_contain_localhost(local_addres6, 2));
+//	EXPECT_FALSE(mdi_contains_localhost(local_addres, 3));
+//	EXPECT_FALSE(mdi_contains_localhost(local_addres6, 2));
 //	//1.2) test  local addr presents
 //	tmpaddr = local_addres[1];
 //	str2saddr(&local_addres[1], "127.0.0.1", 0);
-//	EXPECT_TRUE(mdi_contain_localhost(local_addres, 3));
+//	EXPECT_TRUE(mdi_contains_localhost(local_addres, 3));
 //	local_addres[1] = tmpaddr;
 //	tmpaddr = local_addres6[1];
 //	str2saddr(&local_addres6[1], "::1", 0);
-//	EXPECT_TRUE(mdi_contain_localhost(local_addres6, 2));
+//	EXPECT_TRUE(mdi_contains_localhost(local_addres6, 2));
 //	local_addres6[1] = tmpaddr;
 //	//////////////////////////////////////////////////////////////////////////////
 //	//2) test branch 2 curr_geco_instance_ NOT NULL
 //	curr_geco_instance_ = &inst;
 //	//2.1) test local addr in curr gecio inst local addres list
 //	tmpaddr = local_addres[1];
-//	EXPECT_TRUE(mdi_contain_localhost(&tmpaddr, 1));
+//	EXPECT_TRUE(mdi_contains_localhost(&tmpaddr, 1));
 //	//2.1) test no local addr in curr gecio inst local addres list
 //	str2saddr(&tmpaddr, "221.123.45.12", 0);
-//	EXPECT_FALSE(mdi_contain_localhost(&tmpaddr, 1));
+//	EXPECT_FALSE(mdi_contains_localhost(&tmpaddr, 1));
 //}
 //// last run and passed on 22 Agu 2016
 //TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)

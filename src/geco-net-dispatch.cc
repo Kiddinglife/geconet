@@ -54,6 +54,7 @@ struct sockaddr_cmp_functor
 ////////////////////// default lib geco_instance_params ///////////////////
 int myRWND = 32767; // maybe changed to other values after calling mtra_init()
 bool library_initiaized = false;
+bool library_support_unreliability_;
 int checksum_algorithm_ = MULP_CHECKSUM_ALGORITHM_MD5;
 bool support_pr_ = true;
 bool support_addip_ = true;
@@ -92,27 +93,23 @@ std::unordered_map<sockaddrunion, short, sockaddr_hash_functor, sockaddr_cmp_fun
 std::tr1::unordered_map<sockaddrunion, short, sockaddr_hash_functor, sockaddr_cmp_functor> path_map;
 #endif
 
-/* many diferent channels belongs to a same geco instance*/
-geco_channel_t** channels_; /*store all channels, channel id as key*/
+geco_channel_t** channels_; /// store all channels, channel id as key
 uint channels_size_;
-uint* available_channel_ids_; /*store all frred channel ids, can be reused when creatng a new channel*/
+uint* available_channel_ids_; /// store all frred channel ids, can be reused when creatng a new channel
 uint available_channel_ids_size_;
-std::vector<geco_instance_t*> geco_instances_; /* store all instances, instance name as key*/
+std::vector<geco_instance_t*> geco_instances_; /// store all instances, instance name as key
 
-/* whenever an external event (ULP-call, socket-event or timer-event) this variable must
- * contain the addressed geco instance. This pointer must be reset to null after the event
- * has been handled.*/
+/// whenever an external event (ULP-call, socket-event or timer-event), 
+/// this pointer is setup a value and will be reset to null after the event has been handled.
 geco_instance_t *curr_geco_instance_;
-
-/* whenever an external event (ULP-call, socket-event or timer-event) this variable must
- * contain the addressed channel. This pointer must be reset to null after the event
- * has been handled.*/
+/// whenever an external event (ULP-call, socket-event or timer-event) this variable must contain the addressed channel. 
+/// This pointer must be reset to null after the event has been handled.*/
 geco_channel_t *curr_channel_;
 
 static int mdi_socket_fd_;
 
-/* these one-shot state variables are so frequently used in recv_gco_packet()
- * to improve performances */
+/// these one-shot state variables are so frequently used in recv_gco_packet()  to improve performances 
+int* curr_bundle_chunks_send_addr_ = 0;
 geco_packet_fixed_t* curr_geco_packet_fixed_;
 geco_packet_t* curr_geco_packet_;
 uint curr_geco_packet_value_len_;
@@ -145,7 +142,7 @@ bool is_there_at_least_one_equal_dest_port_;
 init_chunk_fixed_t* init_chunk_fixed_;
 vlparam_fixed_t* vlparam_fixed_;
 
-/* tmp variables used for looking up channel and geco instance*/
+/// tmp variables used for looking up channel and geco instance
 geco_channel_t tmp_channel_;
 sockaddrunion tmp_addr_;
 geco_instance_t tmp_geco_instance_;
@@ -157,17 +154,16 @@ int tmp_peer_addreslist_size_;
 uint tmp_peer_supported_types_;
 transport_addr_t curr_trans_addr_;
 
-/* used if no bundlecontroller has been allocated and initialized yet */
+/// used if no bundle module instance has been allocated and initialized yet 
 bundle_controller_t* default_bundle_ctrl_;
 
-/* related to error cause */
+/// related to error cause 
 ushort curr_ecc_code_;
 ushort curr_ecc_len_;
 uchar* curr_ecc_reason_;
 
-extern timeouts* tos_;
+extern timeouts* tos_; // reference from transport module
 char hoststr_[MAX_IPADDR_STR_LEN];
-bool library_support_unreliability_;
 char chunkflag2use_;
 
 // tmp variables used in process_cookie_echo() 
@@ -185,7 +181,7 @@ bool enable_mock_dispatch_send_geco_packet_;
 bool enable_mock_dispatcher_process_init_chunk_;
 #endif
 
-int* curr_bundle_chunks_send_addr_ = 0;
+
 
 bundle_controller_t* mdi_read_mbu(geco_channel_t* channel = NULL);
 reltransfer_controller_t* mdi_read_mreltsf(void);
@@ -194,6 +190,8 @@ path_controller_t* mdi_read_mpath();
 flow_controller_t* mdi_read_mfc(void);
 recv_controller_t* mdi_read_mrecv(void);
 smctrl_t* mdi_read_smctrl();
+
+
 
 /// this function aborts this association. And optionally adds an error parameter to the ABORT chunk that is sent out. */
 void msm_abort_channel(short error_type = 0, uchar* errordata = 0, ushort errordattalen = 0);
@@ -212,6 +210,16 @@ uint msm_read_max_assoc_retrans_count();
 /// The initAck must contain a cookie which is returned to the peer with the cookie acknowledgement.
 /// Params: initAck: data of initAck-chunk including optional parameters without chunk header
 ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck);
+/// For now this function treats only one incoming data chunk' tsn
+/// @param chunk the data chunk that was received by the bundling
+int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx);
+/// This function is called to initiate the setup an association.
+/// The local tag and the initial TSN are randomly generated.
+/// Together with the parameters of the function, they are used to create the init-message.
+/// This data are also stored in a newly created association-record.
+/// @param noOfOutStreams        number of send streams.
+/// @param noOfInStreams         number of receive streams.
+void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *destinationList, uint numDestAddresses);
 
 
 
@@ -249,20 +257,20 @@ ushort mdlm_get_ostreams(void);
 void mdlm_read_streams(ushort* inStreams, ushort* outStreams);
 
 
+
 /// function called by bundling when a SACK is actually sent, to stop a possibly running  timer
 void mrecv_stop_sack_timer();
 uint mrecv_read_cummulative_tsn_acked();
 void mrecv_restart(int my_rwnd, uint newRemoteInitialTSN);
 
 
-/**
-* mpath_new creates a new instance of path management. There is one path management instance per association.
-* WATCH IT : this needs to be fixed ! path_params is NULL, but may accidentally be referenced !
-* @param numberOfPaths    number of paths of the association
-* @param primaryPath      initial primary path
-* @param  gecoInstance pointer to the geco instance
-* @return pointer to the newly created path management instance !
-*/
+
+/// mpath_new creates a new instance of path management. There is one path management instance per association.
+/// WATCH IT : this needs to be fixed ! path_params is NULL, but may accidentally be referenced !
+/// @param numberOfPaths    number of paths of the association
+/// @param primaryPath      initial primary path
+/// @param  gecoInstance pointer to the geco instance
+/// @return pointer to the newly created path management instance !
 path_controller_t* mpath_new(short numberOfPaths, short primaryPath);
 /// Deletes the instance pointed to by pathmanPtr.
 /// @param   pathmanPtr pointer to the instance that is to be deleted
@@ -290,27 +298,21 @@ void mpath_start_hb_probe(uint remote_addres_size, short primaryPath);
 /// @param heartbeatChunk pointer to the heartbeat chunk
 /// @param source_address address we received the HB chunk from (and where it is echoed)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address);
-/**
- * Function is used to update RTT, SRTT, RTO values after chunks have been acked.
- * CHECKME : this function is called too often with RTO == 0;
- * Is there one update per RTT ?
- * @param  pathID index of the path where data was acked
- * @param  newRTT new RTT measured, when data was acked, or zero if it was retransmitted
- */
+/// Function is used to update RTT, SRTT, RTO values after chunks have been acked.
+/// CHECKME : this function is called too often with RTO == 0;
+/// Is there one update per RTT ?
+/// @param  pathID index of the path where data was acked
+/// @param  newRTT new RTT measured, when data was acked, or zero if it was retransmitted
 void mpath_handle_chunks_acked(short pathID, int roundtripTime);
-/**
-* pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged.
-* @param pathID   last path-ID where chunks were sent to (and thus probably acked from)
-* @param newRTT   the newly determined RTT in milliseconds, and 0 if retransmitted chunks had been acked
-*/
+/// pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged.
+/// @param pathID   last path-ID where chunks were sent to (and thus probably acked from)
+/// @param newRTT   the newly determined RTT in milliseconds, and 0 if retransmitted chunks had been acked
 void mpath_chunks_acked(short pathID, int newRTT);
-/**
- *  mpath_handle_chunks_retx is called whenever datachunks are retransmitted or a hearbeat-request
- *  has not been acknowledged within the current heartbeat-intervall. It increases path- and peer-
- *  retransmission counters and compares these counters to the corresonding thresholds.
- *  @param  pathID index to the path that CAUSED retransmission
- *  @return true if association was deleted, false if not
- */
+/// mpath_handle_chunks_retx is called whenever datachunks are retransmitted or a hearbeat-request
+/// has not been acknowledged within the current heartbeat-intervall. It increases path- and peer-
+/// retransmission counters and compares these counters to the corresonding thresholds.
+/// @param  pathID index to the path that CAUSED retransmission
+/// @return true if association was deleted, false if not
 bool mpath_handle_chunks_retx(short pathid);
 /// pm_chunksRetransmitted is called by reliable transfer whenever chunks have been retransmitted.
 /// @param  pathID  address index, where timeout has occurred (i.e. which caused retransmission)
@@ -346,93 +348,55 @@ int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall);
 
 
 
-uint mdi_read_local_tag();
-uint mdi_read_remote_tag();
-unsigned int mdi_read_supported_addr_types(void);
 /// @todo use safe random generator
 /// generates a random tag value for a new association, but not 0
 /// @return   generates a random tag value for a new association, but not 0
 inline uint mdi_generate_itag(void);
+/// @brief Copies local addresses of this instance into the array passed as parameter.
+/// @param [out] local_addrlist
+/// array that will hold the local host's addresses after returning.
+/// @return numlocalAddres number of addresses that local host/current channel has.
+/// @pre either of current channel and current geco instance MUST present.
+int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types, bool receivedFromPeer);
+/// check if local addr is found, return  ip4or6 loopback if found, otherwise return  the ones same to stored in inst localaddrlist
+bool mdi_contains_localhost(sockaddrunion* addr_list, uint addr_list_num);
+uint mdi_read_local_tag();
+uint mdi_read_remote_tag();
+unsigned int mdi_read_supported_addr_types(void);
 int mdi_read_rwnd();
 int mdi_read_default_delay(geco_instance_t* geco_instance);
-/**
- * @brief Copies local addresses of this instance into the array passed as parameter.
- * @param [out] local_addrlist
- * array that will hold the local host's addresses after returning.
- * @return numlocalAddres
- * number of addresses that local host/current channel has.
- * @pre either of current channel and current geco instance MUST present.
- */
-int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, sockaddrunion *peerAddress,
-	uint numPeerAddresses, uint supported_types, bool receivedFromPeer);
-/**
- *check if local addr is found, return  ip4or6 loopback if found,
- *  otherwise return  the ones same to stored in inst localaddrlist
- */
-bool mdi_contain_localhost(sockaddrunion* addr_list, uint addr_list_num);
-
 // NULL means use last src addr , NOT_NULL means use primary addr or specified addr 
 // @CAUTION  the 3 functions below MUST be used together to send bundled chunks
 void mdi_set_bundle_dest_addr(int * ad_idx = NULL)
 {
 	curr_bundle_chunks_send_addr_ = ad_idx;
 }
-void mdi_bundle_ctrl_chunk1(simple_chunk_t * chunk);
-int mdi_send_bundled_chunks1();
-
 int mdi_send_bundled_chunks(int * ad_idx = NULL);
 void mdi_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
-/**
- * This function is called to initiate the setup an association.
- * The local tag and the initial TSN are randomly generated.
- * Together with the parameters of the function, they are used to create the init-message.
- * This data are also stored in a newly created association-record.
- * @param noOfOutStreams        number of send streams.
- * @param noOfInStreams         number of receive streams.
- */
-void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams, union sockaddrunion *destinationList,
-	unsigned int numDestAddresses, bool tryudp);
-/**
- *  deletes the current chanel.
- *  The chanel will not be deleted at once, but is only marked for deletion. This is done in
- *  this way to allow other modules to finish their current activities. To prevent them to start
- *  new activities, the currentAssociation pointer is set to NULL.
- */
+/// deletes the current chanel.
+/// The chanel will not be deleted at once, but is only marked for deletion. This is done in
+/// this way to allow other modules to finish their current activities. To prevent them to start
+/// new activities, the currentAssociation pointer is set to NULL.
 void mdi_delete_curr_channel();
-/**
- * Clear the global association data.
- *  This function must be called after the association retrieved from the list
- *  with setAssociationData is no longer needed. This is the case after a time
- *  event has been handled.
- */
+/// Clear the global association data. This function must be called after the association retrieved from the list
+/// with setAssociationData is no longer needed. This is the case after a time event has been handled.
 void mdi_clear_current_channel();
-/**
- * function called by bundling when a SACK is actually sent, to stop
- * a possibly running  timer*/
+/// function called by bundling when a SACK is actually sent, to stop a possibly running  timer*/
 void mdi_stop_sack_timer(void);
-/**
- * Allow sender to send data right away
- * when all received chunks have been diassembled completely.
- * @example
- * firstly, mdi_lock_bundle_ctrl() when disassembling received chunks;
- * then, generate and bundle outging chunks like sack, data or ctrl chunks;
- * the bundle() will interally force sending all chunks if the bundle are full.
- * then, excitely call send all bundled chunks;
- * finally, mdi_unlock_bundle_ctrl(dest addr);
- * will send all bundled chunks automatically to the specified dest addr
- * ad_idx = -1, send to last_source_addr
- * ad_idx = -2, send to primary path
- * ad_idx >0, send to the specified path as dest addr
- */
+/// Allow sender to send data right away
+/// when all received chunks have been diassembled completely.
+/// @example
+/// firstly, mdi_lock_bundle_ctrl() when disassembling received chunks;
+/// then, generate and bundle outging chunks like sack, data or ctrl chunks;
+/// the bundle() will interally force sending all chunks if the bundle are full.
+/// then, excitely call send all bundled chunks;
+/// finally, mdi_unlock_bundle_ctrl(dest addr);
+/// will send all bundled chunks automatically to the specified dest addr
+/// ad_idx = -1, send to last_source_addr
+/// ad_idx = -2, send to primary path
+/// ad_idx >0, send to the specified path as dest addr
 void mdi_unlock_bundle_ctrl(int* ad_idx = NULL);
-/**
- pm_disableHB is called to disable heartbeat for one specific path id.
- @param  pathID index of  address, where HBs should not be sent anymore
- @return error code: 0 for success, 1 for error (i.e. pathID too large)
- */
-int mdi_stop_hb_timer(short pathID);
 geco_channel_t* mdi_find_channel();
-
 inline uint mdi_read_default_max_burst()
 {
 	if (curr_geco_instance_ == NULL)
@@ -441,26 +405,20 @@ inline uint mdi_read_default_max_burst()
 		return DEFAULT_MAX_BURST;
 	return curr_channel_->geco_inst->default_maxBurst;
 }
-/**
- * Each module within SCTP that has timers implements its own timer call back
- *  functions. These are registered at the adaption layer when a timer is started
- *  and called directly at the module when the timer expires.
- *  setAssociationData allows SCTP-modules with timers to retrieve the data of the
- *  addressed association from the list of associations.
- *  For this purpose the association-ID must be included in one of the
- *  parameters of the start_timer function of the adaption-layer.
- *
- *  @param  associationID    the ID of the association
- *  @return 0 if successful, 1 if the association does not exist in the list
- */
+/// Each module within SCTP that has timers implements its own timer call back
+///  functions. These are registered at the adaption layer when a timer is started
+///  and called directly at the module when the timer expires.
+///  setAssociationData allows SCTP-modules with timers to retrieve the data of the
+///  addressed association from the list of associations.
+///  For this purpose the association-ID must be included in one of the
+///  parameters of the start_timer function of the adaption-layer.
+///  @param  associationID    the ID of the association
+///  @return 0 if successful, 1 if the association does not exist in the list
 bool mdi_set_curr_channel_inst(uint channelid);
-/**
-* copies destination addresses from the array passed as parameter to  the current association
-* @param addresses array that will hold the destination addresses after returning
-* @param noOfAddresses number of addresses that the peer has (and sends along in init/initAck)
-*/
+/// copies destination addresses from the array passed as parameter to  the current association
+/// @param addresses array that will hold the destination addresses after returning
+/// @param noOfAddresses number of addresses that the peer has (and sends along in init/initAck)
 void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
-
 void mdi_on_peer_connected(uint status);
 /// indicates that communication was lost to peer (chapter 10.2.E).
 /// Calls the respective ULP callback function.
@@ -472,7 +430,6 @@ void mdi_on_disconnected(uint status);
 void mdi_on_path_status_changed(short destaddr_id, int newState);
 /// indicates that a restart has occured(chapter 10.2.G). Calls the respective ULP callback function.
 void mdi_on_peer_restarted();
-////////////////////////////////////////  mdis  dispatcher module  /////////////////////////////////////////
 
 
 
@@ -641,7 +598,7 @@ int mpath_disable_all_hb()
 				pmData->path_params[pathID].hb_timer_id = NULL;
 			}
 			pmData->path_params[pathID].hb_enabled = false;
-			EVENTLOG1(INFO, "mpath_disable_hb: path %d is primary", pathID);
+			EVENTLOG1(INFO, "mpath_disable_hb: path %d hb is disabled", pathID);
 		}
 	}
 	return GECONET_ERRNO::SUCESS;
@@ -1423,8 +1380,7 @@ static int msm_timer_expired(timeout* timerID)
 	}
 	return true;
 }
-void msm_connect(unsigned short noOfOutStreams, unsigned short noOfInStreams, union sockaddrunion *destinationList,
-	unsigned int numDestAddresses)
+void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *destinationList, uint numDestAddresses)
 {
 	smctrl_t* smctrl;
 	if ((smctrl = mdi_read_smctrl()) == NULL)
@@ -1665,7 +1621,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 		if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
 		{
 			bool b1 = false, b2 = false, b3 = false;
-			if (!(b1 = mdi_contain_localhost(last_source_addr_, 1)))
+			if (!(b1 = mdi_contains_localhost(last_source_addr_, 1)))
 			{
 				/* this is from a normal address,
 				 * furtherly filter out except loopbacks */
@@ -1914,7 +1870,8 @@ inline uint mdi_generate_itag(void)
 	} while (tag == 0);
 	return tag;
 }
-bool mdi_contain_localhost(sockaddrunion * addr_list, uint addr_list_num)
+
+bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 {
 	bool ret = false;
 	uint ii;
@@ -2028,7 +1985,7 @@ int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, 
 	bool localHostFound = false, linkLocalFound = false, siteLocalFound = false;
 	for (count = 0; count < numPeerAddresses; count++)
 	{
-		localHostFound = mdi_contain_localhost(peerAddress + count, 1);
+		localHostFound = mdi_contains_localhost(peerAddress + count, 1);
 		linkLocalFound = ::typeofaddr(peerAddress + count, LinkLocalAddrType);
 		siteLocalFound = ::typeofaddr(peerAddress + count, SiteLocalAddrType);
 	}
@@ -2597,16 +2554,11 @@ void mdi_delete_curr_channel(void)
 	uint path_id;
 	if (curr_channel_ != NULL)
 	{
-		for (path_id = 0; path_id < curr_channel_->remote_addres_size; path_id++)
-		{
-			mdi_stop_hb_timer(path_id);
-		}
-
+		mpath_disable_all_hb();
 		mfc_stop_timers();
-		mdi_stop_sack_timer();
+		mrecv_stop_sack_timer();
 
-		/* mark channel as deleted, it will be deleted
-		 when get_channel(..) encounters a "deleted" channel*/
+		/* mark channel as deleted, it will be deleted when get_channel(..) encounters a "deleted" channel*/
 		channels_[curr_channel_->channel_id] = NULL;
 		available_channel_ids_[available_channel_ids_size_] = curr_channel_->channel_id;
 		available_channel_ids_size_++;
@@ -2634,51 +2586,6 @@ void mdi_on_disconnected(uint status)
 	if (curr_geco_instance_->ulp_callbacks.communicationLostNotif != NULL)
 		curr_geco_instance_->ulp_callbacks.communicationLostNotif(curr_channel_->channel_id, status, curr_channel_->ulp_dataptr);
 }
-int mdi_stop_hb_timer(short pathID)
-{
-	path_controller_t* pathctrl = mdi_read_mpath();
-	assert(pathctrl != NULL && "mdi_stop_hb_timer: get_path_controller() failed");
-	assert(pathctrl->path_params != NULL && "mdi_stop_hb_timer: no path_params set");
-
-	if (!(pathID >= 0 && pathID < pathctrl->path_num))
-	{
-		ERRLOG1(WARNNING_ERROR, "pm_disableHB: invalid path ID %d", pathID);
-		return -1;
-	}
-	if (pathctrl->path_params[pathID].hb_enabled)
-	{
-		timeout** t = &pathctrl->path_params[pathID].hb_timer_id;
-		if (*t != NULL)
-		{
-			mtra_timeouts_del(*t);
-			*t = NULL;
-		}
-		pathctrl->path_params[pathID].hb_enabled = false;
-		EVENTLOG1(INFO, "mdi_stop_hb_timer: path %d disabled", pathID);
-	}
-	return 0;
-}
-inline void mdi_stop_sack_timer(void)
-{
-	if (curr_channel_ != NULL && curr_channel_->receive_control != NULL)
-	{
-		/*also make sure free all received duplicated data chunks */
-		curr_channel_->receive_control->duplicated_data_chunks_list.clear();
-		/* stop running sack timer*/
-		if (curr_channel_->receive_control->timer_running)
-		{
-			mtra_timeouts_del(curr_channel_->receive_control->sack_timer);
-			curr_channel_->receive_control->sack_timer = NULL;
-			curr_channel_->receive_control->timer_running = false;
-			EVENTLOG(INFO, "mdi_stop_sack_timer()");
-		}
-	}
-	else
-	{
-		ERRLOG(WARNNING_ERROR, "mdi_stop_sack_timer()::recv_controller_t instance not set !");
-		return;
-	}
-}
 inline bundle_controller_t* mdi_read_mbu(geco_channel_t* channel)
 {
 	if (channel == NULL)
@@ -2698,7 +2605,7 @@ void mdi_unlock_bundle_ctrl(int* ad_idx)
 	/*1) no channel exists, it is NULL, so we take the global bundling buffer */
 	if (bundle_ctrl == NULL)
 	{
-		EVENTLOG(VERBOSE, "mdi_unlock_bundle_ctrl()::Setting global bundling buffer");
+		EVENTLOG(DEBUG, "mdi_unlock_bundle_ctrl()::Setting global bundling buffer");
 		bundle_ctrl = default_bundle_ctrl_;
 	}
 
@@ -2706,7 +2613,7 @@ void mdi_unlock_bundle_ctrl(int* ad_idx)
 	if (bundle_ctrl->got_send_request)
 		mdi_send_bundled_chunks(ad_idx);
 
-	EVENTLOG1(VERBOSE, "mdi_unlock_bundle_ctrl()::got %s send request",
+	EVENTLOG1(DEBUG, "mdi_unlock_bundle_ctrl()::got %s send request",
 		(bundle_ctrl->got_send_request == true) ? "A" : "NO");
 }
 
@@ -3129,9 +3036,6 @@ bool do_we_support_addip(void)
 		return (support_addip_);
 }
 
-
-
-int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx = 0);
 int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
 	return 0;
@@ -4031,7 +3935,7 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres, u
 	return tmp;
 }
 
-void mfc_restart(uint new_rwnd, unsigned int iTSN, unsigned int maxQueueLen)
+void mfc_restart(uint new_rwnd, uint iTSN, uint maxQueueLen)
 {
 	flow_controller_t* tmp = mdi_read_mfc();
 	assert(tmp != NULL);
@@ -5574,8 +5478,8 @@ static void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 }
 
 /*
- pass to relevant module :
-
+pass to relevant module :
+//
  msm:
  CHUNK_INIT,
  CHUNK_INIT_ACK,
@@ -5585,14 +5489,14 @@ static void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
  CHUNK_COOKIE_ECHO,
  CHUNK_COOKIE_ACK
  CHUNK_ERROR
-
- mreltrans:
+ //
+ mreltx:
  CHUNK_SACK
-
+ //
  mpath:
- CHUNK_HBREQ
+CHUNK_HBREQ
  CHUNK_HBACK
-
+ //
  mrecv:
  CHUNK_DATA
  */
@@ -5659,7 +5563,7 @@ int mdi_disassemle_packet()
 
 		case CHUNK_DATA:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
-			handle_ret = msm_process_data_chunk((data_chunk_t*)chunk, -2);
+			handle_ret = msm_process_data_chunk((data_chunk_t*)chunk, last_src_path_);
 			data_chunk_received = true;
 			break;
 
@@ -5987,11 +5891,11 @@ bool cmp_geco_instance(const geco_instance_t& traget, const geco_instance_t& b)
 	//}
 }
 
-geco_instance_t* mdis_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port)
+geco_instance_t* mdi_find_geco_instance(sockaddrunion* dest_addr, ushort dest_port)
 {
 	if (geco_instances_.size() == 0)
 	{
-		ERRLOG(MAJOR_ERROR, "dispatch_layer_t::mdis_find_geco_instance()::geco_instances_.size() == 0");
+		ERRLOG(MAJOR_ERROR, "dispatch_layer_t::mdi_find_geco_instance()::geco_instances_.size() == 0");
 		return NULL;
 	}
 
@@ -6399,7 +6303,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	curr_channel_ = mdi_find_channel();
 	if (curr_channel_ != NULL)
 	{
-		EVENTLOG1(INFO, "Found channel %d",curr_channel_->channel_id);
+		EVENTLOG1(INFO, "Found channel %d", curr_channel_->channel_id);
 		/*5) get the sctp instance for this packet from channel*/
 		curr_geco_instance_ = curr_channel_->geco_inst;
 		if (curr_geco_instance_ == NULL)
@@ -6420,7 +6324,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	 */
 	else
 	{
-		curr_geco_instance_ = mdis_find_geco_instance(last_dest_addr_, last_dest_port_);
+		curr_geco_instance_ = mdi_find_geco_instance(last_dest_addr_, last_dest_port_);
 		if (curr_geco_instance_ == NULL)
 		{
 			// Possible Reasons: dest af not matched || dest addr not matched || dest port not matched
