@@ -407,12 +407,6 @@ void mdi_delete_curr_channel();
  */
 void mdi_clear_current_channel();
 /**
- * indicates that communication was lost to peer (chapter 10.2.E).
- * Calls the respective ULP callback function.
- * @param  status  type of event, that has caused the association to be terminated
- */
-void mdi_on_disconnected(uint status);
-/**
  * function called by bundling when a SACK is actually sent, to stop
  * a possibly running  timer*/
 void mdi_stop_sack_timer(void);
@@ -461,17 +455,23 @@ inline uint mdi_read_default_max_burst()
  */
 bool mdi_set_curr_channel_inst(uint channelid);
 /**
- * indicates a change of network status (chapter 10.2.C). Calls the respective ULP callback function.
- * @param  destinationAddress   index to address that has changed
- * @param  newState             state to which indicated address has changed (PM_ACTIVE/PM_INACTIVE)
- */
-void mdi_on_path_status_changed(short destaddr_id, int newState);
-/**
 * copies destination addresses from the array passed as parameter to  the current association
 * @param addresses array that will hold the destination addresses after returning
 * @param noOfAddresses number of addresses that the peer has (and sends along in init/initAck)
 */
 void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
+
+void mdi_on_peer_connected(uint status);
+/// indicates that communication was lost to peer (chapter 10.2.E).
+/// Calls the respective ULP callback function.
+/// @param  status  type of event, that has caused the association to be terminated
+void mdi_on_disconnected(uint status);
+/// indicates a change of network status (chapter 10.2.C). Calls the respective ULP callback function.
+/// @param  destinationAddress   index to address that has changed
+/// @param  newState             state to which indicated address has changed (PM_ACTIVE/PM_INACTIVE)
+void mdi_on_path_status_changed(short destaddr_id, int newState);
+/// indicates that a restart has occured(chapter 10.2.G). Calls the respective ULP callback function.
+void mdi_on_peer_restarted();
 ////////////////////////////////////////  mdis  dispatcher module  /////////////////////////////////////////
 
 
@@ -2630,31 +2630,20 @@ void mdi_on_disconnected(uint status)
 		saddr2str(&curr_channel_->local_addres[i], str, 128, &port);
 		EVENTLOG2(DEBUG, "mdi_on_disconnected()::local_addres %s:%d", str, port);
 	}
-	geco_instance_t* old_ginst = curr_geco_instance_;
-	geco_channel_t* old_channel = curr_channel_;
-	EVENTLOG2(INTERNAL_TRACE, "mdi_on_disconnected(assoc %u, status %u)", curr_channel_->channel_id, status);
-	//ENTER_CALLBACK("communicationLostNotif");
-	curr_geco_instance_->ulp_callbacks.communicationLostNotif(curr_channel_->channel_id, status,
-		curr_channel_->ulp_dataptr);
-	//LEAVE_CALLBACK("communicationLostNotif");
-	curr_geco_instance_ = old_ginst;
-	curr_channel_ = old_channel;
+	EVENTLOG2(INFO, "mdi_on_disconnected(assoc %u, status %u)", curr_channel_->channel_id, status);
+	if (curr_geco_instance_->ulp_callbacks.communicationLostNotif != NULL)
+		curr_geco_instance_->ulp_callbacks.communicationLostNotif(curr_channel_->channel_id, status, curr_channel_->ulp_dataptr);
 }
 int mdi_stop_hb_timer(short pathID)
 {
 	path_controller_t* pathctrl = mdi_read_mpath();
-	if (pathctrl == NULL)
-	{
-		ERRLOG(FALTAL_ERROR_EXIT, "pm_disableHB: get_path_controller() failed");
-	}
-	if (pathctrl->path_params == NULL)
-	{
-		ERRLOG1(VERBOSE, "pm_disableHB(%d): no paths set", pathID);
-		return -1;
-	}
+	assert(pathctrl != NULL && "mdi_stop_hb_timer: get_path_controller() failed");
+	assert(pathctrl->path_params != NULL && "mdi_stop_hb_timer: no path_params set");
+
 	if (!(pathID >= 0 && pathID < pathctrl->path_num))
 	{
-		ERRLOG1(FALTAL_ERROR_EXIT, "pm_disableHB: invalid path ID %d", pathID);
+		ERRLOG1(WARNNING_ERROR, "pm_disableHB: invalid path ID %d", pathID);
+		return -1;
 	}
 	if (pathctrl->path_params[pathID].hb_enabled)
 	{
@@ -3035,7 +3024,11 @@ void mdi_on_peer_connected(uint status)
 
 void mdi_on_peer_restarted(void)
 {
-
+	if (curr_channel_ != NULL && curr_geco_instance_->ulp_callbacks.restartNotif != NULL)
+	{
+		EVENTLOG1(INFO, "mdi_on_peer_restarted(channel_id=%u)", curr_channel_->channel_id);
+		curr_geco_instance_->ulp_callbacks.restartNotif(curr_channel_->channel_id, curr_channel_->ulp_dataptr);
+	}
 }
 
 
@@ -4388,7 +4381,7 @@ static bool mdi_restart_channel(uint new_rwnd, ushort noOfInStreams, ushort noOf
 	// frees old address-list before assigning new one 
 	mdi_set_channel_remoteaddrlist(destinationAddressList, noOfPaths);
 	curr_channel_->path_control = mpath_new(noOfPaths, primaryAddress);
-	assert(curr_channel_->path_control !=NULL);
+	assert(curr_channel_->path_control != NULL);
 	mpath_start_hb_probe(noOfPaths, primaryAddress);
 
 	return true;
@@ -6406,7 +6399,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	curr_channel_ = mdi_find_channel();
 	if (curr_channel_ != NULL)
 	{
-		EVENTLOG(INFO, "Found channel !");
+		EVENTLOG1(INFO, "Found channel %d",curr_channel_->channel_id);
 		/*5) get the sctp instance for this packet from channel*/
 		curr_geco_instance_ = curr_channel_->geco_inst;
 		if (curr_geco_instance_ == NULL)
@@ -6439,6 +6432,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		}
 		else
 		{
+			EVENTLOG1(INFO, "Found instance %d", curr_geco_instance_->dispatcher_name);
 			// use user sepecified supported addr types
 			my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
 #ifdef _DEBUG
@@ -6567,7 +6561,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	/* 13) process non-OOTB chunks that belong to a found channel */
 	if (curr_channel_ != NULL)
 	{
-		EVENTLOG(VERBOSE, "Process non-OOTB chunks");
+		EVENTLOG(INFO, "non-ootb packet");
 		/*13.1 validate curr_geco_instance_*/
 		if (curr_geco_instance_ == NULL)
 		{
@@ -6839,8 +6833,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 #ifdef _DEBUG
 		else
 		{
-			EVENTLOG(NOTICE, "found channel:non-ootb-packet:check verifi-tag:"
-				"this packet's verifi-tag == channel's local-tag -> start disassemble it!");
+			EVENTLOG(INFO, "disassemble  packet");
 		}
 #endif
 	}
@@ -6849,7 +6842,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		/* 14)
 		 * filtering and pre-process OOB chunks that have no channel found
 		 * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets */
-		EVENTLOG(INFO, "Process OOTB Packet!");
+		EVENTLOG(INFO, "ootb packet");
 
 		/*15)
 		 * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (2)
@@ -6859,8 +6852,8 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		if (contains_chunk(CHUNK_ABORT, chunk_types_arr_) > 0)
 		{
 			clear();
-			EVENTLOG(INFO, "Found ABORT in ootb-packet, discarding it !");
-			EVENTLOG(VERBOSE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
+			EVENTLOG(DEBUG, "Found ABORT in ootb-packet, discarding it !");
+			EVENTLOG(DEBUG, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 			return recv_geco_packet_but_it_is_ootb_abort_discard;
 		}
 
@@ -6874,8 +6867,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		 that the Verification Tag is reflected*/
 		if (contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0)
 		{
-			EVENTLOG(INFO, "Found SHUTDOWN_ACK in ootb-packet "
-				"-> send SHUTDOWN_COMPLETE and return!");
+			EVENTLOG(INFO, "Found SHUTDOWN_ACK -> send SHUTDOWN_COMPLETE and return!");
 
 			uint shutdown_complete_cid = mch_make_simple_chunk(
 				CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
@@ -6888,7 +6880,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			printf("sinple chunk id %u\n", shutdown_complete_cid);
 			clear();
 
-			EVENTLOG(VERBOSE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
+			EVENTLOG(DEBUG, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 			return recv_geco_packet_but_it_is_ootb_sdack_send_sdc;
 		}
 
@@ -6946,17 +6938,17 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 
 		if (curr_uchar_init_chunk_ != NULL)
 		{
-			EVENTLOG(VERBOSE, "Found INIT CHUNK in OOB packet -> processing it");
+			EVENTLOG(INFO, "found INIT CHUNK in ootb packet");
 			if (last_veri_tag_ != 0)
 			{
-				EVENTLOG(NOTICE, " but verification_tag in INIT != 0 -> DISCARD! ");
+				EVENTLOG(DEBUG, " but verification_tag in INIT != 0 -> DISCARD! ");
 				return recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag;
 			}
 
 			// update last_init_tag_ with value of init tag carried in this chunk
 			init_chunk_fixed_ = &(((init_chunk_t*)curr_uchar_init_chunk_)->init_fixed);
 			last_init_tag_ = ntohl(init_chunk_fixed_->init_tag);
-			EVENTLOG1(VERBOSE, "Found init_tag (%u) from INIT CHUNK", last_init_tag_);
+			EVENTLOG1(DEBUG, "Found init_tag (%u) from INIT CHUNK", last_init_tag_);
 
 			// we have an instance up listenning on that port just validate geco_instance_params
 			// this is normal connection pharse
@@ -6969,7 +6961,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 				}
 
 #ifdef _DEBUG
-				EVENTLOG(VERBOSE, "curr_geco_instance found -> processing!");
+				EVENTLOG(DEBUG, "curr_geco_instance found -> processing!");
 #endif
 
 				vlparam_fixed_ = (vlparam_fixed_t*)mch_read_vlparam_init_chunk(curr_uchar_init_chunk_,
@@ -6977,14 +6969,14 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 					VLPARAM_HOST_NAME_ADDR);
 				if (vlparam_fixed_ != NULL)
 				{
-					EVENTLOG(VERBOSE, "found VLPARAM_HOST_NAME_ADDR from INIT CHUNK --->  TODO DNS QUERY");
+					EVENTLOG(DEBUG, "found VLPARAM_HOST_NAME_ADDR from INIT CHUNK --->  TODO DNS QUERY");
 					// TODO refers to RFC 4096 SECTION 5.1.2.  Handle Address Parametersd.
 					do_dns_query_for_host_name_ = true;
 				}
 #ifdef _DEBUG
 				else
-					EVENTLOG(VERBOSE, "Not VLPARAM_HOST_NAME_ADDR from INIT CHUNK ---> NOT DO DNS!");
-				EVENTLOG(VERBOSE, "---> Start to pass this INIT CHUNK to disassembl() for further processing!");
+					EVENTLOG(DEBUG, "Not VLPARAM_HOST_NAME_ADDR from INIT CHUNK ---> NOT DO DNS!");
+				EVENTLOG(DEBUG, "---> Start to pass this INIT CHUNK to disassembl() for further processing!");
 #endif
 			}  // if (curr_geco_instance_ != NULL) at line 460
 			else
@@ -6998,7 +6990,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 				 we do not have an instance up listening on that port-> ABORT
 				 this may happen when a peer is connecting WITH wrong dest port,
 				 or wrong addr type of dest addr, send  ABORT  +  ECC_UNRESOLVABLE_ADDRESS*/
-				EVENTLOG(INFO, "Not found an instance -> send ABORT "
+				EVENTLOG(NOTICE, "Not found an instance -> send ABORT "
 					"with ECC_PEER_NOT_LISTENNING_ADDR or ECC_PEER_NOT_LISTENNING_PORT");
 				is_there_at_least_one_equal_dest_port_ ? curr_ecc_code_ =
 					ECC_PEER_NOT_LISTENNING_ADDR :
@@ -7186,7 +7178,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-}
+	}
 void free_library(void)
 {
 	mtra_destroy();

@@ -835,7 +835,7 @@ void mch_free_simple_chunk(uint chunkID)
 {
 	if (simple_chunks_[chunkID] != NULL)
 	{
-		EVENTLOG1(INFO, "mch_free_simple_chunk():: free simple chunk %u", chunkID);
+		EVENTLOG1(DEBUG, "mch_free_simple_chunk():: free simple chunk %u", chunkID);
 		geco_free_ext(simple_chunks_[chunkID], __FILE__, __LINE__);
 		simple_chunks_[chunkID] = NULL;
 	}
