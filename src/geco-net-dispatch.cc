@@ -138,6 +138,7 @@ uint chunk_types_arr_;
 int init_chunk_num_;
 bool send_abort_;
 bool found_init_chunk_;
+bool cookie_echo_found_;
 bool is_there_at_least_one_equal_dest_port_;
 init_chunk_fixed_t* init_chunk_fixed_;
 vlparam_fixed_t* vlparam_fixed_;
@@ -3482,10 +3483,10 @@ int msm_process_init_chunk(init_chunk_t * init)
 			assert(my_supported_addr_types_ != 0);
 			assert(curr_geco_packet_value_len_ == init->chunk_header.chunk_length);
 
-			tmp_peer_addreslist_size_ = mdi_read_peer_addreslist(tmp_peer_addreslist_, 
-				(uchar*)init, curr_geco_packet_value_len_, 
-				my_supported_addr_types_, 
-				&tmp_peer_supported_types_, 
+			tmp_peer_addreslist_size_ = mdi_read_peer_addreslist(tmp_peer_addreslist_,
+				(uchar*)init, curr_geco_packet_value_len_,
+				my_supported_addr_types_,
+				&tmp_peer_supported_types_,
 				true, false);
 
 			if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
@@ -3552,6 +3553,9 @@ int msm_process_init_chunk(init_chunk_t * init)
 			 parameters of the association (e.g., number of outbound streams) into
 			 the INIT ACK and cookie.*/
 			init_tag = mdi_generate_itag();
+
+			// save a-sides init-tag from init-chunk to be used as a verification tag of the sctp-
+			// message carrying the initAck (required since peer may have changed the verification tag).
 			init_ack_cid = mch_make_init_ack_chunk(init_tag, curr_channel_->receive_control->my_rwnd,
 				curr_channel_->deliverman_control->numSendStreams, curr_channel_->deliverman_control->numReceiveStreams,
 				smctrl->peer_cookie_chunk->cookie.local_initack.initial_tsn);
@@ -5173,7 +5177,7 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 					mch_read_itsn(initAckCID), /*localInitialTSN*/
 					0,/*primaryAddress*/
 					tmp_peer_addreslist_size_, tmp_peer_addreslist_, peer_supports_pr(cookie_echo),
-					peer_supports_addip(cookie_echo)) == 0)
+					peer_supports_addip(cookie_echo)) == true)
 				{
 					curr_channel_->remote_tag = cookie_remote_tag;
 					curr_channel_->local_tag = cookie_local_tag;
@@ -6406,6 +6410,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	}
 
 	found_init_chunk_ = false;
+	cookie_echo_found_ = false;
 	init_chunk_fixed_ = NULL;
 	vlparam_fixed_ = NULL;
 
@@ -6715,7 +6720,8 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 #ifdef _DEBUG
 		if (contains_chunk(CHUNK_COOKIE_ECHO, chunk_types_arr_) > 0)
 		{
-			EVENTLOG(VERBOSE, "Found CHUNK_COOKIE_ECHO in non-ootb-packet -> process further!");
+			EVENTLOG(NOTICE, "Found CHUNK_COOKIE_ECHO in non-ootb-packet -> process further!");
+			cookie_echo_found_ = true;
 		}
 #endif
 
@@ -6746,11 +6752,14 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			}
 		}
 
-		/* 13.7)
-		 // finally verify verifi tag in this packet
-		 // init chunj must has zero verifi tag value except of it
-		 // abort chunk has T bit set cannot that has its own filtering conditions */
-		if (!is_found_init_chunk_ && !is_found_abort_chunk_ && last_veri_tag_ != curr_channel_->local_tag)
+		// finally verify verifi tag in this packet
+		// init chunj must has zero verifi tag value except of it
+		// abort chunk has T bit set cannot that has its own filtering conditions 
+		// cookie_echo may be sent by restarted host with new itag that is different from the old one
+		if (!cookie_echo_found_ &&
+			!is_found_init_chunk_ &&
+			!is_found_abort_chunk_ &&
+			last_veri_tag_ != curr_channel_->local_tag)
 		{
 			ERRLOG(MINOR_ERROR, "found channel:non-ootb-packet:check verifi-tag:"
 				"this packet's verifi-tag != channel's local-tag -> discard !!");

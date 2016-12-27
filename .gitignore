@@ -23,3 +23,5 @@
 *.opendb
 *.VC.opendb
 *.idb
+*.iobj
+*.ipdb
