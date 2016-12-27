@@ -1132,7 +1132,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	int roundtripTime = get_safe_time_ms() - sendingTime;
 	mch_remove_simple_chunk(heartbeatCID);
 	EVENTLOG2(EXTERNAL_EVENT_UNEXPECTED, " HBAck for path %u, RTT = %d msecs", pathID, roundtripTime);
-	exit(-1);
+	//exit(-1);
 	if (!(pathID >= 0 && pathID < pmData->path_num))
 	{
 		EVENTLOG1(INFO, "pm_heartbeatAck: invalid path ID %d", pathID);
@@ -3354,7 +3354,7 @@ int msm_process_init_chunk(init_chunk_t * init)
 			{
 				for (int inner = 0; inner < tmp_peer_addreslist_size_; inner++)
 				{
-					if (saddr_equals(curr_channel_->remote_addres + idx, tmp_peer_addreslist_ + inner, true) == false)
+					if (!saddr_equals(curr_channel_->remote_addres + idx, tmp_peer_addreslist_ + inner))
 					{
 						EVENTLOG(NOTICE,
 							"new addr found in received INIT at CookieEchoed state -> send ABORT with ECC_RESTART_WITH_NEW_ADDRESSES  !");
@@ -3481,8 +3481,13 @@ int msm_process_init_chunk(init_chunk_t * init)
 			/* read and validate peer addrlist carried in the received init chunk*/
 			assert(my_supported_addr_types_ != 0);
 			assert(curr_geco_packet_value_len_ == init->chunk_header.chunk_length);
-			tmp_peer_addreslist_size_ = mdi_read_peer_addreslist(tmp_peer_addreslist_, (uchar*)init,
-				curr_geco_packet_value_len_, my_supported_addr_types_, &tmp_peer_supported_types_, true, false);
+
+			tmp_peer_addreslist_size_ = mdi_read_peer_addreslist(tmp_peer_addreslist_, 
+				(uchar*)init, curr_geco_packet_value_len_, 
+				my_supported_addr_types_, 
+				&tmp_peer_supported_types_, 
+				true, false);
+
 			if ((my_supported_addr_types_ & tmp_peer_supported_types_) == 0)
 			{
 				EVENTLOG(NOTICE, "msm_process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
@@ -3501,27 +3506,39 @@ int msm_process_init_chunk(init_chunk_t * init)
 			}
 
 			/*compare if there is new addr presenting*/
+			bool new_addr_found = false;
 			for (uint idx = 0; idx < curr_channel_->remote_addres_size; idx++)
 			{
 				for (int inner = 0; inner < tmp_peer_addreslist_size_; inner++)
 				{
-					if (saddr_equals(curr_channel_->remote_addres + idx, tmp_peer_addreslist_ + inner) == false)
+					if (!saddr_equals(curr_channel_->remote_addres + idx, tmp_peer_addreslist_ + inner))
 					{
-						EVENTLOG(VERBOSE, "new addr found in received INIT at CookieEchoed state -> discard !");
-						chunk_id_t abort_cid = mch_make_simple_chunk(
-							CHUNK_ABORT, FLAG_TBIT_UNSET);
-						mch_write_error_cause(abort_cid,
-							ECC_RESTART_WITH_NEW_ADDRESSES, (uchar*)tmp_peer_addreslist_ + inner, sizeof(sockaddrunion));
-						mdi_lock_bundle_ctrl();
-						mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
-						mdi_unlock_bundle_ctrl();
-						mdi_send_bundled_chunks();
-						mch_free_simple_chunk(abort_cid);
-						/* remove NOT free INIT CHUNK before return */
-						mch_remove_simple_chunk(init_cid);
-						return STOP_PROCESS_CHUNK_FOR_FOUND_NEW_ADDR;
+						new_addr_found = true;
+					}
+					else
+					{
+						new_addr_found = false;
+						break;
 					}
 				}
+			}
+
+			if (new_addr_found)
+			{
+				EVENTLOG(NOTICE,
+					"new addr found in received INIT at CookieEchoed state -> send ABORT with ECC_RESTART_WITH_NEW_ADDRESSES  !");
+				chunk_id_t abort_cid = mch_make_simple_chunk(
+					CHUNK_ABORT, FLAG_TBIT_UNSET);
+				//mch_write_error_cause(abort_cid,
+				//	ECC_RESTART_WITH_NEW_ADDRESSES, (uchar*)tmp_peer_addreslist_ + start_idx, num * sizeof(sockaddrunion));
+				mdi_lock_bundle_ctrl();
+				mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(abort_cid));
+				mdi_unlock_bundle_ctrl();
+				mdi_send_bundled_chunks();
+				mch_free_simple_chunk(abort_cid);
+				/* remove NOT free INIT CHUNK before return */
+				mch_remove_simple_chunk(init_cid);
+				return STOP_PROCESS_CHUNK_FOR_FOUND_NEW_ADDR;
 			}
 
 			/*7.2) get in out stream number*/
@@ -3534,10 +3551,10 @@ int msm_process_init_chunk(init_chunk_t * init)
 			 -Other parameters for the endpoint SHOULD be copied from the existing
 			 parameters of the association (e.g., number of outbound streams) into
 			 the INIT ACK and cookie.*/
-			init_tag = mdi_generate_itag();  // todo use safe mdi_generate_itag
+			init_tag = mdi_generate_itag();
 			init_ack_cid = mch_make_init_ack_chunk(init_tag, curr_channel_->receive_control->my_rwnd,
 				curr_channel_->deliverman_control->numSendStreams, curr_channel_->deliverman_control->numReceiveStreams,
-				smctrl->my_init_chunk->init_fixed.initial_tsn);
+				smctrl->peer_cookie_chunk->cookie.local_initack.initial_tsn);
 
 			/*7.4) get local addr list and append them to INIT ACK*/
 			tmp_local_addreslist_size_ = mdi_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
@@ -3548,8 +3565,15 @@ int msm_process_init_chunk(init_chunk_t * init)
 			mch_write_cookie(init_cid, init_ack_cid, mch_read_init_fixed(init_cid), mch_read_init_fixed(init_ack_cid),
 				mch_read_cookie_preserve(init_cid, ignore_cookie_life_spn_from_init_chunk_, msm_get_cookielife()),
 				/* unexpected case:  channel existing, set both NOT zero*/
-				smctrl->local_tie_tag, smctrl->peer_tie_tag, last_dest_port_, last_src_port_, tmp_local_addreslist_,
-				tmp_local_addreslist_size_, do_we_support_unreliability(), do_we_support_addip(), tmp_peer_addreslist_,
+				smctrl->local_tie_tag,
+				smctrl->peer_tie_tag,
+				last_dest_port_,
+				last_src_port_,
+				tmp_local_addreslist_,
+				tmp_local_addreslist_size_,
+				do_we_support_unreliability(),
+				do_we_support_addip(),
+				tmp_peer_addreslist_,
 				tmp_peer_addreslist_size_);
 
 			/* 6.8) check unrecognized geco_instance_params*/
@@ -5107,7 +5131,8 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 
 		smctrl->outbound_stream = mch_read_ostreams(initAckCID);
 		smctrl->inbound_stream = mch_read_instreams(initAckCID);
-
+		smctrl->peer_cookie_chunk = (cookie_echo_chunk_t*)geco_malloc_ext(sizeof(cookie_echo_chunk_t), __FILE__, __LINE__);
+		memcpy_fast(smctrl->peer_cookie_chunk, cookie_echo, sizeof(cookie_echo_chunk_t));
 		EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u", smctrl->outbound_stream,
 			smctrl->inbound_stream);
 
@@ -7080,7 +7105,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-	}
+}
 void free_library(void)
 {
 	mtra_destroy();
