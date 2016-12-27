@@ -3416,7 +3416,7 @@ int sctp_setLibraryParameters(SCTP_LibraryParameters *params)
 		(params->supportPRSCTP == true) ? "ENABLED" : "DISABLED");
 	event_logi(INTERNAL_EVENT_0,
 		"sctp_setLibraryParameters: Support of ADDIP is now %s",
-		(params->supportADDIP == true) ? "ENABLED" : "DISABLED");
+		(params->supportADDIP == true) ? "ENABLED" : "disBLED");
 
 	LEAVE_LIBRARY("sctp_setLibraryParameters");
 	return SCTP_SUCCESS;

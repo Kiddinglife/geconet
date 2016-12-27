@@ -835,8 +835,8 @@ int sctlr_init(SCTP_init *init)
 	{
 		/* save a-sides init-tag from init-chunk to be used as a verification tag of the sctp-
 			   message carrying the initAck (required since peer may have changed the verification
-			   tag).
-			   mdi_writeLastInitiateTag(ch_initiateTag(initCID)); */
+			   tag).*/
+			   mdi_writeLastInitiateTag(ch_initiateTag(initCID)); 
 
 		state = smctrl->association_state;
 		event_logi(EXTERNAL_EVENT, "sctlr_init: received INIT chunk in state %02u", state);
