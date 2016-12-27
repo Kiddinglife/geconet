@@ -88,6 +88,7 @@ struct geco_packet_t
 #define CHUNK_FORWARD_TSN       0xC0 //192
 #define CHUNK_ASCONF            0xC1//193
 #define CHUNK_ASCONF_ACK        0x80//128
+#define CHUNK_PADDING        0x84//128
 
 // 0xc0 = 192 = 11000000
 // 0x40 = 64   = 01000000
@@ -244,6 +245,7 @@ enum ActionWhenUnknownVlpOrChunkType
 #define VLPARAM_SET_PRIMARY             0xC004
 #define VLPARAM_SUCCESS_REPORT          0xC005
 #define VLPARAM_ADAPTATION_LAYER_IND    0xC006
+#define VLPARAM_PADDING   0x8005
 
 #define VLPARAM_FIXED_SIZE  (2 * sizeof(ushort))
 /* Header of variable length parameters */
@@ -252,7 +254,7 @@ struct vlparam_fixed_t
 	ushort param_type;
 	ushort param_length;
 };
-struct ip_address_t
+struct ipaddr_vlp_t
 {
 	vlparam_fixed_t vlparam_header;
 	union
@@ -262,16 +264,21 @@ struct ip_address_t
 	} dest_addr_un;
 };
 /* Supported Addresstypes */
-struct supported_address_types_t
+struct supported_addr_types_vlp_t
 {
 	vlparam_fixed_t vlparam_header;
 	ushort address_type[4];
 };
 /* Cookie Preservative */
-struct cookie_preservative_t
+struct cookie_preservative_vlp_t
 {
 	vlparam_fixed_t vlparam_header;
 	uint cookieLifetimeInc;
+};
+struct padding_vlp_t
+{
+	vlparam_fixed_t vlparam_header;
+	uchar paddings[1];
 };
 
 #define IS_IPV4_ADDRESS_NBO(a)  \
@@ -572,7 +579,11 @@ struct asconf_ack_chunk_t
 	asconfig_ack_chunk_fixed_t asc_ack;
 	uchar variableParams[MAX_INIT_CHUNK_OPTIONS_SIZE];
 };
-
+struct padding_chunk_t
+{
+	chunk_fixed_t chunk_header;
+	uchar variableParams[1];
+};
 /******************** some useful macros ************************/
 #define get_chunk_length(chunk)        (ntohs((chunk)->chunk_length))
 // Chunk classes for distribution and any other modules which might need it

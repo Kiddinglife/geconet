@@ -381,8 +381,6 @@ void mdi_delete_curr_channel();
 /// Clear the global association data. This function must be called after the association retrieved from the list
 /// with setAssociationData is no longer needed. This is the case after a time event has been handled.
 void mdi_clear_current_channel();
-/// function called by bundling when a SACK is actually sent, to stop a possibly running  timer*/
-void mdi_stop_sack_timer(void);
 /// Allow sender to send data right away
 /// when all received chunks have been diassembled completely.
 /// @example
@@ -1133,8 +1131,8 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	uint sendingTime = mch_read_sendtime_from_heartbeat(heartbeatCID);
 	int roundtripTime = get_safe_time_ms() - sendingTime;
 	mch_remove_simple_chunk(heartbeatCID);
-	EVENTLOG2(INFO, "HBAck for path %u, RTT = %d msecs", pathID, roundtripTime);
-
+	EVENTLOG2(EXTERNAL_EVENT_UNEXPECTED, " HBAck for path %u, RTT = %d msecs", pathID, roundtripTime);
+	exit(-1);
 	if (!(pathID >= 0 && pathID < pmData->path_num))
 	{
 		EVENTLOG1(INFO, "pm_heartbeatAck: invalid path ID %d", pathID);
@@ -1589,7 +1587,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 
 	uint vlp_len;
 	vlparam_fixed_t* vlp;
-	ip_address_t* addres;
+	ipaddr_vlp_t* addres;
 	bool is_new_addr;
 	int idx;
 	IPAddrType flags;
@@ -1655,7 +1653,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 			  // validate if exceed max num addres allowed
 				if (found_addr_number < MAX_NUM_ADDRESSES)
 				{
-					addres = (ip_address_t*)curr_pos;
+					addres = (ipaddr_vlp_t*)curr_pos;
 					// validate vlp type and length
 					if (IS_IPV4_ADDRESS_PTR_NBO(addres))
 					{
@@ -1716,7 +1714,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 			  /*6) pass by other validates*/
 				if (found_addr_number < MAX_NUM_ADDRESSES)
 				{
-					addres = (ip_address_t*)curr_pos;
+					addres = (ipaddr_vlp_t*)curr_pos;
 					if (IS_IPV6_ADDRESS_PTR_NBO(addres))
 					{
 #ifdef WIN32
@@ -1782,7 +1780,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 		case VLPARAM_SUPPORTED_ADDR_TYPES:
 			if (peer_supported_addr_types != NULL)
 			{
-				supported_address_types_t* sat = (supported_address_types_t*)curr_pos;
+				supported_addr_types_vlp_t* sat = (supported_addr_types_vlp_t*)curr_pos;
 				int size = ((vlp_len - VLPARAM_FIXED_SIZE) / sizeof(ushort)) - 1;
 				while (size >= 0)
 				{
@@ -2387,7 +2385,7 @@ int mdi_send_bundled_chunks(int* ad_idx)
 	int send_len;
 	if (bundle_ctrl->sack_in_buffer)
 	{
-		mdi_stop_sack_timer();
+		mrecv_stop_sack_timer();
 		/* send sacks, by default they go to the last active address,from which data arrived */
 		send_buffer = bundle_ctrl->sack_buf;
 		/*

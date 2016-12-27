@@ -5,4 +5,8 @@
     <LocalDebuggerCommand>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommand>$(OutDir)$(SolutionName)_$(ProjectName)_$(Configuration)$(Platform).exe</LocalDebuggerCommand>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

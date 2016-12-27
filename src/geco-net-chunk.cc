@@ -192,7 +192,7 @@ uint mch_read_cookie_preserve(uint chunkID, bool ignore_cookie_life_spn_from_ini
 	if (curr_pos != NULL && !ignore_cookie_life_spn_from_init_chunk_)
 	{
 		/* found cookie preservative */
-		return ntohl(((cookie_preservative_t*)curr_pos)->cookieLifetimeInc) + defaultcookielife;
+		return ntohl(((cookie_preservative_vlp_t*)curr_pos)->cookieLifetimeInc) + defaultcookielife;
 	}
 	else
 	{
@@ -613,11 +613,11 @@ int mch_write_vlp_addrlist(uint chunkid, sockaddrunion local_addreslist[MAX_NUM_
 	}
 
 	uint i, length = 0;
-	ip_address_t* ip_addr;
+	ipaddr_vlp_t* ip_addr;
 	for (i = 0; i < local_addreslist_size; i++)
 	{
 
-		ip_addr = (ip_address_t*)(vlp + length);
+		ip_addr = (ipaddr_vlp_t*)(vlp + length);
 		switch (saddr_family(&(local_addreslist[i])))
 		{
 		case AF_INET:
@@ -887,8 +887,8 @@ void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool w
 		ERRLOG(FALTAL_ERROR_EXIT, "put_supported_addr_types()::No Supported Address Types -- Program Error\n");
 
 	ushort total_length = VLPARAM_FIXED_SIZE + num_of_types * sizeof(ushort);
-	supported_address_types_t* param =
-		(supported_address_types_t*) &((init_chunk_t*)simple_chunks_[chunkID])->variableParams[curr_write_pos_[chunkID]];
+	supported_addr_types_vlp_t* param =
+		(supported_addr_types_vlp_t*) &((init_chunk_t*)simple_chunks_[chunkID])->variableParams[curr_write_pos_[chunkID]];
 	param->vlparam_header.param_type = htons(VLPARAM_SUPPORTED_ADDR_TYPES);
 	param->vlparam_header.param_length = htons(total_length);
 
@@ -1005,7 +1005,7 @@ void put_vlp_cookie_fixed(cookie_param_t* cookie, init_chunk_fixed_t* peer_init,
 	cookie->ck.sendingTime = htonl(get_safe_time_ms());
 }
 
-uint put_vlp_cookie_life_span(cookie_preservative_t* preserv, unsigned int lifespanIncrement)
+uint put_vlp_cookie_life_span(cookie_preservative_vlp_t* preserv, unsigned int lifespanIncrement)
 {
 	ushort len = VLPARAM_FIXED_SIZE + sizeof(unsigned int);
 	preserv->vlparam_header.param_type = htons(VLPARAM_COOKIE_PRESEREASONV);
@@ -1124,13 +1124,13 @@ void mch_write_cookie_preserve(chunk_id_t chunkID, uint lifespanIncrement)
 	uchar* cookie_preservative_ptr = mch_read_vlparam(VLPARAM_COOKIE_PRESEREASONV, initchunk->variableParams,
 		vl_param_total_length); /* check if init chunk already contains a cookie preserv. */
 
-	cookie_preservative_t* preserv;
+	cookie_preservative_vlp_t* preserv;
 	if (cookie_preservative_ptr == NULL)
 	{
 		/* append the new parameter */
-		preserv = (cookie_preservative_t*) &(initchunk->variableParams[curr_write_pos_[chunkID]]);
+		preserv = (cookie_preservative_vlp_t*) &(initchunk->variableParams[curr_write_pos_[chunkID]]);
 		/* _might_ be overflow here, at some time... */
-		curr_write_pos_[chunkID] += sizeof(cookie_preservative_t);
+		curr_write_pos_[chunkID] += sizeof(cookie_preservative_vlp_t);
 		if (curr_write_pos_[chunkID] > MAX_INIT_CHUNK_OPTIONS_SIZE)
 		{
 			ERRLOG(FALTAL_ERROR_EXIT,
@@ -1140,7 +1140,7 @@ void mch_write_cookie_preserve(chunk_id_t chunkID, uint lifespanIncrement)
 
 	/* enter cookie preservative */
 	preserv->vlparam_header.param_type = htons(VLPARAM_COOKIE_PRESEREASONV);
-	preserv->vlparam_header.param_length = htons(sizeof(cookie_preservative_t));
+	preserv->vlparam_header.param_length = htons(sizeof(cookie_preservative_vlp_t));
 	preserv->cookieLifetimeInc = htonl(lifespanIncrement);
 }
 
