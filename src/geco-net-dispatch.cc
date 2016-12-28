@@ -2271,7 +2271,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
   }  // curr_channel_ != NULL
 
   /*9) calc checksum and insert it MD5*/
-  gset_checksum((geco_packet + UDP_PACKET_FIXED_SIZE), length - UDP_PACKET_FIXED_SIZE);
+  gset_checksum(geco_packet, length);
   len = mtra_send(mdi_socket_fd_, geco_packet, length, dest_addr_ptr, tos);
 
 #ifdef _DEBUG
@@ -2378,17 +2378,17 @@ int mdi_send_bundled_chunks(int* ad_idx)
 
     if (bundle_ctrl->ctrl_chunk_in_buffer)
     {
-      ret = bundle_ctrl->ctrl_position - UDP_GECO_PACKET_FIXED_SIZES;
-      //memcpy(&(send_buffer[send_len]), &(bundle_ctrl->ctrl_buf[UDP_GECO_PACKET_FIXED_SIZES]), ret);
-      memcpy_fast(&(send_buffer[send_len]), &(bundle_ctrl->ctrl_buf[UDP_GECO_PACKET_FIXED_SIZES]), ret);
+      ret = bundle_ctrl->ctrl_position - GECO_PACKET_FIXED_SIZE;
+      //memcpy(&(send_buffer[send_len]), &(bundle_ctrl->ctrl_buf[GECO_PACKET_FIXED_SIZE]), ret);
+      memcpy_fast(&(send_buffer[send_len]), &(bundle_ctrl->ctrl_buf[GECO_PACKET_FIXED_SIZE]), ret);
       send_len += ret;
       EVENTLOG1(VERBOSE, "send_bundled_chunks(sack+ctrl) : send_len == %d ", send_len);
     }
     if (bundle_ctrl->data_in_buffer)
     {
-      ret = bundle_ctrl->data_position - UDP_GECO_PACKET_FIXED_SIZES;
-      //memcpy(&(send_buffer[send_len]), &(bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES]), ret);
-      memcpy_fast(&(send_buffer[send_len]), &(bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES]), ret);
+      ret = bundle_ctrl->data_position - GECO_PACKET_FIXED_SIZE;
+      //memcpy(&(send_buffer[send_len]), &(bundle_ctrl->data_buf[GECO_PACKET_FIXED_SIZE]), ret);
+      memcpy_fast(&(send_buffer[send_len]), &(bundle_ctrl->data_buf[GECO_PACKET_FIXED_SIZE]), ret);
       send_len += ret;
       EVENTLOG1(VERBOSE,
           ret == 0 ?
@@ -2403,9 +2403,9 @@ int mdi_send_bundled_chunks(int* ad_idx)
     EVENTLOG1(VERBOSE, "send_bundled_chunks(ctrl) : send_len == %d ", send_len);
     if (bundle_ctrl->data_in_buffer)
     {
-      ret = bundle_ctrl->data_position - UDP_GECO_PACKET_FIXED_SIZES;
-      //memcpy(&send_buffer[send_len], &(bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES]), ret);
-      memcpy_fast(&send_buffer[send_len], &(bundle_ctrl->data_buf[UDP_GECO_PACKET_FIXED_SIZES]), ret);
+      ret = bundle_ctrl->data_position - GECO_PACKET_FIXED_SIZE;
+      //memcpy(&send_buffer[send_len], &(bundle_ctrl->data_buf[GECO_PACKET_FIXED_SIZE]), ret);
+      memcpy_fast(&send_buffer[send_len], &(bundle_ctrl->data_buf[GECO_PACKET_FIXED_SIZE]), ret);
       send_len += ret;
       EVENTLOG1(VERBOSE, "send_bundled_chunks(ctrl+data) : send_len == %d ", send_len);
     }
@@ -2449,9 +2449,9 @@ int mdi_send_bundled_chunks(int* ad_idx)
   bundle_ctrl->data_in_buffer = false;
   bundle_ctrl->got_send_request = false;
   bundle_ctrl->got_send_address = false;
-  bundle_ctrl->data_position = UDP_GECO_PACKET_FIXED_SIZES;
-  bundle_ctrl->ctrl_position = UDP_GECO_PACKET_FIXED_SIZES;
-  bundle_ctrl->sack_position = UDP_GECO_PACKET_FIXED_SIZES;
+  bundle_ctrl->data_position = GECO_PACKET_FIXED_SIZE;
+  bundle_ctrl->ctrl_position = GECO_PACKET_FIXED_SIZE;
+  bundle_ctrl->sack_position = GECO_PACKET_FIXED_SIZE;
 
 #ifdef _DEBUG
   EVENTLOG(VERBOSE, "- - - Leave send_bundled_chunks()");
@@ -2723,12 +2723,16 @@ bool contains_error_chunk(uchar * packet_value, uint packet_val_len, ushort erro
 inline uint get_bundle_total_size(bundle_controller_t* buf)
 {
   assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
-  return ((buf)->ctrl_position + (buf)->sack_position + (buf)->data_position - 2 * UDP_GECO_PACKET_FIXED_SIZES);
+  if (buf->use_udp_tunnel)
+  {
+    return ((buf)->ctrl_position + (buf)->sack_position + (buf)->data_position - 2 * GECO_PACKET_FIXED_SIZE_USE_UDP);
+  }
+  return ((buf)->ctrl_position + (buf)->sack_position + (buf)->data_position - 2 * GECO_PACKET_FIXED_SIZE);
 }
 inline uint get_bundle_sack_size(bundle_controller_t* buf)
 {
   assert(GECO_PACKET_FIXED_SIZE == sizeof(geco_packet_fixed_t));
-  return ((buf)->ctrl_position + (buf)->data_position - UDP_GECO_PACKET_FIXED_SIZES);
+  return ((buf)->ctrl_position + (buf)->data_position - GECO_PACKET_FIXED_SIZE);
 }
 void mdi_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 {
@@ -2781,8 +2785,8 @@ void mdi_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
   }
 
   EVENTLOG3(VERBOSE,
-      "mdi_bundle_ctrl_chunk():chunklen %u + UDP_GECO_PACKET_FIXED_SIZES(%u) = Total buffer size now (includes pad): %u",
-      get_chunk_length((chunk_fixed_t *)chunk), UDP_GECO_PACKET_FIXED_SIZES, get_bundle_total_size(bundle_ctrl));
+      "mdi_bundle_ctrl_chunk():chunklen %u + GECO_PACKET_FIXED_SIZE(%u) = Total buffer size now (includes pad): %u",
+      get_chunk_length((chunk_fixed_t *)chunk), GECO_PACKET_FIXED_SIZE, get_bundle_total_size(bundle_ctrl));
 
   EVENTLOG(VERBOSE, "- -  Leave mdi_bundle_ctrl_chunk()");
 }
@@ -3563,7 +3567,7 @@ int msm_process_init_chunk(init_chunk_t * init)
         /*send all bundled chunks to ensure init ack is the only chunk sent*/
         EVENTLOG1(VERBOSE, "at line 1674 msm_process_init_chunk():CURR BUNDLE SIZE (%d)",
             get_bundle_total_size(mdi_read_mbu()));
-        assert(get_bundle_total_size(mdi_read_mbu()) == UDP_GECO_PACKET_FIXED_SIZES);
+        assert(get_bundle_total_size(mdi_read_mbu()) == GECO_PACKET_FIXED_SIZE);
         mdi_unlock_bundle_ctrl();
         mdi_send_bundled_chunks();
         // bundle INIT ACK if full will send and empty bundle then copy init ack
@@ -3573,7 +3577,7 @@ int msm_process_init_chunk(init_chunk_t * init)
          * whole geco packet */
         mdi_send_bundled_chunks(&smctrl->addr_my_init_chunk_sent_to);
         mch_free_simple_chunk(init_ack_cid);
-        EVENTLOG(INTERNAL_EVENT, "event: initAck sent at state of ShutdownSent");
+        EVENTLOG(DEBUG, "event: initAck sent at state of ShutdownSent");
       }
     }
   }  // existing channel
@@ -4566,7 +4570,7 @@ bool cmp_channel(const geco_channel_t& tmp_channel, const geco_channel_t& b)
  * Creates a new bundling instance and returns a pointer to its data.
  * @return pointer to an instance of the bundling data
  */
-bundle_controller_t* mbu_new(void)
+bundle_controller_t* mbu_new()
 {
   bundle_controller_t* bundle_ctrl = NULL;
   if ((bundle_ctrl = (bundle_controller_t*) geco_malloc_ext(sizeof(bundle_controller_t), __FILE__,
@@ -4581,12 +4585,29 @@ bundle_controller_t* mbu_new(void)
   bundle_ctrl->got_send_request = false;
   bundle_ctrl->got_send_address = false;
   bundle_ctrl->locked = false;
+  bundle_ctrl->requested_destination = 0;
+  bundle_ctrl->got_shutdown = false;
+
   bundle_ctrl->data_position = GECO_PACKET_FIXED_SIZE;
   bundle_ctrl->ctrl_position = GECO_PACKET_FIXED_SIZE;
   bundle_ctrl->sack_position = GECO_PACKET_FIXED_SIZE;
-  bundle_ctrl->requested_destination = 0;
-  bundle_ctrl->got_shutdown = false;
   return bundle_ctrl;
+}
+void mdi_set_mbu_position_size(bundle_controller_t* bundle_ctrl, bool udp_tunnel)
+{
+  bundle_ctrl->use_udp_tunnel = udp_tunnel;
+  if (udp_tunnel)
+  {
+    bundle_ctrl->data_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+    bundle_ctrl->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+    bundle_ctrl->sack_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+  }
+  else
+  {
+    bundle_ctrl->data_position = GECO_PACKET_FIXED_SIZE;
+    bundle_ctrl->ctrl_position = GECO_PACKET_FIXED_SIZE;
+    bundle_ctrl->sack_position = GECO_PACKET_FIXED_SIZE;
+  }
 }
 /////////////////////////////////////////////// Bundle Moudle (bu) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 
@@ -6049,8 +6070,26 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
   /* 2) validate port numbers */
   curr_geco_packet_fixed_ = (geco_packet_fixed_t*) dctp_packet;
   curr_geco_packet_ = (geco_packet_t*) dctp_packet;
-  last_src_port_ = ntohs(curr_geco_packet_fixed_->src_port);
-  last_dest_port_ = ntohs(curr_geco_packet_fixed_->dest_port);
+
+  static int rawsockip4 = mtra_read_ip4rawsock();
+  static int rawsockip6 = mtra_read_ip6rawsock();
+  static int udpsockip4 = mtra_read_ip4udpsock();
+  if (socket_fd == rawsockip4 || socket_fd == rawsockip6)
+  {
+    last_src_port_ = ntohs(curr_geco_packet_fixed_->src_port);
+    last_dest_port_ = ntohs(curr_geco_packet_fixed_->dest_port);
+  }
+  else if (socket_fd == udpsockip4)
+  {
+    last_src_port_ = ntohs(source_addr->sin.sin_port);
+    last_dest_port_ = ntohs(dest_addr->sin.sin_port);
+  }
+  else
+  {
+    last_src_port_ = ntohs(source_addr->sin6.sin6_port);
+    last_dest_port_ = ntohs(dest_addr->sin6.sin6_port);
+  }
+
   if (last_src_port_ == 0 || last_dest_port_ == 0)
   {
     /* refers to RFC 4960 Section 3.1 at line 867 and line 874*/
@@ -6085,7 +6124,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
   if (dest_addr_type_ == AF_INET)
   {
     dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV4; // peer snd us an IP4-formate address
-    dest_addr->sin.sin_port = curr_geco_packet_fixed_->dest_port;
+    dest_addr->sin.sin_port = htons(last_dest_port_);
     ip4_saddr_ = ntohl(dest_addr->sin.sin_addr.s_addr);
 
     if (IN_CLASSD(ip4_saddr_))
@@ -6113,21 +6152,11 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
       EVENTLOG(VERBOSE, "INADDR_BROADCAST(dest_addr) -> discard !");
       should_discard_curr_geco_packet_ = true;
     }
-    //if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
-    //    || (INADDR_ANY == ip4_saddr_) || (INADDR_BROADCAST == ip4_saddr_))
-    //{
-    //    should_discard_curr_geco_packet_ = true;
-    //}
-
-    /* COMMENT HERE MEANS msg sent to ourself is allowed
-     * if ((INADDR_LOOPBACK != ntohl(source_addr->sin.sin_addr.s_addr))
-     *  &&(source_addr->sin.sin_addr.s_addr == dest_addr->sin.sin_addr.s_addr))
-     *  should_discard_curr_geco_packet_ = true;*/
   }
   else if (dest_addr_type_ == AF_INET6)
   {
     dest_addr_type_ = SUPPORT_ADDRESS_TYPE_IPV6; // peer snd us an IP6-formate address
-    dest_addr->sin6.sin6_port = curr_geco_packet_fixed_->dest_port;
+    dest_addr->sin6.sin6_port = htons(last_dest_port_);
     ip6_saddr_ = &(dest_addr->sin6.sin6_addr);
 
     if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_))
@@ -6155,18 +6184,6 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
       EVENTLOG(VERBOSE, "IN6ADDR_ANY(dest_addr) -> discard !");
       should_discard_curr_geco_packet_ = true;
     }
-
-    //if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_)
-    //    || IN6_IS_ADDR_V4COMPAT(ip6_saddr_) || IN6_IS_ADDR_V4MAPPED(ip6_saddr_)
-    //    || IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_)) should_discard_curr_geco_packet_ =
-    //    true;
-    /* comment here means msg sent to ourself is allowed
-     * if ((!IN6_IS_ADDR_LOOPBACK(&(source_addr->sin6.sin6_addr.s6_addr))) &&
-     * IN6_ARE_ADDR_EQUAL(&(source_addr->sin6.sin6_addr.s6_addr),
-     * &(dest_addr->sin6.sin6_addr.s6_addr))) should_discard_curr_geco_packet_ = true;
-     */
-    //EVENTLOG1(VERBOSE, "filter out dest IPV6 addresses, discard(%d)",
-    //    should_discard_curr_geco_packet_);
   }
   else
   {
@@ -6177,7 +6194,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 
   if (saddr_family(source_addr) == AF_INET)
   {
-    source_addr->sin.sin_port = curr_geco_packet_fixed_->src_port;
+    source_addr->sin.sin_port = htons(last_src_port_);
     ip4_saddr_ = ntohl(source_addr->sin.sin_addr.s_addr);
 
     if (IN_CLASSD(ip4_saddr_))
@@ -6205,17 +6222,10 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
       EVENTLOG(NOTICE, "INADDR_BROADCAST(source_addr) -> discard !");
       should_discard_curr_geco_packet_ = true;
     }
-    //if (IN_CLASSD(ip4_saddr_) || IN_EXPERIMENTAL(ip4_saddr_) || IN_BADCLASS(ip4_saddr_)
-    //    || (INADDR_ANY == ip4_saddr_) || (INADDR_BROADCAST == ip4_saddr_))
-    //{
-    //    should_discard_curr_geco_packet_ = true;
-    //}
-    //EVENTLOG1(VERBOSE, "filter out src addr->discard(%d)",
-    //    should_discard_curr_geco_packet_);
   }
   else if (saddr_family(source_addr) == AF_INET6)
   {
-    source_addr->sin6.sin6_port = curr_geco_packet_fixed_->src_port;
+    source_addr->sin6.sin6_port = htons(last_src_port_);
     ip6_saddr_ = &(source_addr->sin6.sin6_addr);
 
     if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_))
@@ -6243,15 +6253,6 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
       EVENTLOG(VERBOSE, "IN6ADDR_ANY(source_addr) -> discard !");
       should_discard_curr_geco_packet_ = true;
     }
-
-    //if (IN6_IS_ADDR_UNSPECIFIED(ip6_saddr_) || IN6_IS_ADDR_MULTICAST(ip6_saddr_)
-    //    || IN6_IS_ADDR_V4COMPAT(ip6_saddr_) || IN6_IS_ADDR_V4MAPPED(ip6_saddr_)
-    //    || IN6_ADDR_EQUAL(&in6addr_any, ip6_saddr_))
-    //{
-    //    should_discard_curr_geco_packet_ = true;
-    //}
-    //EVENTLOG1(VERBOSE, "filter out src addr6 -> discard(%d)",
-    //    should_discard_curr_geco_packet_);
   }
   else
   {
