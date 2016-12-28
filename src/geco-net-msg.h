@@ -33,10 +33,10 @@ typedef short chunk_id_t;
 #define GECO_PACKET_FIXED_SIZE_USE_UDP  (sizeof(uint))
 struct geco_packet_fixed_t
 {
-    uint verification_tag;
-    uint checksum;
-    ushort src_port;
-    ushort dest_port;
+	uint verification_tag;
+	uint checksum;
+	ushort src_port;
+	ushort dest_port;
 };
 
 #define MAX_NETWORK_PACKET_VALUE_SIZE (MAX_GECO_PACKET_SIZE - GECO_PACKET_FIXED_SIZE)

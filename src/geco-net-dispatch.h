@@ -133,8 +133,8 @@ struct bundle_controller_t
     // this is stored in mbu if so, geco packet fixed sies are 4 bytes veri tag,
     // othwewise 12 bytes (2 srcport + 2 destport + 4 veritag + 4 checksum)
     // this variable is for each channel
-    bool use_udp_tunnel;
     uint requested_destination;
+	uint geco_packet_fixed_size;
 
     bundle_controller_t()
     {
@@ -143,10 +143,8 @@ struct bundle_controller_t
     void reset()
     {
       requested_destination = 0;
-      if (use_udp_tunnel)
-        ctrl_position = data_position = sack_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
-      else
-        ctrl_position = data_position = sack_position = GECO_PACKET_FIXED_SIZE;
+	  geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE;
+      ctrl_position = data_position = sack_position = geco_packet_fixed_size;
       got_shutdown = locked = got_send_address = got_send_request = data_in_buffer = ctrl_chunk_in_buffer =
           sack_in_buffer = false;
     }
