@@ -2082,7 +2082,7 @@ int mtra_init(int * myRwnd)
 	return 0;
 }
 
-inline int mtra_send(int mdi_socket_fd_, char* geco_packet, int length, sockaddrunion *dest_addr_ptr, uchar tos)
+int mtra_send(int mdi_socket_fd_, char* geco_packet, int length, sockaddrunion *dest_addr_ptr, uchar tos)
 {
 	int len;
 

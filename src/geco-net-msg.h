@@ -376,8 +376,8 @@ struct heartbeat_chunk_t
 {
 	chunk_fixed_t chunk_header;
 	vlparam_fixed_t HB_Info;
-	uint sendingTime;
 	uint pathID;
+  uint sendingTime;
 #ifdef MD5_HMAC
 	uchar hmac[16];
 #elif SHA_HMAC

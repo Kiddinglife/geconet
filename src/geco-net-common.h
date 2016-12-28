@@ -759,7 +759,7 @@ union cbunion_t
 	task_cb_fun_t task_cb_fun;
 };
 extern bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags);
-extern bool get_local_addresses(union sockaddrunion **addresses, int *numberOfNets, int sctp_fd, bool with_ipv6,
+extern bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets, int sctp_fd, bool with_ipv6,
 	int *max_mtu, const IPAddrType flags);
 extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
 

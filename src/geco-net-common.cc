@@ -812,7 +812,7 @@ leave:
 	return ret;
 }
 bool get_local_addresses(union sockaddrunion **addresses,
-	int *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
+	uint *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
 	const IPAddrType flags)
 {
 #ifdef WIN32
