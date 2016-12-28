@@ -31,8 +31,6 @@ static socklen_t src_addr_len_;
 static int recvlen_;
 static ushort portnum_;
 static char src_address[MAX_IPADDR_STR_LEN];
-static iphdr* iph;
-static int iphdrlen;
 
 //static dispatch_layer_t dispatch_layer_;
 static cbunion_t cbunion_;

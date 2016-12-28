@@ -18,14 +18,14 @@
 #include "geco-net-config.h"
 #include "geco-common.h"
 
-#define DEFAULT_COOKIE_LIFE_SPAN 10000 //ms
+#define DEFAULT_COOKIE_LIFE_SPAN 30000 //ms
 
 typedef short chunk_id_t;
 #define MAX_CHUNKS_SIZE 32
 #define MAX_CHUNKS_SIZE_MASK 31
 
 /**************************** packet definitions ***************************/
-#define MAX_MTU_SIZE 576
+#define MAX_MTU_SIZE 576 //1500
 #define DEFAULT_MTU_CEILING MAX_MTU_SIZE
 #define IP_HDR_SIZE 20
 #define MAX_GECO_PACKET_SIZE  (MAX_MTU_SIZE - IP_HDR_SIZE)
