@@ -358,7 +358,7 @@ void mdi_set_bundle_dest_addr(int * ad_idx = NULL)
 {
 	curr_bundle_chunks_send_addr_ = ad_idx;
 }
-int mdi_send_bundled_chunks(int * ad_idx = NULL);
+int mdi_send_bundled_chunks(int* ad_idx = NULL);
 void mdi_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index = NULL);
 /// deletes the current chanel.
 /// The chanel will not be deleted at once, but is only marked for deletion. This is done in
@@ -1422,17 +1422,11 @@ void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *des
 			{
 				destinationList[count].sa.sa_family == AF_INET ? mdi_socket_fd_ = mtra_read_ip4udpsock() : mdi_socket_fd_ =
 					mtra_read_ip6udpsock();
-				curr_channel_->bundle_control->geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE_USE_UDP;
-				curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
-					= curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
 			}
 			else
 			{
 				destinationList[count].sa.sa_family == AF_INET ? mdi_socket_fd_ = mtra_read_ip4rawsock() : mdi_socket_fd_ =
 					mtra_read_ip6rawsock();
-				curr_channel_->bundle_control->geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE;
-				curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
-					= curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
 			}
 			mdi_bundle_ctrl_chunk(myinit, &count);
 			mdi_send_bundled_chunks(&count);
@@ -2163,7 +2157,7 @@ int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist, 
 
 	return count;
 }
-int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
+int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex, uint geco_packet_fixed_size)
 {
 #ifdef _DEBUG
 	EVENTLOG(VERBOSE, "- - - - Enter mdi_send_geco_packet()");
@@ -2179,7 +2173,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 
 	int len = 0;
 	geco_packet_t* geco_packet_ptr = (geco_packet_t*)geco_packet;
-	simple_chunk_t* chunk = ((simple_chunk_t*)(geco_packet_ptr->chunk));
+	simple_chunk_t* chunk = ((simple_chunk_t*)(geco_packet_ptr->chunk - GECO_PACKET_FIXED_SIZE + geco_packet_fixed_size));
 
 	/*1)when sending OOB chunk without channel found, we use last_source_addr_
 	 * carried in OOB packet as the sending dest addr see recv_geco_packet() for details*/
@@ -2297,7 +2291,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex)
 #ifdef _DEBUG
 	ushort port;
 	saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, &port);
-	EVENTLOG4(VERBOSE, "mdi_send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d", length, hoststr_,
+	EVENTLOG4(DEBUG, "mdi_send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d", length, hoststr_,
 		ntohs(geco_packet_ptr->pk_comm_hdr.dest_port), len);
 #endif
 
@@ -2460,7 +2454,7 @@ int mdi_send_bundled_chunks(int* ad_idx)
 	EVENTLOG2(VERBOSE, "sending message len==%u to adress idx=%d", send_len, path_param_id);
 
 	// send_len = geco hdr + chunks
-	ret = mdi_send_geco_packet(send_buffer, send_len, path_param_id);
+	ret = mdi_send_geco_packet(send_buffer, send_len, path_param_id, bundle_ctrl->geco_packet_fixed_size);
 
 	/* reset all positions */
 	bundle_ctrl->sack_in_buffer = false;
@@ -2851,6 +2845,14 @@ void mdi_on_peer_connected(uint status)
 	assert(curr_geco_instance_ != NULL);
 	assert(last_source_addr_ != NULL);
 
+	// reset mbu geco packet size
+	if (default_bundle_ctrl_->geco_packet_fixed_size != 0 && curr_channel_->bundle_control->geco_packet_fixed_size == 0)
+	{
+		curr_channel_->bundle_control->geco_packet_fixed_size = default_bundle_ctrl_->geco_packet_fixed_size;
+		curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
+			= curr_channel_->bundle_control->ctrl_position = default_bundle_ctrl_->geco_packet_fixed_size;
+	}
+
 	// find primary path
 	//short primaryPath;
 	//if (last_source_addr_ != NULL)
@@ -3098,11 +3100,6 @@ int msm_process_init_chunk(init_chunk_t * init)
 			mdi_clear_current_channel();
 			return STOP_PROCESS_CHUNK_FOR_NULL_SRC_ADDR;
 		}
-	}
-	else
-	{
-		//memcpy(&tmp_addr_, last_source_addr_, sizeof(sockaddrunion));
-		memcpy_fast(&tmp_addr_, last_source_addr_, sizeof(sockaddrunion));
 	}
 
 	ushort inbound_stream;
@@ -4602,10 +4599,7 @@ bundle_controller_t* mbu_new()
 	bundle_ctrl->locked = false;
 	bundle_ctrl->requested_destination = 0;
 	bundle_ctrl->got_shutdown = false;
-
-	bundle_ctrl->data_position = GECO_PACKET_FIXED_SIZE;
-	bundle_ctrl->ctrl_position = GECO_PACKET_FIXED_SIZE;
-	bundle_ctrl->sack_position = GECO_PACKET_FIXED_SIZE;
+	bundle_ctrl->geco_packet_fixed_size = 0;
 	return bundle_ctrl;
 }
 
@@ -6301,7 +6295,6 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	/*4) find the endpoint for this packet */
 	// cmp_channel() will set last_src_path_ to the one found src's
 	// index in channel's remote addr list
-	last_src_path_ = 0;
 	curr_channel_ = mdi_find_channel();
 	if (curr_channel_ != NULL)
 	{
@@ -7070,7 +7063,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-}
+	}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
@@ -7505,7 +7498,20 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 		curr_channel_ = old_assoc;
 		ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx()::Creation of association failed !");
 	}
+
 	curr_channel_->ulp_dataptr = ulp_data;
+	if (mdi_connect_udp_sfd_)
+	{
+		curr_channel_->bundle_control->geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE_USE_UDP;
+		curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
+			= curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+	}
+	else
+	{
+		curr_channel_->bundle_control->geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE;
+		curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
+			= curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
+	}
 
 	//insert channel id to map
 	for (uint i = 0; i < curr_channel_->local_addres_size; i++)
