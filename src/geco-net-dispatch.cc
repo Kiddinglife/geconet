@@ -6312,13 +6312,12 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			my_supported_addr_types_ = curr_geco_instance_->supportedAddressTypes;
 		}
 	}
-
-	/* 6) find  instance for this packet if this packet is for a server dctp instance,
-	 *  we will find that  instance and let it handle this packet (i.e. we have an
-	 *  instance's localPort set and it matches the packet's destination port)
-	 */
 	else
 	{
+		/* 6) find  instance for this packet if this packet is for a server dctp instance,
+		*  we will find that  instance and let it handle this packet (i.e. we have an
+		*  instance's localPort set and it matches the packet's destination port)
+		*/
 		curr_geco_instance_ = mdi_find_geco_instance(last_dest_addr_, last_dest_port_);
 		if (curr_geco_instance_ == NULL)
 		{
@@ -6476,6 +6475,27 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	if (curr_channel_ != NULL)
 	{
 		EVENTLOG(INFO, "non-ootb packet");
+
+		// when peer restarts with different sfd to its previous connection, we need update 
+		if (curr_channel_->state_machine_control->channel_state == ChannelState::Connected)
+		{
+			if (from_udp_sfd)
+			{
+				if (curr_channel_->bundle_control->geco_packet_fixed_size != GECO_PACKET_FIXED_SIZE_USE_UDP)
+					curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->geco_packet_fixed_size =
+					curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->data_position =
+					curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+			}
+			else
+			{
+				if (curr_channel_->bundle_control->geco_packet_fixed_size != GECO_PACKET_FIXED_SIZE)
+					curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->geco_packet_fixed_size =
+					curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->data_position =
+					curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
+			}
+
+		}
+
 		/*13.1 validate curr_geco_instance_*/
 		if (curr_geco_instance_ == NULL)
 		{
@@ -6776,6 +6796,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 					default_bundle_ctrl_->data_position = default_bundle_ctrl_->ctrl_position = GECO_PACKET_FIXED_SIZE;
 			}
 		}
+
 		/*15)
 		 * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets - (2)
 		 * If the OOTB packet contains an ABORT chunk, the receiver MUST
