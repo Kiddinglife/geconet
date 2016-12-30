@@ -109,7 +109,7 @@ TEST(MULP, test_alloc_and_free_port)
 extern int myRWND;
 extern uint ipv4_sockets_geco_instance_users;
 extern uint ipv6_sockets_geco_instance_users;
-extern int defaultlocaladdrlistsize_;
+extern uint defaultlocaladdrlistsize_;
 extern sockaddrunion* defaultlocaladdrlist_;
 extern std::vector<geco_instance_t*> geco_instances_;
 TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
