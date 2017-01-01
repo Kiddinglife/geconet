@@ -107,7 +107,7 @@ geco_instance_t *curr_geco_instance_;
 /// This pointer must be reset to null after the event has been handled.*/
 geco_channel_t *curr_channel_;
 
-static int mdi_socket_fd_;
+static int mdi_send_sfd_;
 
 /// these one-shot state variables are so frequently used in recv_gco_packet()  to improve performances 
 int* curr_bundle_chunks_send_addr_ = 0;
@@ -130,7 +130,7 @@ char dest_addr_str_[MAX_IPADDR_STR_LEN];
 bool is_found_init_chunk_;
 bool is_found_cookie_echo_;
 bool is_found_abort_chunk_;
-bool from_udp_sfd;
+bool mdi_udp_tunneled_;
 bool should_discard_curr_geco_packet_;
 int dest_addr_type_;
 uint ip4_saddr_;
@@ -1420,12 +1420,12 @@ void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *des
 			// we firstly try raw socket if it fails we switch to udp-tunneld by setting to upd socks in on_connection_failed_cb()
 			if (mdi_connect_udp_sfd_)
 			{
-				destinationList[count].sa.sa_family == AF_INET ? mdi_socket_fd_ = mtra_read_ip4udpsock() : mdi_socket_fd_ =
+				destinationList[count].sa.sa_family == AF_INET ? mdi_send_sfd_ = mtra_read_ip4udpsock() : mdi_send_sfd_ =
 					mtra_read_ip6udpsock();
 			}
 			else
 			{
-				destinationList[count].sa.sa_family == AF_INET ? mdi_socket_fd_ = mtra_read_ip4rawsock() : mdi_socket_fd_ =
+				destinationList[count].sa.sa_family == AF_INET ? mdi_send_sfd_ = mtra_read_ip4rawsock() : mdi_send_sfd_ =
 					mtra_read_ip6rawsock();
 			}
 			mdi_bundle_ctrl_chunk(myinit, &count);
@@ -2286,7 +2286,10 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex,
 			tos, curr_channel_->remote_tag, curr_channel_->local_port, curr_channel_->remote_port);
 	}  // curr_channel_ != NULL
 
-	len = mtra_send(mdi_socket_fd_, geco_packet, length, dest_addr_ptr, tos);
+	mdi_send_sfd_ =
+		(mdi_udp_tunneled_ ? (dest_addr_ptr->sa.sa_family == AF_INET ? mtra_read_ip4udpsock() : mtra_read_ip6udpsock()) :
+		(dest_addr_ptr->sa.sa_family == AF_INET ? mtra_read_ip4rawsock() : mtra_read_ip6rawsock()));
+	len = mtra_send(mdi_send_sfd_, geco_packet, length, dest_addr_ptr, tos);
 
 #ifdef _DEBUG
 	ushort port;
@@ -6071,7 +6074,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	{
 		last_src_port_ = ntohs(curr_geco_packet_fixed_->src_port);
 		last_dest_port_ = ntohs(curr_geco_packet_fixed_->dest_port);
-		from_udp_sfd = false;
+		mdi_udp_tunneled_ = false;
 		if (!gvalidate_checksum(dctp_packet, dctp_packet_len))
 		{
 			EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
@@ -6082,13 +6085,13 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	{
 		last_src_port_ = ntohs(source_addr->sin.sin_port);
 		last_dest_port_ = ntohs(dest_addr->sin.sin_port);
-		from_udp_sfd = true;
+		mdi_udp_tunneled_ = true;
 	}
 	else
 	{
 		last_src_port_ = ntohs(source_addr->sin6.sin6_port);
 		last_dest_port_ = ntohs(dest_addr->sin6.sin6_port);
-		from_udp_sfd = true;
+		mdi_udp_tunneled_ = true;
 	}
 
 	if (last_src_port_ == 0 || last_dest_port_ == 0)
@@ -6282,7 +6285,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	else
 	{
 		// we can assign addr as they are good to use now
-		mdi_socket_fd_ = socket_fd;
+		mdi_send_sfd_ = socket_fd;
 		last_source_addr_ = source_addr;
 		last_dest_addr_ = dest_addr;
 		curr_trans_addr_.local_saddr = dest_addr;
@@ -6341,7 +6344,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	}
 
 	/*9) fetch all chunk types contained in this packet value field for use in the folowing */
-	if (from_udp_sfd)
+	if (mdi_udp_tunneled_)
 	{
 		curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE_USE_UDP;
 		chunk = curr_geco_packet_->chunk - GECO_PACKET_FIXED_SIZE + sizeof(uint);
@@ -6479,7 +6482,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		// when peer restarts with different sfd to its previous connection, we need update 
 		if (curr_channel_->state_machine_control->channel_state == ChannelState::Connected)
 		{
-			if (from_udp_sfd)
+			if (mdi_udp_tunneled_)
 			{
 				if (curr_channel_->bundle_control->geco_packet_fixed_size != GECO_PACKET_FIXED_SIZE_USE_UDP)
 					curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->geco_packet_fixed_size =
@@ -6780,7 +6783,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		 * refers to RFC 4960 Sectiion 8.4 Handle "Out of the Blue" Packets */
 		EVENTLOG(INFO, "ootb packet");
 
-		if (from_udp_sfd)
+		if (mdi_udp_tunneled_)
 		{
 			if (default_bundle_ctrl_->geco_packet_fixed_size != GECO_PACKET_FIXED_SIZE_USE_UDP)
 			{
