@@ -731,7 +731,7 @@ chunk_id_t mch_make_init_chunk(uint initTag, uint arwnd, ushort noOutStreams, us
 		INIT_CHUNK_TOTAL_SIZE, __FILE__, __LINE__);
 	if (initChunk == NULL)
 		ERRLOG(FALTAL_ERROR_EXIT, "malloc failed!\n");
-	memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
+	//memset(initChunk, 0, INIT_CHUNK_TOTAL_SIZE);
 	initChunk->chunk_header.chunk_id = CHUNK_INIT;
 	initChunk->chunk_header.chunk_flags = 0x00;
 	initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;

@@ -770,6 +770,9 @@ static void mtra_fire_event(int num_of_events)
 #ifdef _WIN32
 		cb_dispatcher :
 #endif
+					  // release 0.03ms debug 0.06ms
+					  //static uint64 sum=0;
+					  //static uint64 count = 0;
 					  //uint64 start = gettimestamp();
 					  switch (event_callbacks[i].eventcb_type)
 					  {
@@ -828,7 +831,9 @@ static void mtra_fire_event(int num_of_events)
 						  ERRLOG1(MAJOR_ERROR, "No such  eventcb_type %d", event_callbacks[i].eventcb_type);
 						  break;
 					  }
-					 // printf("fire event time used %.5f ms\n", (gettimestamp() - start)/stamps_per_ms_double());
+					  //count++;
+					  //sum += (gettimestamp() - start);
+					 //printf("fire event time used %.5f ms\n", sum /(count*stamps_per_ms_double()));
 					  //exit(-1);
 					  socket_despts[i].revents = 0;
 	}

@@ -2194,12 +2194,11 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex,
 		last_init_tag_ = 0;  //reset it
 
 		// swap port number
-		if (default_bundle_ctrl_->geco_packet_fixed_size == GECO_PACKET_FIXED_SIZE)
+		if (!mdi_udp_tunneled_)
 		{
 			geco_packet_ptr->pk_comm_hdr.src_port = htons(last_dest_port_);
 			geco_packet_ptr->pk_comm_hdr.dest_port = htons(last_src_port_);
-			/*9) calc checksum and insert it MD5*/
-			gset_checksum(geco_packet, length);
+			gset_checksum(geco_packet, length);	// calc checksum and insert it MD5
 		}
 		curr_geco_instance_ == NULL ? tos = (uchar)IPTOS_DEFAULT : tos = curr_geco_instance_->default_ipTos;
 		EVENTLOG4(VERBOSE,
@@ -2275,19 +2274,19 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex,
 			geco_packet_ptr->pk_comm_hdr.verification_tag = htonl(curr_channel_->remote_tag);
 
 		tos = curr_channel_->ipTos;
-		if (curr_channel_->bundle_control->geco_packet_fixed_size == GECO_PACKET_FIXED_SIZE)
+		assert(curr_channel_->bundle_control->geco_packet_fixed_size != 0);
+		if (!mdi_udp_tunneled_ && !mdi_connect_udp_sfd_)
 		{
 			geco_packet_ptr->pk_comm_hdr.src_port = htons(curr_channel_->local_port);
 			geco_packet_ptr->pk_comm_hdr.dest_port = htons(curr_channel_->remote_port);
-			/*9) calc checksum and insert it MD5*/
-			gset_checksum(geco_packet, length);
+			gset_checksum(geco_packet, length);	// calc checksum and insert it MD5
 		}
 		EVENTLOG4(VERBOSE, "dispatch_layer_t::mdi_send_geco_packet() : tos = %u, tag = %x, src_port = %u , dest_port = %u",
 			tos, curr_channel_->remote_tag, curr_channel_->local_port, curr_channel_->remote_port);
 	}  // curr_channel_ != NULL
 
 	mdi_send_sfd_ =
-		(mdi_udp_tunneled_ ? (dest_addr_ptr->sa.sa_family == AF_INET ? mtra_read_ip4udpsock() : mtra_read_ip6udpsock()) :
+		(mdi_udp_tunneled_ || mdi_connect_udp_sfd_ ? (dest_addr_ptr->sa.sa_family == AF_INET ? mtra_read_ip4udpsock() : mtra_read_ip6udpsock()) :
 		(dest_addr_ptr->sa.sa_family == AF_INET ? mtra_read_ip4rawsock() : mtra_read_ip6rawsock()));
 	len = mtra_send(mdi_send_sfd_, geco_packet, length, dest_addr_ptr, tos);
 
@@ -2440,8 +2439,7 @@ int mdi_send_bundled_chunks(int* ad_idx)
 	}
 	EVENTLOG1(VERBOSE, "send_len == %d ", send_len);
 
-	/*this should not happen as bundle_xxx_chunk() internally detects
-	 * if exceeds MAX_GECO_PACKET_SIZE, if so, it will call */
+	// this should not happen as bundle_xxx_chunk() internally detectsif exceeds MAX_GECO_PACKET_SIZE, if so, it will call 
 	if (send_len > MAX_GECO_PACKET_SIZE)
 	{
 		EVENTLOG5(FALTAL_ERROR_EXIT,
@@ -2459,22 +2457,23 @@ int mdi_send_bundled_chunks(int* ad_idx)
 	// send_len = geco hdr + chunks
 	ret = mdi_send_geco_packet(send_buffer, send_len, path_param_id, bundle_ctrl->geco_packet_fixed_size);
 
-	/* reset all positions */
-	bundle_ctrl->sack_in_buffer = false;
-	bundle_ctrl->ctrl_chunk_in_buffer = false;
-	bundle_ctrl->data_in_buffer = false;
-	bundle_ctrl->got_send_request = false;
-	bundle_ctrl->got_send_address = false;
-
-	bundle_ctrl->data_position = bundle_ctrl->geco_packet_fixed_size;
-	bundle_ctrl->ctrl_position = bundle_ctrl->geco_packet_fixed_size;
-	bundle_ctrl->sack_position = bundle_ctrl->geco_packet_fixed_size;
+	// reset all positions 
+	bundle_ctrl->sack_in_buffer =
+		bundle_ctrl->ctrl_chunk_in_buffer =
+		bundle_ctrl->data_in_buffer =
+		bundle_ctrl->got_send_request =
+		bundle_ctrl->got_send_address = false;
+	bundle_ctrl->data_position =
+		bundle_ctrl->ctrl_position =
+		bundle_ctrl->sack_position =
+		bundle_ctrl->geco_packet_fixed_size;
 
 #ifdef _DEBUG
 	EVENTLOG(VERBOSE, "- - - Leave send_bundled_chunks()");
 #endif
 
-leave: return ret;
+leave:
+	return ret;
 }
 void mdi_init(void)
 {
@@ -6053,17 +6052,16 @@ void clear()
 int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len, sockaddrunion * source_addr,
 	sockaddrunion * dest_addr)
 {
-	EVENTLOG2(DEBUG, "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -", dctp_packet_len,
-		socket_fd);
+	EVENTLOG2(DEBUG, "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -", dctp_packet_len, socket_fd);
 
-	/* 1) validate packet hdr size, checksum and if aligned 4 bytes */
+	//1) validate packet hdr size, checksum and if aligned 4 bytes 
 	if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_GECO_PACKET_SIZE || dctp_packet_len > MAX_GECO_PACKET_SIZE)
 	{
 		EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
 		return recv_geco_packet_but_integrity_check_failed;
 	}
 
-	/* 2) validate port numbers */
+	//2) validate port numbers 
 	curr_geco_packet_fixed_ = (geco_packet_fixed_t*)dctp_packet;
 	curr_geco_packet_ = (geco_packet_t*)dctp_packet;
 
@@ -6072,26 +6070,32 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	static int udpsockip4 = mtra_read_ip4udpsock();
 	if (socket_fd == rawsockip4 || socket_fd == rawsockip6)
 	{
-		last_src_port_ = ntohs(curr_geco_packet_fixed_->src_port);
-		last_dest_port_ = ntohs(curr_geco_packet_fixed_->dest_port);
-		mdi_udp_tunneled_ = false;
 		if (!gvalidate_checksum(dctp_packet, dctp_packet_len))
 		{
 			EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
 			return recv_geco_packet_but_integrity_check_failed;
 		}
+		last_src_port_ = ntohs(curr_geco_packet_fixed_->src_port);
+		last_dest_port_ = ntohs(curr_geco_packet_fixed_->dest_port);
+		mdi_udp_tunneled_ = false;
+		curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
+		chunk = curr_geco_packet_->chunk;
 	}
 	else if (socket_fd == udpsockip4)
 	{
 		last_src_port_ = ntohs(source_addr->sin.sin_port);
 		last_dest_port_ = ntohs(dest_addr->sin.sin_port);
 		mdi_udp_tunneled_ = true;
+		curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE_USE_UDP;
+		chunk = curr_geco_packet_->chunk - GECO_PACKET_FIXED_SIZE + sizeof(uint);
 	}
 	else
 	{
 		last_src_port_ = ntohs(source_addr->sin6.sin6_port);
 		last_dest_port_ = ntohs(dest_addr->sin6.sin6_port);
 		mdi_udp_tunneled_ = true;
+		curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE_USE_UDP;
+		chunk = curr_geco_packet_->chunk - GECO_PACKET_FIXED_SIZE + sizeof(uint);
 	}
 
 	if (last_src_port_ == 0 || last_dest_port_ == 0)
@@ -6343,27 +6347,13 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		}
 	}
 
-	/*9) fetch all chunk types contained in this packet value field for use in the folowing */
-	if (mdi_udp_tunneled_)
-	{
-		curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE_USE_UDP;
-		chunk = curr_geco_packet_->chunk - GECO_PACKET_FIXED_SIZE + sizeof(uint);
-		chunk_types_arr_ = find_chunk_types(chunk, curr_geco_packet_value_len_, &total_chunks_count_);
-	}
-	else
-	{
-		curr_geco_packet_value_len_ = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
-		chunk = curr_geco_packet_->chunk;
-		chunk_types_arr_ = find_chunk_types(chunk, curr_geco_packet_value_len_, &total_chunks_count_);
-	}
-
-	last_veri_tag_ = ntohl(curr_geco_packet_->pk_comm_hdr.verification_tag);
-	printf("last_veri_tag_ = %u\n", last_veri_tag_);
-	//exit(-1);
-
 	tmp_peer_addreslist_size_ = 0;
 	curr_uchar_init_chunk_ = NULL;
 	send_abort_ = false;
+	last_veri_tag_ = ntohl(curr_geco_packet_->pk_comm_hdr.verification_tag);
+
+	/*9) fetch all chunk types contained in this packet value field for use in the folowing */
+	chunk_types_arr_ = find_chunk_types(chunk, curr_geco_packet_value_len_, &total_chunks_count_);
 
 	/* 10) validate individual chunks
 	 * (see section 3.1 of RFC 4960 at line 931 init chunk MUST be the only chunk
@@ -6561,14 +6551,11 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			}
 
 			init_chunk_fixed_ = &(((init_chunk_t*)curr_uchar_init_chunk_)->init_fixed);
-			// if you need send ABORT later on
-			// (i.e.for peer requests 0 streams), this give you the right tag
+			// if you need send ABORT later on  (i.e.for peer requests 0 streams), this give you the right tag
 			last_init_tag_ = ntohl(init_chunk_fixed_->init_tag);
 			EVENTLOG1(VERBOSE, "Its initiation-tag is %u", last_init_tag_);
 
-			vlparam_fixed_ = (vlparam_fixed_t*)mch_read_vlparam_init_chunk(curr_uchar_init_chunk_,
-				curr_geco_packet_value_len_,
-				VLPARAM_HOST_NAME_ADDR);
+			vlparam_fixed_ = (vlparam_fixed_t*)mch_read_vlparam_init_chunk(curr_uchar_init_chunk_, curr_geco_packet_value_len_, VLPARAM_HOST_NAME_ADDR);
 			if (vlparam_fixed_ != NULL)
 			{
 				EVENTLOG(VERBOSE, "Found VLPARAM_HOST_NAME_ADDR  ->  do dns");
@@ -6824,15 +6811,13 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 		if (contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types_arr_) > 0)
 		{
 			EVENTLOG(DEBUG, "Found SHUTDOWN_ACK -> send SHUTDOWN_COMPLETE and return!");
-			uint shutdown_complete_cid = mch_make_simple_chunk(
-				CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
+			uint shutdown_complete_cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
 			mdi_lock_bundle_ctrl();
 			mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdown_complete_cid));
 			mdi_unlock_bundle_ctrl();
 			mdi_send_bundled_chunks();
 			mch_free_simple_chunk(shutdown_complete_cid);
 			clear();
-
 			EVENTLOG(DEBUG, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 			return recv_geco_packet_but_it_is_ootb_sdack_send_sdc;
 		}
@@ -7497,9 +7482,6 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 		ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx()::not found geco instance !");
 	}
 
-	geco_instance_t* old_Instance = curr_geco_instance_;
-	geco_channel_t* old_assoc = curr_channel_;
-
 	curr_geco_instance_ = geco_instances_[instanceid];
 	ushort localPort;
 
@@ -7518,23 +7500,19 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 		destinationPort,/* remote server port */
 		itag, 0, noOfDestinationAddresses, dest_su))
 	{
-		curr_geco_instance_ = old_Instance;
-		curr_channel_ = old_assoc;
 		ERRLOG(FALTAL_ERROR_EXIT, "mulp_connectx()::Creation of association failed !");
 	}
 
 	curr_channel_->ulp_dataptr = ulp_data;
 	if (mdi_connect_udp_sfd_)
 	{
-		curr_channel_->bundle_control->geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE_USE_UDP;
-		curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
-			= curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+		curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->data_position =
+			curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
 	}
 	else
 	{
-		curr_channel_->bundle_control->geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE;
-		curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
-			= curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
+		curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->data_position =
+			curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
 	}
 
 	//insert channel id to map
@@ -7557,8 +7535,6 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 	// we always try
 	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses);
 	uint channel_id = curr_channel_->channel_id;
-	curr_geco_instance_ = old_Instance;
-	curr_channel_ = old_assoc;
 	return channel_id;
 }
 
