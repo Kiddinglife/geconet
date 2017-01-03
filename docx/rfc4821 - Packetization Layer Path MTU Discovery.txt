@@ -482,7 +482,7 @@ RFC 4821         Packetization Layer Path MTU Discovery       March 2007
    indications of which packets were lost in the network.
 
    Normal congestion control algorithms MUST remain in effect under all
-   conditions except when only an isolated(单独的) probe packet is detected as
+   conditions except when only an isolated(单独�? probe packet is detected as
    lost. In this case alone, the normal congestion (window or data
    rate) reduction SHOULD be suppressed(阻止). If any other data loss is
    detected, standard congestion control MUST take place.
@@ -758,7 +758,7 @@ RFC 4821         Packetization Layer Path MTU Discovery       March 2007
 
    In a few cases, there may be no reasonable mechanisms to generate
    probes within the Packetization Layer protocol itself.  As a last
-   resort, it may be possible to rely on an adjunct(辅助性) protocol, 
+   resort, it may be possible to rely on an adjunct(辅助�? protocol, 
    such as ICMP ECHO ("ping"), to send probe packets.  
    See Section 10.3 for further discussion of this approach.
 
