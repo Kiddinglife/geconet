@@ -702,11 +702,10 @@ char* Itoa(int value, char* result, int base)
 	return result;
 }
 
+static bool b1, b2, b3, b4, b5, b6, b7, b8, typeofaddr_ret;
 bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 {
-	bool ret = false;
-	bool b1;
-	bool b2;
+	typeofaddr_ret = false;
 
 #ifdef _DEBUG
 	char addrstr[MAX_IPADDR_STR_LEN];
@@ -716,31 +715,27 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 	switch (saddr_family(newAddress))
 	{
 	case AF_INET:
-		if ((IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr))
-			&& (flags & MulticastAddrType))
-			|| (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr))
-				&& (flags & ReservedAddrType))
-			|| (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr))
-				&& (flags & ReservedAddrType))
-			|| ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr))
-				&& (flags & BroadcastAddrType))
-			|| ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr))
-				&& (flags & LoopBackAddrType))
-			|| ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr))
-				&& (flags & AllExceptLoopbackAddrTypes))
-			|| (ntohl(newAddress->sin.sin_addr.s_addr) == INADDR_ANY))
+		b1 = (IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & MulticastAddrType));
+		b2 = (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & ReservedAddrType));
+		b3 = (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & ReservedAddrType));
+		b4 = ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & BroadcastAddrType));
+		b5 = ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & LoopBackAddrType));
+		b6 = ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & AllExceptLoopbackAddrTypes));
+		b7 = (ntohl(newAddress->sin.sin_addr.s_addr) == INADDR_ANY);
+		if (b1 || b2 || b3 || b4 || b5 || b6 || b7)
 		{
 #ifdef _DEBUG
-			EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
+			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
 #endif
-			ret = true;
+			typeofaddr_ret = true;
 			goto leave;
 		}
 #ifdef _DEBUG
 		else
-			EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
+			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
 #endif
 		break;
+
 	case AF_INET6:
 #if defined (__linux__)
 		if ((!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr))
@@ -767,49 +762,49 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 				&(newAddress->sin6.sin6_addr.s6_addr)))
 		{
 #ifdef _DEBUG
-			EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
+			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
 #endif
-			ret = true;
+			typeofaddr_ret = true;
 			goto leave;
 		}
 #ifdef _DEBUG
 		else
-			EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
+			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
 #endif
 #else
-		if (
-			(!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLoopbackAddrTypes)) ||
-			(IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & LoopBackAddrType)) ||
-			(!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLinkLocalAddrTypes)) ||
-			(!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & ExceptSiteLocalAddrTypes)) ||
-			(IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & LinkLocalAddrType)) ||
-			(IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & SiteLocalAddrType)) ||
-			(IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & MulticastAddrType)) ||
-			IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr))
-			)
+		b1 = (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLoopbackAddrTypes));
+		b2 = (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & LoopBackAddrType));
+		b3 = (!IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLinkLocalAddrTypes));
+		b4 = (!IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & ExceptSiteLocalAddrTypes));
+		b5 = (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr)) && (flags & LinkLocalAddrType));
+		b6 = (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr)) && (flags & SiteLocalAddrType));
+		b7 = (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr)) && (flags & MulticastAddrType));
+		b8 = IN6_IS_ADDR_UNSPECIFIED(&(newAddress->sin6.sin6_addr));
+		if (b1 || b2 || b3 || b4 || b5 || b6 || b7 || b8)
 		{
 #ifdef _DEBUG
-			EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s IS type of filtered addr BAD", 1, addrstr);
+			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s IS type of filtered addr BAD", 1, addrstr);
 #endif
-			ret = true;
+			typeofaddr_ret = true;
 			goto leave;
 		}
 #ifdef _DEBUG
 		else
-			EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
+			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
 #endif
 #endif
+
 		break;
 	default:
 #ifdef _DEBUG
-		EVENTLOG2(DEBUG, "typeofaddr(ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
+		EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
 #endif
-		ret = true;
+		typeofaddr_ret = true;
 		goto leave;
 		break;
 	}
 leave:
-	return ret;
+	return typeofaddr_ret;
 }
 bool get_local_addresses(union sockaddrunion **addresses,
 	uint *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,

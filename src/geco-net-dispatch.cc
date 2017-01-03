@@ -1615,22 +1615,25 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 				if ((b2 = typeofaddr(last_source_addr_, LinkLocalAddrType)))  //
 				{
 					flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType);
+					EVENTLOG(DEBUG, "last_source_addr_ from LinkLocalAddrType use default flag AllCastAddrTypes | LoopBackAddrType");
 				}
 				else if ((b3 = typeofaddr(last_source_addr_, SiteLocalAddrType))) // filtered
 				{
 					flags = (IPAddrType)(AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType);
+					EVENTLOG(DEBUG, "last_source_addr_ from SiteLocalAddrType use default flag AllCastAddrTypes | LoopBackAddrType | LinkLocalAddrType");
 				}
 				else
 				{
 					flags = (IPAddrType)(AllCastAddrTypes | AllLocalAddrTypes);
+					EVENTLOG(DEBUG, "last_source_addr_ from normal address use default flag AllCastAddrTypes | AllLocalAddrTypes");
 				}
 			}
 			else
 			{
 				/* this is from a loopback, use default flag*/
 				flags = AllCastAddrTypes;
+				EVENTLOG(DEBUG, "last_source_addr_ is from a loopback, use default flag AllCastAddrTypes");
 			}
-			EVENTLOG3(DEBUG, "localHostFound: %d,  linkLocalFound: %d, siteLocalFound: %d", b1, b2, b3);
 		}
 
 		/*4) validate received addresses in this chunk*/
@@ -1723,9 +1726,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 							peer_addreslist[found_addr_number].sin6.sin6_port = htons(last_src_port_);
 							peer_addreslist[found_addr_number].sin6.sin6_flowinfo = 0;
 							peer_addreslist[found_addr_number].sin6.sin6_scope_id = 0;
-							//memcpy(peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr, &(addres->dest_addr_un.ipv6_addr),sizeof(struct in6_addr));
-							memcpy_fast(peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr,
-								&(addres->dest_addr_un.ipv6_addr), sizeof(struct in6_addr));
+							memcpy_fast(peer_addreslist[found_addr_number].sin6.sin6_addr.s6_addr, addres->dest_addr_un.ipv6_addr.s6_addr, sizeof(struct in6_addr));
 							if (!typeofaddr(&peer_addreslist[found_addr_number], flags)) // NOT contains the addr type of [flags]
 							{
 								// current addr duplicated with a previous found addr?
@@ -2293,8 +2294,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex,
 #ifdef _DEBUG
 	ushort port;
 	saddr2str(dest_addr_ptr, hoststr_, MAX_IPADDR_STR_LEN, &port);
-	EVENTLOG4(DEBUG, "mdi_send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d", length, hoststr_,
-		ntohs(geco_packet_ptr->pk_comm_hdr.dest_port), len);
+	EVENTLOG4(DEBUG, "mdi_send_geco_packet()::sent geco packet of %d bytes to %s:%u, sent bytes %d", length, hoststr_, port, len);
 #endif
 
 leave:
@@ -4870,18 +4870,14 @@ int mch_read_addrlist_from_cookie(cookie_echo_chunk_t* cookiechunk, uint mySuppo
 	}
 
 	//copy remote ip4 and ip6 addrlist
-	//EVENTLOG(DEBUG, "+++++++++++++++++temp_addresses are :: \n");
-	//print_addrlist(temp_addresses, nAddresses);
+	EVENTLOG(DEBUG, "+++++++++++++++++temp_addresses are :: \n");
+	print_addrlist(temp_addresses, nAddresses);
 
 	if (no_remote_ipv4_addresses > 0)
-		//memcpy(addresses, &temp_addresses[no_loc_ipv4_addresses + no_loc_ipv6_addresses],no_remote_ipv4_addresses * sizeof(sockaddrunion));
 		memcpy_fast(addresses, &temp_addresses[no_loc_ipv4_addresses + no_loc_ipv6_addresses],
 			no_remote_ipv4_addresses * sizeof(sockaddrunion));
 
 	if (no_remote_ipv6_addresses > 0)
-		//memcpy(&addresses[no_remote_ipv4_addresses],
-		//&temp_addresses[no_loc_ipv4_addresses + no_loc_ipv6_addresses + no_remote_ipv4_addresses],
-		//no_remote_ipv6_addresses * sizeof(sockaddrunion));
 		memcpy_fast(&addresses[no_remote_ipv4_addresses],
 			&temp_addresses[no_loc_ipv4_addresses + no_loc_ipv6_addresses + no_remote_ipv4_addresses],
 			no_remote_ipv6_addresses * sizeof(sockaddrunion));
@@ -4908,10 +4904,8 @@ void mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], 
 		curr_channel_->remote_addres_size = 0;
 	}
 
-	curr_channel_->remote_addres = (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__,
-		__LINE__);
+	curr_channel_->remote_addres = (sockaddrunion*)geco_malloc_ext(noOfAddresses * sizeof(sockaddrunion), __FILE__, __LINE__);
 	assert(curr_channel_->remote_addres != NULL);
-	//memcpy(curr_channel_->remote_addres, addresses, noOfAddresses * sizeof(sockaddrunion));
 	memcpy_fast(curr_channel_->remote_addres, addresses, noOfAddresses * sizeof(sockaddrunion));
 	curr_channel_->remote_addres_size = noOfAddresses;
 
@@ -5117,10 +5111,16 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			mch_read_itsn(initCID), cookie_remote_tag, mch_read_itsn(initAckCID), peer_supports_pr(cookie_echo),
 			peer_supports_addip(cookie_echo));
 
+		//reset mbu
+		assert(default_bundle_ctrl_->geco_packet_fixed_size != 0);
+		curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->ctrl_position =
+			curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position = default_bundle_ctrl_->geco_packet_fixed_size;
+
 		smctrl->outbound_stream = mch_read_ostreams(initAckCID);
 		smctrl->inbound_stream = mch_read_instreams(initAckCID);
-		smctrl->peer_cookie_chunk = (cookie_echo_chunk_t*)geco_malloc_ext(sizeof(cookie_echo_chunk_t), __FILE__, __LINE__);
-		memcpy_fast(smctrl->peer_cookie_chunk, cookie_echo, sizeof(cookie_echo_chunk_t));
+		ushort cookiesize = cookie_echo->chunk_header.chunk_length;
+		smctrl->peer_cookie_chunk = (cookie_echo_chunk_t*)geco_malloc_ext(cookiesize, __FILE__, __LINE__);
+		memcpy_fast(smctrl->peer_cookie_chunk, cookie_echo, cookiesize);
 		EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u", smctrl->outbound_stream,
 			smctrl->inbound_stream);
 
@@ -6054,14 +6054,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 {
 	EVENTLOG2(DEBUG, "- - - - - - - - - - Enter recv_geco_packet(%d bytes, fd %d) - - - - - - - - - -", dctp_packet_len, socket_fd);
 
-	//1) validate packet hdr size, checksum and if aligned 4 bytes 
-	if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_GECO_PACKET_SIZE || dctp_packet_len > MAX_GECO_PACKET_SIZE)
-	{
-		EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
-		return recv_geco_packet_but_integrity_check_failed;
-	}
-
-	//2) validate port numbers 
+	// validate port numbers 
 	curr_geco_packet_fixed_ = (geco_packet_fixed_t*)dctp_packet;
 	curr_geco_packet_ = (geco_packet_t*)dctp_packet;
 
@@ -6070,7 +6063,8 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	static int udpsockip4 = mtra_read_ip4udpsock();
 	if (socket_fd == rawsockip4 || socket_fd == rawsockip6)
 	{
-		if (!gvalidate_checksum(dctp_packet, dctp_packet_len))
+		// validate packet hdr size, checksum and if aligned 4 bytes 
+		if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_GECO_PACKET_SIZE || dctp_packet_len > MAX_GECO_PACKET_SIZE || !gvalidate_checksum(dctp_packet, dctp_packet_len))
 		{
 			EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
 			return recv_geco_packet_but_integrity_check_failed;
@@ -6083,6 +6077,12 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	}
 	else if (socket_fd == udpsockip4)
 	{
+		// validate packet hdr size, checksum and if aligned 4 bytes 
+		if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_UDP_PACKET_SIZE || dctp_packet_len > MAX_UDP_PACKET_SIZE)
+		{
+			EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
+			return recv_geco_packet_but_integrity_check_failed;
+		}
 		last_src_port_ = ntohs(source_addr->sin.sin_port);
 		last_dest_port_ = ntohs(dest_addr->sin.sin_port);
 		mdi_udp_tunneled_ = true;
@@ -6091,6 +6091,12 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	}
 	else
 	{
+		// validate packet hdr size, checksum and if aligned 4 bytes 
+		if ((dctp_packet_len & 3) != 0 || dctp_packet_len < MIN_UDP_PACKET_SIZE || dctp_packet_len > MAX_UDP_PACKET_SIZE)
+		{
+			EVENTLOG(NOTICE, "mdi_recv_geco_packet()::received corrupted datagramm -> discard");
+			return recv_geco_packet_but_integrity_check_failed;
+		}
 		last_src_port_ = ntohs(source_addr->sin6.sin6_port);
 		last_dest_port_ = ntohs(dest_addr->sin6.sin6_port);
 		mdi_udp_tunneled_ = true;
@@ -6113,6 +6119,8 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	 int IN6_IS_ADDR_UNSPECIFIED(const struct in6_addr * aptr);
 	 int IN6_IS_ADDR_LOOPBACK(const struct in6_addr * aptr);
 	 int IN6_IS_ADDR_MULTICAST(const struct in6_addr * aptr);
+	 //Link-local addresses for IPv4 are defined in the address block 169.254.0.0/16,
+	 //in CIDR notation. In IPv6, they are assigned with the prefix fe80::/64
 	 int IN6_IS_ADDR_LINKLOCAL(const struct in6_addr * aptr);
 	 int IN6_IS_ADDR_SITELOCAL(const struct in6_addr * aptr);
 	 int IN6_IS_ADDR_V4MAPPED(const struct in6_addr * aptr);
@@ -7123,7 +7131,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-}
+	}
 void free_library(void)
 {
 	mtra_destroy();
