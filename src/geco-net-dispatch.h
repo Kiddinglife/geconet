@@ -220,6 +220,16 @@ struct path_params_t
     timeout* hb_timer_id;
     //time of last RTO update
     uint64 last_rto_update_time;
+    //search_low          eff_pmtu         search_high
+    //|                   |                  |
+    //-------------------> non-probe size range
+    //<--------------------------------------> probe size range
+    //the smallest useful probe size, minus one. default 1024
+    ushort search_low;
+    //the greatest useful probe size. default 1500
+    ushort search_high;
+    //the largest non-probe packet permitted by PLPMTUD for the path. 1400
+    ushort  eff_pmtu;
 };
 
 /**

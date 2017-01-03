@@ -432,7 +432,7 @@ RFC 4821         Packetization Layer Path MTU Discovery       March 2007
       the probe is acknowledged.
 
    Search strategy:  The heuristics used to choose successive probe
-      sizes to converge on the proper Path MTU, as described in
+      sizes to converge(jvji) on the proper Path MTU, as described in
       Section 7.3.
 
    Full-stop timeout:  A timeout where none of the packets transmitted
@@ -482,24 +482,24 @@ RFC 4821         Packetization Layer Path MTU Discovery       March 2007
    indications of which packets were lost in the network.
 
    Normal congestion control algorithms MUST remain in effect under all
-   conditions except when only an isolated probe packet is detected as
-   lost.  In this case alone, the normal congestion (window or data
-   rate) reduction SHOULD be suppressed.  If any other data loss is
+   conditions except when only an isolated(单独的) probe packet is detected as
+   lost. In this case alone, the normal congestion (window or data
+   rate) reduction SHOULD be suppressed(阻止). If any other data loss is
    detected, standard congestion control MUST take place.
 
    Suppressed congestion control MUST be rate limited such that it
    occurs less frequently than the worst-case loss rate for TCP
    congestion control at a comparable data rate over the same path
-   (i.e., less than the "TCP-friendly" loss rate [tcp-friendly]).  This
-   SHOULD be enforced by requiring a minimum headway between a
+   (i.e., less than the "TCP-friendly" loss rate [tcp-friendly]). This
+   SHOULD be enforced by requiring a minimum headway(间隔时间) between a
    suppressed congestion adjustment (due to a failed probe) and the next
    attempted probe, which is equal to one round-trip time for each
    packet permitted by the congestion window.  This is discussed further
    in Section 7.6.2.
 
    Whenever the MTU is raised, the congestion state variables MUST be
-   rescaled so as not to raise the window size in bytes (or data rate in
-   bytes per seconds).
+   rescaled(重新调节) so as not to raise the window size in bytes 
+   (or data rate in bytes per seconds).
 
 
 
@@ -758,9 +758,9 @@ RFC 4821         Packetization Layer Path MTU Discovery       March 2007
 
    In a few cases, there may be no reasonable mechanisms to generate
    probes within the Packetization Layer protocol itself.  As a last
-   resort, it may be possible to rely on an adjunct protocol, such as
-   ICMP ECHO ("ping"), to send probe packets.  See Section 10.3 for
-   further discussion of this approach.
+   resort, it may be possible to rely on an adjunct(辅助性) protocol, 
+   such as ICMP ECHO ("ping"), to send probe packets.  
+   See Section 10.3 for further discussion of this approach.
 
 7.  The Probing Method
 
