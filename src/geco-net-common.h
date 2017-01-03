@@ -281,10 +281,6 @@ enum SENDING_DEST_ADDR_TYPE
 #define USE_UDP_BUFSZ 65536 //RECV BUFFER IN POLLER
 #define DEFAULT_RWND_SIZE  8192
 
-/* src port + dest port + ver tag + checksum +
- chunk type + chunk flag + chunk length = 16 bytes*/
-#define MIN_GECO_PACKET_SIZE \
-GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE
 #define MAX_NETWORK_PACKET_HDR_SIZES 5552
 
  //<--------------------------------- log ------------------------->
