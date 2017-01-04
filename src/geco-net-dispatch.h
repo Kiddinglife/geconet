@@ -135,6 +135,7 @@ struct bundle_controller_t
     // this variable is for each channel
     uint requested_destination;
 	uint geco_packet_fixed_size;
+	uint curr_max_pdu;
 
     bundle_controller_t()
     {
@@ -143,10 +144,11 @@ struct bundle_controller_t
     void reset()
     {
       requested_destination = 0;
-	  geco_packet_fixed_size = GECO_PACKET_FIXED_SIZE;
+	  geco_packet_fixed_size = 0;
       ctrl_position = data_position = sack_position = geco_packet_fixed_size;
       got_shutdown = locked = got_send_address = got_send_request = data_in_buffer = ctrl_chunk_in_buffer =
           sack_in_buffer = false;
+	  curr_max_pdu = 0;
     }
 };
 

@@ -52,6 +52,7 @@ struct sockaddr_cmp_functor
 };
 
 ////////////////////// default lib geco_instance_params ///////////////////
+uint PMTU_LOWEST = 576;
 int myRWND = 32767; // maybe changed to other values after calling mtra_init()
 bool library_initiaized = false;
 bool library_support_unreliability_;
@@ -761,8 +762,7 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
 			if (i != primaryPathID)
 			{
 				j++;
-				j <= maxburst ? timeout_ms = j : /* send HB quickly on first usually four unconfirmed paths */
-					timeout_ms = pmData->path_params[i].rto * (j - maxburst); /* send HB more slowly on other paths */
+				timeout_ms = j*GRANULARITY; // send HB very quickly on unconfirmed paths every other GRANULARITY ms
 			}
 			else
 			{
@@ -2762,7 +2762,7 @@ void mdi_bundle_ctrl_chunk(simple_chunk_t * chunk, int * dest_index)
 	ushort chunk_len = get_chunk_length((chunk_fixed_t*)chunk);
 	uint bundle_size = get_bundle_total_size(bundle_ctrl);
 
-	if ((bundle_size + chunk_len) > MAX_GECO_PACKET_SIZE)
+	if ((bundle_size + chunk_len) > bundle_ctrl->curr_max_pdu)
 	{
 		/*2) an packet CANNOT hold all data, we send chunks and get bundle empty*/
 		EVENTLOG5(VERBOSE, "mdi_bundle_ctrl_chunk()::Chunk Length(bundlesize %u+chunk_len %u = %u),"
@@ -2854,6 +2854,7 @@ void mdi_on_peer_connected(uint status)
 		curr_channel_->bundle_control->geco_packet_fixed_size = default_bundle_ctrl_->geco_packet_fixed_size;
 		curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position
 			= curr_channel_->bundle_control->ctrl_position = default_bundle_ctrl_->geco_packet_fixed_size;
+		curr_channel_->bundle_control->curr_max_pdu = default_bundle_ctrl_->curr_max_pdu;
 	}
 
 	// find primary path
@@ -3819,7 +3820,7 @@ void mreltx_free(reltransfer_controller_t* rtx_inst)
 			rtx_inst->chunk_list_tsn_ascended.erase(it++);
 		}
 	}
-	//@FIXME  need also free rtx_inst->prChunks     g_array_free(rtx->prChunks, true);
+
 	// see https://developer.gnome.org/glib/stable/glib-Arrays.html#g-array-free
 	for (auto& it : rtx_inst->prChunks)
 	{
@@ -6485,16 +6486,22 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			if (mdi_udp_tunneled_)
 			{
 				if (curr_channel_->bundle_control->geco_packet_fixed_size != GECO_PACKET_FIXED_SIZE_USE_UDP)
+				{
 					curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->geco_packet_fixed_size =
-					curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->data_position =
-					curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+						curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->data_position =
+						curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+					curr_channel_->bundle_control->curr_max_pdu = PMTU_LOWEST - IP_HDR_SIZE - UDP_HDR_SIZE;
+				}
 			}
 			else
 			{
 				if (curr_channel_->bundle_control->geco_packet_fixed_size != GECO_PACKET_FIXED_SIZE)
+				{
 					curr_channel_->bundle_control->geco_packet_fixed_size = curr_channel_->bundle_control->geco_packet_fixed_size =
-					curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->data_position =
-					curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
+						curr_channel_->bundle_control->sack_position = curr_channel_->bundle_control->data_position =
+						curr_channel_->bundle_control->ctrl_position = GECO_PACKET_FIXED_SIZE;
+					curr_channel_->bundle_control->curr_max_pdu = PMTU_LOWEST - IP_HDR_SIZE;
+				}
 			}
 
 		}
@@ -6786,6 +6793,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			{
 				default_bundle_ctrl_->geco_packet_fixed_size = default_bundle_ctrl_->sack_position =
 					default_bundle_ctrl_->data_position = default_bundle_ctrl_->ctrl_position = GECO_PACKET_FIXED_SIZE_USE_UDP;
+				curr_channel_->bundle_control->curr_max_pdu = PMTU_LOWEST - IP_HDR_SIZE - UDP_HDR_SIZE;
 			}
 		}
 		else
@@ -6794,6 +6802,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 			{
 				default_bundle_ctrl_->geco_packet_fixed_size = default_bundle_ctrl_->sack_position =
 					default_bundle_ctrl_->data_position = default_bundle_ctrl_->ctrl_position = GECO_PACKET_FIXED_SIZE;
+				curr_channel_->bundle_control->curr_max_pdu = PMTU_LOWEST - IP_HDR_SIZE;
 			}
 		}
 
@@ -7082,7 +7091,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
@@ -7558,6 +7567,7 @@ int mulp_set_lib_params(lib_params_t *lib_params)
 	send_abort_for_oob_packet_ = lib_params->send_ootb_aborts;
 	support_addip_ = lib_params->support_dynamic_addr_config;
 	support_pr_ = lib_params->support_particial_reliability;
+	lib_params->pmtu_lowest == 0 ? PMTU_LOWEST = 576 : PMTU_LOWEST = lib_params->pmtu_lowest;
 	if ((delayed_ack_interval_ = lib_params->delayed_ack_interval) >= 500)
 	{
 		ret = MULP_PARAMETER_PROBLEM;

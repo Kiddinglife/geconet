@@ -25,7 +25,7 @@ typedef short chunk_id_t;
 #define MAX_CHUNKS_SIZE_MASK 31
 
 /**************************** packet definitions ***************************/
-#define PMTU_LOWEST 576 
+extern uint PMTU_LOWEST;
 #define PMTU_HIGHEST 1500
 #define IP_HDR_SIZE 20
 #define UDP_HDR_SIZE 8

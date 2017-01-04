@@ -131,6 +131,7 @@ struct lib_params_t
 	bool support_dynamic_addr_config; /* does the assoc support adding/deleting IP addresses*/
 	uint delayed_ack_interval;
 	ushort udp_bind_port; /*the well knwon local binding port for udp-based stack*/
+	uint pmtu_lowest;
 };
 
 /**
