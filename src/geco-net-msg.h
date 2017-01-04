@@ -25,11 +25,12 @@ typedef short chunk_id_t;
 #define MAX_CHUNKS_SIZE_MASK 31
 
 /**************************** packet definitions ***************************/
-#define MAX_MTU_SIZE 576 //1500
+#define PMTU_LOWEST 576 
+#define PMTU_HIGHEST 1500
 #define IP_HDR_SIZE 20
 #define UDP_HDR_SIZE 8
-#define MAX_UDP_PACKET_SIZE  (MAX_MTU_SIZE - IP_HDR_SIZE - UDP_HDR_SIZE)
-#define MAX_GECO_PACKET_SIZE  (MAX_MTU_SIZE - IP_HDR_SIZE)
+#define MAX_UDP_PACKET_SIZE  (PMTU_HIGHEST - IP_HDR_SIZE - UDP_HDR_SIZE)
+#define MAX_GECO_PACKET_SIZE  (PMTU_HIGHEST - IP_HDR_SIZE)
 /* src port + dest port + ver tag + checksum + chunk type + chunk flag + chunk length = 16 bytes*/
 #define MIN_GECO_PACKET_SIZE (GECO_PACKET_FIXED_SIZE+CHUNK_FIXED_SIZE)
 #define MIN_UDP_PACKET_SIZE (sizeof(uint)+CHUNK_FIXED_SIZE)

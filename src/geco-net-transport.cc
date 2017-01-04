@@ -720,7 +720,7 @@ static void mtra_fire_event(int num_of_events)
 
   //char* curr = internal_dctp_buffer;
   // use pool buffer to save  mem copy
-  char* curr = (char*) geco_malloc_ext(MAX_MTU_SIZE, __FILE__, __LINE__);
+  char* curr = (char*) geco_malloc_ext(PMTU_HIGHEST, __FILE__, __LINE__);
 
   //handle network events  individually right here
   //socket_despts_size_ = socket fd size with stdin excluded
@@ -786,8 +786,7 @@ static void mtra_fire_event(int num_of_events)
         if (enable_socket_read_handler_)
           mtra_socket_read_handler_.mtra_socket_read_start_(mtra_socket_read_handler_.start_args_);
 
-        recvlen_ = mtra_recv_udpsocks(socket_despts[i].fd, curr,
-        MAX_MTU_SIZE, &src, &dest);
+        recvlen_ = mtra_recv_udpsocks(socket_despts[i].fd, curr, PMTU_HIGHEST, &src, &dest);
 
         if (enable_socket_read_handler_)
           mtra_socket_read_handler_.mtra_socket_read_end_(socket_despts[i].fd, true, curr, recvlen_, &src, &dest,
@@ -805,8 +804,7 @@ static void mtra_fire_event(int num_of_events)
         if (enable_socket_read_handler_)
           mtra_socket_read_handler_.mtra_socket_read_start_(mtra_socket_read_handler_.start_args_);
 
-        recvlen_ = mtra_recv_rawsocks(socket_despts[i].fd, &curr,
-        MAX_MTU_SIZE, &src, &dest);
+        recvlen_ = mtra_recv_rawsocks(socket_despts[i].fd, &curr, PMTU_HIGHEST, &src, &dest);
 
         if (enable_socket_read_handler_)
           mtra_socket_read_handler_.mtra_socket_read_end_(socket_despts[i].fd, false, curr, 0, &src, &dest,

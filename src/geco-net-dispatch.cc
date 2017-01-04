@@ -3915,15 +3915,16 @@ flow_controller_t* mfc_new(uint peer_rwnd, uint my_iTSN, uint numofdestaddres, u
 		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
 	}
 
+
 	for (uint count = 0; count < numofdestaddres; count++)
 	{
 		tmp->T3_timer[count] = NULL; /* i.e. timer not running */
 		tmp->addresses[count] = count;
-		(tmp->cparams[count]).cwnd = 2 * MAX_MTU_SIZE;
+		(tmp->cparams[count]).cwnd = (uint)PMTU_LOWEST << 1; // pmtu probe will update this
 		(tmp->cparams[count]).cwnd2 = 0L;
 		(tmp->cparams[count]).partial_bytes_acked = 0L;
 		(tmp->cparams[count]).ssthresh = peer_rwnd;
-		(tmp->cparams[count]).mtu = MAX_NETWORK_PACKET_VALUE_SIZE;
+		(tmp->cparams[count]).mtu = PMTU_LOWEST - IP_HDR_SIZE - 12; // PMTU_LOWEST 576 - 20 - 12(geco_packet_fixed_size 12 or udp_packet_fixed_size  8+4) = 544
 		tmp->cparams[count].time_of_cwnd_adjustment = gettimestamp();
 		tmp->cparams[count].last_send_time = 0;
 	}
@@ -3955,11 +3956,11 @@ void mfc_restart(uint new_rwnd, uint iTSN, uint maxQueueLen)
 	uint count;
 	for (count = 0; count < tmp->numofdestaddrlist; count++)
 	{
-		(tmp->cparams[count]).cwnd = 2 * MAX_MTU_SIZE;
+		(tmp->cparams[count]).cwnd = (uint)PMTU_LOWEST << 1;
 		(tmp->cparams[count]).cwnd2 = 0L;
 		(tmp->cparams[count]).partial_bytes_acked = 0L;
 		(tmp->cparams[count]).ssthresh = new_rwnd;
-		(tmp->cparams[count]).mtu = MAX_NETWORK_PACKET_VALUE_SIZE;
+		(tmp->cparams[count]).mtu = PMTU_LOWEST - IP_HDR_SIZE - 12;
 		tmp->cparams[count].time_of_cwnd_adjustment = gettimestamp();
 		tmp->cparams[count].last_send_time = 0;
 	}
@@ -7132,7 +7133,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-	}
+}
 void free_library(void)
 {
 	mtra_destroy();
