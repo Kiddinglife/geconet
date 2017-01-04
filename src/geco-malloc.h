@@ -35,6 +35,8 @@
 #endif
 #include <new>
 
+#define FILE_AND_LINE __FILE__,__LINE__
+
 // These pointers are statically and globally defined in RakMemoryOverride.cpp
 // Change them to point to your own allocators if you want.
 // Use the functions for a DLL, or just reassign the variable if using source

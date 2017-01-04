@@ -1,6 +1,6 @@
 #include "geco-net-chunk.h"
 #include "geco-net-config.h"
-#include "geco-malloc.h"
+#include "geco-bit-stream.h"
 #include <cassert>
 
 /*related to simple chunk send */
@@ -168,7 +168,7 @@ chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam)
 	cookieChunk->chunk_header.chunk_length = ntohs(cookieParam->vlparam_header.param_length);
 	add2chunklist((simple_chunk_t*)cookieChunk, "created cookie echo chunk %u ");
 	/*  copy cookie parameter EXcluding param-header into chunk */
-	memcpy(&(cookieChunk->cookie), &cookieParam->ck, cookieChunk->chunk_header.chunk_length - VLPARAM_FIXED_SIZE);
+	memcpy_fast(&(cookieChunk->cookie), &cookieParam->ck, cookieChunk->chunk_header.chunk_length - VLPARAM_FIXED_SIZE);
 	return simple_chunk_index_;
 }
 
@@ -345,7 +345,7 @@ int write_add_ip_chunk(uint initAckCID, uint initCID)
 		}
 		if (vlp_len >= VLPARAM_FIXED_SIZE)
 		{
-			memcpy(&initack->variableParams[curr_write_pos_[initAckCID]], foundvlp, vlp_len);
+			memcpy_fast(&initack->variableParams[curr_write_pos_[initAckCID]], foundvlp, vlp_len);
 			curr_write_pos_[initAckCID] += vlp_len;
 			while (curr_write_pos_[initAckCID] & 3)
 			{
@@ -399,7 +399,7 @@ void write_unknown_param_error(uchar* pos, uint cid, ushort length, uchar* data)
 	ec->error_reason_code = htons(VLPARAM_UNRECOGNIZED_PARAM);
 	ec->error_reason_length = htons(length + ERR_CAUSE_FIXED_SIZE);
 	if (length > 0)
-		memcpy(&ec->error_reason, data, length);
+		memcpy_fast(&ec->error_reason, data, length);
 	curr_write_pos_[cid] += length + ERR_CAUSE_FIXED_SIZE;
 	while ((curr_write_pos_[cid] % 4) != 0)
 		curr_write_pos_[cid]++;
@@ -437,6 +437,19 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 	cookie->ck.peer_tie_tag = htonl(peer_tie_tag);
 	cookie->ck.src_port = htons(last_src_port);
 	cookie->ck.dest_port = htons(last_dest_port);
+
+  /////////////////////////
+	//geco_bit_stream_t mch_stream_compressor(((uchar*)cookie+sizeof(ushort)), false);
+  //mch_stream_compressor.WriteMini((ushort)VLPARAM_COOKIE);
+  //mch_stream_compressor.WriteMini(local_initack->init_tag);
+  //mch_stream_compressor.WriteMini(local_initack->rwnd);
+  //mch_stream_compressor.WriteMini(local_initack->outbound_streams);
+  //mch_stream_compressor.WriteMini(local_initack->inbound_streams);
+  //mch_stream_compressor.WriteMini(local_tie_tag);
+  //mch_stream_compressor.WriteMini(peer_tie_tag);
+  //mch_stream_compressor.WriteMini(last_src_port);
+  //mch_stream_compressor.WriteMini(last_dest_port);
+
 
 	uint count;
 	uint no_local_ipv4_addresses = 0;
@@ -480,8 +493,21 @@ void mch_write_cookie(uint initCID, uint initAckID, init_chunk_fixed_t* peer_ini
 	cookie->ck.cookieLifetime = htonl(cookieLifetime);
 	cookie->ck.sendingTime = htonl(get_safe_time_ms());
 
+  /////////////////////////
+  //mch_stream_compressor.WriteMini(no_local_ipv4_addresses);
+  //mch_stream_compressor.WriteMini(no_remote_ipv4_addresses);
+  //mch_stream_compressor.WriteMini(no_local_ipv6_addresses);
+  //mch_stream_compressor.WriteMini(no_remote_ipv6_addresses);
+  //mch_stream_compressor.WriteMini(cookieLifetime);
+  //mch_stream_compressor.WriteMini(get_safe_time_ms());
+  /////////////////////////
+
 	uint wr = curr_write_pos_[initAckID];
 	curr_write_pos_[initAckID] += COOKIE_PARAM_SIZE;
+
+  /////////////////////////
+	//curr_write_pos_[initAckID] += mch_stream_compressor.get_written_bytes();
+  /////////////////////////
 
 	EVENTLOG2(VERBOSE, "Building Cookie with %u local, %u peer addresses", num_local_Addresses, num_peer_Addresses);
 	mch_write_vlp_addrlist(initAckID, local_Addresses, num_local_Addresses);
@@ -564,7 +590,7 @@ int mch_write_vlp_unreliability(uint initAckCID, uint initCID)
 		{
 			/* peer supports it, and does send some */ret = 1;
 		}
-		memcpy(&initack->variableParams[curr_write_pos_[initAckCID]], foundvlp, vlp_len);
+		memcpy_fast(&initack->variableParams[curr_write_pos_[initAckCID]], foundvlp, vlp_len);
 		curr_write_pos_[initAckCID] += vlp_len;
 		while (curr_write_pos_[initAckCID] & 3)
 		{
@@ -631,7 +657,7 @@ int mch_write_vlp_addrlist(uint chunkid, sockaddrunion local_addreslist[MAX_NUM_
 			ip_addr->vlparam_header.param_type = htons(
 				VLPARAM_IPV6_ADDRESS);
 			ip_addr->vlparam_header.param_length = htons(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE);
-			memcpy(&ip_addr->dest_addr_un.ipv6_addr, &(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
+			memcpy_fast(&ip_addr->dest_addr_un.ipv6_addr, &(s6addr(&(local_addreslist[i]))), sizeof(struct in6_addr));
 			assert(sizeof(struct in6_addr) + VLPARAM_FIXED_SIZE == 20);
 			length += 20;
 			break;
@@ -667,7 +693,7 @@ void mch_write_error_cause(chunk_id_t chunkID, ushort errcode, uchar* errdata, u
 	int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
 	ecause->error_reason_length = htons(len);
 	if (errdatalen > 0 && errdata != NULL)
-		memcpy(ecause->error_reason, errdata, errdatalen);
+		memcpy_fast(ecause->error_reason, errdata, errdatalen);
 	while (len & 3)
 		len++;
 	curr_write_pos_[chunkID] += len;
@@ -750,7 +776,7 @@ void mch_write_error_cause_unrecognized_chunk(chunk_id_t cid, error_cause_t*ecau
 	int len = errdatalen + ERR_CAUSE_FIXED_SIZE;
 	ecause->error_reason_length = htons(len);
 	if (errdatalen > 0 && errdata != NULL)
-		memcpy(ecause->error_reason, errdata, errdatalen);
+		memcpy_fast(ecause->error_reason, errdata, errdatalen);
 	while (len & 3)
 		len++;
 	curr_write_pos_[cid] += len;
@@ -926,7 +952,7 @@ void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode, uchar* da
 	*((ushort*)vlPtr) = htons(pCode);
 	*((ushort*)(vlPtr + sizeof(ushort))) = htons(len + VLPARAM_FIXED_SIZE);
 	if (len > 0 && data != NULL)
-		memcpy(vlPtr + 2 * sizeof(ushort), data, len);
+		memcpy_fast(vlPtr + 2 * sizeof(ushort), data, len);
 	len += VLPARAM_FIXED_SIZE;
 	while (len & 3)
 	{
@@ -1104,7 +1130,7 @@ bool mch_verify_hmac(cookie_echo_chunk_t* cookie_chunk)
 {
 	cookie_fixed_t* cookie = &cookie_chunk->cookie;
 	uchar cookieSignature[HMAC_LEN];
-	memcpy(cookieSignature, cookie->hmac, HMAC_LEN); // store existing hmac
+	memcpy_fast(cookieSignature, cookie->hmac, HMAC_LEN); // store existing hmac
 
 	uchar ourSignature[HMAC_LEN];
 	ushort cookieLength = cookie_chunk->chunk_header.chunk_length - CHUNK_FIXED_SIZE;
@@ -1290,7 +1316,7 @@ bool mch_verify_heartbeat(chunk_id_t heartbeatCID)
 	uchar * key = get_secre_key(KEY_READ);
 
 	// store HMAC
-	memcpy(hbSignature, heartbeatChunk->hmac, HMAC_LEN);
+	memcpy_fast(hbSignature, heartbeatChunk->hmac, HMAC_LEN);
 #ifdef _DEBUG
 	int i;
 	EVENTLOG(VERBOSE, "Got signature: ");
