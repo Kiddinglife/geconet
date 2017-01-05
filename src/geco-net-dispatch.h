@@ -263,6 +263,7 @@ struct path_controller_t
     uint rto_min;
     /** maximum RTO, a configurable parameter */
     uint rto_max;
+    uint min_pmtu;
 };
 
 /**state controller structure. Stores the current state of the channel.*/

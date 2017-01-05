@@ -113,7 +113,7 @@ timeouts* mtra_read_timeouts()
   return tos_;
 }
 
-timeout* mtra_timeouts_add(uint timer_type, uint timout_ms, timeout_cb::Action action, void *arg1, void *arg2,
+timeout* mtra_timeouts_add(uint timer_type, uint timout_ms, timeout_cb::Action action, void *arg1, void *arg2,void *arg3,
     bool repeated)
 {
   timeout* tout = (timeout*) geco_malloc_ext(sizeof(timeout), __FILE__, __LINE__);
@@ -121,6 +121,7 @@ timeout* mtra_timeouts_add(uint timer_type, uint timout_ms, timeout_cb::Action a
   tout->callback.type = timer_type;
   tout->callback.arg1 = arg1;
   tout->callback.arg2 = arg2;
+  tout->callback.arg3 = arg3;
   repeated ? tout->flags = TIMEOUT_INT : tout->flags = 0;
   timeouts_add(tos_, tout, timout_ms * stamps_per_ms());
   return tout;

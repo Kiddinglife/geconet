@@ -365,6 +365,8 @@ struct heartbeat_chunk_t
     vlparam_fixed_t HB_Info;
     uint pathID;
     uint sendingTime;
+    ushort mtu;
+    ushort hmaclen;
 #ifdef MD5_HMAC
     uchar hmac[16];
 #elif SHA_HMAC

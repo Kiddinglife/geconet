@@ -130,7 +130,8 @@ uchar* mch_read_vlparam_init_chunk(uchar * setup_chunk, uint chunk_len, ushort p
 // mch_read_path_idx reads the path heartbeat on which the heartbeat was sent.
 uint mch_read_path_idx_from_heartbeat(chunk_id_t chunkID);
 // mch_read_sendtime_from_heartbeat reads the sending time of a heartbeat.
-unsigned int mch_read_sendtime_from_heartbeat(chunk_id_t chunkID);
+uint mch_read_sendtime_from_heartbeat(chunk_id_t chunkID);
+uint mch_read_pmtu_from_heartbeat(chunk_id_t chunkID);
 
 void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6, bool with_dns);
 void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode, uchar* data = 0, ushort dataLength = 0);
@@ -171,6 +172,6 @@ error_chunk_t* mch_make_error_chunk();
 chunk_id_t mch_make_init_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk);
 chunk_id_t mch_make_init_ack_chunk_from_cookie(cookie_echo_chunk_t* cookie_echo_chunk);
 chunk_id_t mch_make_shutdown_chunk(uint acked_cum_tsn);
-chunk_id_t mch_make_hb_chunk(uint sendingTime, uint pathID);
+chunk_id_t mch_make_hb_chunk(uint sendingTime, uint pathID,uint mtu=0);
 
 #endif
