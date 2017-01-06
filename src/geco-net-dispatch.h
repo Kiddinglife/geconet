@@ -218,6 +218,8 @@ struct path_params_t
     uint hb_interval;
     //current mtu of this path
     uint pmtu;
+    // mtu that not acked but rescheduled test again
+    uint probing_pmtu;
     // id of hb timer
     timeout* hb_timer_id;
     //time of last RTO update

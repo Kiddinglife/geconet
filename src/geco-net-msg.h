@@ -358,6 +358,7 @@ struct duplicate_tsn_t
 
 /************************** heartbeat chunk defs ***************************/
 #define HB_VLPARAM_SIZES (sizeof(heartbeat_chunk_t) - sizeof(chunk_fixed_t))
+#define PMTU_CHANGE_RATE 20 //20 BYTES
 /* our heartbeat chunk structure */
 struct heartbeat_chunk_t
 {
