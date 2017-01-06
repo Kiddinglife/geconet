@@ -784,9 +784,8 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
         timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
       }
 
-      if (i == primaryPathID)
-      {
-
+      //if (i == primaryPathID)
+      //{
         EVENTLOG(DEBUG, "--------------> First 1500bytes HB probe");
         chunk_id_t heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), i, pmData->path_params[i].probing_pmtu);
         mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID));
@@ -801,7 +800,7 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
 
         /* after RTO we can do next RTO update */
         pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
-      }
+      //}
     }
   }
 }
