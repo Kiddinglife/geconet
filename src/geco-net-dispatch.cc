@@ -774,32 +774,17 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
       //        timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
       //      }
 
-      if (i != primaryPathID)
-      {
-        j++;
-        timeout_ms = j * GRANULARITY; // send HB very quickly on unconfirmed paths every other GRANULARITY ms
-      }
-      else
-      {
-        timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
-      }
+      j++;
+      timeout_ms = j * GRANULARITY; // send HB very quickly on unconfirmed paths every other GRANULARITY ms
 
       //if (i == primaryPathID)
       //{
-        EVENTLOG(DEBUG, "--------------> First 1500bytes HB probe");
-        chunk_id_t heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), i, pmData->path_params[i].probing_pmtu);
-        mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID));
-        mdi_unlock_bundle_ctrl();
-        pmData->path_params[i].hb_sent = mdi_send_bundled_chunks(&i) > -1 ? true : false;
-        mch_free_simple_chunk(heartbeatCID);
-
-        assert(pmData->path_params[i].hb_timer_id == NULL);
-        pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT, timeout_ms,
-            &mpath_heartbeat_timer_expired, &pmData->channel_id, &pmData->path_params[i].path_id,
-            &pmData->path_params[i].probing_pmtu);
-
-        /* after RTO we can do next RTO update */
-        pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
+      assert(pmData->path_params[i].hb_timer_id == NULL);
+      pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT, timeout_ms,
+          &mpath_heartbeat_timer_expired, &pmData->channel_id, &pmData->path_params[i].path_id,
+          &pmData->path_params[i].probing_pmtu);
+      /* after RTO we can do next RTO update */
+      pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
       //}
     }
   }
@@ -1011,7 +996,11 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
   uint associationID = *(uint*) timerID->callback.arg1;
   int pathID = *(int *) timerID->callback.arg2;
   int mtu = timerID->callback.arg3 == NULL ? 0 : *(int*) timerID->callback.arg3;
-
+  if (mtu == 20)
+  {
+    printf("1001hello world/n");
+    exit(-1);
+  }
   if (!mdi_set_curr_channel_inst(associationID))
   { /* error log: expired timer refers to a non existent association. */
     ERRLOG1(WARNNING_ERROR, "mpath_heartbeat_timer_expired()::init timer expired association %08u does not exist",
@@ -1064,7 +1053,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
         EVENTLOG2(INFO, "Backing off timer : Path %d, RTO= %u", pathID, pmData->path_params[pathID].rto);
       }
 
-      if (pmData->path_params[pathID].hb_enabled && mtu > 0)
+      if (mtu > 0)
       {
         if (
         /*probe packet is lost but recent path network (last rto) are in good condition, treat as pmtu issue,*/
@@ -1083,7 +1072,11 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
             timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
             heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint) pathID, mtu);
           }
-
+          if (mtu == 20)
+          {
+            printf("1077hello world/n");
+            exit(-1);
+          }
           // send bundle to make sure hb&pmtu chunk is the only chunk in packet
           mdi_unlock_bundle_ctrl();
           mdi_send_bundled_chunks();
@@ -1096,6 +1089,11 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
            here we do not send hb we ecpect t3-rtx timer timeouts to detect connection lost
            also we reset the timeout to rto, when it timeouts, data chunks should be acked */
           newtimeout = pmData->path_params[pathID].rto;
+          if (mtu == 20)
+          {
+            printf("1094 hello world/n");
+            exit(-1);
+          }
         }
       }
     }
@@ -1103,16 +1101,28 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
   else
   {
     // send heartbeat if no chunks have been acked in the last HB-intervall (path is idle).
-    timerID->callback.arg3 = 0;
-    mtu = 0;
-    if (generate_random_uint32() % 10 == 6)
+    if (mtu == 0)
     {
-      // hit ratio for pmtu hb probe is 1/10 which is lamostly hbintervel*10 = 300000ms = 300s = 5 minutes
-      // so eff pmtu will be cached at most 5 minutes
-      mtu = pmData->path_params[pathID].probing_pmtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
-      timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
+      timerID->callback.arg3 = 0;
+      mtu = 0;
+      if (generate_random_uint32() % 10 == 6)
+      {
+        // hit ratio for pmtu hb probe is 1/10 which is lamostly hbintervel*10 = 300000ms = 300s = 5 minutes
+        // so eff pmtu will be cached at most 5 minutes
+        mtu = pmData->path_params[pathID].probing_pmtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
+        timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
+      }
+      if (mtu == 20)
+      {
+        printf("1117 hello world/n");
+        exit(-1);
+      }
+      heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint) pathID, mtu);
     }
-    heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint) pathID, mtu);
+    else
+    {
+      heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint) pathID, mtu);
+    }
   }
 
   if (!removed_association)
@@ -1120,6 +1130,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
     pmData->path_params[pathID].hb_sent = false;
     if (heartbeatCID != 0)
     {
+      EVENTLOG2(0, "--------------> HB PROBE WITH BYTES OF %d on path %d", mtu, pathID);
       mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID));
       pmData->path_params[pathID].hb_sent = mdi_send_bundled_chunks(&pathID) > -1 ? true : false;
       mch_free_simple_chunk(heartbeatCID);
@@ -1284,6 +1295,11 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
   // update smallest channel pmtu pmtu is zero this is pure hb probe
   if (newpmtu > 0 && pmData->min_pmtu > newpmtu)
   {
+    if (newpmtu == 20)
+    {
+      printf("1285 hello world\n");
+      exit(-1);
+    }
     pmData->min_pmtu = newpmtu;
     curr_channel_->bundle_control->geco_packet_fixed_size == sizeof(uint) ?
         curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE - UDP_HDR_SIZE :
@@ -1292,26 +1308,16 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
   }
 
   //increase search low or stop probe pmtu
-  if (newpmtu >= pmData->path_params[pathID].search_high)
-    pmData->path_params[pathID].hb_timer_id->callback.arg3 = 0; // stop pmtu probe we already get a good pmtu
-  else
-  {
-    newpmtu += PMTU_CHANGE_RATE;
-    if (newpmtu < pmData->path_params[pathID].search_high)
-    {
-      while (newpmtu & 3)
-        newpmtu++;
-      pmData->path_params[pathID].probing_pmtu = newpmtu;
-      pmData->path_params[pathID].hb_timer_id->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
-    }
-    else
-    {
-      pmData->path_params[pathID].hb_timer_id->callback.arg3 = 0; // stop pmtu probe we already get a good pmtu
-    }
-  }
+  pmData->path_params[pathID].hb_timer_id->callback.arg3 = 0; // stop pmtu probe we already get a good pmtu
 
   pmData->path_params[pathID].heartbeatAcked = true;
   pmData->path_params[pathID].timer_backoff = false;
+
+  if (newpmtu == 20)
+  {
+    printf("1298 hello world\n");
+    exit(-1);
+  }
 }
 
 inline int msm_get_cookielife(void)

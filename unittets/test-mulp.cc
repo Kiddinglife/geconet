@@ -758,7 +758,7 @@ TEST(MULP, test_connection_pharse)
 	curr_geco_instance_ = geco_instances_[instid];
 
 	// cline code
-	mdi_connect_udp_sfd_ = true;
+	mdi_connect_udp_sfd_ = false;
 	noOfOutStreams = 12;
 	mulp_connect(instid, noOfOutStreams, (char*) "127.0.0.1", localPort, &ULPcallbackFunctions);
 
