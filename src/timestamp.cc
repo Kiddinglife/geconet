@@ -148,13 +148,13 @@ static uint64 calc_stamps_pe_sec()
 	LARGE_INTEGER ratee;
 	LARGE_INTEGER rate;
 	rate.QuadPart = 0;
-	uint64 count = 1000000;
+	uint64 count = 1000;
 	for (int i = 0;i < count;i++)
 	{
 		QueryPerformanceFrequency(&ratee);
 		rate.QuadPart += ratee.QuadPart;
 	}
-	return rate.QuadPart / count;
+	return rate.QuadPart / (double)count;
 }
 #endif
 

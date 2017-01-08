@@ -22,7 +22,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
 
     // last pass on 26 Oct 2016
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.*";
-    // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
+     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_timer_mgr";
     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_wheel_timer";
     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_bitops";
@@ -50,7 +50,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // current unit test summary
     // locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168....
     // cross-machina connection NOT ok
-    ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
+   ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MBU.*";

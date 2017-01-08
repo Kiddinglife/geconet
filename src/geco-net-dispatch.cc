@@ -739,10 +739,13 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
 			if (i == primaryPathID)
 			{
 				pmData->path_params[i].state = PM_ACTIVE;
+				timeout_ms = 1; // send pmtu HB imediately on primary path
 			}
 			else
 			{
 				pmData->path_params[i].state = PM_PATH_UNCONFIRMED;
+				j++;
+				timeout_ms = j * GRANULARITY; // send pmtu HB very quickly on unconfirmed paths every other GRANULARITY ms
 			}
 
 			pmData->path_params[i].hb_enabled = true;
@@ -762,28 +765,13 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
 			pmData->path_params[i].eff_pmtu = PMTU_LOWEST;
 			pmData->path_params[i].probing_pmtu = PMTU_HIGHEST;
 
-			//      if (i != primaryPathID)
-			//      {
-			//        j++;
-			//        timeout_ms = j * GRANULARITY; // send HB very quickly on unconfirmed paths every other GRANULARITY ms
-			//      }
-			//      else
-			//      {
-			//        timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
-			//      }
-
-			j++;
-			timeout_ms = j * GRANULARITY; // send HB very quickly on unconfirmed paths every other GRANULARITY ms
-			if (i == primaryPathID)
-			{
-				EVENTLOG1(0, "timeout = %d", timeout_ms);
-				assert(pmData->path_params[i].hb_timer_id == NULL);
-				pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT, 1,
-					&mpath_heartbeat_timer_expired, &pmData->channel_id, &pmData->path_params[i].path_id,
-					&pmData->path_params[i].probing_pmtu);
-				/* after RTO we can do next RTO update */
-				pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
-			}
+			EVENTLOG1(0, "timeout = %d", timeout_ms);
+			assert(pmData->path_params[i].hb_timer_id == NULL);
+			pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT, timeout_ms,
+				&mpath_heartbeat_timer_expired, &pmData->channel_id, &pmData->path_params[i].path_id,
+				&pmData->path_params[i].probing_pmtu);
+			/* after RTO we can do next RTO update */
+			pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
 		}
 	}
 }
@@ -1007,7 +995,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	assert(pmData != NULL && "mpath_process_heartbeat_ack_chunk():: mdi_read_mpath() failed");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_heartbeat_timer_expired: invalid path ID");
 
-	EVENTLOG1(INFO, "Heartbeat timer expired for path %u", pathID);
+	EVENTLOG2(0, "Heartbeat timer expired for path %u at time ms %u", pathID, get_safe_time_ms());
 	chunk_id_t heartbeatCID = 0;
 	bool removed_association = false;
 	int ret = 0;
@@ -1056,7 +1044,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 					(!pmData->path_params[pathID].data_chunks_sent_in_last_rto && !pmData->path_params[pathID].data_chunk_acked))
 				{
 					//send smaller hb&&pmtu probe again
-					if(mtu < PMTU_HIGHEST)
+					if (mtu < PMTU_HIGHEST)
 						mtu -= PMTU_CHANGE_RATE;
 					if (mtu > (int)PMTU_LOWEST && mtu != pmData->path_params[pathID].eff_pmtu)
 					{//if == eff pmtu, which means we  last test upwards not acked, we still use the cached eff not sending probe again
@@ -1109,7 +1097,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		pmData->path_params[pathID].hb_sent = false;
 		if (heartbeatCID != 0)
 		{
-			EVENTLOG2(0, "--------------> timeout Send HB PROBE WITH BYTES OF %d on path %d", mtu, pathID);
+			EVENTLOG2(DEBUG, "--------------> timeout Send HB PROBE WITH BYTES OF %d on path %d", mtu, pathID);
 			mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID));
 			pmData->path_params[pathID].hb_sent = mdi_send_bundled_chunks(&pathID) > -1 ? true : false;
 			mch_free_simple_chunk(heartbeatCID);
@@ -1199,6 +1187,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address)
 {
 	EVENTLOG1(INFO, "mpath_process_heartbeat_chunk()::source_address (%d)", source_address);
+	return;
 	assert(curr_channel_ != NULL);
 	if (curr_channel_->state_machine_control->channel_state == CookieEchoed
 		|| curr_channel_->state_machine_control->channel_state == Connected)
@@ -1269,29 +1258,31 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	}
 
 	// update this path's pmtu
-	pmData->path_params[pathID].eff_pmtu = newpmtu;
-	bool smallest = true;
-
-	// update smallest channel pmtu pmtu is zero this is pure hb probe
-	for (int i = 0;i < pmData->path_num;i++)
+	if (newpmtu > 0)
 	{
-		if (pmData->path_params[i].eff_pmtu < newpmtu)
+		pmData->path_params[pathID].eff_pmtu = newpmtu;
+		bool smallest = true;
+		// update smallest channel pmtu pmtu is zero this is pure hb probe
+		for (int i = 0;i < pmData->path_num;i++)
 		{
-			smallest = false;
-			break;
+			if (pmData->path_params[i].eff_pmtu < newpmtu)
+			{
+				smallest = false;
+				break;
+			}
+		}
+		if (smallest)
+		{
+			pmData->min_pmtu = newpmtu;
+			curr_channel_->bundle_control->geco_packet_fixed_size == sizeof(uint) ?
+				curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE - UDP_HDR_SIZE :
+				curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE;
+			curr_channel_->flow_control->cparams->mtu = newpmtu - IP_HDR_SIZE - 12;
 		}
 	}
 
-	if (smallest)
-	{
-		pmData->min_pmtu = newpmtu;
-		curr_channel_->bundle_control->geco_packet_fixed_size == sizeof(uint) ?
-			curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE - UDP_HDR_SIZE :
-			curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE;
-		curr_channel_->flow_control->cparams->mtu = newpmtu - IP_HDR_SIZE - 12;
-	}
-	EVENTLOG2(0, "-------------->Receive HB PROBE WITH BYTES OF %d on path %d", newpmtu, pathID);
-	exit(-1);
+	EVENTLOG2(DEBUG, "-------------->Receive HB PROBE WITH BYTES OF %d on path %d", newpmtu, pathID);
+	//exit(-1);
 	// stop pmtu probe on this path as we already get the best max eff pmtu
 	pmData->path_params[pathID].hb_timer_id->callback.arg3 = 0;
 	pmData->path_params[pathID].heartbeatAcked = true;
@@ -1905,7 +1896,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 								{
 									EVENTLOG(DEBUG, "IPv6 was in the INIT or INIT ACK chunk more than once");
 								}
-						}
+							}
 					}
 				}
 			}
@@ -2039,8 +2030,8 @@ bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
-			}
 		}
+	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -7290,7 +7281,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-	}
+}
 void free_library(void)
 {
 	mtra_destroy();

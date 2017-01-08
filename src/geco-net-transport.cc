@@ -771,9 +771,9 @@ static void mtra_fire_event(int num_of_events)
 		cb_dispatcher :
 #endif
 					  // release 0.03ms debug 0.06ms
-					  static uint64 sum = 0;
-					  static uint64 count = 0;
-					  uint64 start = gettimestamp();
+					  //static uint64 sum = 0;
+					  //static uint64 count = 0;
+					  //uint64 start = gettimestamp();
 					  switch (event_callbacks[i].eventcb_type)
 					  {
 					  case EVENTCB_TYPE_USER:
@@ -829,9 +829,9 @@ static void mtra_fire_event(int num_of_events)
 						  ERRLOG1(MAJOR_ERROR, "No such  eventcb_type %d", event_callbacks[i].eventcb_type);
 						  break;
 					  }
-					  count++;
-					  sum += (gettimestamp() - start);
-					  printf("fire event time used %.5f ms\n", sum / (count * stamps_per_ms_double()));
+					  //count++;
+					  //sum += (gettimestamp() - start);
+					  //printf("fire event time used %.5f ms\n", sum / (count * stamps_per_ms_double()));
 					  //exit(-1);
 					  socket_despts[i].revents = 0;
 	}

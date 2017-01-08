@@ -12,6 +12,7 @@
 #include <limits.h>
 #include "wheel-timer.h"
 #include "wheel-timer-bitops.cc"
+#include "geco-net-transport.h"
 
 static uint64_t testcases[] =
   { 13371337 * 10, 100, 385789752, 82574, (((uint64_t) 1) << 63)
