@@ -132,6 +132,7 @@ uint mch_read_path_idx_from_heartbeat(chunk_id_t chunkID);
 // mch_read_sendtime_from_heartbeat reads the sending time of a heartbeat.
 uint mch_read_sendtime_from_heartbeat(chunk_id_t chunkID);
 uint mch_read_pmtu_from_heartbeat(chunk_id_t chunkID);
+uint mch_read_ctsna(chunk_id_t shutdownCID);
 
 void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6, bool with_dns);
 void mch_write_vlp_of_init_chunk(chunk_id_t initChunkID, ushort pCode, uchar* data = 0, ushort dataLength = 0);

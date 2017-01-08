@@ -100,8 +100,6 @@ struct chunk_fixed_t
 #define FLAG_TBIT_UNSET       0x00 // perr has our itag setup
 #define FLAG_DELETED_CHANNEL  0x00 
 #define FLAG_TBIT_SET         0x01 // peer has no our itag setup
-#define FLAG_UNFOUND_CHANNEL  0x00
-#define FLAG_FOUND_CHANNEL  0x01
 
 /**************** chunk_value chunk *******************/
 #define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10

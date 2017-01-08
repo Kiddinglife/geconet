@@ -1356,3 +1356,10 @@ bool mch_verify_heartbeat(chunk_id_t heartbeatCID)
 
   return memcmp(hbSignature, heartbeatChunk->hmac, HMAC_LEN) == 0 ? true : false;
 }
+
+uint mch_read_ctsna(chunk_id_t shutdownCID)
+{
+	assert(simple_chunks_[shutdownCID] != NULL);
+	assert(simple_chunks_[shutdownCID]->chunk_header.chunk_id == CHUNK_SHUTDOWN);
+	return ntohl(*(uint*)simple_chunks_[shutdownCID]->chunk_value);
+}

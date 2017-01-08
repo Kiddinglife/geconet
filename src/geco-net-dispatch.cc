@@ -192,6 +192,8 @@ flow_controller_t* mdi_read_mfc(void);
 recv_controller_t* mdi_read_mrecv(void);
 smctrl_t* mdi_read_smctrl();
 
+
+
 /// this function aborts this association. And optionally adds an error parameter to the ABORT chunk that is sent out. */
 void msm_abort_channel(short error_type = 0, uchar* errordata = 0, ushort errordattalen = 0);
 /// get current parameter value for cookieLifeTime @return current value, -1 on erro
@@ -219,6 +221,12 @@ int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx);
 /// @param noOfOutStreams        number of send streams.
 /// @param noOfInStreams         number of receive streams.
 void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *destinationList, uint numDestAddresses);
+/// called when a shutdown chunk was received from the peer.
+/// This function initiates a graceful shutdown of the association.
+/// @param  shutdown_chunk pointer to the received shutdown chunk
+int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk);
+
+
 
 /// Function returns the outstanding byte count value of this association.
 /// @return current outstanding_bytes value, else -1
@@ -5627,47 +5635,132 @@ static void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 
 int msm_process_shutdown_complete_chunk()
 {
+	//@TODO
+	return 0;
+}
+
+void mdi_peer_shutdown_received()
+{
+	// @TODO
+}
+
+/**
+* function that is called by SCTP-Control, when peer indicates
+* shutdown and sends us his last ctsna...this function dequeues
+* all chunks, and returns the number of chunks left in the queue
+* @param  ctsna    up to this tsn we can dequeue all chunks here
+* @return  number of chunks that are still queued
+*/
+void mrecv_process_ctsna_from_shutdown_chunk(uint ctsna)
+{
 	throw std::logic_error("The method or operation is not implemented.");
 }
 
 int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	assert(simple_chunk->chunk_header.chunk_id == CHUNK_SHUTDOWN);
+	chunk_id_t shutdownCID = mch_make_simple_chunk(simple_chunk);
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		mch_remove_simple_chunk(shutdownCID);
+		return;
+	}
+
+	ChannelState state = smctrl->channel_state;
+	ChannelState new_state = state;
+	chunk_id_t abortCID;
+	bool removed = false, sendNotification = false;
+	int return_state = Good;
+
+	switch (state)
+	{
+	case ChannelState::Closed:
+		EVENTLOG(NOTICE, "event: receive shutdown chunk in state CLOSED, send ABORT ! ");
+		abortCID = mch_make_simple_chunk(CHUNK_ABORT, FLAG_TBIT_SET);
+		mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(abortCID));
+		mch_remove_simple_chunk(abortCID);
+		mdi_unlock_bundle_ctrl();
+		mdi_send_bundled_chunks();
+		// delete all data of this association 
+		mdi_delete_curr_channel();
+		removed = true;
+		return_state = StopProcessAndDeleteChannel;
+		break;
+
+	case ChannelState::CookieWait:
+	case ChannelState::CookieEchoed:
+	case ChannelState::ShutdownPending:
+		EVENTLOG1(NOTICE, "event: receive shutdown chunk  in state %2u -> discarding !", state);
+		mch_remove_simple_chunk(shutdownCID);
+		break;
+
+	case ChannelState::ShutdownReceived:
+	case ChannelState::ShutdownAckSent:
+		EVENTLOG(NOTICE, "event: receive shutdown chunk  in state SHUTDOWN_RECEIVED/SHUTDOWN_ACK_SENT -> acking CTSNA !");
+		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
+		break;
+
+	case ChannelState::Connected:
+		EVENTLOG(INFO, "event: receive shutdown chunk  in Connected State !");
+		break;
+
+	default:
+		ERRLOG1(MINOR_ERROR, "msm_process_shutdown_chunk() in state %02d: unexpected event", state);
+		break;
+	}
+
+	mch_remove_simple_chunk(shutdownCID);
+	if (sendNotification)
+	{
+		mdi_peer_shutdown_received();
+	}
+	smctrl->channel_state = new_state;
+	if (removed)
+	{
+		mdi_on_disconnected(ConnectionLostReason::NO_TCB);
+		mdi_clear_current_channel();
+	}
+
+	return return_state;
 }
 
 int msm_process_shutdown_ack_chunk()
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
+	return 0;
 }
 
 void mrecv_process_forward_tsn(simple_chunk_t* simple_chunk)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
 }
 
 void mdi_process_asconf_chunk(simple_chunk_t* simple_chunk)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
 }
 
 void mdi_process_asconf_ack_chunk(simple_chunk_t* simple_chunk)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
 }
 
 void mdlm_do_notifications()
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
 }
 
 bool mrecv_create_sack(int* last_src_path_, bool force_sack)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
+	return 0;
 }
 
 void mrecv_all_chunks_processed(bool new_data_received)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	//@TODO
 }
 
 /*
