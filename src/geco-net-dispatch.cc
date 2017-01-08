@@ -1897,14 +1897,14 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 									EVENTLOG(DEBUG, "IPv6 was in the INIT or INIT ACK chunk more than once");
 								}
 							}
+						}
 					}
 				}
-			}
 				else
 				{
 					EVENTLOG(DEBUG, "Too many addresses found during IPv4 reading");
 				}
-		}
+			}
 			break;
 		case VLPARAM_SUPPORTED_ADDR_TYPES:
 			if (peer_supported_addr_types != NULL)
@@ -1923,14 +1923,14 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES], u
 					*peer_supported_addr_types);
 			}
 			break;
-	}
+		}
 		read_len += vlp_len;
 		while (read_len & 3)
 			++read_len;
 		curr_pos = chunk + read_len;
-}  // while
+	}  // while
 
-// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
+	// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
 	if (!ignore_last_src_addr)
 	{
 		is_new_addr = true;
@@ -5625,6 +5625,51 @@ static void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 	mdi_on_peer_connected(COMM_UP_RECEIVED_COOKIE_ACK);
 }
 
+int msm_process_shutdown_complete_chunk()
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+int msm_process_shutdown_ack_chunk()
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void mrecv_process_forward_tsn(simple_chunk_t* simple_chunk)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void mdi_process_asconf_chunk(simple_chunk_t* simple_chunk)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void mdi_process_asconf_ack_chunk(simple_chunk_t* simple_chunk)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void mdlm_do_notifications()
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+bool mrecv_create_sack(int* last_src_path_, bool force_sack)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void mrecv_all_chunks_processed(bool new_data_received)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
 /*
  pass to relevant module :
  //
@@ -5730,6 +5775,25 @@ int mdi_disassemle_packet()
 			mpath_process_heartbeat_ack_chunk((heartbeat_chunk_t*)simple_chunk);
 			break;
 
+		case CHUNK_FORWARD_TSN:
+			if (!do_we_support_unreliability())
+				continue;
+			EVENTLOG(DEBUG, "*******************  Bundling received CHUNK_FORWARD_TSN");
+			mrecv_process_forward_tsn(simple_chunk);
+			break;
+
+		case CHUNK_ASCONF:
+			/* check that ASCONF chunks are standalone chunks, not bundled with any other
+			chunks. Else ignore the ASCONF chunk (but not the others) */
+			EVENTLOG(DEBUG, "*******************  Bundling received CHUNK_ASCONF");
+			mdi_process_asconf_chunk(simple_chunk);
+			break;
+
+		case CHUNK_ASCONF_ACK:
+			EVENTLOG(DEBUG, "*******************  Bundling received CHUNK_ASCONF_ACK");
+			mdi_process_asconf_ack_chunk(simple_chunk);
+			break;
+
 		case CHUNK_ABORT:
 			EVENTLOG(DEBUG, "******************* Diassemble received ABORT chunk");
 			handle_ret = msm_process_abort_chunk();
@@ -5739,6 +5803,22 @@ int mdi_disassemle_packet()
 			EVENTLOG(DEBUG, "******************* Diassemble received ERROR chunk");
 			msm_process_error_chunk(simple_chunk);
 			break;
+
+		case CHUNK_SHUTDOWN:
+			EVENTLOG(DEBUG, "******************* Diassemble received CHUNK_SHUTDOWN");
+			handle_ret = msm_process_shutdown_chunk(simple_chunk);
+			break;
+
+		case CHUNK_SHUTDOWN_ACK:
+			EVENTLOG(DEBUG, "******************* Diassemble received CHUNK_SHUTDOWN_ACK");
+			handle_ret = msm_process_shutdown_ack_chunk();
+			break;
+
+		case CHUNK_SHUTDOWN_COMPLETE:
+			EVENTLOG(DEBUG, "******************* Diassemble received CHUNK_SHUTDOWN_COMPLETE");
+			handle_ret = msm_process_shutdown_complete_chunk();
+			break;
+
 
 		default:
 			/*
@@ -5792,24 +5872,16 @@ int mdi_disassemle_packet()
 
 	if (handle_ret != ChunkProcessResult::StopProcessAndDeleteChannel)
 	{
-		if (data_chunk_received)
-		{
-			/* update SACK structure and start SACK timer */
-			//rxc_all_chunks_processed(true);
-		}
-		else
-		{
-			/* update SACK structure and datagram counter */
-			// rxc_all_chunks_processed(false);
-		}
+		// update SACK structure and start SACK timer if data_chunk_received = true 
+		// update SACK structure and datagram counter if data_chunk_received = false
+		mrecv_all_chunks_processed(data_chunk_received);
 
-		// optionally also add a SACK chunk, at least for every second datagram
-		// see section 6.2, second paragraph
+		// optionally also add a SACK chunk, at least for every second datagram see section 6.2, second paragraph
 		if (data_chunk_received)
 		{
-			//bool send_it = rxc_create_sack(&address_index, false);
-			//se_doNotifications();
-			//if (send_it == true) bu_sendAllChunks(&address_index);
+			mdlm_do_notifications();
+			if (mrecv_create_sack(&last_src_path_, false))
+				mdi_send_bundled_chunks(&last_src_path_);
 		}
 	}
 
