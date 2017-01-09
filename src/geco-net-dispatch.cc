@@ -225,7 +225,8 @@ void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *des
 /// This function initiates a graceful shutdown of the association.
 /// @param  shutdown_chunk pointer to the received shutdown chunk
 int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk);
-
+/// function initiates the shutdown of this association.
+void msm_shutdown();
 
 
 /// Function returns the outstanding byte count value of this association.
@@ -237,6 +238,8 @@ void mfc_stop_timers(void);
 /// this function stops all currently running timers, and may be called when the shutdown is imminent
 /// @param  new_rwnd new receiver window of the association peer
 void mfc_restart(uint new_rwnd, uint iTSN, uint maxQueueLen);
+
+
 
 /// function to return the last a_rwnd value we got from our peer
 /// @return  peers advertised receiver window
@@ -251,16 +254,19 @@ uint mreltx_get_unacked_chunks_count();
 /// called, when a Cookie, that indicates the peer's restart, is received in the ESTABLISHED stat-> we need to restart too
 static reltransfer_controller_t* mreltx_restart(reltransfer_controller_t* mreltx, uint numOfPaths, uint iTSN);
 
+
 /// function to return the number of chunks that can be retrievedby the ULP - this function may need to be refined !!!!!!
 int mdlm_get_queued_chunks_count();
 ushort mdlm_get_istreams(void);
 ushort mdlm_get_ostreams(void);
 void mdlm_read_streams(ushort* inStreams, ushort* outStreams);
 
+
 /// function called by bundling when a SACK is actually sent, to stop a possibly running  timer
 void mrecv_stop_sack_timer();
 uint mrecv_read_cummulative_tsn_acked();
 void mrecv_restart(int my_rwnd, uint newRemoteInitialTSN);
+
 
 /// mpath_new creates a new instance of path management. There is one path management instance per association.
 /// WATCH IT : this needs to be fixed ! path_params is NULL, but may accidentally be referenced !
@@ -272,7 +278,6 @@ path_controller_t* mpath_new(short numberOfPaths, short primaryPath);
 /// Deletes the instance pointed to by pathmanPtr.
 /// @param   pathmanPtr pointer to the instance that is to be deleted
 void mpath_free(path_controller_t *pathmanPtr);
-
 /// pm_readState returns the current state of the path.
 /// @param pathID  index of the questioned address
 /// @return state of path (active/inactive)
@@ -1639,6 +1644,72 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 	mdi_delete_curr_channel();
 	mdi_clear_current_channel();
 }
+void msm_shutdown()
+{
+  smctrl_t* smctrl = mdi_read_smctrl();
+  if (smctrl == NULL)
+  {
+    ERRLOG(FALTAL_ERROR_EXIT, "msm_shutdown()::smctrl is NULL!");
+    return;
+  }
+  bool readyForShutdown;
+  switch (smctrl->channel_state)
+  {
+  case ChannelState::Connected:
+    EVENTLOG1(INFO, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
+    mpath_disable_all_hb();
+    /* stop reliable transfer and read its state */
+    readyForShutdown = (mreltx_get_unacked_chunks_count() == 0) && (mfc_get_queued_chunks_count() == 0);
+    if(readyForShutdown)
+    {
+      // make and send shutdown
+      chunk_id_t shutdownCID = mch_make_shutdown_chunk(mrecv_read_cummulative_tsn_acked());
+      mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownCID));
+      mch_remove_simple_chunk(shutdownCID);
+      mdi_unlock_bundle_ctrl();
+      mdi_send_bundled_chunks();
+
+      // start shutdown timer
+      smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
+      if(smctrl->init_timer_id != NULL)
+        mtra_timeouts_del(smctrl->init_timer_id);
+      smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval,&msm_timer_expired,&smctrl->channel_id);
+      smctrl->init_retrans_count = 0;
+
+      // mrecv must acknoweledge every data chunk immediately after the shutdown was sent.
+      curr_channel_->receive_control->sack_flag = 1;
+      smctrl->channel_state = ChannelState::ShutdownSent;
+
+    }else
+    {
+      // ULP has initiated a shutdown procedure. We must only send unacked data from now on !
+      curr_channel_->flow_control->shutdown_received = true;
+      curr_channel_->reliable_transfer_control->shutdown_received = true;
+      // wait for msm_all_chunks_acked() from mreltx
+      smctrl->channel_state = ChannelState::ShutdownPending;
+    }
+    break;
+  case ChannelState::Closed:
+  case ChannelState::CookieWait:
+  case ChannelState::CookieEchoed:
+    /* Siemens convention: ULP can not send datachunks until it has received the communication up. */
+    EVENTLOG1(NOTICE, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
+    msm_abort_channel(ECC_USER_INITIATED_ABORT);
+    break;
+  case ChannelState::ShutdownSent:
+  case ChannelState::ShutdownReceived:
+  case ChannelState::ShutdownPending:
+  case ChannelState::ShutdownAckSent:
+    /* ignore, keep on waiting for completion of the running shutdown */
+    EVENTLOG1(NOTICE, "event: msm_shutdown in state %", smctrl->channel_state);
+    break;
+  default:
+    ERRLOG(WARNNING_ERROR, "unexpected event: msm_shutdown");
+    break;
+  }
+}
+
+
 
 inline recv_controller_t* mdi_read_mrecv(void)
 {
@@ -4384,6 +4455,8 @@ inline uint mrecv_read_cummulative_tsn_acked()
 	}
 	return (mrxc->cumulative_tsn);
 }
+
+
 
 inline static reltransfer_controller_t* mreltx_restart(reltransfer_controller_t* mreltx, uint numOfPaths, uint iTSN)
 {
@@ -7863,6 +7936,45 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 	msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses);
 	uint channel_id = curr_channel_->channel_id;
 	return channel_id;
+}
+int mulp_abort(unsigned int connectionid)
+{
+  geco_channel_t *old_assoc = curr_channel_;
+  curr_channel_ = channels_[connectionid];
+  if (curr_channel_ != NULL)
+  {
+    curr_geco_instance_ = curr_channel_->geco_inst;
+    // Forward shutdown to the addressed association
+    msm_abort_channel(ECC_USER_INITIATED_ABORT);
+  }
+  else
+  {
+    ERRLOG(MINOR_ERROR, "mulp_abort(): addressed association does not exist");
+    return MULP_ASSOC_NOT_FOUND;
+  }
+  curr_geco_instance_ = old_assoc->geco_inst;
+  curr_channel_ = old_assoc;
+  return MULP_SUCCESS;
+}
+int mulp_shutdown(unsigned int connectionid)
+{
+  geco_channel_t *old_assoc = curr_channel_;
+  curr_channel_ = channels_[connectionid];
+  if (curr_channel_ != NULL)
+    {
+      curr_geco_instance_ = curr_channel_->geco_inst;
+      // Forward shutdown to the addressed association
+      msm_abort_channel(ECC_USER_INITIATED_ABORT);
+      msm_shutdown();
+    }
+    else
+    {
+      ERRLOG(MINOR_ERROR, "mulp_abort(): addressed association does not exist");
+      return MULP_ASSOC_NOT_FOUND;
+    }
+    curr_geco_instance_ = old_assoc->geco_inst;
+    curr_channel_ = old_assoc;
+    return MULP_SUCCESS;
 }
 
 int mulp_set_lib_params(lib_params_t *lib_params)
