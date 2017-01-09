@@ -747,7 +747,7 @@ void mpath_start_hb_probe(uint noOfPaths, ushort primaryPathID)
 			if (i == primaryPathID)
 			{
 				pmData->path_params[i].state = PM_ACTIVE;
-				timeout_ms = 1; // send pmtu HB imediately on primary path
+				timeout_ms = 0; // send pmtu HB imediately on primary path
 			}
 			else
 			{
@@ -1195,7 +1195,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address)
 {
 	EVENTLOG1(INFO, "mpath_process_heartbeat_chunk()::source_address (%d)", source_address);
-	return;
+	//return;
 	assert(curr_channel_ != NULL);
 	if (curr_channel_->state_machine_control->channel_state == CookieEchoed
 		|| curr_channel_->state_machine_control->channel_state == Connected)
@@ -5665,7 +5665,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 	{
 		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
 		mch_remove_simple_chunk(shutdownCID);
-		return;
+		return -1;
 	}
 
 	ChannelState state = smctrl->channel_state;
