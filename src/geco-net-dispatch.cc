@@ -221,12 +221,17 @@ int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx);
 /// @param noOfOutStreams        number of send streams.
 /// @param noOfInStreams         number of receive streams.
 void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *destinationList, uint numDestAddresses);
+/// function initiates the shutdown of this association.
+void msm_shutdown();
 /// called when a shutdown chunk was received from the peer.
 /// This function initiates a graceful shutdown of the association.
 /// @param  shutdown_chunk pointer to the received shutdown chunk
 int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk);
-/// function initiates the shutdown of this association.
-void msm_shutdown();
+/// called by bundling when a shutdownAck chunk was received from the peer.
+/// Depending on the current state of the association, COMMUNICATION LOST is signaled to the
+/// Upper Layer Protocol, and the association marked for removal.
+int msm_process_shutdown_ack_chunk();
+
 
 
 /// Function returns the outstanding byte count value of this association.
@@ -1646,67 +1651,67 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 }
 void msm_shutdown()
 {
-  smctrl_t* smctrl = mdi_read_smctrl();
-  if (smctrl == NULL)
-  {
-    ERRLOG(FALTAL_ERROR_EXIT, "msm_shutdown()::smctrl is NULL!");
-    return;
-  }
-  bool readyForShutdown;
-  switch (smctrl->channel_state)
-  {
-  case ChannelState::Connected:
-    EVENTLOG1(INFO, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
-    mpath_disable_all_hb();
-    /* stop reliable transfer and read its state */
-    readyForShutdown = (mreltx_get_unacked_chunks_count() == 0) && (mfc_get_queued_chunks_count() == 0);
-    if(readyForShutdown)
-    {
-      // make and send shutdown
-      chunk_id_t shutdownCID = mch_make_shutdown_chunk(mrecv_read_cummulative_tsn_acked());
-      mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownCID));
-      mch_remove_simple_chunk(shutdownCID);
-      mdi_unlock_bundle_ctrl();
-      mdi_send_bundled_chunks();
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "msm_shutdown()::smctrl is NULL!");
+		return;
+	}
+	bool readyForShutdown;
+	switch (smctrl->channel_state)
+	{
+	case ChannelState::Connected:
+		EVENTLOG1(INFO, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
+		mpath_disable_all_hb();
+		/* stop reliable transfer and read its state */
+		readyForShutdown = (mreltx_get_unacked_chunks_count() == 0) && (mfc_get_queued_chunks_count() == 0);
+		if (readyForShutdown)
+		{
+			// make and send shutdown
+			chunk_id_t shutdownCID = mch_make_shutdown_chunk(mrecv_read_cummulative_tsn_acked());
+			mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownCID));
+			mch_remove_simple_chunk(shutdownCID);
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
 
-      // start shutdown timer
-      smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
-      if(smctrl->init_timer_id != NULL)
-        mtra_timeouts_del(smctrl->init_timer_id);
-      smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval,&msm_timer_expired,&smctrl->channel_id);
-      smctrl->init_retrans_count = 0;
+			// start shutdown timer
+			smctrl->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
+			if (smctrl->init_timer_id != NULL)
+				mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
+			smctrl->init_retrans_count = 0;
 
-      // mrecv must acknoweledge every data chunk immediately after the shutdown was sent.
-      curr_channel_->receive_control->sack_flag = 1;
-      smctrl->channel_state = ChannelState::ShutdownSent;
-
-    }else
-    {
-      // ULP has initiated a shutdown procedure. We must only send unacked data from now on !
-      curr_channel_->flow_control->shutdown_received = true;
-      curr_channel_->reliable_transfer_control->shutdown_received = true;
-      // wait for msm_all_chunks_acked() from mreltx
-      smctrl->channel_state = ChannelState::ShutdownPending;
-    }
-    break;
-  case ChannelState::Closed:
-  case ChannelState::CookieWait:
-  case ChannelState::CookieEchoed:
-    /* Siemens convention: ULP can not send datachunks until it has received the communication up. */
-    EVENTLOG1(NOTICE, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
-    msm_abort_channel(ECC_USER_INITIATED_ABORT);
-    break;
-  case ChannelState::ShutdownSent:
-  case ChannelState::ShutdownReceived:
-  case ChannelState::ShutdownPending:
-  case ChannelState::ShutdownAckSent:
-    /* ignore, keep on waiting for completion of the running shutdown */
-    EVENTLOG1(NOTICE, "event: msm_shutdown in state %", smctrl->channel_state);
-    break;
-  default:
-    ERRLOG(WARNNING_ERROR, "unexpected event: msm_shutdown");
-    break;
-  }
+			// mrecv must acknoweledge every data chunk immediately after the shutdown was sent.
+			curr_channel_->receive_control->sack_flag = 1;
+			smctrl->channel_state = ChannelState::ShutdownSent;
+		}
+		else
+		{
+			// ULP has initiated a shutdown procedure. We must only send unacked data from now on !
+			curr_channel_->flow_control->shutdown_received = true;
+			curr_channel_->reliable_transfer_control->shutdown_received = true;
+			// wait for msm_all_chunks_acked() from mreltx
+			smctrl->channel_state = ChannelState::ShutdownPending;
+		}
+		break;
+	case ChannelState::Closed:
+	case ChannelState::CookieWait:
+	case ChannelState::CookieEchoed:
+		/* Siemens convention: ULP can not send datachunks until it has received the communication up. */
+		EVENTLOG1(NOTICE, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
+		msm_abort_channel(ECC_USER_INITIATED_ABORT);
+		break;
+	case ChannelState::ShutdownSent:
+	case ChannelState::ShutdownReceived:
+	case ChannelState::ShutdownPending:
+	case ChannelState::ShutdownAckSent:
+		/* ignore, keep on waiting for completion of the running shutdown */
+		EVENTLOG1(NOTICE, "event: msm_shutdown in state %", smctrl->channel_state);
+		break;
+	default:
+		ERRLOG(WARNNING_ERROR, "unexpected event: msm_shutdown");
+		break;
+	}
 }
 
 
@@ -5741,13 +5746,10 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 		return -1;
 	}
 
-	ChannelState state = smctrl->channel_state;
-	ChannelState new_state = state;
-	chunk_id_t abortCID;
-	bool removed = false, sendNotification = false;
+	chunk_id_t abortCID, shutdownAckCID;
 	int return_state = Good;
 
-	switch (state)
+	switch (smctrl->channel_state)
 	{
 	case ChannelState::Closed:
 		EVENTLOG(NOTICE, "event: receive shutdown chunk in state CLOSED, send ABORT ! ");
@@ -5756,17 +5758,18 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 		mch_remove_simple_chunk(abortCID);
 		mdi_unlock_bundle_ctrl();
 		mdi_send_bundled_chunks();
+
 		// delete all data of this association 
 		mdi_delete_curr_channel();
-		removed = true;
+		mdi_on_disconnected(ConnectionLostReason::NO_TCB);
+		mdi_clear_current_channel();
 		return_state = StopProcessAndDeleteChannel;
 		break;
 
 	case ChannelState::CookieWait:
 	case ChannelState::CookieEchoed:
 	case ChannelState::ShutdownPending:
-		EVENTLOG1(NOTICE, "event: receive shutdown chunk  in state %2u -> discarding !", state);
-		mch_remove_simple_chunk(shutdownCID);
+		EVENTLOG1(NOTICE, "event: receive shutdown chunk  in state %2u -> discarding !", smctrl->channel_state);
 		break;
 
 	case ChannelState::ShutdownReceived:
@@ -5775,27 +5778,67 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
 		break;
 
+	case ChannelState::ShutdownSent:
+		EVENTLOG(NOTICE, "event: receive shutdown chunk  in state ShutdownSent -> shutdown collisons !");
+		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
+		bool readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
+		if (readyForShutdown)
+		{
+			// retransmissions are not necessary, send shutdownAck 
+			shutdownAckCID = mch_make_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_TBIT_UNSET);
+			mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownAckCID));
+			mch_free_simple_chunk(shutdownAckCID);
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
+			// start shutdown timer
+			if (smctrl->init_timer_id != NULL)
+				mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval,
+				&msm_timer_expired, &smctrl->channel_id);
+			smctrl->channel_state = ChannelState::ShutdownAckSent;
+		}
+		else
+		{
+			ERRLOG(FALTAL_ERROR_EXIT, "Program logic error! SHUTDOWN_SENT state may not be entered from shutdown_pending, if queues are not empty !!!!");
+		}
+		mdi_peer_shutdown_received();
+		break;
+
 	case ChannelState::Connected:
 		EVENTLOG(INFO, "event: receive shutdown chunk  in Connected State !");
+		smctrl->channel_state = ChannelState::ShutdownReceived;
+		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
+		bool readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
+		if (readyForShutdown)
+		{
+			// retransmissions are not necessary, send shutdownAck 
+			shutdownAckCID = mch_make_simple_chunk(CHUNK_SHUTDOWN_ACK, FLAG_TBIT_UNSET);
+			mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shutdownAckCID));
+			mch_free_simple_chunk(shutdownAckCID);
+			mdi_unlock_bundle_ctrl();
+			mdi_send_bundled_chunks();
+			// start shutdown timer
+			if (smctrl->init_timer_id != NULL)
+				mtra_timeouts_del(smctrl->init_timer_id);
+			smctrl->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, smctrl->init_timer_interval, &msm_timer_expired, &smctrl->channel_id);
+			smctrl->channel_state = ChannelState::ShutdownAckSent;
+		}
+		else
+		{
+			// received shutdown from peer. We must only send unacked data from now on !
+			// wait for msm_all_chunks_acked() from mreltx
+			curr_channel_->flow_control->shutdown_received = true;
+			curr_channel_->reliable_transfer_control->shutdown_received = true;
+		}
+		mdi_peer_shutdown_received();
 		break;
 
 	default:
-		ERRLOG1(MINOR_ERROR, "msm_process_shutdown_chunk() in state %02d: unexpected event", state);
+		ERRLOG1(MINOR_ERROR, "msm_process_shutdown_chunk() in state %02d: unexpected event", smctrl->channel_state);
 		break;
 	}
 
 	mch_remove_simple_chunk(shutdownCID);
-	if (sendNotification)
-	{
-		mdi_peer_shutdown_received();
-	}
-	smctrl->channel_state = new_state;
-	if (removed)
-	{
-		mdi_on_disconnected(ConnectionLostReason::NO_TCB);
-		mdi_clear_current_channel();
-	}
-
 	return return_state;
 }
 
@@ -7937,44 +7980,56 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
 	uint channel_id = curr_channel_->channel_id;
 	return channel_id;
 }
+
 int mulp_abort(unsigned int connectionid)
 {
-  geco_channel_t *old_assoc = curr_channel_;
-  curr_channel_ = channels_[connectionid];
-  if (curr_channel_ != NULL)
-  {
-    curr_geco_instance_ = curr_channel_->geco_inst;
-    // Forward shutdown to the addressed association
-    msm_abort_channel(ECC_USER_INITIATED_ABORT);
-  }
-  else
-  {
-    ERRLOG(MINOR_ERROR, "mulp_abort(): addressed association does not exist");
-    return MULP_ASSOC_NOT_FOUND;
-  }
-  curr_geco_instance_ = old_assoc->geco_inst;
-  curr_channel_ = old_assoc;
-  return MULP_SUCCESS;
+	// Ungracefully closes an association.  Any locally queued user data
+	// will be discarded, and an ABORT chunk is sent to the peer.  A success
+	// code will be returned on successful abort of the association.  If
+	// attempting to abort the association results in a failure, an error
+	// code shall be returned.
+	geco_channel_t *old_assoc = curr_channel_;
+	curr_channel_ = channels_[connectionid];
+	if (curr_channel_ != NULL)
+	{
+		curr_geco_instance_ = curr_channel_->geco_inst;
+		// Forward shutdown to the addressed association
+		msm_abort_channel(ECC_USER_INITIATED_ABORT);
+	}
+	else
+	{
+		ERRLOG(MINOR_ERROR, "mulp_abort(): addressed association does not exist");
+		return MULP_ASSOC_NOT_FOUND;
+	}
+	curr_geco_instance_ = old_assoc->geco_inst;
+	curr_channel_ = old_assoc;
+	return MULP_SUCCESS;
 }
+
 int mulp_shutdown(unsigned int connectionid)
 {
-  geco_channel_t *old_assoc = curr_channel_;
-  curr_channel_ = channels_[connectionid];
-  if (curr_channel_ != NULL)
-    {
-      curr_geco_instance_ = curr_channel_->geco_inst;
-      // Forward shutdown to the addressed association
-      msm_abort_channel(ECC_USER_INITIATED_ABORT);
-      msm_shutdown();
-    }
-    else
-    {
-      ERRLOG(MINOR_ERROR, "mulp_abort(): addressed association does not exist");
-      return MULP_ASSOC_NOT_FOUND;
-    }
-    curr_geco_instance_ = old_assoc->geco_inst;
-    curr_channel_ = old_assoc;
-    return MULP_SUCCESS;
+	// Gracefully closes an association.  Any locally queued user data will
+	// be delivered to the peer.  The association will be terminated only
+	// after the peer acknowledges all the SCTP packets sent.  A success
+	// code will be returned on successful termination of the association.
+	// If attempting to terminate the association results in a failure, an
+	// error code shall be returned.
+	geco_channel_t *old_assoc = curr_channel_;
+	curr_channel_ = channels_[connectionid];
+	if (curr_channel_ != NULL)
+	{
+		curr_geco_instance_ = curr_channel_->geco_inst;
+		// Forward shutdown to the addressed association
+		msm_shutdown();
+	}
+	else
+	{
+		ERRLOG(MINOR_ERROR, "mulp_abort(): addressed association does not exist");
+		return MULP_ASSOC_NOT_FOUND;
+	}
+	curr_geco_instance_ = old_assoc->geco_inst;
+	curr_channel_ = old_assoc;
+	return MULP_SUCCESS;
 }
 
 int mulp_set_lib_params(lib_params_t *lib_params)

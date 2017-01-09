@@ -1190,14 +1190,14 @@ int rtx_shutdown()
   * @param  ctsna    up to this tsn we can dequeue all chunks here
   * @return  number of chunks that are still queued
   */
-unsigned int rtx_rcv_shutdown_ctsna(unsigned int ctsna)
+unsigned int rtx_process_ctsna_from_shutdown_chunk(unsigned int ctsna)
 {
 	reltransfer_controller_t *rtx;
 	int result;
 	int rtx_queue_len = 0;
 	gboolean all_acked = FALSE, new_acked = FALSE;
 
-	event_logi(INTERNAL_EVENT_0, "rtx_rcv_shutdown_ctsna(ctsna==%u)", ctsna);
+	event_logi(INTERNAL_EVENT_0, "rtx_process_ctsna_from_shutdown_chunk(ctsna==%u)", ctsna);
 
 	rtx = (reltransfer_controller_t *)mdi_readReliableTransfer();
 	if (!rtx) {

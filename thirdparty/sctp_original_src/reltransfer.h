@@ -147,7 +147,7 @@ int rtx_shutdown(void);
  * shutdown and sends us his last ctsna...this function dequeues
  * all chunks, and returns the number of chunks left in the queue
  */
-unsigned int rtx_rcv_shutdown_ctsna(unsigned int ctsna);
+unsigned int rtx_process_ctsna_from_shutdown_chunk(unsigned int ctsna);
 
 int rtx_dequeueOldestUnackedChunk(unsigned char *buf, unsigned int *len, unsigned int *tsn,
                                   unsigned short *sID, unsigned short *sSN,unsigned int* pID,

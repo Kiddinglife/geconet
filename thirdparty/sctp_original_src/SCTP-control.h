@@ -174,10 +174,10 @@ int sctlr_shutdown(SCTP_simple_chunk * shutdown_chunk);
 
 
 
-/* sctlr_shutdownAck is called by bundling when a shutdownAck chunk was received from  the peer.
+/* sctlr_process_shutdown_ack_chunk is called by bundling when a shutdownAck chunk was received from  the peer.
    The function initiates a gracefull shutdown of the association.
 */
-int sctlr_shutdownAck(void);
+int sctlr_process_shutdown_ack_chunk(void);
 
 /* sctlr_shutdownComplete is called by bundling when a shutdownComplete chunk was received from the peer.
 */

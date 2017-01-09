@@ -470,7 +470,7 @@ gint rbu_rcvDatagram(guint address_index, guchar * datagram, guint len)
 		case CHUNK_SHUTDOWN_ACK:
 			event_log(INTERNAL_EVENT_0,
 				"*******************  Bundling received SHUTDOWN ACK chunk");
-			association_state = sctlr_shutdownAck();
+			association_state = sctlr_process_shutdown_ack_chunk();
 			break;
 		case CHUNK_ERROR:
 			event_log(INTERNAL_EVENT_0, "Error Chunk");

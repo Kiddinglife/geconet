@@ -1973,7 +1973,7 @@ sctlr_shutdown (SCTP_simple_chunk *shutdown_chunk)
       event_log(
           EXTERNAL_EVENT,
           "sctlr_shutdown in state SHUTDOWN_RECEIVED/SHUTDOWN_ACK_SENT -> acking CTSNA !");
-      rtx_rcv_shutdown_ctsna (ch_cummulativeTSNacked (shutdownCID));
+      rtx_process_ctsna_from_shutdown_chunk (ch_cummulativeTSNacked (shutdownCID));
       break;
 
     case ESTABLISHED:
@@ -1981,7 +1981,7 @@ sctlr_shutdown (SCTP_simple_chunk *shutdown_chunk)
 
       new_state = SHUTDOWNRECEIVED;
 
-      rtx_rcv_shutdown_ctsna (ch_cummulativeTSNacked (shutdownCID));
+      rtx_process_ctsna_from_shutdown_chunk (ch_cummulativeTSNacked (shutdownCID));
 
       readyForShutdown = (rtx_get_unacked_chunks_count () == 0)
           && (fc_get_queued_chunks_count () == 0);
@@ -2073,12 +2073,12 @@ sctlr_shutdown (SCTP_simple_chunk *shutdown_chunk)
 }
 
 /**
- sctlr_shutdownAck is called by bundling when a shutdownAck chunk was received from the peer.
+ sctlr_process_shutdown_ack_chunk is called by bundling when a shutdownAck chunk was received from the peer.
  Depending on the current state of the association, COMMUNICATION LOST is signaled to the
  Upper Layer Protocol, and the association marked for removal.
  */
 int
-sctlr_shutdownAck ()
+sctlr_process_shutdown_ack_chunk ()
 {
   unsigned int state, new_state;
   unsigned int lastFromPath, lastTag;
@@ -2090,7 +2090,7 @@ sctlr_shutdownAck ()
   if ((smctrl = (smctrl_t *) mdi_readSCTP_control ()) == NULL)
   {
     /* error log */
-    error_log(ERROR_MAJOR, "sctlr_shutdownAck: read SCTP-control failed");
+    error_log(ERROR_MAJOR, "sctlr_process_shutdown_ack_chunk: read SCTP-control failed");
     return return_state;
   }
 
@@ -2103,14 +2103,14 @@ sctlr_shutdownAck ()
     case CLOSED:
       error_log(
           ERROR_FATAL,
-          "sctlr_shutdownAck in state CLOSED, should have been handled before ! ");
+          "sctlr_process_shutdown_ack_chunk in state CLOSED, should have been handled before ! ");
       break;
     case COOKIE_WAIT:
     case COOKIE_ECHOED:
       /* see also section 8.5.E.) treat this like OOTB packet, leave T1 timer run ! */
       event_logi(
           EXTERNAL_EVENT,
-          "event: sctlr_shutdownAck in state %u, send SHUTDOWN_COMPLETE ! ",
+          "event: sctlr_process_shutdown_ack_chunk in state %u, send SHUTDOWN_COMPLETE ! ",
           state);
       shdcCID = ch_makeSimpleChunk (CHUNK_SHUTDOWN_COMPLETE, FLAG_NO_TCB);
 
@@ -2136,17 +2136,17 @@ sctlr_shutdownAck ()
     case ESTABLISHED:
       error_log(
           ERROR_MAJOR,
-          "sctlr_shutdownAck in state ESTABLISHED, peer not standard conform ! ");
+          "sctlr_process_shutdown_ack_chunk in state ESTABLISHED, peer not standard conform ! ");
       break;
     case SHUTDOWNPENDING:
       error_log(
           ERROR_MAJOR,
-          "sctlr_shutdownAck in state SHUTDOWNPENDING, peer not standard conform ! ");
+          "sctlr_process_shutdown_ack_chunk in state SHUTDOWNPENDING, peer not standard conform ! ");
       break;
     case SHUTDOWNRECEIVED:
       error_log(
           ERROR_MAJOR,
-          "sctlr_shutdownAck in state SHUTDOWNRECEIVED, peer not standard conform ! ");
+          "sctlr_process_shutdown_ack_chunk in state SHUTDOWNRECEIVED, peer not standard conform ! ");
       break;
 
     case SHUTDOWNSENT:
@@ -2181,7 +2181,7 @@ sctlr_shutdownAck ()
     default:
       /* error logging */
       event_logi(EXTERNAL_EVENT_X,
-                 "sctlr_shutdownAck in state %02d: unexpected event", state);
+                 "sctlr_process_shutdown_ack_chunk in state %02d: unexpected event", state);
       break;
     }
 
