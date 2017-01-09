@@ -434,6 +434,10 @@ void mdi_on_disconnected(uint status);
 void mdi_on_path_status_changed(short destaddr_id, int newState);
 /// indicates that a restart has occured(chapter 10.2.G). Calls the respective ULP callback function.
 void mdi_on_peer_restarted();
+/// indicates that association has been gracefully shut down (chapter 10.2.H). Calls the respective ULP callback function.
+void mdi_on_shutdown_completed();
+
+
 
 //\\ IMPLEMENTATIONS \\//
 inline uint mfc_get_queued_chunks_count(void)
@@ -5748,6 +5752,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 
 	chunk_id_t abortCID, shutdownAckCID;
 	int return_state = Good;
+	bool readyForShutdown;
 
 	switch (smctrl->channel_state)
 	{
@@ -5781,7 +5786,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 	case ChannelState::ShutdownSent:
 		EVENTLOG(NOTICE, "event: receive shutdown chunk  in state ShutdownSent -> shutdown collisons !");
 		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
-		bool readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
+		readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
 		if (readyForShutdown)
 		{
 			// retransmissions are not necessary, send shutdownAck 
@@ -5808,7 +5813,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 		EVENTLOG(INFO, "event: receive shutdown chunk  in Connected State !");
 		smctrl->channel_state = ChannelState::ShutdownReceived;
 		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
-		bool readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
+		 readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
 		if (readyForShutdown)
 		{
 			// retransmissions are not necessary, send shutdownAck 
@@ -5842,10 +5847,78 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 	return return_state;
 }
 
+static void mdi_on_shutdown_completed(void)
+{
+	if (curr_channel_ != NULL && curr_channel_->geco_inst->ulp_callbacks.shutdownCompleteNotif != NULL)
+	{
+		curr_channel_->geco_inst->ulp_callbacks.shutdownCompleteNotif(curr_channel_->channel_id,curr_channel_->ulp_dataptr);
+	}
+	else
+	{
+		ERRLOG(FALTAL_ERROR_EXIT, "mdi_on_shutdown_completed: association not set ! ");
+	}
+}
+
 int msm_process_shutdown_ack_chunk()
 {
-	//@TODO
-	return 0;
+	smctrl_t* smctrl = mdi_read_smctrl();
+	if (smctrl == NULL)
+	{
+		ERRLOG(MINOR_ERROR, "msm_process_shutdown_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		return -1;
+	}
+
+	chunk_id_t shdcCID;
+	ChunkProcessResult return_state = ChunkProcessResult::Good;
+
+	switch (smctrl->channel_state)
+	{
+	case ChannelState::Closed:
+		EVENTLOG(NOTICE, "event: receive shutdown ack chunk in state CLOSED, should have been handled before  ! ");
+		break;
+
+	case ChannelState::CookieWait:
+	case ChannelState::CookieEchoed:
+		// see also section 8.5.E.) treat this like OOTB packet, leave T1 timer run ! 
+		EVENTLOG(NOTICE, "event: receive shutdown ack chunk in state CookieWait or CookieEchoed ->send shutdown_complete chunk ! ");
+		shdcCID = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_SET);
+		//@TODO
+		break;
+
+	case ChannelState::ShutdownPending:
+	case ChannelState::ShutdownReceived:
+	case ChannelState::Connected:
+		ERRLOG(WARNNING_ERROR, "msm_process_shutdown_ack_chunk() in %02d state -> peer not standard conform!");
+		break;
+
+	case ChannelState::ShutdownSent:
+	case ChannelState::ShutdownAckSent:
+		if (smctrl->init_timer_id == NULL)
+			ERRLOG(FALTAL_ERROR_EXIT, "msm_process_shutdown_ack_chunk():: shutdown timer is not running in %02d state ->program logic errors!");
+
+		mtra_timeouts_del(smctrl->init_timer_id);
+		smctrl->init_timer_id = NULL;
+
+		shdcCID = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE, FLAG_TBIT_UNSET);
+		mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(shdcCID));
+		mch_free_simple_chunk(shdcCID);
+		mdi_unlock_bundle_ctrl();
+		mdi_send_bundled_chunks();
+
+		// delete all data of this association 
+		mdi_on_shutdown_completed();
+		mdi_delete_curr_channel();
+		mdi_clear_current_channel();
+		return_state = StopProcessAndDeleteChannel;
+		smctrl->channel_state = ChannelState::Closed;
+		break;
+
+	default:
+		ERRLOG1(MINOR_ERROR, "msm_process_shutdown_ack_chunk() in state %02d: unexpected event", smctrl->channel_state);
+		break;
+	}
+
+	return return_state;
 }
 
 void mrecv_process_forward_tsn(simple_chunk_t* simple_chunk)
