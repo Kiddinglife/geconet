@@ -37,6 +37,8 @@ extern uint PMTU_LOWEST;
 
 #define GECO_PACKET_FIXED_SIZE  (2 * (sizeof(ushort) + sizeof(uint)))
 #define GECO_PACKET_FIXED_SIZE_USE_UDP  (sizeof(uint))
+// constant nomatter udp or war socket, paylods without any headers
+#define MAX_PACKET_PDU  (PMTU_HIGHEST - IP_HDR_SIZE - GECO_PACKET_FIXED_SIZE)
 struct geco_packet_fixed_t
 {
 	uint verification_tag;
@@ -102,15 +104,15 @@ struct chunk_fixed_t
 #define FLAG_TBIT_SET         0x01 // peer has no our itag setup
 
 /**************** chunk_value chunk *******************/
-#define DCHUNK_FLAG_FIRST_FRAG      ((uchar)0x02) //BEGIN   10base: 10  2base : 10
-#define DCHUNK_FLAG_MIDDLE_FRAG ((uchar)0x00) //MIDDLE 10base: 0    2base : 00
-#define DCHUNK_FLAG_LAST_FRG      0x01 //END               10base: 1      2base : 01
-#define DCHUNK_FLAG_FL_FRG      0x01 //Unfragmented   10base: 11    2base : 11
+#define DCHUNK_FLAG_FIRST_FRAG  0x02 //BEGIN    10base: 10  2base : 10
+#define DCHUNK_FLAG_MIDDLE_FRAG 0x00 //MIDDLE   10base: 0   2base : 00
+#define DCHUNK_FLAG_LAST_FRG    0x01 //END      10base: 1   2base : 01
+#define DCHUNK_FLAG_FL_FRG      0x01 //Unfrag   10base: 11  2base : 11
 
-#define DCHUNK_FLAG_UNORDER 0x04
-//unordered data chunk     10base: 4    2base :  100
-#define DCHUNK_FLAG_UNRELIABLE 0x08
-// unreliable data chunk     10base: 8    2base : 1000
+#define DCHUNK_FLAG_ORDER       0x04 //ordered data chunk       10base: 4    2base : 0100
+#define DCHUNK_FLAG_UNORDER     0x00 //unordered data chunk     10base: 4    2base : 0000
+#define DCHUNK_FLAG_RELIABLE    0x08 //reliable data chunk      10base: 8    2base : 1000
+#define DCHUNK_FLAG_UNRELIABLE  0x00 //unreliable data chunk    10base: 8    2base : 0000
 
 /* when chunk_id == CHUNK_DATA */
 #define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
