@@ -349,71 +349,71 @@ void perr_abort(const char *infostring)
 	abort();
 }
 //++++++++++++++++++ helpers +++++++++++++++
-bool safe_before(uint seq1, uint seq2)
-{
-	// INT32_MAX = (2147483647)
-	// INT32_MIN = (-2147483647-1)
-	// UINT32_MAX = 4294967295U
-	// assume a extream situation where seq1 = 0, seq2 = UINT32_MAX,
-	// seq1 - seq2 = -4294967295 ���int��ʵ��ֵ���� (int) ��-1�� ��Ϊ
-	// INT32_MAX-INT32_MIN ����UINT32_MAX���պ������int�ĸ�ֵ����
-	// Ҳ����С��0�� �������ǵ���Ҫ
-	// ʵ�������ǻ����Է���һ���ȱȽϵ����͸�������ͣ���֯�������Ĳ���
-	// ����   return (uint64) (seq1 - seq2) < 0;
-	return ((int)(seq1 - seq2)) < 0;
-}
-bool safe_after(uint seq1, uint seq2)
-{
-	return ((int)(seq2 - seq1)) < 0;
-}
-bool safe_before(ushort seq1, ushort seq2)
-{
-	return ((short)(seq1 - seq2)) < 0;
-}
-bool safe_after(ushort seq1, ushort seq2)
-{
-	return ((short)(seq2 - seq1)) < 0;
-}
+//bool safe_before(uint seq1, uint seq2)
+//{
+//	// INT32_MAX = (2147483647)
+//	// INT32_MIN = (-2147483647-1)
+//	// UINT32_MAX = 4294967295U
+//	// assume a extream situation where seq1 = 0, seq2 = UINT32_MAX,
+//	// seq1 - seq2 = -4294967295 ���int��ʵ��ֵ���� (int) ��-1�� ��Ϊ
+//	// INT32_MAX-INT32_MIN ����UINT32_MAX���պ������int�ĸ�ֵ����
+//	// Ҳ����С��0�� �������ǵ���Ҫ
+//	// ʵ�������ǻ����Է���һ���ȱȽϵ����͸�������ͣ���֯�������Ĳ���
+//	// ����   return (uint64) (seq1 - seq2) < 0;
+//	return ((int)(seq1 - seq2)) < 0;
+//}
+//bool safe_after(uint seq1, uint seq2)
+//{
+//	return ((int)(seq2 - seq1)) < 0;
+//}
+//bool safe_before(ushort seq1, ushort seq2)
+//{
+//	return ((short)(seq1 - seq2)) < 0;
+//}
+//bool safe_after(ushort seq1, ushort seq2)
+//{
+//	return ((short)(seq2 - seq1)) < 0;
+//}
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
-bool safe_between(uint seq1, uint seq2, uint seq3)
-{
-	return safe_before(seq1, seq3) ? seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
-}
-// @pre make sure seq1 <= seq3
-bool unsafe_between(uint seq1, uint seq2, uint seq3)
-{
-	return seq3 - seq1 >= seq2 - seq1;
-}
+//bool safe_between(uint seq1, uint seq2, uint seq3)
+//{
+//	return safe_before(seq1, seq3) ? seq3 - seq1 >= seq2 - seq1 : seq3 - seq1 <= seq2 - seq1;
+//}
+//// @pre make sure seq1 <= seq3
+//bool unsafe_between(uint seq1, uint seq2, uint seq3)
+//{
+//	return seq3 - seq1 >= seq2 - seq1;
+//}
 /**
  * helper function for sorting list of chunks in tsn order
  * @param  one pointer to chunk data
  * @param  two pointer to other chunk data
  * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
  */
-int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two)
-{
-	if (safe_before(one.chunk_tsn, two.chunk_tsn)) return -1;
-	else if (safe_after(one.chunk_tsn, two.chunk_tsn)) return 1;
-	else return 0; /* one==two */
-}
-int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two)
-{
-	if (one.stream_id < two.stream_id)
-	{
-		return -1;
-	}
-	else if (one.stream_id > two.stream_id)
-	{
-		return 1;
-	}
-	else /* one.sid==two.sid */
-	{
-		if (safe_before(one.stream_sn, two.stream_sn)) return -1;
-		else if (safe_after(one.stream_sn, two.stream_sn)) return 1;
-	}
-	return 0;
-}
+//int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two)
+//{
+//	if (safe_before(one.chunk_tsn, two.chunk_tsn)) return -1;
+//	else if (safe_after(one.chunk_tsn, two.chunk_tsn)) return 1;
+//	else return 0; /* one==two */
+//}
+//int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two)
+//{
+//	if (one.stream_id < two.stream_id)
+//	{
+//		return -1;
+//	}
+//	else if (one.stream_id > two.stream_id)
+//	{
+//		return 1;
+//	}
+//	else /* one.sid==two.sid */
+//	{
+//		if (safe_before(one.stream_sn, two.stream_sn)) return -1;
+//		else if (safe_after(one.stream_sn, two.stream_sn)) return 1;
+//	}
+//	return 0;
+//}
 
 char* Bitify(size_t mWritePosBits, char* mBuffer)
 {

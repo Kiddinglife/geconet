@@ -5,19 +5,19 @@
  *      Author: jakez
  */
 
- /**
-  * WHY WE NEED MEMORY ALIGNMENT?
-  * 1. Mips CPU 只能通过Load/Store两条指令访问内存
-  * RISC的指令一般比较整齐，单条指令的功能单一，执行时间比较快。只能对寄存器中的数据运算，存储器的寻址一般只能通过L/S(Load/Store)进行。一般为等长指令，更便于流水线。
-  * MIPS为RISC系统，等长指令，每条指令都有相同的长度：32位。其操作码固定为：6位。其余26位为若干个操作数。
-  * 2. 内存地址的对齐
-  * 对于一个32位的系统来说，CPU 一次只能从内存读32位长度的数据。如果CPU要读取一个int类型的变量并且该变量的起始位不在所读32位数据的首位，
-  * 那么CPU肯定无法一次性读完这个变量，这时就说这个变量的地址是不对齐的。相反，如果CPU可以一次性读完一个变量，则说该变量的地址是对齐的。
-  * 3. Mips CPU 要求内存地址（即Load/Store的操作地址）必须是对齐的
-  * 其实不管是Mips，还是X86，都希望所操作地址是对齐的，因为这样可以最快速地处理数据。
-  * 不过X86平台可以很容易很快速地处理不对齐的情况，而Mips一旦遇到地址不对齐的变量就会抛出exception,从而调用一大段后续处理代码，继而消耗大量的时间。
-  * 因此，不管工作在什么平台下，程序员都应该养成使内存地址对齐的好习惯。
-  */
+/**
+ * WHY WE NEED MEMORY ALIGNMENT?
+ * 1. Mips CPU 只能通过Load/Store两条指令访问内存
+ * RISC的指令一般比较整齐，单条指令的功能单一，执行时间比较快。只能对寄存器中的数据运算，存储器的寻址一般只能通过L/S(Load/Store)进行。一般为等长指令，更便于流水线。
+ * MIPS为RISC系统，等长指令，每条指令都有相同的长度：32位。其操作码固定为：6位。其余26位为若干个操作数。
+ * 2. 内存地址的对齐
+ * 对于一个32位的系统来说，CPU 一次只能从内存读32位长度的数据。如果CPU要读取一个int类型的变量并且该变量的起始位不在所读32位数据的首位，
+ * 那么CPU肯定无法一次性读完这个变量，这时就说这个变量的地址是不对齐的。相反，如果CPU可以一次性读完一个变量，则说该变量的地址是对齐的。
+ * 3. Mips CPU 要求内存地址（即Load/Store的操作地址）必须是对齐的
+ * 其实不管是Mips，还是X86，都希望所操作地址是对齐的，因为这样可以最快速地处理数据。
+ * 不过X86平台可以很容易很快速地处理不对齐的情况，而Mips一旦遇到地址不对齐的变量就会抛出exception,从而调用一大段后续处理代码，继而消耗大量的时间。
+ * 因此，不管工作在什么平台下，程序员都应该养成使内存地址对齐的好习惯。
+ */
 
 #ifndef MY_GLOBALS_H_
 #define MY_GLOBALS_H_
@@ -125,20 +125,20 @@
 
 #else
 #define ADDRESS_LIST_BUFFER_SIZE        4096
-  //#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
+//#define IFNAMSIZ 64   /* Windows has no IFNAMSIZ. Just define it. */
 #define IFNAMSIZ IF_NAMESIZE
 struct iphdr
 {
-	uchar version_length;
-	uchar typeofservice; /* type of service */
-	ushort length; /* total length */
-	ushort identification; /* identification */
-	ushort fragment_offset; /* fragment offset field */
-	uchar ttl; /* time to live */
-	uchar protocol; /* protocol */
-	ushort checksum; /* checksum */
-	struct in_addr src_addr; /* source and dest address */
-	struct in_addr dst_addr;
+  uchar version_length;
+  uchar typeofservice; /* type of service */
+  ushort length; /* total length */
+  ushort identification; /* identification */
+  ushort fragment_offset; /* fragment offset field */
+  uchar ttl; /* time to live */
+  uchar protocol; /* protocol */
+  ushort checksum; /* checksum */
+  struct in_addr src_addr; /* source and dest address */
+  struct in_addr dst_addr;
 };
 
 #define msghdr _WSAMSG
@@ -154,9 +154,9 @@ ap = (struct sockaddr *)((caddr_t) ap + (ap->sa_len ? \
 ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
 inline bool IN6_ADDR_EQUAL(const in6_addr *x, const in6_addr *y)
 {
-	uint64_t* a = (uint64_t*)x;
-	uint64_t* b = (uint64_t*)y;
-	return (bool)((a[1] == b[1]) && (a[0] == b[0]));
+  uint64_t* a = (uint64_t*) x;
+  uint64_t* b = (uint64_t*) y;
+  return (bool) ((a[1] == b[1]) && (a[0] == b[0]));
 }
 #else
 #define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
@@ -215,60 +215,60 @@ inline bool IN6_ADDR_EQUAL(const in6_addr *x, const in6_addr *y)
 #include "geco-net-msg.h"
 
 enum geco_return_enum
-	:int
-{
-	good,
-	discard,
-	reply_abort,
-	recv_geco_packet_but_integrity_check_failed,
-	recv_geco_packet_but_port_numbers_check_failed,
-	recv_geco_packet_but_addrs_formate_check_failed,
-	recv_geco_packet_but_found_channel_has_no_instance,
-	recv_geco_packet_but_dest_addr_check_failed,
-	recv_geco_packet_but_morethanone_init,
-	recv_geco_packet_but_morethanone_init_ack,
-	recv_geco_packet_but_morethanone_shutdown_complete,
-	recv_geco_packet_but_init_chunk_has_zero_verifi_tag,
-	recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag,
-	recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate,
-	recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal,
-	recv_geco_packet_but_nootb_sdack_otherthan_sds_state,
-	recv_geco_packet_but_nootb_initack_otherthan_cookiew_state,
-	recv_geco_packet_but_nootb_packet_verifitag_illegal,
-	recv_geco_packet_but_it_is_ootb_abort_discard,
-	recv_geco_packet_but_it_is_ootb_sdc_discard,
-	recv_geco_packet_but_it_is_ootb_sdack_send_sdc,
-	recv_geco_packet_but_it_is_ootb_cookie_ack_discard,
-	recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard,
-	recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag,
-	recv_geco_packet_but_local_instance_has_zero_portnum,
-	recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk,
-	recv_geco_packet_but_not_send_abort_for_ootb_packet
+  :int
+  {
+    good,
+  discard,
+  reply_abort,
+  recv_geco_packet_but_integrity_check_failed,
+  recv_geco_packet_but_port_numbers_check_failed,
+  recv_geco_packet_but_addrs_formate_check_failed,
+  recv_geco_packet_but_found_channel_has_no_instance,
+  recv_geco_packet_but_dest_addr_check_failed,
+  recv_geco_packet_but_morethanone_init,
+  recv_geco_packet_but_morethanone_init_ack,
+  recv_geco_packet_but_morethanone_shutdown_complete,
+  recv_geco_packet_but_init_chunk_has_zero_verifi_tag,
+  recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag,
+  recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate,
+  recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal,
+  recv_geco_packet_but_nootb_sdack_otherthan_sds_state,
+  recv_geco_packet_but_nootb_initack_otherthan_cookiew_state,
+  recv_geco_packet_but_nootb_packet_verifitag_illegal,
+  recv_geco_packet_but_it_is_ootb_abort_discard,
+  recv_geco_packet_but_it_is_ootb_sdc_discard,
+  recv_geco_packet_but_it_is_ootb_sdack_send_sdc,
+  recv_geco_packet_but_it_is_ootb_cookie_ack_discard,
+  recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard,
+  recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag,
+  recv_geco_packet_but_local_instance_has_zero_portnum,
+  recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk,
+  recv_geco_packet_but_not_send_abort_for_ootb_packet
 };
 extern geco_return_enum global_ret_val;
 
 const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 const uint OVERFLOW_MS = (15 * 24 * 60 * 60 * 1000);
 enum SENDING_DEST_ADDR_TYPE
-	: int
-{
-	PRIMARY_ADDR = -1, LAST_SOURCE_ADDR = -2, RESET_VALUE = -3
+  : int
+  {
+    PRIMARY_ADDR = -1, LAST_SOURCE_ADDR = -2, RESET_VALUE = -3
 };
 
 /* ms default interval to timeout when no timers in poll
  * it is alos the resolution of wheel-timer*/
 #define GRANULARITY 50 //ms
 
- /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
- /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
+/* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
+/* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
 #define MAX_IPADDR_STR_LEN           46        /* ==  INET6_ADDRSTRLEN      */
 
 /*this parameter specifies the maximum number of addresses
  that an endpoint may have */
 #define MAX_NUM_ADDRESSES      32
 
- // if our impl is based on UDP, this is the well-known-port
- // receiver and sender endpoints use
+// if our impl is based on UDP, this is the well-known-port
+// receiver and sender endpoints use
 #ifndef USED_UDP_PORT
 #define USED_UDP_PORT 9899 //inna defined port
 #endif
@@ -283,7 +283,7 @@ enum SENDING_DEST_ADDR_TYPE
 
 #define MAX_NETWORK_PACKET_HDR_SIZES 5552
 
- //<--------------------------------- log ------------------------->
+//<--------------------------------- log ------------------------->
 #define TRACE_MUDULE_SIZE 50
 #define ENABLE_STR_LOG   false  /* set to != 0 if byte string logging should be done */
 
@@ -310,15 +310,15 @@ enum SENDING_DEST_ADDR_TYPE
 #define CURR_EVENT_LOG_LEVEL VERBOSE
 #endif
 
- /* Definition of levels for the logging of errors */
- /* warning, recovery not necessary. */
+/* Definition of levels for the logging of errors */
+/* warning, recovery not necessary. */
 #define WARNNING_ERROR 4
 /* recovery from error was possible without affecting the system. */
 #define MINOR_ERROR  3
 /*recovery from error was possible with some affects to the system,
  * for instance abort of an association.*/
 #define MAJOR_ERROR  2
- /* recovery from error was not possible, the program exits. */
+/* recovery from error was not possible, the program exits. */
 #define FALTAL_ERROR_EXIT 1
 /* Defines the level up to which the errors are prInt32ed.
  *ERROR_WARNING (4) means all events are prInt32ed.
@@ -412,7 +412,7 @@ if (x <= CURR_ERROR_LOG_LEVEL) {y}
  * in that file, which causes all output from event_logs() to go into a logfile in the local
  * directory.
  */
-	extern void read_trace_levels(void);
+extern void read_trace_levels(void);
 // print fixed date and then the msg
 extern void debug_print(FILE * fd, const char *f, ...);
 
@@ -487,7 +487,7 @@ extern void error_log_sys1(short error_loglvl, const char *module_name, int line
 #include "timestamp.h"
 #define get_safe_time_ms() ((uint)(((uint64)(gettimestamp() / stamps_per_ms())) % OVERFLOW_MS))
 
- /*helper to init timeval struct with ms interval*/
+/*helper to init timeval struct with ms interval*/
 #define fills_timeval(timeval_ptr, time_t_inteval)\
 (timeval_ptr)->tv_sec = (time_t_inteval) / 1000;\
 (timeval_ptr)->tv_usec = ((time_t_inteval) % 1000) * 1000;
@@ -510,48 +510,48 @@ extern void print_timeval(timeval* tv);
 //<---------------------- helpers --------------------->
 enum ctrl_type
 {
-	bundle_ctrl, recv_ctrl, flow_ctrl, reliable_transfer_ctrl, path_ctrl, geco_ctrl, stream_ctrl, unkown
+  bundle_ctrl, recv_ctrl, flow_ctrl, reliable_transfer_ctrl, path_ctrl, geco_ctrl, stream_ctrl, unkown
 };
 
 struct internal_stream_data_t
 {
-	ushort stream_id;
-	ushort stream_sn;
+    ushort stream_id;
+    ushort stream_sn;
 };
 
 //chunk_data_struct
 struct internal_data_chunk_t
 {
-	uint chunk_len;
-	uint chunk_tsn; /* for efficiency */
-	uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
+    uint chunk_len;
+    uint chunk_tsn; /* for efficiency */
+    uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
 
-	uint gap_reports;
+    uint gap_reports;
 
-	uint64 transmission_time;
-	/* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
-	int ack_time;
-	uint num_of_transmissions;
+    uint64 transmission_time;
+    /* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
+    int ack_time;
+    uint num_of_transmissions;
 
-	/* time after which chunk should not be retransmitted */
-	uint64 expiry_time;
-	bool dontBundle;
+    /* time after which chunk should not be retransmitted */
+    uint64 expiry_time;
+    bool dontBundle;
 
-	/* lst destination used to send chunk to */
-	uint last_destination;
-	int initial_destination;
+    /* lst destination used to send chunk to */
+    uint last_destination;
+    int initial_destination;
 
-	/* this is set to true, whenever chunk is sent/received on unreliable stream */
-	bool isUnreliable;
+    /* this is set to true, whenever chunk is sent/received on unreliable stream */
+    bool isUnreliable;
 
-	bool hasBeenAcked;
-	bool hasBeenDropped;
-	bool hasBeenFastRetransmitted;
-	bool hasBeenRequeued;
-	bool context;
+    bool hasBeenAcked;
+    bool hasBeenDropped;
+    bool hasBeenFastRetransmitted;
+    bool hasBeenRequeued;
+    bool context;
 
-	/*which ctrl this struct belongs to*/
-	ctrl_type ct;
+    /*which ctrl this struct belongs to*/
+    ctrl_type ct;
 };
 
 /**
@@ -564,16 +564,22 @@ struct internal_data_chunk_t
  * 　1） 使用头文件 <limits.h> 里面分别有关于最大、最小的char 、int、long的。
  * 2） 分别将-1转换成对应的unsigned char 、unsigned int、unsigned long值
  */
-extern bool safe_before(uint seq1, uint seq2);
-extern bool safe_after(uint seq1, uint seq2);
-extern bool safe_before(ushort seq1, ushort seq2);
-extern bool safe_after(ushort seq1, ushort seq2);
+//extern bool safe_before(uint seq1, uint seq2);
+//extern bool safe_after(uint seq1, uint seq2);
+//extern bool safe_before(ushort seq1, ushort seq2);
+//extern bool safe_after(ushort seq1, ushort seq2);
+#define safe_before_uint(seq1,seq2) (((int)((seq1)-(seq2)))<0)
+#define safe_after_uint(seq1,seq2) (((int)((seq2)-(seq1)))<0)
+#define safe_before_ushort(seq1,seq2) (((short)((seq1)-(seq2)))<0)
+#define safe_after_ushort(seq1,seq2) (((short)((seq2)-(seq1)))<0)
 
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
-extern bool safe_between(uint seq1, uint seq2, uint seq3);
+//extern bool safe_between(uint seq1, uint seq2, uint seq3);
 // @pre make sure seq1 <= seq3
-extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
+//extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
+#define safe_between_uint(seq1,seq2,seq3) (safe_before_uint(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
+#define unsafe_between_uint(seq1,seq2,seq3) (seq3-seq1>=seq2-seq1)
 
 /**
  * compute IP checksum yourself. If packet does not have even packet boundaries,
@@ -583,9 +589,44 @@ extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
  * field is initialized to 0 before starting the computation
  */
 extern ushort in_check(uchar *buf, int sz);
-int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two);
-// function that correctly sorts TSN values, minding wrapround
-extern int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two);
+//extern int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two);
+//// function that correctly sorts TSN values, minding wrapround
+//extern int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two);
+
+/**
+ * helper function for sorting list of chunks in tsn order
+ * @param  one pointer to chunk data
+ * @param  two pointer to other chunk data
+ * @return 0 if chunks have equal tsn, -1 if tsn1 < tsn2, 1 if tsn1 > tsn2
+ */
+inline int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two)
+{
+  if (safe_before_uint(one.chunk_tsn, two.chunk_tsn))
+    return -1;
+  else if (safe_after_uint(one.chunk_tsn, two.chunk_tsn))
+    return 1;
+  else
+    return 0; /* one==two */
+}
+inline int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two)
+{
+  if (one.stream_id < two.stream_id)
+  {
+    return -1;
+  }
+  else if (one.stream_id > two.stream_id)
+  {
+    return 1;
+  }
+  else /* one.sid==two.sid */
+  {
+    if (safe_before_ushort(one.stream_sn, two.stream_sn))
+      return -1;
+    else if (safe_after_ushort(one.stream_sn, two.stream_sn))
+      return 1;
+  }
+  return 0;
+}
 
 /*=========== help functions =================*/
 #define BITS_TO_BYTES(x) (((x)+7)>>3)
@@ -633,35 +674,35 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 //} AddressScopingFlags;
 enum IPAddrType
 {
-	LoopBackAddrType = (1 << 0),
-	LinkLocalAddrType = (1 << 1),
-	SiteLocalAddrType = (1 << 2),
-	AnyCastAddrType = (1 << 3),
-	MulticastAddrType = (1 << 4),
-	BroadcastAddrType = (1 << 5),
-	ReservedAddrType = (1 << 6),
-	AllExceptLoopbackAddrTypes = (1 << 7),
-	AllExceptLinkLocalAddrTypes = (1 << 8),
-	ExceptSiteLocalAddrTypes = (1 << 9),
-	//flag_Default
-	AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
-	//flag_HideLocal
-	AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
+  LoopBackAddrType = (1 << 0),
+  LinkLocalAddrType = (1 << 1),
+  SiteLocalAddrType = (1 << 2),
+  AnyCastAddrType = (1 << 3),
+  MulticastAddrType = (1 << 4),
+  BroadcastAddrType = (1 << 5),
+  ReservedAddrType = (1 << 6),
+  AllExceptLoopbackAddrTypes = (1 << 7),
+  AllExceptLinkLocalAddrTypes = (1 << 8),
+  ExceptSiteLocalAddrTypes = (1 << 9),
+  //flag_Default
+  AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
+  //flag_HideLocal
+  AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
 };
 
 /* union for handling either type of addresses: ipv4 and ipv6 */
 union sockaddrunion
 {
-	struct sockaddr sa;
-	struct sockaddr_in sin;
-	struct sockaddr_in6 sin6;
+    struct sockaddr sa;
+    struct sockaddr_in sin;
+    struct sockaddr_in6 sin6;
 };
 
 // key of channel
 struct transport_addr_t
 {
-	sockaddrunion* local_saddr;
-	sockaddrunion* peer_saddr;
+    sockaddrunion* local_saddr;
+    sockaddrunion* peer_saddr;
 };
 
 /* converts address-string
@@ -674,44 +715,44 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum = NULL);
 inline bool saddr_equals(const sockaddrunion *a, const sockaddrunion *b, bool ignore_port = false)
 {
-	if (saddr_family(a) == AF_INET)
-	{
-		if (saddr_family(b) == AF_INET)
-		{
-			if (a->sin.sin_addr.s_addr == b->sin.sin_addr.s_addr)
-			{
-				if (ignore_port)
-					return true;
-				else if (a->sin.sin_port == b->sin.sin_port)
-					return true;
-				else
-					return false;
-			}
-			return false;
-		}
-		return false;
-	}
-	else if (saddr_family(a) == AF_INET6)
-	{
-		if (saddr_family(b) == AF_INET6)
-		{
-			if (IN6_ADDR_EQUAL(&a->sin6.sin6_addr, &b->sin6.sin6_addr))
-			{
-				if (ignore_port)
-					return true;
-				else if (a->sin6.sin6_port == b->sin6.sin6_port)
-					return true;
-				else
-					return false;
-			}
-			return false;
-		}
-		return false;
-	}
-	else
-	{
-		ERRLOG(FALTAL_ERROR_EXIT, "saddr_equals()::no such af!!");
-	}
+  if (saddr_family(a) == AF_INET)
+  {
+    if (saddr_family(b) == AF_INET)
+    {
+      if (a->sin.sin_addr.s_addr == b->sin.sin_addr.s_addr)
+      {
+        if (ignore_port)
+          return true;
+        else if (a->sin.sin_port == b->sin.sin_port)
+          return true;
+        else
+          return false;
+      }
+      return false;
+    }
+    return false;
+  }
+  else if (saddr_family(a) == AF_INET6)
+  {
+    if (saddr_family(b) == AF_INET6)
+    {
+      if (IN6_ADDR_EQUAL(&a->sin6.sin6_addr, &b->sin6.sin6_addr))
+      {
+        if (ignore_port)
+          return true;
+        else if (a->sin6.sin6_port == b->sin6.sin6_port)
+          return true;
+        else
+          return false;
+      }
+      return false;
+    }
+    return false;
+  }
+  else
+  {
+    ERRLOG(FALTAL_ERROR_EXIT, "saddr_equals()::no such af!!");
+  }
 }
 
 //! From http://www.azillionmonkeys.com/qed/hash.html
@@ -733,7 +774,7 @@ extern unsigned int sockaddr2hashcode(const sockaddrunion* sa);
  4. source Address  (as string, may be IPv4 or IPv6 address string, in numerical format)
  5. source port number for UDP sockets, 0 for SCTP raw sockets
  */
-typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to);
+typedef void (*socket_cb_fun_t)(int sfd, char* data, int datalen, sockaddrunion* from, sockaddrunion* to);
 
 /* Defines the callback function that is called when an event occurs
  on a user file-descriptor
@@ -743,20 +784,20 @@ typedef void(*socket_cb_fun_t)(int sfd, char* data, int datalen, sockaddrunion* 
  It may be changed by the callback function.
  Params: 4. user data
  */
-typedef void(*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
+typedef void (*user_cb_fun_t)(int, short int revents, int* settled_events, void* usrdata);
 
 // function THAT WILL BE CALLED IN EACH TICK
-typedef void(*task_cb_fun_t)(void* usrdata);
+typedef void (*task_cb_fun_t)(void* usrdata);
 
 union cbunion_t
 {
-	socket_cb_fun_t socket_cb_fun;
-	user_cb_fun_t user_cb_fun;
-	task_cb_fun_t task_cb_fun;
+    socket_cb_fun_t socket_cb_fun;
+    user_cb_fun_t user_cb_fun;
+    task_cb_fun_t task_cb_fun;
 };
 extern bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags);
 extern bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets, int sctp_fd, bool with_ipv6,
-	int *max_mtu, const IPAddrType flags);
+    int *max_mtu, const IPAddrType flags);
 extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/

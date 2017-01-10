@@ -3292,7 +3292,15 @@ int msm_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
   chunk_tsn = ntohl(data_chunk->data_chunk_hdr.trans_seq_num);
   chunk_len = ntohs(data_chunk->comm_chunk_hdr.chunk_length);
-
+  if((current_rwnd == 0 && safe_after_uint(chunk_tsn,mrecv->highest_duplicated_tsn)) ||
+      assoc_state == ChannelState::ShutdownReceived || assoc_state == ChannelState::ShutdownAckSent)
+  {
+    // drop data chunk if
+    // 1. our rwnd is 0,
+    // 2. we have acked all queued data chunks that peer has sent to us. should have no chunks in flight and in peer's queue
+    mrecv->new_chunk_received = false;
+    return 1;
+  }
   return 0;
 }
 int msm_process_init_chunk(init_chunk_t * init)
@@ -5794,7 +5802,7 @@ int msm_process_shutdown_complete_chunk()
 }
 
 /// indicates gracefully shut down (chapter 10.2.H).Calls the respective ULP callback function.
-static void mdi_on_peer_shutdown_received()
+void mdi_on_peer_shutdown_received()
 {
   assert(curr_channel_ != NULL);
   assert(curr_channel_->geco_inst->ulp_callbacks.peerShutdownReceivedNotif != NULL);
@@ -5922,12 +5930,11 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
       ERRLOG1(MINOR_ERROR, "msm_process_shutdown_chunk() in state %02d: unexpected event", smctrl->channel_state);
       break;
   }
-
   mch_remove_simple_chunk(shutdownCID);
   return return_state;
 }
 
-static void mdi_on_shutdown_completed(void)
+void mdi_on_shutdown_completed()
 {
   assert(curr_channel_ != NULL);
   assert(curr_channel_->geco_inst->ulp_callbacks.shutdownCompleteNotif);
@@ -6064,7 +6071,7 @@ int mdi_disassemle_packet()
   uint read_len = 0, chunk_len;
   simple_chunk_t* simple_chunk;
   bool data_chunk_received = false;
-  ChunkProcessResult handle_ret = ChunkProcessResult::Good;
+  int handle_ret = ChunkProcessResult::Good;
 
   while (read_len < curr_geco_packet_value_len_)
   {
