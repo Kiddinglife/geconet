@@ -351,10 +351,7 @@ struct segment16_t
 	ushort start;
 	ushort stop;
 };
-struct duplicate_tsn_t
-{
-	uint duplicate_tsn;
-};
+typedef uint duplicate_tsn_t;
 
 /************************** heartbeat chunk defs ***************************/
 #define HB_VLPARAM_SIZES (sizeof(heartbeat_chunk_t) - sizeof(chunk_fixed_t))

@@ -207,7 +207,7 @@ boolean rxc_chunk_is_duplicate(rxc_buffer * rbuf, unsigned int chunk_tsn)
  * @param chunk_tsn	tsn we just received
  * @return boolean indicating whether lowest_duplicated_tsn was updated or not
  */
-boolean rxc_update_lowest(rxc_buffer * rbuf, unsigned int chunk_tsn)
+boolean rxc_update_lowest_duplicated_chunk_tsn(rxc_buffer * rbuf, unsigned int chunk_tsn)
 {
 	unsigned int low = rbuf->lowest_duplicated_tsn;
 	if (before(chunk_tsn, low)) {
@@ -513,7 +513,7 @@ int rxc_data_chunk_rx(SCTP_data_chunk * se_chk, unsigned int ad_idx)
 		reported in the SACK as duplicate.
 	 */
 	event_logii(VERBOSE, "rxc_data_chunk_rx : chunk_tsn==%u, chunk_len=%u", chunk_tsn, chunk_len);
-	if (rxc_update_lowest(rxc, chunk_tsn) == TRUE) {
+	if (rxc_update_lowest_duplicated_chunk_tsn(rxc, chunk_tsn) == TRUE) {
 		/* tsn is even lower than the lowest_duplicated_tsn one received so far */
 		rxc_update_duplicates(rxc, chunk_tsn);
 	}
