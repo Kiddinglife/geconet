@@ -177,7 +177,7 @@ struct recv_controller_t  //recv_ctrl
 	uint my_rwnd;
 	uint delay; /* delay for delayed ACK in msecs */
 	uint numofdestaddrlist; /* number of dest addresses */
-	std::list<internal_data_chunk_t*> fragmented_data_chunks_list;
+	std::list<segment32_t> fragmented_data_chunks_list;
 	std::list<duplicate_tsn_t> duplicated_data_chunks_list;
 };
 

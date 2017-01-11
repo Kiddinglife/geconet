@@ -4440,6 +4440,10 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    include them in Gap Ack Blocks in subsequent SACKs until they are
    received again via retransmission.  In addition, the endpoint should
    take into account the dropped data when calculating its a_rwnd.
+   
+   Notes: when reassembling fragmented chunks with memory running out,
+   there is no more psace for the rest of fragments resulting in an
+   uncompleted chunk that will never be releasedincrease rwnd by the amounts as droped chunks 
 
    An endpoint SHOULD NOT revoke a SACK and discard data.  Only in
    extreme circumstances should an endpoint use this procedure (such as
