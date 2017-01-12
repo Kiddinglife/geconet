@@ -3431,6 +3431,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
 		if (mrecv->new_chunk_received && mdlm_process_data_chunk((uchar*)data_chunk, chunk_len, ad_idx, chunk_flag&DCHUNK_FLAG_ORDER))
 			mrecv->new_chunk_received = false;
+		/* else: ABORT has been sent and the association (possibly) removed in callback! */
 	}
 	else
 	{
@@ -3457,6 +3458,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 			mrecv_update_fragments(mrecv, chunk_tsn);
 			if (mrecv->new_chunk_received && mdlm_process_data_chunk((uchar*)data_chunk, chunk_len, ad_idx, true))
 				mrecv->new_chunk_received = false;
+			/* else: ABORT has been sent and the association (possibly) removed in callback! */
 		}
 	}
 
