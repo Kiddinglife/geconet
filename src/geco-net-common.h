@@ -831,8 +831,7 @@ if((list_element) == NULL ) return; if((list_element)->num_of_transmissions == 0
 #define free_reltransfer_data_chunk(list_element) \
 if( (list_element) == NULL ) return; if( (list_element)->num_of_transmissions > 0 ) geco_free_ext((list_element), __FILE__, __LINE__)
 
-#define free_data_chunk(list_element)\
-if( (list_element) == NULL ) return; geco_free_ext((list_element), __FILE__, __LINE__)
+#define free_data_chunk(list_element) if( (list_element) == NULL ) return; geco_free_ext((list_element), __FILE__, __LINE__)
 
 #define free_delivery_pdu(d_pdu)\
 if (d_pdu->ddata != NULL)\

@@ -3307,7 +3307,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
-  segment32_t& frag;
+  segment32_t frag;
   mrecv->fragmented_data_chunks_list;
   // lowest_duplicated_tsn and highest_duplicated_tsn have already been updated at this moment if they should be updated
   // given received chunks = 123-5-8, dup_chunks = 2-5-8,
@@ -4165,7 +4165,6 @@ reltransfer_controller_t* mreltx_new(uint numofdestaddrlist, uint iTSN)
 void mreltx_free(reltransfer_controller_t* rtx_inst)
 {
   EVENTLOG(VERBOSE, "- - - Enter mreltx_free()");
-
   if (rtx_inst->chunk_list_tsn_ascended.size() > 0)
   {
     EVENTLOG(NOTICE, "mfc_free() : rtx_inst is deleted but chunk_list has size > 0, still queued ...");
@@ -4175,9 +4174,8 @@ void mreltx_free(reltransfer_controller_t* rtx_inst)
       rtx_inst->chunk_list_tsn_ascended.erase(it++);
     }
   }
-
   // see https://developer.gnome.org/glib/stable/glib-Arrays.html#g-array-free
-  for (auto& it : rtx_inst->prChunks)
+  for (internal_data_chunk_t* it : rtx_inst->prChunks)
   {
     free_data_chunk(it);
   }
@@ -4345,26 +4343,14 @@ void mfc_restart(uint new_rwnd, uint iTSN, uint maxQueueLen)
 void mrecv_free(recv_controller_t* rxc_inst)
 {
   EVENTLOG(VERBOSE, "- - - Enter mrecv_free()");
-
   delete rxc_inst->sack_chunk;
-
   if (rxc_inst->timer_running)
   {
     mtra_timeouts_del(rxc_inst->sack_timer);
     rxc_inst->timer_running = false;
   }
-
-  for (auto it = rxc_inst->fragmented_data_chunks_list.begin(); it != rxc_inst->fragmented_data_chunks_list.end();)
-  {
-    free_data_chunk((*it));
-    rxc_inst->fragmented_data_chunks_list.erase(it++);
-  }
-
-  for (auto it = rxc_inst->duplicated_data_chunks_list.begin(); it != rxc_inst->duplicated_data_chunks_list.end();)
-  {
-    rxc_inst->duplicated_data_chunks_list.erase(it++);
-  }
-
+  rxc_inst->fragmented_data_chunks_list.clear();
+  rxc_inst->duplicated_data_chunks_list.clear();
   delete rxc_inst;
   EVENTLOG(VERBOSE, "- - - Leave mrecv_free()");
 }
@@ -4562,11 +4548,6 @@ void mrecv_restart(int my_rwnd, uint new_remote_TSN)
   assert(rxc != NULL);
 
   mrecv_stop_sack_timer();
-
-  for (internal_data_chunk_t* idct : rxc->fragmented_data_chunks_list)
-  {
-    free_data_chunk(idct);
-  }
   rxc->fragmented_data_chunks_list.clear();
 
   rxc->cumulative_tsn = new_remote_TSN - 1;
