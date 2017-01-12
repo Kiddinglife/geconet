@@ -155,8 +155,7 @@ struct bundle_controller_t
 /**
  * this struct contains all necessary data for
  * creating SACKs from received data chunks
- * both are closely Connected
- * as sack is created based on form recv data chunks
+ * both are closely Connected as sack is created based on form recv data chunks
  */
 struct recv_controller_t  //recv_ctrl
 {
@@ -177,6 +176,7 @@ struct recv_controller_t  //recv_ctrl
 	uint my_rwnd;
 	uint delay; /* delay for delayed ACK in msecs */
 	uint numofdestaddrlist; /* number of dest addresses */
+	// store completed msg's segment
 	std::list<segment32_t> fragmented_data_chunks_list;
 	std::list<duplicate_tsn_t> duplicated_data_chunks_list;
 };

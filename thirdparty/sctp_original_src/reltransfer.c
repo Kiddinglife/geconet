@@ -77,7 +77,7 @@ typedef struct rtx_buffer_struct
 	/** a list that is ordered by ascending tsn values */
 	GList *chunk_list_tsn_ascended;
 	/** */
-	struct timeval sack_arrival_time;
+	struct timeval sack_arrival_dup_listtime;
 	/** */
 	struct timeval saved_send_time;
 	/** this val stores 0 if retransmitted chunks have been acked, else 1 */

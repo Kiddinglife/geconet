@@ -3287,8 +3287,7 @@ bool mrecv_update_lowest_duplicate_chunk_tsn(recv_controller_t* mrecv, uint chun
   }
   return false;
 }
-
-///  insert chunk_tsn in the list of duplicates from small to big
+/// insert chunk_tsn in the list of duplicates from small to big if it is not in list
 /// @param chunk_tsn	tsn we just received
 void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
 {
@@ -3298,13 +3297,11 @@ void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
     return;
   mrecv->duplicated_data_chunks_list.insert(insert_pos, chunk_tsn);
 }
-
 bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 {
 
   return false;
 }
-
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
   segment32_t frag;
@@ -3324,7 +3321,51 @@ bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 
   return false;
 }
+void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
+{
+  if (mrecv->fragmented_data_chunks_list.size() == 0)
+    return;
+  for (auto itr = mrecv->fragmented_data_chunks_list.begin(); itr != mrecv->fragmented_data_chunks_list.end();)
+  {
+    if (mrecv->cumulative_tsn + 1 != itr->start_tsn)
+    {
+      // if the first frag not cotimus, no need to test other frags as frag tsn is ordered small to big
+      // say frag567 and frag89, sequence 23-567-89 => 3+1=4!=5 => return
+      EVENTLOG(VVERBOSE, "mrecv_bubbleup_ctsna():: NOT update rxc->cumulative_tsn");
+      return;
+    }
+    // say frag567,newly received data chunks sequence is 234-67
+    // assume after calling mrecv_update_fragments(),
+    // frag567 is completed and store into mrecv->fragmented_data_chunks_list
+    // => current stsna is bubbleup from 4 to 7
+    mrecv->cumulative_tsn = itr->stop_tsn;
+    mrecv->fragmented_data_chunks_list.erase(itr++);
+  }
+  EVENTLOG1(VVERBOSE, "mrecv_bubbleup_ctsna()::after update,rxc->cumulative_tsn is now %u", mrecv->cumulative_tsn);
+}
 
+/// called from mrecv to forward received chunks to mdlm.
+/// returns an error chunk to the peer, when the maximum stream id is exceeded !
+int mdlm_process_data_chunk(uchar* dataChunk, uint byteCount, ushort address_index)
+{
+
+  switch (((chunk_fixed_t*) dataChunk)->chunk_flags & DCHUNK_FLAG_UO_MASK)
+  {
+    case DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_ORDER:
+      break;
+    case DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_UNORDER:
+      break;
+    case DCHUNK_FLAG_RELIABLE | DCHUNK_FLAG_ORDER:
+      break;
+    case DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_UNORDER:
+      break;
+    default:
+      // send abort with err cause invalid chunk flag
+      break;
+  }
+
+  return 1;
+}
 int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
   static uint chunk_tsn;
@@ -3364,9 +3405,12 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
   if ((current_rwnd == 0 && safe_after_uint(chunk_tsn, mrecv->highest_duplicated_tsn))
       || assoc_state == ChannelState::ShutdownReceived || assoc_state == ChannelState::ShutdownAckSent)
   {
-    // drop data chunk when
-    // our rwnd is 0,
-    // or we have acked all queued data chunks that peer has sent to us. should have no chunks in flight and in peer's queue
+    // drop data chunk when:
+    // 1.our rwnd is 0 and chunk_tsn is higher than current highest_duplicated_tsn
+    // if chunk_tsn is lower, we should drop the buffered highest and buffer this chunk_tsn
+    // 2.we are ShutdownAckSent state: we have acked all queued data chunks that peer has sent to us.
+    // should have no chunks in flight and in peer's queue
+    // 3.we are in ShutdownReceived state: we have received and processed all peer's queued chunks, shoul nt receive any more chunks
     mrecv->new_chunk_received = false;
     return 1;
   }
@@ -3380,18 +3424,29 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
   EVENTLOG2(VERBOSE, "mrecv_process_data_chunk()::chunk_tsn %u, chunk_len %u", chunk_tsn, chunk_len);
   if (mrecv_update_lowest_duplicate_chunk_tsn(mrecv, chunk_tsn))
+    /* tsn is even lower than the lowest_duplicated_tsn one received so far */
     mrecv_update_duplicates(mrecv, chunk_tsn);
   else if (mrecv_update_highest_duplicate_chunk_tsn(mrecv, chunk_tsn))
   {
+    /* tsn is even higher than the highest_duplicated_tsn one received so far */
     mrecv->new_chunk_received = true;
     ret0 = mrecv_update_fragments(mrecv, chunk_tsn);
   }
   else if (mrecv_chunk_is_duplicate(mrecv, chunk_tsn))
+    /* tsn is dup */
     mrecv_update_duplicates(mrecv, chunk_tsn);
   else
     ret0 = mrecv_update_fragments(mrecv, chunk_tsn);
 
-  return 0;
+  if (ret0 == true)
+    mrecv_bubbleup_ctsna(mrecv);
+
+  if (mrecv->new_chunk_received == true)
+  {
+
+  }
+
+  return 1;
 }
 int msm_process_init_chunk(init_chunk_t * init)
 {
