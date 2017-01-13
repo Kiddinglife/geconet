@@ -568,18 +568,18 @@ struct internal_data_chunk_t
 //extern bool safe_after(uint seq1, uint seq2);
 //extern bool safe_before(ushort seq1, ushort seq2);
 //extern bool safe_after(ushort seq1, ushort seq2);
-#define safe_before_uint(seq1,seq2) (((int)((seq1)-(seq2)))<0)
-#define safe_after_uint(seq1,seq2) (((int)((seq2)-(seq1)))<0)
-#define safe_before_ushort(seq1,seq2) (((short)((seq1)-(seq2)))<0)
-#define safe_after_ushort(seq1,seq2) (((short)((seq2)-(seq1)))<0)
+#define ubefore(seq1,seq2) (((int)((seq1)-(seq2)))<0)
+#define uafter(seq1,seq2) (((int)((seq2)-(seq1)))<0)
+#define sbefore(seq1,seq2) (((short)((seq1)-(seq2)))<0)
+#define safter(seq1,seq2) (((short)((seq2)-(seq1)))<0)
 
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3
 //extern bool safe_between(uint seq1, uint seq2, uint seq3);
 // @pre make sure seq1 <= seq3
 //extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
-#define safe_between_uint(seq1,seq2,seq3) (safe_before_uint(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
-#define unsafe_between_uint(seq1,seq2,seq3) (seq3-seq1>=seq2-seq1)
+#define ubetween(seq1,seq2,seq3) (ubefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
+#define sbetween(seq1,seq2,seq3) (sbefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
 
 /**
  * compute IP checksum yourself. If packet does not have even packet boundaries,

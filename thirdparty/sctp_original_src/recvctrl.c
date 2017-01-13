@@ -894,7 +894,8 @@ rxc_all_chunks_processed (boolean new_data_received)
   if (rxc->timer_running != TRUE && new_data_received == TRUE)
   {
     rxc->sack_timer = adl_startTimer (rxc->delay, &rxc_sack_timer_cb,
-                                      TIMER_TYPE_SACK, &(rxc->channel_id),
+    TIMER_TYPE_SACK,
+                                      &(rxc->channel_id),
                                       NULL);
     event_log(INTERNAL_EVENT_0, "Started SACK Timer !");
     rxc->timer_running = TRUE;
@@ -938,7 +939,8 @@ rxc_start_sack_timer (unsigned int oldQueueLen)
     if (rxc->timer_running != TRUE)
     {
       rxc->sack_timer = adl_startTimer (rxc->delay, &rxc_sack_timer_cb,
-                                        TIMER_TYPE_SACK, &(rxc->channel_id),
+      TIMER_TYPE_SACK,
+                                        &(rxc->channel_id),
                                         NULL);
       event_log(INTERNAL_EVENT_0, "Started SACK Timer !");
       rxc->timer_running = TRUE;

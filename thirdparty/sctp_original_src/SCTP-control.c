@@ -212,7 +212,7 @@ msm_timer_expired (TimerID timerID, void *associationIDvoid, void *unused)
         /* increase retransmissission-counter, resend init and restart init-timer */
         smctrl->initRetransCounter++;
         bu_put_Ctrl_Chunk ((SCTP_simple_chunk *) smctrl->peer_cookie_chunk,
-                           NULL);
+        NULL);
         bu_sendAllChunks (NULL);
         /* restart cookie timer after timer backoff */
         smctrl->init_timer_interval = min(smctrl->init_timer_interval * 2,
@@ -1780,7 +1780,8 @@ msm_process_cookie_echo_chunk (cookie_echo_chunk_t *cookie_echo)
             bu_put_Ctrl_Chunk (ch_chunkString (shutdownAckCID), NULL);
             errorCID = ch_makeErrorChunk ();
             ch_enterErrorCauseData (errorCID,
-                                    ECC_COOKIE_RECEIVED_DURING_SHUTDWN, 0,
+            ECC_COOKIE_RECEIVED_DURING_SHUTDWN,
+                                    0,
                                     NULL);
             bu_put_Ctrl_Chunk (ch_chunkString (errorCID), NULL);
             /* send cookie acknowledgement */
@@ -1973,7 +1974,8 @@ sctlr_shutdown (SCTP_simple_chunk *shutdown_chunk)
       event_log(
           EXTERNAL_EVENT,
           "sctlr_shutdown in state SHUTDOWN_RECEIVED/SHUTDOWN_ACK_SENT -> acking CTSNA !");
-      rtx_process_ctsna_from_shutdown_chunk (ch_cummulativeTSNacked (shutdownCID));
+      rtx_process_ctsna_from_shutdown_chunk (
+          ch_cummulativeTSNacked (shutdownCID));
       break;
 
     case ESTABLISHED:
@@ -1981,7 +1983,8 @@ sctlr_shutdown (SCTP_simple_chunk *shutdown_chunk)
 
       new_state = SHUTDOWNRECEIVED;
 
-      rtx_process_ctsna_from_shutdown_chunk (ch_cummulativeTSNacked (shutdownCID));
+      rtx_process_ctsna_from_shutdown_chunk (
+          ch_cummulativeTSNacked (shutdownCID));
 
       readyForShutdown = (rtx_get_unacked_chunks_count () == 0)
           && (fc_get_queued_chunks_count () == 0);
@@ -2090,7 +2093,8 @@ sctlr_process_shutdown_ack_chunk ()
   if ((smctrl = (smctrl_t *) mdi_readSCTP_control ()) == NULL)
   {
     /* error log */
-    error_log(ERROR_MAJOR, "sctlr_process_shutdown_ack_chunk: read SCTP-control failed");
+    error_log(ERROR_MAJOR,
+              "sctlr_process_shutdown_ack_chunk: read SCTP-control failed");
     return return_state;
   }
 
@@ -2180,8 +2184,10 @@ sctlr_process_shutdown_ack_chunk ()
 
     default:
       /* error logging */
-      event_logi(EXTERNAL_EVENT_X,
-                 "sctlr_process_shutdown_ack_chunk in state %02d: unexpected event", state);
+      event_logi(
+          EXTERNAL_EVENT_X,
+          "sctlr_process_shutdown_ack_chunk in state %02d: unexpected event",
+          state);
       break;
     }
 
