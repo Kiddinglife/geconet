@@ -574,6 +574,17 @@ struct padding_chunk_t
 	chunk_fixed_t chunk_header;
 	uchar variableParams[1];
 };
+struct network_packet_t
+{
+	uchar chunk_flags;
+	ushort stream_id;
+	ushort stream_sn;
+	uint data_length;
+	uint tsn;
+	uint protocolId;
+	uint fromAddressIndex;
+	uchar data[0];
+};
 /******************** some useful macros ************************/
 #define get_chunk_length(chunk)        (ntohs((chunk)->chunk_length))
 // Chunk classes for distribution and any other modules which might need it

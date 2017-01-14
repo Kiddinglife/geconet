@@ -431,6 +431,7 @@ struct deliverman_controller_t
 	bool* recvStreamActivated;
 	uint queuedBytes;
 	bool unreliable;
+	bool unordered;
 	//fixme is delivery_data_t* used?
 	std::list<delivery_data_t*> packets;  //!< list for all packets
 };

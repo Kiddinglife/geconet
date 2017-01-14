@@ -3312,8 +3312,21 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 	static segment32_t newseg;
 	static std::list<segment32_t>::iterator tmp;
 
-	lo = mrecv->cumulative_tsn + 1;
-	for (std::list<segment32_t>::iterator itr = mrecv->fragmented_data_chunks_list.begin(); itr != mrecv->fragmented_data_chunks_list.end();)
+	// printf("test %u\n", (unsigned int)(UINT32_MAX + 1)); => test 0
+	// if cumulative_tsn == UINT32_MAX, UINT32_MAX + 1 will wrap round to 0 agin
+	// why use 4 bytes tsn is that sender must NOT send chunks with tsn wrapper at one time sending.
+	// otherwise, the tsn will not be working correctly for retrans, reordering and acking functions. 
+	// eg. assume tsn is beteen [0,2], sender  sents chunk 0,1,2,0,1,2, 
+	// 1.when sender send all chunks in one packet,  this will confuses receiver's reliableing function. 
+	// 2.when send send all chunks one after another, it is likely that receiver will buffer all or some of received chunks, 
+	// which also confuses receiver's reliableing function. 
+	// the tricky using uint is it is so big that receiver will never receive wrapped tsn. 
+	// also sender will stop sending chunks when congestion ocurres. 
+	// key point: receiver is always catching up with sender's tsn, and most of time receiver is as fast as sender, 
+	// so there is no chance for sender to run fast enough to wrap around (tsn wrapping).
+	lo = (uint)(mrecv->cumulative_tsn + 1);
+
+	for (auto itr = mrecv->fragmented_data_chunks_list.begin(); itr != mrecv->fragmented_data_chunks_list.end();)
 	{
 		hi = itr->start_tsn - 1;
 		if (ubetween(lo, chunk_tsn, hi))
@@ -3404,6 +3417,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 					*
 					* now sequence sre 1-4.5-7-8.9...
 					*/
+					//@TODO g_list_insert_sorted but I think we do not need loop again
 					newseg.start_tsn = newseg.stop_tsn = chunk_tsn;
 					mrecv->fragmented_data_chunks_list.insert(itr, newseg);
 					mrecv->new_chunk_received = true;
@@ -3472,9 +3486,6 @@ bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
 	// Assume lowest_duplicated_tsn and highest_duplicated_tsn have already been updated if they should be
 
-	static segment32_t frag;
-	mrecv->fragmented_data_chunks_list;
-
 	// Given cstna=2, chunk_tsn=2, received sequence 2-4.5-7...,  dups sequence 0,2 =>
 	// ubetween(0, 2, 2)  =>return true
 	if (ubetween(mrecv->lowest_duplicated_tsn, chunk_tsn, mrecv->cumulative_tsn))
@@ -3520,6 +3531,7 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 {
 	if (mrecv->fragmented_data_chunks_list.size() == 0)
 		return;
+
 	for (auto itr = mrecv->fragmented_data_chunks_list.begin(); itr != mrecv->fragmented_data_chunks_list.end();)
 	{
 		if (mrecv->cumulative_tsn + 1 != itr->start_tsn)
@@ -3543,6 +3555,16 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 bool mdlm_process_data_chunk(uchar* dataChunk, uint byteCount, ushort address_index, bool ordered)
 {
+	static ushort datalength;
+	static invalid_stream_id_err_t error_info;
+	static delivery_data_t* d_chunk;
+	static deliverman_controller_t* mdlm;
+
+	mdlm = mdi_read_mdlm();
+	assert(mdlm !=NULL);
+	
+
+
 	return true;
 }
 int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
