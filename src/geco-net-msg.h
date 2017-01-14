@@ -581,7 +581,6 @@ struct network_packet_t
 	ushort stream_sn;
 	uint data_length;
 	uint tsn;
-	uint protocolId;
 	uint fromAddressIndex;
 	uchar data[0];
 };
