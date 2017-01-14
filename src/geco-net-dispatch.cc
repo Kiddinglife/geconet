@@ -279,7 +279,7 @@ void mrecv_restart(int my_rwnd, uint newRemoteInitialTSN);
 /// @param mrecv	instance of recv_controller_t
 /// @param chunk_tsn	tsn we just received
 /// @return boolean indicating whether lowest_duplicated_tsn was updated or not
-bool mrecv_update_lowest_duplicate_chunk_tsn(recv_controller_t* mrecv, uint chunk_tsn);
+bool mrecv_before_lowest_duptsn(recv_controller_t* mrecv, uint chunk_tsn);
 static bool mrecv_sort_duplicates_cmp(duplicate_tsn_t one, duplicate_tsn_t two)
 {
 	return ubefore(one, two);
@@ -3269,7 +3269,7 @@ uint mdlm_read_queued_bytes()
 	return mdlm != NULL ? mdlm->queuedBytes : 0;
 }
 
-bool mrecv_update_highest_duplicate_chunk_tsn(recv_controller_t* mrecv, uint chunk_tsn)
+bool mrecv_after_highest_duptsn(recv_controller_t* mrecv, uint chunk_tsn)
 {
 	if (uafter(chunk_tsn, mrecv->highest_duplicated_tsn))
 	{
@@ -3278,7 +3278,7 @@ bool mrecv_update_highest_duplicate_chunk_tsn(recv_controller_t* mrecv, uint chu
 	}
 	return false;
 }
-bool mrecv_update_lowest_duplicate_chunk_tsn(recv_controller_t* mrecv, uint chunk_tsn)
+bool mrecv_before_lowest_duptsn(recv_controller_t* mrecv, uint chunk_tsn)
 {
 	if (ubefore(chunk_tsn, mrecv->lowest_duplicated_tsn))
 	{
@@ -3291,11 +3291,20 @@ bool mrecv_update_lowest_duplicate_chunk_tsn(recv_controller_t* mrecv, uint chun
 /// @param chunk_tsn	tsn we just received
 void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
 {
+	/*
+	  // 10 10 10 20 20 20 30 30
+	  low=std::lower_bound (v.begin(), v.end(), 20); //
+	  up= std::upper_bound (v.begin(), v.end(), 20); //
+	  std::cout << "lower_bound at position " << (low- v.begin()) << '\n';
+	  std::cout << "upper_bound at position " << (up - v.begin()) << '\n';
+	  lower_bound at position 3
+	  upper_bound at position 6
+	*/
+	assert(!mrecv->duplicated_data_chunks_list.empty());
 	auto end = mrecv->duplicated_data_chunks_list.end();
-	auto insert_pos = upper_bound(mrecv->duplicated_data_chunks_list.begin(), end, chunk_tsn, mrecv_sort_duplicates_cmp);
-	if (end != insert_pos && *insert_pos == chunk_tsn)
-		return;
-	mrecv->duplicated_data_chunks_list.insert(insert_pos, chunk_tsn);
+	auto insert_pos = lower_bound(mrecv->duplicated_data_chunks_list.begin(), end, chunk_tsn, mrecv_sort_duplicates_cmp);
+	if (*insert_pos != chunk_tsn)
+		mrecv->duplicated_data_chunks_list.insert(insert_pos, chunk_tsn);
 }
 bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 {
@@ -3461,21 +3470,50 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 }
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
-	segment32_t frag;
-	mrecv->fragmented_data_chunks_list;
-	// lowest_duplicated_tsn and highest_duplicated_tsn have already been updated at this moment if they should be updated
-	// given received chunks = 123-5-8, dup_chunks = 2-5-8,
-	// 123 are sequcial chunks received,highest_dup=8,lowest_dup_tsn=1,ctsn=3
-	if (ubetween(mrecv->lowest_duplicated_tsn, chunk_tsn, mrecv->cumulative_tsn))
-		return true;  // => 1,2 or 3 must be dup
-	if (!ubetween(mrecv->cumulative_tsn, chunk_tsn, mrecv->highest_duplicated_tsn))
-		return false;  // => chunk_tsn greater than 8, eg 9, must NOT be dup
+	// Assume lowest_duplicated_tsn and highest_duplicated_tsn have already been updated if they should be
 
-	  /*at this moment, chunk_tsn could be 4,5,6,7*/
-	// check if chunk is in sorted fragments list
+	static segment32_t frag;
+	mrecv->fragmented_data_chunks_list;
+
+	// Given cstna=2, chunk_tsn=2, received sequence 2-4.5-7...,  dups sequence 0,2 =>
+	// ubetween(0, 2, 2)  =>return true
+	if (ubetween(mrecv->lowest_duplicated_tsn, chunk_tsn, mrecv->cumulative_tsn))
+		return true;
+
+	// Given cstna=2, chunk_tsn=6, received sequence 2-4.5-7...,  dups sequence lowest 0, highest 5 =>
+	// !ubetween(2, 6, 5)  =>return false => it is new chunk frag passing to mrecv_update_framents() for further processing
+	if (!ubetween(mrecv->cumulative_tsn, chunk_tsn, mrecv->highest_duplicated_tsn))
+		return false;
+
+	// frag list is empty which means this is first time received new chunk
 	if (mrecv->fragmented_data_chunks_list.empty())
 		return false;
 
+	// now chunk_tsn between any fragment boundary must be dup, otherwise must be new
+	for (segment32_t& seg : mrecv->fragmented_data_chunks_list)
+	{
+		if (ubetween(seg.start_tsn, chunk_tsn, seg.stop_tsn))
+		{
+			// Given cstna=2, chunk_tsn=5, received sequence 2-4.5-7...,  dups sequence lowest 0, highest 5 =>
+			// ubetween(0, 5, 2) false =>
+			// ubetween(2, 5, 5)  true => 
+			//loop1:
+			// ubetween(seg.start-4, 5, seg.stop-5) true => it is dup ,return true
+			return true;
+		}
+		if (uafter(chunk_tsn, seg.stop_tsn, chunk_tsn))
+		{
+			// Given cstna=2, chunk_tsn=6, received sequence 2-4.5-7...,  dups sequence lowest 0, highest 7 =>
+			// ubetween(0, 6, 2) false =>
+			// ubetween(2, 6, 7)  true => 
+			// loop1:
+			// ubetween(start4, 6, stop5) false => 
+			// uafter(6, stop5) true => it is new chunk, return false
+			return false;
+		}
+	}
+
+	// you should never reach here
 	return false;
 }
 void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
@@ -3560,25 +3598,18 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 			return 1;
 		}
 
-		/* TODO :  Duplicates : see Note in section 6.2 :
-		 Note: When a datagram arrives with duplicate DATA chunk(s) and no new
-		 DATA chunk(s), the receiver MUST immediately send a SACK with no
-		 delay. Normally this will occur when the original SACK was lost, and
-		 the peers RTO has expired. The duplicate TSN number(s) SHOULD be
-		 reported in the SACK as duplicate. */
-
 		EVENTLOG2(VERBOSE, "mrecv_process_data_chunk()::chunk_tsn %u, chunk_len %u", chunk_tsn, chunk_len);
-		if (mrecv_update_lowest_duplicate_chunk_tsn(mrecv, chunk_tsn))
-			/* tsn is even lower than the lowest_duplicated_tsn one received so far */
+		if (mrecv_before_lowest_duptsn(mrecv, chunk_tsn))
+			// tsn is even lower than the lowest_duplicated_tsn one received so far 
+			// it must be dup
 			mrecv_update_duplicates(mrecv, chunk_tsn);
-		else if (mrecv_update_highest_duplicate_chunk_tsn(mrecv, chunk_tsn))
+		else if (mrecv_after_highest_duptsn(mrecv, chunk_tsn))
 		{
-			/* tsn is even higher than the highest_duplicated_tsn one received so far */
-			mrecv->new_chunk_received = true;
+			// tsn is even higher than the highest_duplicated_tsn one received so far 
+			// it might be dup or new chunk, just pass it to mrecv_update_fragments() for further processing
 			bubbleup_ctsna = mrecv_update_fragments(mrecv, chunk_tsn);
 		}
 		else if (mrecv_chunk_is_duplicate(mrecv, chunk_tsn))
-			/* tsn is dup */
 			mrecv_update_duplicates(mrecv, chunk_tsn);
 		else
 			bubbleup_ctsna = mrecv_update_fragments(mrecv, chunk_tsn);
@@ -3586,10 +3617,21 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 		if (bubbleup_ctsna)
 			mrecv_bubbleup_ctsna(mrecv);
 
-		if (mrecv->new_chunk_received
-			&& mdlm_process_data_chunk((uchar*)data_chunk, chunk_len, ad_idx, chunk_flag & DCHUNK_FLAG_ORDER))
-			mrecv->new_chunk_received = false;
-		/* else: ABORT has been sent and the association (possibly) removed in callback! */
+		if (mrecv->new_chunk_received)
+		{
+			if (mdlm_process_data_chunk((uchar*)data_chunk, chunk_len, ad_idx, chunk_flag & DCHUNK_FLAG_ORDER))
+				mrecv->new_chunk_received = false;
+			/* else: ABORT has been sent and the association (possibly) removed in callback! */
+		}
+		else
+		{
+			/* TODO :  Duplicates : see Note in section 6.2 :
+			Note: When a datagram arrives with duplicate DATA chunk(s) and no new
+			DATA chunk(s), the receiver MUST immediately send a SACK with no
+			delay. Normally this will occur when the original SACK was lost, and
+			the peers RTO has expired. The duplicate TSN number(s) SHOULD be
+			reported in the SACK as duplicate. */
+		}
 	}
 	else
 	{
@@ -7929,7 +7971,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 
 	EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 	return geco_return_enum::good;
-	}
+}
 
 /* port management array */
 unsigned char portsSeized[65536];
