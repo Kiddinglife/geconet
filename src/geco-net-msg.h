@@ -574,16 +574,32 @@ struct padding_chunk_t
 	chunk_fixed_t chunk_header;
 	uchar variableParams[1];
 };
-struct network_packet_t
+
+struct packet_params_t
 {
-	uchar chunk_flags;
+	ushort chunk_flags; // ur has no ssn a
 	ushort stream_id;
 	ushort stream_sn;
-	uint data_length;
+	ushort src_path_id;//address we received this data chunk
+	uint data_length;// data chunk pdu length
 	uint tsn;
-	uint fromAddressIndex;
-	uchar data[0];
+
+	// used for free this packet_params_t
+	uint total_packet_bytes;//received length from mtra
+	uint released_bytes;//curr release bytes
+
+	char data[PMTU_HIGHEST];
 };
+
+// used for free pooled packet_params_t
+struct chunk_wrapper_t
+{
+	uchar* data;
+	bool can_free_at_once;//this is aseembled chunk we can delete for efficiency
+	uint chunklen;// chunk legth for this chunk
+	packet_params_t* packet_params_t; // where this chunk is located
+};
+
 /******************** some useful macros ************************/
 #define get_chunk_length(chunk)        (ntohs((chunk)->chunk_length))
 // Chunk classes for distribution and any other modules which might need it

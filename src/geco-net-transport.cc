@@ -382,7 +382,7 @@ int str2saddr(sockaddrunion *su, const char * str, ushort hs_port)
 #else
 		(su->sin.sin_addr.s_addr = inet_addr(str)) == INADDR_NONE ? ret = 0 : ret = 1;
 #endif
-}
+	}
 	else
 	{
 		EVENTLOG(VERBOSE, "no s_addr specified, set to all zeros\n");
@@ -567,7 +567,7 @@ void mtra_set_expected_event_on_fd(int sfd, int eventcb_type, int event_mask, cb
 	event_callbacks[index].userData = userData;
 	socket_despts_size_++;
 #endif
-	}
+}
 
 static int mtra_remove_socket_despt(int sfd)
 {
@@ -721,7 +721,8 @@ static void mtra_fire_event(int num_of_events)
 
 	//char* curr = internal_dctp_buffer;
 	// use pool buffer to save  mem copy
-	char* curr = (char*)geco_malloc_ext(PMTU_HIGHEST, __FILE__, __LINE__);
+	packet_params_t* rpk = (packet_params_t*)geco_malloc_ext(sizeof(packet_params_t), __FILE__, __LINE__);
+	char* curr = rpk->data;
 
 	//handle network events  individually right here
 	//socket_despts_size_ = socket fd size with stdin excluded
@@ -797,7 +798,10 @@ static void mtra_fire_event(int num_of_events)
 							  event_callbacks[i].action.socket_cb_fun(socket_despts[i].fd, curr, recvlen_, &src, &dest);
 
 						  if (recvlen_ > 0)
+						  {
+							  rpk->total_packet_bytes = recvlen_;
 							  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src, &dest);
+						  }
 						  break;
 
 					  case EVENTCB_TYPE_SCTP:
@@ -821,7 +825,10 @@ static void mtra_fire_event(int num_of_events)
 						  // port number is not USED_UDP_PORT, if so, just skip this msg
 						  // as if we never receive it
 						  if (recvlen_ > 0)
+						  {
+							  rpk->total_packet_bytes = recvlen_;
 							  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src, &dest);
+						  }
 
 						  break;
 
