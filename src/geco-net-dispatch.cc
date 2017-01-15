@@ -3551,22 +3551,95 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 	EVENTLOG1(VVERBOSE, "mrecv_bubbleup_ctsna()::after update,rxc->cumulative_tsn is now %u", mrecv->cumulative_tsn);
 }
 
-/// called from mrecv to forward received chunks to mdlm.
+/// called from mrecv to forward received reliable and ordered chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-bool mdlm_process_data_chunk(uchar* dataChunk, uint byteCount, ushort address_index, bool ordered)
+int mdlm_process_data_chunk(data_chunk_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
 {
-	static ushort datalength;
-	static invalid_stream_id_err_t error_info;
-	static delivery_data_t* d_chunk;
+	static delivery_data_t* dchunk;
 	static deliverman_controller_t* mdlm;
 
 	mdlm = mdi_read_mdlm();
-	assert(mdlm !=NULL);
-	
+	assert(mdlm != NULL);
+	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
+		return MULP_OUT_OF_RESOURCES;
 
+	// return error, when numReceiveStreams is exceeded 
+	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
+	if (dchunk->stream_id > mdlm->numReceiveStreams)
+	{
+		invalid_stream_id_err_t error_info;
+		error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
+		error_info.reserved = 0;
+		msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*)&error_info, sizeof(invalid_stream_id_err_t));
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_INVALID_STREAM_ID;
+	}
 
-	return true;
+	// return error, when no user data
+	dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
+	if (dchunk_pdu_len == 0)
+	{
+		msm_abort_channel(ECC_NO_USER_DATA, (uchar*)&dchunk->tsn, sizeof(uint));
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_NO_USER_DATA;
+	}
+
+	dchunk->data_length = dchunk_pdu_len;
+	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
+	dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
+	dchunk->fromAddressIndex = address_index;
+
+	mdlm->queuedBytes += dchunk_pdu_len;
+	mdlm->recvStreamActivated[dchunk->stream_id] = true;
+
+	return MULP_SUCCESS;
 }
+/// called from mrecv to forward received reliable and unordered chunks to mdlm.
+/// returns an error chunk to the peer, when the maximum stream id is exceeded !
+int mdlm_process_data_chunk(data_chunk_nossn_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
+{
+	static invalid_stream_id_err_t error_info;
+	static delivery_data_t* dchunk;
+	static deliverman_controller_t* mdlm;
+
+	mdlm = mdi_read_mdlm();
+	assert(mdlm != NULL);
+	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
+		return MULP_OUT_OF_RESOURCES;
+	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
+	return 0;
+}
+/// called from mrecv to forward received unreliable and ordered chunks to mdlm.
+/// returns an error chunk to the peer, when the maximum stream id is exceeded !
+int mdlm_process_data_chunk(data_chunk_notsn_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
+{
+	static invalid_stream_id_err_t error_info;
+	static delivery_data_t* dchunk;
+	static deliverman_controller_t* mdlm;
+
+	mdlm = mdi_read_mdlm();
+	assert(mdlm != NULL);
+	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
+		return MULP_OUT_OF_RESOURCES;
+	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
+	return 0;
+}
+/// called from mrecv to forward received unreliable and unordered chunks to mdlm.
+/// returns an error chunk to the peer, when the maximum stream id is exceeded !
+int mdlm_process_data_chunk(data_chunk_nossntsn_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
+{
+	static invalid_stream_id_err_t error_info;
+	static delivery_data_t* dchunk;
+	static deliverman_controller_t* mdlm;
+
+	mdlm = mdi_read_mdlm();
+	assert(mdlm != NULL);
+	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
+		return MULP_OUT_OF_RESOURCES;
+	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
+	return 0;
+}
+
 int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
 	static uint chunk_tsn;
@@ -3641,8 +3714,18 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
 		if (mrecv->new_chunk_received)
 		{
-			if (mdlm_process_data_chunk((uchar*)data_chunk, chunk_len, ad_idx, chunk_flag & DCHUNK_FLAG_ORDER))
-				mrecv->new_chunk_received = false;
+			if (chunk_flag & DCHUNK_FLAG_ORDER)
+			{
+				chunk_len -= DATA_CHUNK_FIXED_SIZES;
+				if (mdlm_process_data_chunk((data_chunk_t*)data_chunk, chunk_len, ad_idx))
+					mrecv->new_chunk_received = false;
+			}
+			else
+			{
+				chunk_len -= DATA_CHUNK_FIXED_NOSSN_SIZES;
+				if (mdlm_process_data_chunk((data_chunk_nossn_t*)data_chunk, chunk_len, ad_idx))
+					mrecv->new_chunk_received = false;
+			}
 			/* else: ABORT has been sent and the association (possibly) removed in callback! */
 		}
 		else
@@ -3657,6 +3740,9 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 	}
 	else
 	{
+		// there is no retx for unreliable chunk, so any chunks received are treated as "new chunk"
+		mrecv->new_chunk_received = true;
+
 		// deliver to reordering function for further processing
 		if (current_rwnd == 0 || assoc_state == ChannelState::ShutdownReceived
 			|| assoc_state == ChannelState::ShutdownAckSent)
@@ -3675,15 +3761,18 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 		// if unreliable mesg  is framented in sender, the fragmented chunks are sent as reliable
 		// and (ordered or unordered same to original msg).
 		// so right here, we can safely bypass assembling and reliabling function
-		if (chunk_flag & DCHUNK_FLAG_UNORDER)
+		if (mrecv->new_chunk_received)
 		{
-			// deliver to ulp right now
-		}
-		else
-		{
-			mrecv_update_fragments(mrecv, chunk_tsn);
-			if (mrecv->new_chunk_received && mdlm_process_data_chunk((uchar*)data_chunk, chunk_len, ad_idx, true))
-				mrecv->new_chunk_received = false;
+			if (chunk_flag & DCHUNK_FLAG_ORDER)
+			{
+				chunk_len -= DATA_CHUNK_FIXED_NOTSN_SIZES;
+				mdlm_process_data_chunk((data_chunk_notsn_t*)data_chunk, chunk_len, ad_idx);
+			}
+			else
+			{
+				chunk_len -= DATA_CHUNK_FIXED_NOSSNTSN_SIZES;
+				mdlm_process_data_chunk((data_chunk_nossntsn_t*)data_chunk, chunk_len, ad_idx);
+			}
 			/* else: ABORT has been sent and the association (possibly) removed in callback! */
 		}
 	}
@@ -8030,7 +8119,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 

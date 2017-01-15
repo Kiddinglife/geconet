@@ -130,6 +130,14 @@ struct data_chunk_fixed_t
 	ushort stream_identity;
 	ushort stream_seq_num;  // unordered msg has NO this field
 };
+
+union data_chunk_union
+{
+	data_chunk_t* ro;
+	data_chunk_notsn_t* uro;
+	data_chunk_nossn_t* ruo;
+	data_chunk_nossntsn_t* uruo;
+};
 struct data_chunk_t
 {
 	chunk_fixed_t comm_chunk_hdr;
@@ -577,27 +585,10 @@ struct padding_chunk_t
 
 struct packet_params_t
 {
-	ushort chunk_flags; // ur has no ssn a
-	ushort stream_id;
-	ushort stream_sn;
-	ushort src_path_id;//address we received this data chunk
-	uint data_length;// data chunk pdu length
-	uint tsn;
-
 	// used for free this packet_params_t
 	uint total_packet_bytes;//received length from mtra
 	uint released_bytes;//curr release bytes
-
 	char data[PMTU_HIGHEST];
-};
-
-// used for free pooled packet_params_t
-struct chunk_wrapper_t
-{
-	uchar* data;
-	bool can_free_at_once;//this is aseembled chunk we can delete for efficiency
-	uint chunklen;// chunk legth for this chunk
-	packet_params_t* packet_params_t; // where this chunk is located
 };
 
 /******************** some useful macros ************************/

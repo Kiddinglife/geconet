@@ -387,9 +387,11 @@ struct delivery_data_t
 	uint tsn;
 	ushort stream_id;
 	ushort stream_sn;
-	uint protocolId;
 	uint fromAddressIndex;
-	uchar data[MAX_DATA_CHUNK_VALUE_SIZE];
+
+	uchar* data;
+	bool can_free_at_once;//this is aseembled chunk we can delete for efficiency
+	packet_params_t* packet_params_t; // where this chunk is located
 };
 
 /*stores several chunks that can be delivered to the user as one message*/
