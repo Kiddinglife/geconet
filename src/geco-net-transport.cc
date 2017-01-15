@@ -699,6 +699,7 @@ static int mtra_poll_timers()
 	return UINT64_MAX == tout ? (int)0 : (int)(tout / stamps_per_ms_double());
 }
 
+extern packet_params_t* g_packet_params;
 static void mtra_fire_event(int num_of_events)
 {
 	int i = 0;
@@ -721,8 +722,8 @@ static void mtra_fire_event(int num_of_events)
 
 	//char* curr = internal_dctp_buffer;
 	// use pool buffer to save  mem copy
-	packet_params_t* rpk = (packet_params_t*)geco_malloc_ext(sizeof(packet_params_t), __FILE__, __LINE__);
-	char* curr = rpk->data;
+	g_packet_params = (packet_params_t*)geco_malloc_ext(sizeof(packet_params_t), __FILE__, __LINE__);
+	char* curr = g_packet_params->data;
 
 	//handle network events  individually right here
 	//socket_despts_size_ = socket fd size with stdin excluded
@@ -799,7 +800,7 @@ static void mtra_fire_event(int num_of_events)
 
 						  if (recvlen_ > 0)
 						  {
-							  rpk->total_packet_bytes = recvlen_;
+							  g_packet_params->total_packet_bytes = recvlen_;
 							  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src, &dest);
 						  }
 						  break;
@@ -826,7 +827,7 @@ static void mtra_fire_event(int num_of_events)
 						  // as if we never receive it
 						  if (recvlen_ > 0)
 						  {
-							  rpk->total_packet_bytes = recvlen_;
+							  g_packet_params->total_packet_bytes = recvlen_;
 							  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src, &dest);
 						  }
 

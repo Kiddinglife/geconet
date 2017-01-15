@@ -389,7 +389,7 @@ struct delivery_data_t
 	ushort stream_sn;
 	uint fromAddressIndex;
 
-	uchar* data;
+	uchar* data; // usr data this is assigned from data chunk value
 	bool can_free_at_once;//this is aseembled chunk we can delete for efficiency
 	packet_params_t* packet_params_t; // where this chunk is located
 };

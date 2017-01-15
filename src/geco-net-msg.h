@@ -126,18 +126,11 @@ struct chunk_fixed_t
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
 struct data_chunk_fixed_t
 {
-	uint trans_seq_num;  // unrealiable msg has NO this field
 	ushort stream_identity;
 	ushort stream_seq_num;  // unordered msg has NO this field
+	uint trans_seq_num;  // unrealiable msg has NO this field
 };
 
-union data_chunk_union
-{
-	data_chunk_t* ro;
-	data_chunk_notsn_t* uro;
-	data_chunk_nossn_t* ruo;
-	data_chunk_nossntsn_t* uruo;
-};
 struct data_chunk_t
 {
 	chunk_fixed_t comm_chunk_hdr;

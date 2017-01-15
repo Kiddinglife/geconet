@@ -107,8 +107,8 @@ geco_instance_t *curr_geco_instance_;
 /// whenever an external event (ULP-call, socket-event or timer-event) this variable must contain the addressed channel. 
 /// This pointer must be reset to null after the event has been handled.*/
 geco_channel_t *curr_channel_;
-
 static int mdi_send_sfd_;
+packet_params_t* g_packet_params;
 
 /// these one-shot state variables are so frequently used in recv_gco_packet()  to improve performances 
 int* curr_bundle_chunks_send_addr_ = 0;
@@ -3551,6 +3551,10 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 	EVENTLOG1(VVERBOSE, "mrecv_bubbleup_ctsna()::after update,rxc->cumulative_tsn is now %u", mrecv->cumulative_tsn);
 }
 
+bool mdlm_sort_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
+{
+	return ubefore(one->tsn, two->tsn);
+}
 /// called from mrecv to forward received reliable and ordered chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(data_chunk_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
@@ -3584,21 +3588,23 @@ int mdlm_process_data_chunk(data_chunk_t* dataChunk, uint dchunk_pdu_len, ushort
 		return MULP_NO_USER_DATA;
 	}
 
+	dchunk->data = dataChunk->chunk_value;
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
 	dchunk->fromAddressIndex = address_index;
-
+	dchunk->packet_params_t = g_packet_params;
 	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recvStreamActivated[dchunk->stream_id] = true;
-
+	const auto& upper = std::upper_bound(mdlm->packets.begin(), mdlm->packets.end(), dchunk,
+		mdlm_sort_delivery_data_cmp);
+	mdlm->packets.insert(upper, dchunk);
 	return MULP_SUCCESS;
 }
 /// called from mrecv to forward received reliable and unordered chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(data_chunk_nossn_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
 {
-	static invalid_stream_id_err_t error_info;
 	static delivery_data_t* dchunk;
 	static deliverman_controller_t* mdlm;
 
@@ -3606,14 +3612,44 @@ int mdlm_process_data_chunk(data_chunk_nossn_t* dataChunk, uint dchunk_pdu_len, 
 	assert(mdlm != NULL);
 	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
 		return MULP_OUT_OF_RESOURCES;
+
+	// return error, when numReceiveStreams is exceeded 
 	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-	return 0;
+	if (dchunk->stream_id > mdlm->numReceiveStreams)
+	{
+		invalid_stream_id_err_t error_info;
+		error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
+		error_info.reserved = 0;
+		msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*)&error_info, sizeof(invalid_stream_id_err_t));
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_INVALID_STREAM_ID;
+	}
+
+	// return error, when no user data
+	dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
+	if (dchunk_pdu_len == 0)
+	{
+		msm_abort_channel(ECC_NO_USER_DATA);
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_NO_USER_DATA;
+	}
+
+	dchunk->data = dataChunk->chunk_value;
+	dchunk->data_length = dchunk_pdu_len;
+	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
+	dchunk->fromAddressIndex = address_index;
+	dchunk->packet_params_t = g_packet_params;
+	mdlm->queuedBytes += dchunk_pdu_len;
+	mdlm->recvStreamActivated[dchunk->stream_id] = true;
+	const auto& upper = std::upper_bound(mdlm->packets.begin(), mdlm->packets.end(), dchunk,
+		mdlm_sort_delivery_data_cmp);
+	mdlm->packets.insert(upper, dchunk);
+	return MULP_SUCCESS;
 }
 /// called from mrecv to forward received unreliable and ordered chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(data_chunk_notsn_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
 {
-	static invalid_stream_id_err_t error_info;
 	static delivery_data_t* dchunk;
 	static deliverman_controller_t* mdlm;
 
@@ -3621,14 +3657,44 @@ int mdlm_process_data_chunk(data_chunk_notsn_t* dataChunk, uint dchunk_pdu_len, 
 	assert(mdlm != NULL);
 	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
 		return MULP_OUT_OF_RESOURCES;
+
+	// return error, when numReceiveStreams is exceeded 
 	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-	return 0;
+	if (dchunk->stream_id > mdlm->numReceiveStreams)
+	{
+		invalid_stream_id_err_t error_info;
+		error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
+		error_info.reserved = 0;
+		msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*)&error_info, sizeof(invalid_stream_id_err_t));
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_INVALID_STREAM_ID;
+	}
+
+	// return error, when no user data
+	if (dchunk_pdu_len == 0)
+	{
+		msm_abort_channel(ECC_NO_USER_DATA);
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_NO_USER_DATA;
+	}
+
+	dchunk->data = dataChunk->chunk_value;
+	dchunk->data_length = dchunk_pdu_len;
+	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
+	dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
+	dchunk->fromAddressIndex = address_index;
+	dchunk->packet_params_t = g_packet_params;
+	mdlm->queuedBytes += dchunk_pdu_len;
+	mdlm->recvStreamActivated[dchunk->stream_id] = true;
+	const auto& upper = std::upper_bound(mdlm->packets.begin(), mdlm->packets.end(), dchunk,
+		mdlm_sort_delivery_data_cmp);
+	mdlm->packets.insert(upper, dchunk);
+	return MULP_SUCCESS;
 }
 /// called from mrecv to forward received unreliable and unordered chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(data_chunk_nossntsn_t* dataChunk, uint dchunk_pdu_len, ushort address_index)
 {
-	static invalid_stream_id_err_t error_info;
 	static delivery_data_t* dchunk;
 	static deliverman_controller_t* mdlm;
 
@@ -3636,8 +3702,38 @@ int mdlm_process_data_chunk(data_chunk_nossntsn_t* dataChunk, uint dchunk_pdu_le
 	assert(mdlm != NULL);
 	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
 		return MULP_OUT_OF_RESOURCES;
+
+	// return error, when numReceiveStreams is exceeded 
 	dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-	return 0;
+	if (dchunk->stream_id > mdlm->numReceiveStreams)
+	{
+		invalid_stream_id_err_t error_info;
+		error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
+		error_info.reserved = 0;
+		msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*)&error_info, sizeof(invalid_stream_id_err_t));
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_INVALID_STREAM_ID;
+	}
+
+	// return error, when no user data
+	if (dchunk_pdu_len == 0)
+	{
+		msm_abort_channel(ECC_NO_USER_DATA);
+		geco_free_ext(dchunk, __FILE__, __LINE__);
+		return MULP_NO_USER_DATA;
+	}
+
+	dchunk->data = dataChunk->chunk_value;
+	dchunk->data_length = dchunk_pdu_len;
+	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
+	dchunk->fromAddressIndex = address_index;
+	dchunk->packet_params_t = g_packet_params;
+	mdlm->queuedBytes += dchunk_pdu_len;
+	mdlm->recvStreamActivated[dchunk->stream_id] = true;
+	auto& upper = std::upper_bound(mdlm->packets.begin(), mdlm->packets.end(), dchunk,
+		mdlm_sort_delivery_data_cmp);
+	mdlm->packets.insert(upper, dchunk);
+	return MULP_SUCCESS;
 }
 
 int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
@@ -8119,7 +8215,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-}
+	}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
