@@ -3551,6 +3551,18 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 	EVENTLOG1(VVERBOSE, "mrecv_bubbleup_ctsna()::after update,rxc->cumulative_tsn is now %u", mrecv->cumulative_tsn);
 }
 
+/**
+*  indicates new data has arrived from peer (chapter 10.2.) destined for the ULP
+*
+*  @param streamID  received data belongs to this stream
+*  @param  length   so many bytes have arrived (may be used to reserve space)
+*  @param  protoID  the protocol ID of the arrived payload
+*  @param  unordered  unordered flag (true==1==unordered, false==0==normal,numbered chunk)
+*/
+void mdi_on_peer_data_arrive(uint length, ushort streamID,ushort* streamSN, uint* tsn)
+{
+
+}
 bool mdlm_sort_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
 {
 	return ubefore(one->tsn, two->tsn);
@@ -3723,16 +3735,9 @@ int mdlm_process_data_chunk(data_chunk_nossntsn_t* dataChunk, uint dchunk_pdu_le
 		return MULP_NO_USER_DATA;
 	}
 
-	dchunk->data = dataChunk->chunk_value;
-	dchunk->data_length = dchunk_pdu_len;
-	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
-	dchunk->fromAddressIndex = address_index;
-	dchunk->packet_params_t = g_packet_params;
-	mdlm->queuedBytes += dchunk_pdu_len;
-	mdlm->recvStreamActivated[dchunk->stream_id] = true;
-	auto& upper = std::upper_bound(mdlm->packets.begin(), mdlm->packets.end(), dchunk,
-		mdlm_sort_delivery_data_cmp);
-	mdlm->packets.insert(upper, dchunk);
+	// call data arrive callback immeditely
+	mdi_on_peer_data_arrive(dchunk_pdu_len, dchunk->stream_id, NULL,NULL);
+
 	return MULP_SUCCESS;
 }
 
