@@ -569,10 +569,10 @@ struct internal_data_chunk_t
  //extern bool safe_after(uint seq1, uint seq2);
  //extern bool safe_before(ushort seq1, ushort seq2);
  //extern bool safe_after(ushort seq1, ushort seq2);
-#define ubefore(seq1,seq2) (((int)((seq1)-(seq2)))<0)
-#define uafter(seq1,seq2) (((int)((seq2)-(seq1)))<0)
-#define sbefore(seq1,seq2) (((short)((seq1)-(seq2)))<0)
-#define safter(seq1,seq2) (((short)((seq2)-(seq1)))<0)
+#define ubefore(seq1,seq2) (((int)((uint)(seq1)-(uint)(seq2)))<0)
+#define uafter(seq1,seq2) (((int)((uint)(seq2)-(uint)(seq1)))<0)
+#define sbefore(seq1,seq2) (((short)((ushort)(seq1)-(ushort)(seq2)))<0)
+#define safter(seq1,seq2) (((short)((ushort)(seq2)-(ushort)(seq1)))<0)
 
 // if s1 <= s2 <= s3
 // @pre seq1 <= seq3

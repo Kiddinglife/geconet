@@ -43,8 +43,8 @@
 #define MULP_INSTANCE_IN_USE                -16
 #define MULP_INVALID_STREAM_ID                -17
 #define MULP_NO_USER_DATA                -17
+#define MULP_PROTOCOL_VIOLATION  -18
 #define MULP_SPECIFIC_FUNCTION_ERROR        1
-
 /* the possible 7 states of an association */
 enum ChannelState
 {
