@@ -698,7 +698,7 @@ static int mtra_poll_timers()
 	timeout_t tout = timeouts_timeout(tos_);
 	return UINT64_MAX == tout ? (int)0 : (int)(tout / stamps_per_ms_double());
 }
-
+struct packet_params_t;
 extern packet_params_t* g_packet_params;
 static void mtra_fire_event(int num_of_events)
 {
