@@ -434,7 +434,7 @@ struct deliverman_controller_t
     uint queuedBytes;
     bool unreliable;
     bool unordered;
-    std::list<delivery_data_t*> ro;  //!< list for all reliable and ordered data chunk
+    std::list<delivery_data_t*> rchunks;  //!< list for all reliable and ordered data chunk
     std::list<delivery_data_t*> ruo;  //!< list for all reliable and unordered chunks
     std::list<delivery_data_t*> uro;  //!< list for all unreliable and ordered data chunk
     std::list<delivery_data_t*> uruo;  //!< list for all unreliable and unordered chunks

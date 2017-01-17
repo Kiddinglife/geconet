@@ -3602,8 +3602,8 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
 	dchunk->packet_params_t = g_packet_params;
 	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recvStreamActivated[dchunk->stream_id] = true;
-	const auto& upper = std::upper_bound(mdlm->ro.begin(), mdlm->ro.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
-	mdlm->ro.insert(upper, dchunk);
+	const auto& upper = std::upper_bound(mdlm->rchunks.begin(), mdlm->rchunks.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
+	mdlm->rchunks.insert(upper, dchunk);
 	return MULP_SUCCESS;
 }
 
@@ -3772,6 +3772,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 	static ushort currentSSN;
 	static ushort currentTSN;
 	static ushort nrOfChunks;
+	static bool unordered;
 	static bool complete;
 	static uint i;
 	static uint itemPosition;
@@ -3787,13 +3788,15 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 	//	mdlm->recv_streams[i].highestSSNused = false;
 	//}
 
-	// search complete pdu from ro chunk list
-	for (auto itr = mdlm->ro.begin(); itr != mdlm->ro.end();)
+	// search complete pdu from rchunks chunk list
+	for (auto itr = mdlm->rchunks.begin(); itr != mdlm->rchunks.end();)
 	{
 		d_chunk = *itr;
 		currentTSN = d_chunk->tsn;
 		currentSID = d_chunk->stream_id;
 		currentSSN = d_chunk->stream_sn;
+		unordered = d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER;
+
 		EVENTLOG3(VERBOSE, "Handling chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
 		// @?
@@ -3804,8 +3807,11 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 			return MULP_PROTOCOL_VIOLATION;
 		}
 
-		mdlm->recv_streams[currentSID].highestSSN = currentSSN;
-		mdlm->recv_streams[currentSID].highestSSNused = true;
+		if (!unordered)
+		{
+			mdlm->recv_streams[currentSID].highestSSN = currentSSN;
+			mdlm->recv_streams[currentSID].highestSSNused = true;
+		}
 
 		// start assemble fragmented ulp msg
 		if (d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG)
@@ -3816,8 +3822,8 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 			firstItemItr = itr;
 			firstTSN = d_chunk->tsn;
 
-			if (sbefore(currentSSN, mdlm->recv_streams[currentSID].nextSSN)
-				|| currentSSN == mdlm->recv_streams[currentSID].nextSSN)
+			// only ordered or unordered chunk wanted
+			if (unordered || (sbefore(currentSSN, mdlm->recv_streams[currentSID].nextSSN) || currentSSN == mdlm->recv_streams[currentSID].nextSSN))
 			{
 				if (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
 				{
@@ -3831,11 +3837,62 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 					complete = true;
 				}
 
-				// reassemble segments chunks to a completed pdu
-				while (itr != mdlm->ro.end() && (!complete))
+				// find and reassemble segmented chunks
+				while (!complete)
 				{
-					// handle segmented pdu
+					++itr;
+					if (itr == mdlm->rchunks.end()) break;
 
+					d_chunk = *itr;
+					nrOfChunks++;
+
+					if (d_chunk->stream_id == currentSID &&
+						(d_chunk->stream_sn == currentSSN || unordered) &&
+						d_chunk->tsn == firstTSN + nrOfChunks - 1)
+					{
+						// tsn 1 2 34
+						// ssn 2 1 00
+						// sid  0 1 00
+						// nextSSN is initially set to 0, currentSSN = 0
+						// loop1: sbefore(2,0) false || 2==0 false =>false
+						// loop2: sbefore(1,0) false || 1==0 false =>false
+						// loop3: sbefore(0,0) false || 0==0 true =>true
+						// !completed =>
+						// currentTSN = 3,    currentSID = 0,                currentSSN = 0
+						// d_chunk->tsn = 4,d_chunk->stream_id=0,  d_chunk->stream_sn=0
+						// firstTSn3 + nrOfChunks2 -1 == d_chunk->tsn = 4 => true
+						// 
+						if (d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG)
+						{
+							EVENTLOG1(NOTICE, "Multiple Begin segment chunk found with SSN: %u", d_chunk->stream_sn);
+							msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+							return MULP_PROTOCOL_VIOLATION;
+						}
+						if (d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER != unordered)
+						{
+							EVENTLOG1(NOTICE, "Mix Ordered and unordered Segments found with SSN: %u", d_chunk->stream_sn);
+							msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+							return MULP_PROTOCOL_VIOLATION;
+						}
+						if (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
+						{
+							EVENTLOG(VVERBOSE, "Complete segmented PDU found");
+							complete = true;
+						}
+					}
+					else
+					{
+						if (d_chunk->tsn == firstTSN + nrOfChunks - 1)
+						{
+							// tsn-cotinueus segments must have same ssn and sid. if not, send abort
+							EVENTLOG1(NOTICE,
+								"tsn-cotinueus segment found but with different ssn or sid", d_chunk->stream_sn);
+							msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+							return MULP_PROTOCOL_VIOLATION;
+						}
+						EVENTLOG(NOTICE, "have to wait for more segements to reassemble  segments");
+						break;
+					}
 				}
 
 				// found an completed pdu
@@ -3857,12 +3914,12 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 						return MULP_OUT_OF_RESOURCES;
 					}
 
-					// remove complete chunk(s) from ro list and append them to this pdu's ddata
+					// remove complete chunk(s) from rchunks list and append them to this pdu's ddata
 					for (i = 0, itr = firstItemItr; i < nrOfChunks; i++)
 					{
 						d_pdu->ddata[i] = *itr;
 						d_pdu->total_length += d_pdu->ddata[i]->data_length;
-						mdlm->ro.erase(itr++);
+						mdlm->rchunks.erase(itr++);
 					}
 					assert(std::distance(firstItemItr, itr) == nrOfChunks - 1);
 
@@ -3875,7 +3932,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 						mdlm->recv_streams[d_pdu->ddata[0]->stream_id].nextSSN++;
 
 					nrOfChunks = 0;
-					firstItemItr = mdlm->ro.end();
+					firstItemItr = mdlm->rchunks.end();
 					firstTSN = 0;
 					currentSID = 0;
 					currentSSN = 0;
@@ -3886,7 +3943,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 					// must be end of loop not reaaly need this
 					// as they are reset at loop beginning
 					//nrOfChunks = 0;
-					//firstItemItr = mdlm->ro.end();
+					//firstItemItr = mdlm->rchunks.end();
 					//firstTSN = 0;
 					//currentSID = 0;
 					//currentSSN = 0;
@@ -3902,14 +3959,14 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 				// 1 <= 0 false =>
 				// no begin chunks any more not really need this as they are reset at loop beginning
 				nrOfChunks = 0;
-				firstItemItr = mdlm->ro.end();
+				firstItemItr = mdlm->rchunks.end();
 				firstTSN = 0;
 				currentSID = 0;
 				currentSSN = 0;
 			}
 		}
 	}
-	
+
 	for (auto itr = mdlm->uro.begin(); itr != mdlm->uro.end();)
 	{
 		d_chunk = *itr;
