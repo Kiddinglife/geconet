@@ -3645,8 +3645,8 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossn_t* d
 	dchunk->packet_params_t = g_packet_params;
 	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recvStreamActivated[dchunk->stream_id] = true;
-	const auto& upper = std::upper_bound(mdlm->ruo.begin(), mdlm->ruo.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
-	mdlm->ruo.insert(upper, dchunk);
+	const auto& upper = std::upper_bound(mdlm->rchunks.begin(), mdlm->rchunks.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
+	mdlm->rchunks.insert(upper, dchunk);
 	return MULP_SUCCESS;
 }
 
@@ -3782,11 +3782,12 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 	complete = false;
 	currentSID = currentSSN = nrOfChunks = 0;
 
-	//for (i = 0; i < mdlm->numReceiveStreams; i++)
-	//{
-	//	mdlm->recv_streams[i].highestSSN = 0;
-	//	mdlm->recv_streams[i].highestSSNused = false;
-	//}
+	// one-off settings will be reset everytime mdlm_search_ready_pdu() is called
+	for (i = 0; i < mdlm->numReceiveStreams; i++)
+	{
+		mdlm->recv_streams[i].highestSSN = 0;
+		mdlm->recv_streams[i].highestSSNused = false;
+	}
 
 	// search complete pdu from rchunks chunk list
 	for (auto itr = mdlm->rchunks.begin(); itr != mdlm->rchunks.end();)
@@ -3799,7 +3800,9 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 
 		EVENTLOG3(VERBOSE, "Handling chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
-		// @?
+		// say we have ssn 0 1 2  5 8
+		// at beginning, highestSSN =0, csn = 0
+		// higest <= currentSSN => safter(higest, currentSSN)
 		if (mdlm->recv_streams[currentSID].highestSSNused && safter(mdlm->recv_streams[currentSID].highestSSN, currentSSN))
 		{
 			EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
@@ -3970,17 +3973,130 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 	for (auto itr = mdlm->uro.begin(); itr != mdlm->uro.end();)
 	{
 		d_chunk = *itr;
-		currentTSN = d_chunk->tsn;
 		currentSID = d_chunk->stream_id;
 		currentSSN = d_chunk->stream_sn;
 		EVENTLOG3(VERBOSE, "Handling uro chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
-		if (safter(currentSSN, mdlm->recv_streams[currentSID].nextSSN)
-			|| currentSSN == mdlm->recv_streams[currentSID].nextSSN)
+		// say we have ssn 0 1 2  5 8
+		// at beginning, highestSSN =0, csn = 0
+		// higest <= currentSSN => safter(higest, currentSSN)
+		if (mdlm->recv_streams[currentSID].highestSSNused && safter(mdlm->recv_streams[currentSID].highestSSN, currentSSN))
 		{
-			// only use up-to-date uro chunk, drop the out-of-date ones
+			EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
+			msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+			return MULP_PROTOCOL_VIOLATION;
+		}
+
+		mdlm->recv_streams[currentSID].highestSSN = currentSSN;
+		mdlm->recv_streams[currentSID].highestSSNused = true;
+
+		// start assemble fragmented ulp msg
+		if (d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG && d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
+		{
+			EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment");
+			nrOfChunks = 1; // common-case: not segment chunk
+
+			// only ordered or unordered chunk wanted
+			if ((safter(currentSSN, mdlm->recv_streams[currentSID].newestSSN) || currentSSN == mdlm->recv_streams[currentSID].newestSSN))
+			{
+				// when loop ends, this will be set to highest ssn of the uro chunk
+				mdlm->recv_streams[currentSID].newestSSN = currentSSN;
+
+				if ((d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__)) == NULL)
+					return MULP_OUT_OF_RESOURCES;
+
+				d_pdu->number_of_chunks = nrOfChunks;
+				d_pdu->read_position = 0;
+				d_pdu->read_chunk = 0;
+				d_pdu->chunk_position = 0;
+				d_pdu->total_length = 0;
+
+				if ((d_pdu->ddata = (delivery_data_t**)geco_malloc_ext(nrOfChunks * sizeof(delivery_data_t*), __FILE__,
+					__LINE__)) == NULL)
+				{
+					geco_free_ext(d_pdu, __FILE__, __LINE__);
+					return MULP_OUT_OF_RESOURCES;
+				}
+
+				// remove complete chunk(s) from rchunks list and append them to this pdu's ddata
+				for (i = 0; i < nrOfChunks; i++)
+				{
+					d_pdu->ddata[i] = *itr;
+					d_pdu->total_length += d_pdu->ddata[i]->data_length;
+				}
+				assert(std::distance(firstItemItr, itr) == nrOfChunks - 1);
+
+				// insert this pdu to prepdu list and update ssn if possible
+				// ddata stored all segmented chunks that have same sid
+				// so we use ddata[0]->stream_id to locate the stream
+				// all pdus in prePduList are continueous and ordered by ssn 
+				mdlm->recv_streams[d_pdu->ddata[0]->stream_id].prePduList.push_back(d_pdu);
+
+				nrOfChunks = 0;
+				currentSID = 0;
+				currentSSN = 0;
+			}
+		}
+		else
+		{
+			EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::found segmented unreliable chunk");
+			msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+			return MULP_PROTOCOL_VIOLATION;
 		}
 	}
+	mdlm->uro.clear();
+
+	for (auto itr = mdlm->uruo.begin(); itr != mdlm->uruo.end();)
+	{
+		d_chunk = *itr;
+		currentSID = d_chunk->stream_id;
+		EVENTLOG(VERBOSE, "Handling uruo chunk with tsn");
+
+		if (d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG && d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
+		{
+			EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment");
+			nrOfChunks = 1; // common-case: not segment chunk
+
+			if ((d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__)) == NULL)
+				return MULP_OUT_OF_RESOURCES;
+
+			d_pdu->number_of_chunks = nrOfChunks;
+			d_pdu->read_position = 0;
+			d_pdu->read_chunk = 0;
+			d_pdu->chunk_position = 0;
+			d_pdu->total_length = 0;
+
+			if ((d_pdu->ddata = (delivery_data_t**)geco_malloc_ext(nrOfChunks * sizeof(delivery_data_t*), __FILE__,
+				__LINE__)) == NULL)
+			{
+				geco_free_ext(d_pdu, __FILE__, __LINE__);
+				return MULP_OUT_OF_RESOURCES;
+			}
+
+			// remove complete chunk(s) from rchunks list and append them to this pdu's ddata
+			for (i = 0; i < nrOfChunks; i++)
+			{
+				d_pdu->ddata[i] = *itr;
+				d_pdu->total_length += d_pdu->ddata[i]->data_length;
+			}
+			assert(std::distance(firstItemItr, itr) == nrOfChunks - 1);
+
+			// insert this pdu to prepdu list and update ssn if possible
+			// ddata stored all segmented chunks that have same sid
+			// so we use ddata[0]->stream_id to locate the stream
+			// all pdus in prePduList are continueous and ordered by ssn 
+			mdlm->recv_streams[d_pdu->ddata[0]->stream_id].prePduList.push_back(d_pdu);
+			nrOfChunks = 0;
+		}
+		else
+		{
+			EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::found segmented unreliable chunk");
+			msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+			return MULP_PROTOCOL_VIOLATION;
+		}
+	}
+	mdlm->uruo.clear();
+
 	return 1;
 }
 
