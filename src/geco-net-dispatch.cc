@@ -3742,7 +3742,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossntsn_t
  *  @param  protoID  the protocol ID of the arrived payload
  *  @param  unordered  unordered flag (true==1==unordered, false==0==normal,numbered chunk)
  */
-void mdi_on_peer_data_arrive(uint* tsn, ushort streamID, ushort* streamSN, uint length)
+void mdi_on_peer_data_arrive(int64 tsn, ushort streamID, int streamSN, uint length)
 {
 
 }
@@ -3756,7 +3756,8 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 			for (auto dpdu : mdlm->recv_streams[i].prePduList)
 			{
 				mdlm->recv_streams[i].pduList.push_back(dpdu);
-				//mdi_on_peer_data_arrive(dpdu->ddata[]);
+				mdi_on_peer_data_arrive(dpdu->ddata[0]->tsn, i, dpdu->ddata[0]->stream_sn, 
+					dpdu->total_length);
 			}
 		}
 	}
