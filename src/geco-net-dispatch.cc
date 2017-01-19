@@ -3618,30 +3618,17 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
   return MULP_SUCCESS;
 }
 
-/// called from mrecv to forward received rchunks to mdlm.
+/// called from mrecv to forward received rchunks (no sid and ssn) to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossn_t* dataChunk, uint dchunk_pdu_len,
+int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk, uint dchunk_pdu_len,
     ushort address_index)
 {
   static delivery_data_t* dchunk;
   if ((dchunk = (delivery_data_t*) geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
     return MULP_OUT_OF_RESOURCES;
 
-  // return error, when numReceiveStreams is exceeded
-  dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-  if (dchunk->stream_id > mdlm->numReceiveStreams)
-  {
-    invalid_stream_id_err_t error_info;
-    error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
-    error_info.reserved = 0;
-    msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*) &error_info, sizeof(invalid_stream_id_err_t));
-    geco_free_ext(dchunk, __FILE__, __LINE__);
-    return MULP_INVALID_STREAM_ID;
-  }
-
   // return error, when no user data
-  dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
-  dchunk_pdu_len -= DATA_CHUNK_FIXED_NOSSN_SIZES;
+  dchunk_pdu_len -= DCHUNK_R_FIXED_SIZES;
   if (dchunk_pdu_len == 0)
   {
     msm_abort_channel(ECC_NO_USER_DATA);
@@ -3649,6 +3636,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossn_t* d
     return MULP_NO_USER_DATA;
   }
 
+  dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
   dchunk->data = dataChunk->chunk_value;
   dchunk->data_length = dchunk_pdu_len;
   dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
@@ -3656,15 +3644,15 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossn_t* d
   dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[dchunk->stream_id] = true;
   const auto& upper = std::upper_bound(mdlm->r.begin(), mdlm->r.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
   mdlm->r.insert(upper, dchunk);
+
   return MULP_SUCCESS;
 }
 
 /// called from mrecv to forward received uro and urs chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_notsn_t* dataChunk, uint dchunk_pdu_len,
+int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_uros_t* dataChunk, uint dchunk_pdu_len,
     ushort address_index)
 {
   static delivery_data_t* dchunk;
@@ -3709,36 +3697,24 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_notsn_t* d
   mdlm->queuedBytes += dchunk_pdu_len;
   mdlm->recvStreamActivated[dchunk->stream_id] = true;
 
-  const auto& upper = std::upper_bound(mdlm->recv_streams[dchunk->stream_id].prePduList.begin(), mdlm->recv_streams[dchunk->stream_id].prePduList.end(), dchunk, mdlm_sort_ssn_delivery_data_cmp);
-  mdlm->recv_streams[dchunk->stream_id].prePduList.insert(upper, dpdu);
+  // REORDERING BASED ON SSN
+  //const auto& upper = std::upper_bound(mdlm->recv_streams[dchunk->stream_id].prePduList.begin(), mdlm->recv_streams[dchunk->stream_id].prePduList.end(), dchunk, mdlm_sort_ssn_delivery_data_cmp);
+  //mdlm->recv_streams[dchunk->stream_id].prePduList.insert(upper, dpdu);
 
   return MULP_SUCCESS;
 }
 
 /// called from mrecv to forward received urchunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossntsn_t* dataChunk, uint dchunk_pdu_len,
-    ushort address_index)
+int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChunk, uint dchunk_len,ushort address_index)
 {
   static delivery_data_t* dchunk;
   if ((dchunk = (delivery_data_t*) geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
     return MULP_OUT_OF_RESOURCES;
 
-  // return error, when numReceiveStreams is exceeded
-  dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-  if (dchunk->stream_id > mdlm->numReceiveStreams)
-  {
-    invalid_stream_id_err_t error_info;
-    error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
-    error_info.reserved = 0;
-    msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*) &error_info, sizeof(invalid_stream_id_err_t));
-    geco_free_ext(dchunk, __FILE__, __LINE__);
-    return MULP_INVALID_STREAM_ID;
-  }
-
   // return error, when no user data
-  dchunk_pdu_len -= DATA_CHUNK_FIXED_NOSSNTSN_SIZES;
-  if (dchunk_pdu_len == 0)
+  dchunk_len -= DCHUNK_UR_FIXED_SIZES;
+  if (dchunk_len == 0)
   {
     msm_abort_channel(ECC_NO_USER_DATA);
     geco_free_ext(dchunk, __FILE__, __LINE__);
@@ -3746,13 +3722,12 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_nossntsn_t
   }
 
   dchunk->data = dataChunk->chunk_value;
-  dchunk->data_length = dchunk_pdu_len;
+  dchunk->data_length = dchunk_len;
   dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
   dchunk->fromAddressIndex = address_index;
   dchunk->packet_params_t = g_packet_params;
 
-  mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[dchunk->stream_id] = true;
+  mdlm->queuedBytes += dchunk_len;
   mdlm->ur.push_back(dchunk);
   return MULP_SUCCESS;
 }
@@ -4246,7 +4221,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
     {
       if((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
       {
-        if (mdlm_process_data_chunk(mdlm, (data_chunk_nossn_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+        if (mdlm_process_data_chunk(mdlm, (dchunk_r_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
           mrecv->new_chunk_received = false;
       }else
       {
@@ -4292,11 +4267,11 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
     {
       if((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
       {
-        if (mdlm_process_data_chunk(mdlm, (data_chunk_nossntsn_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+        if (mdlm_process_data_chunk(mdlm, (dchunk_ur_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
           mrecv->new_chunk_received = false;
       }else
       {
-        if (mdlm_process_data_chunk(mdlm, (data_chunk_notsn_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+        if (mdlm_process_data_chunk(mdlm, (dchunk_uros_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
           mrecv->new_chunk_received = false;
       }
       /* else: ABORT has been sent and the association (possibly) removed in callback! */

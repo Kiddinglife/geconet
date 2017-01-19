@@ -154,52 +154,43 @@ struct data_chunk_t
 #define DATA_CHUNK_FIXED_NOTSN_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOTSN_SIZE)
 #define MAX_DATA_CHUNK_VALUE_NOTSN_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOTSN_SIZES)
-struct data_chunk_fixed_notsn_t
+struct dchunk_uros_fixed_t
 {
 	//uint trans_seq_num; // unrealiable msg has NO this field
 	ushort stream_identity;
 	ushort stream_seq_num;  // unordered msg has NO this field
 };
-struct data_chunk_notsn_t
+struct dchunk_uros_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	data_chunk_fixed_notsn_t data_chunk_hdr;
+	dchunk_uros_fixed_t data_chunk_hdr;
 	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOTSN_SIZE];
 };
 
-#define DATA_CHUNK_FIXED_NOSSN_SIZE (sizeof(uint)+sizeof(ushort))
-#define DATA_CHUNK_FIXED_NOSSN_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOSSN_SIZE)
+#define DCHUNK_R_FIXED_SIZE (sizeof(uint))
+#define DCHUNK_R_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_R_FIXED_SIZE)
 #define MAX_DATA_CHUNK_VALUE_NOSSN_SIZE  \
-(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSN_SIZES)
-struct data_chunk_fixed_nossn_t
+(MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_R_FIXED_SIZE)
+struct dchunk_r_fixed_t
 {
 	uint trans_seq_num;  // unrealiable msg has NO this field
-	ushort stream_identity;
+	// ushort stream_identity;
 	//ushort stream_seq_num; // unordered msg has NO this field
 };
-struct data_chunk_nossn_t
+struct dchunk_r_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	data_chunk_fixed_nossn_t data_chunk_hdr;
+	dchunk_r_fixed_t data_chunk_hdr;
 	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSN_SIZE];
 };
 
-#define DATA_CHUNK_FIXED_NOSSNTSN_SIZE (sizeof(ushort))
-#define DATA_CHUNK_FIXED_NOSSNTSN_SIZES \
-(CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOSSNTSN_SIZE)
-#define MAX_DATA_CHUNK_VALUE_NOSSNTSN_SIZE  \
-(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOSSNTSN_SIZES)
-struct data_chunk_fixed_nossntsn_t
-{
-	//uint trans_seq_num; // unrealiable msg has NO this field
-	ushort stream_identity;
-	//ushort stream_seq_num; // unordered msg has NO this field
-};
-struct data_chunk_nossntsn_t
+#define DCHUNK_UR_FIXED_SIZES CHUNK_FIXED_SIZE
+#define MAX_DCHUNK_UR_VALUE_SIZE  \
+MAX_NETWORK_PACKET_VALUE_SIZE
+struct dchunk_ur_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	data_chunk_fixed_nossntsn_t data_chunk_hdr;
-	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSNTSN_SIZE];
+	uchar chunk_value[MAX_DCHUNK_UR_VALUE_SIZE];
 };
 
 /*************************** variable length parameter definitions ***************************/
