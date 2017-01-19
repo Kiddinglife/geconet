@@ -3482,6 +3482,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
   }
   return false;
 }
+
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
   // Assume lowest_duplicated_tsn and highest_duplicated_tsn have already been updated if they should be
@@ -3562,48 +3563,6 @@ bool mdlm_sort_tsn_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
 bool mdlm_sort_ssn_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
 {
   return ubefore(one->stream_sn, two->stream_sn);
-}
-
-int mdlm_receive_data_chunk(deliverman_controller_t* mdlm, uchar* dataChunk, uint dchunk_pdu_len,ushort address_index)
-{
-  static delivery_data_t* dchunk;
-  if ((dchunk = (delivery_data_t*) geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__)))
-    return MULP_OUT_OF_RESOURCES;
-
-  // return error, when numReceiveStreams is exceeded
-  dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-  if (dchunk->stream_id > mdlm->numReceiveStreams)
-  {
-    invalid_stream_id_err_t error_info;
-    error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
-    error_info.reserved = 0;
-    msm_abort_channel(ECC_INVALID_STREAM_ID, (uchar*) &error_info, sizeof(invalid_stream_id_err_t));
-    geco_free_ext(dchunk, __FILE__, __LINE__);
-    return MULP_INVALID_STREAM_ID;
-  }
-
-  // return error, when no user data
-  dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
-  dchunk_pdu_len -= DATA_CHUNK_FIXED_SIZES;
-  if (dchunk_pdu_len == 0)
-  {
-    msm_abort_channel(ECC_NO_USER_DATA, (uchar*) &dchunk->tsn, sizeof(uint));
-    geco_free_ext(dchunk, __FILE__, __LINE__);
-    return MULP_NO_USER_DATA;
-  }
-
-  dchunk->data = dataChunk->chunk_value;
-  dchunk->data_length = dchunk_pdu_len;
-  dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
-  dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
-  dchunk->fromAddressIndex = address_index;
-  dchunk->packet_params_t = g_packet_params;
-
-  mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[dchunk->stream_id] = true;
-  const auto& upper = std::upper_bound(mdlm->ro.begin(), mdlm->ro.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
-  mdlm->ro.insert(upper, dchunk);
-  return MULP_SUCCESS;
 }
 
 /// called from mrecv to forward received ro and rs chunks to mdlm.
