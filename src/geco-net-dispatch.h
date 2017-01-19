@@ -416,7 +416,7 @@ struct recv_stream_t  //ReceiveStream
     ushort highestSSN;
     ushort nextSSN;
     bool highestSSNused;
-	ushort newestSSN; // for uro chunks
+    ushort newestSSN; // for uro chunks
     int index;
 };
 
@@ -435,12 +435,9 @@ struct deliverman_controller_t
     uint queuedBytes;
     bool unreliable;
     bool unordered;
-	// list for all reliable data chunk (order and unorder)
-    std::list<delivery_data_t*> rchunks; 
-	// list for all unreliable and ordered data chunk
-    std::list<delivery_data_t*> uro;  
-	// list for all unreliable and unordered chunks
-    std::list<delivery_data_t*> uruo; 
+    // reliable, reliable&ordered, reliable&sequenced,
+    // unreliable, unreliable&ordered or unreliable&sequenced
+    std::list<delivery_data_t*> r, ro, rs, ur, uro, urs;
 };
 
 /**

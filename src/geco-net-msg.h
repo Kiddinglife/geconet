@@ -109,13 +109,25 @@ struct chunk_fixed_t
 #define DCHUNK_FLAG_LAST_FRG    0x01 //END      10base: 1   2base : 01
 #define DCHUNK_FLAG_FL_FRG      0x01 //Unfrag   10base: 11  2base : 11
 
-#define DCHUNK_FLAG_RO_MASK     12 //                        10base: 12   2base : 1100
-#define DCHUNK_FLAG_ORDER_MASK     4 //                        10base: 12   2base : 100
-#define DCHUNK_FLAG_RELIABLE_MASK     8 //                        10base: 12   2base : 1000
+#define DCHUNK_FLAG_RO          20
+#define DCHUNK_FLAG_RS          24
+#define DCHUNK_FLAG_URO         4
+#define DCHUNK_FLAG_URS         8
+
+#define DCHUNK_FLAG_ROS_MASK     28 //                       10base: 12   2base : 11100
+#define DCHUNK_FLAG_OS_MASK      12 //                       10base: 12   2base : 01100
+#define DCHUNK_FLAG_O_MASK       4 //                        10base: 12   2base : 0100
+#define DCHUNK_FLAG_S_MASK       8 //                        10base: 12   2base : 1000
+
 #define DCHUNK_FLAG_ORDER       4 //ordered data chunk       10base: 4    2base : 0100
 #define DCHUNK_FLAG_UNORDER     0 //unordered data chunk     10base: 0    2base : 0000
-#define DCHUNK_FLAG_RELIABLE    8 //reliable data chunk      10base: 8    2base : 1000
-#define DCHUNK_FLAG_UNRELIABLE  0 //unreliable data chunk    10base: 8    2base : 0000
+
+#define DCHUNK_FLAG_SEQ       8 //sequence data chunk        10base: 4    2base : 1000
+#define DCHUNK_FLAG_UNSEQ     0 //unsequence data chunk      10base: 0    2base : 0000
+
+#define DCHUNK_FLAG_RELIABLE_MASK     16 //                  10base: 12   2base : 10000
+#define DCHUNK_FLAG_RELIABLE    16 //reliable data chunk     10base: 8    2base : 10000
+#define DCHUNK_FLAG_UNRELIABLE  0 //unreliable data chunk    10base: 8    2base : 00000
 
 /* when chunk_id == CHUNK_DATA */
 #define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
