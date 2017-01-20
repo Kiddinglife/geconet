@@ -154,21 +154,20 @@ struct data_chunk_t
 	uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
 };
 
-#define DATA_CHUNK_FIXED_NOTSN_SIZE (sizeof(uint)+sizeof(ushort))
-#define DATA_CHUNK_FIXED_NOTSN_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOTSN_SIZE)
-#define MAX_DATA_CHUNK_VALUE_NOTSN_SIZE  \
-(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOTSN_SIZES)
+#define DCHUNK_URS_FIXED_SIZE (sizeof(uint)+sizeof(ushort))
+#define DCHUNK_URS_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_URS_FIXED_SIZE)
+#define MAX_DCHUNK_URS_VALUE_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_URS_FIXED_SIZES)
 struct dchunk_urs_fixed_t
 {
-	//uint trans_seq_num; // unrealiable msg has NO this field
 	ushort stream_identity;
-	ushort stream_seq_num;  // unordered msg has NO this field
+	ushort stream_seq_num;
 };
 struct dchunk_urs_t
 {
 	chunk_fixed_t comm_chunk_hdr;
 	dchunk_urs_fixed_t data_chunk_hdr;
-	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOTSN_SIZE];
+	uchar chunk_value[MAX_DCHUNK_URS_VALUE_SIZE];
 };
 
 #define DCHUNK_R_FIXED_SIZE (sizeof(uint))

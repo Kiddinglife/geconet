@@ -440,7 +440,8 @@ struct deliverman_controller_t
     bool unordered;
     // reliable, reliable&ordered, reliable&sequenced,
     // unreliable, unreliable&ordered or unreliable&sequenced
-    std::list<delivery_data_t*> r, ro, rs, ur,urs;
+    std::list<delivery_data_t*> ro,rs,urs;
+    std::list<delivery_pdu_t*> r,ur;
 };
 
 /**
