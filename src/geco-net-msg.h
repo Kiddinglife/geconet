@@ -109,6 +109,10 @@ struct chunk_fixed_t
 #define DCHUNK_FLAG_LAST_FRG    0x01 //END      10base: 1   2base : 01
 #define DCHUNK_FLAG_FL_FRG      0x01 //Unfrag   10base: 11  2base : 11
 
+#define SEQUENCED_STREAM_IDX 1
+#define ORDERED_STREAM_IDX 1
+#define STREAM_COUNT 2
+
 #define DCHUNK_FLAG_RO          20
 #define DCHUNK_FLAG_RS          24
 #define DCHUNK_FLAG_URO         4
@@ -154,16 +158,16 @@ struct data_chunk_t
 #define DATA_CHUNK_FIXED_NOTSN_SIZES (CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_NOTSN_SIZE)
 #define MAX_DATA_CHUNK_VALUE_NOTSN_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_NOTSN_SIZES)
-struct dchunk_uros_fixed_t
+struct dchunk_urs_fixed_t
 {
 	//uint trans_seq_num; // unrealiable msg has NO this field
 	ushort stream_identity;
 	ushort stream_seq_num;  // unordered msg has NO this field
 };
-struct dchunk_uros_t
+struct dchunk_urs_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	dchunk_uros_fixed_t data_chunk_hdr;
+	dchunk_urs_fixed_t data_chunk_hdr;
 	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOTSN_SIZE];
 };
 
@@ -311,8 +315,8 @@ struct init_chunk_fixed_t
 {
 	uint init_tag;
 	uint rwnd;
-	ushort outbound_streams;
-	ushort inbound_streams;
+	ushort sequenced_streams;
+	ushort ordered_streams;
 	uint initial_tsn;
 };
 /* max. length of optional parameters */

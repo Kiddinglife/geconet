@@ -65,9 +65,9 @@ struct geco_instance_t
     ulp_cbs_t ulp_callbacks; /*setup by app layer*/
 
     /*maximum number of incoming streams that this instance will take */
-    ushort noOfInStreams;
+    ushort sequenced_streams;
     /*maximum number of outgoingng streams that this instance will take */
-    ushort noOfOutStreams;
+    ushort ordered_streams;
 
     /*default params for geco_inst initialization*/
     uint default_rtoInitial;
@@ -293,9 +293,9 @@ struct smctrl_t
     /** peer's tie tag for cross initialization and other sick cases */
     uint peer_tie_tag;
     /** todo we store these here, too. Maybe better be stored with StreamEngine ? */
-    ushort outbound_stream;
+    ushort ordered_streams;
     /** todo we store these here, too. Maybe better be stored with StreamEngine ? */
-    ushort inbound_stream;
+    ushort sequenced_streams;
     /** value for maximum retransmissions per association */
     uint max_assoc_retrans_count;
     /** value for maximum initial retransmissions per association */
@@ -427,17 +427,17 @@ struct send_stream_t  //SendStream
 
 struct deliverman_controller_t
 {
-    uint numSendStreams;
-    uint numReceiveStreams;
-    recv_stream_t* recv_streams;
-    send_stream_t* send_streams;
-    bool* recvStreamActivated;
+    uint numSequencedStreams;
+    uint numOrderedStreams;
+    recv_stream_t* recv_streams[STREAM_COUNT]; // sequence streams 1 and ordered streams 0
+    send_stream_t* send_streams[STREAM_COUNT];
+    bool* recvStreamActivated[STREAM_COUNT];
     uint queuedBytes;
     bool unreliable;
     bool unordered;
     // reliable, reliable&ordered, reliable&sequenced,
     // unreliable, unreliable&ordered or unreliable&sequenced
-    std::list<delivery_data_t*> r, ro, rs, ur, uro, urs;
+    std::list<delivery_data_t*> r, ro, rs, ur,urs;
 };
 
 /**

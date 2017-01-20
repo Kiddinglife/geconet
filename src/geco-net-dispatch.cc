@@ -521,10 +521,15 @@ inline int mdlm_read_queued_chunks()
     ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
     return -1;
   }
-  for (i = 0; i < (int) se->numReceiveStreams; i++)
+  for (i = 0; i < (int) se->numSequencedStreams; i++)
   {
     /* Add number of all chunks (i.e. lengths of all pduList lists of all streams */
-    num_of_chunks += se->recv_streams[i].pduList.size();
+    num_of_chunks += se->recv_streams[SEQUENCED_STREAM_IDX][i].pduList.size();
+  }
+  for (i = 0; i < (int) se->numOrderedStreams; i++)
+  {
+    /* Add number of all chunks (i.e. lengths of all pduList lists of all streams */
+    num_of_chunks += se->recv_streams[ORDERED_STREAM_IDX][i].pduList.size();
   }
   return num_of_chunks;
 }
@@ -536,7 +541,7 @@ inline ushort mdlm_read_istreams(void)
     ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
     return 0;
   }
-  return se->numReceiveStreams;
+  return se->numOrderedStreams+se->numSequencedStreams;
 }
 inline ushort mdlm_read_ostreams(void)
 {
@@ -546,7 +551,7 @@ inline ushort mdlm_read_ostreams(void)
     ERRLOG(MAJOR_ERROR, "Could not read deliverman_controller_t Instance !");
     return 0;
   }
-  return se->numSendStreams;
+  return se->numOrderedStreams+se->numSequencedStreams;
 }
 
 //-------------------------- mpath
@@ -1531,7 +1536,7 @@ static int msm_timer_expired(timeout* timerID)
   }
   return true;
 }
-void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *destinationList, uint numDestAddresses)
+void msm_connect(ushort noOfOrderStreams,ushort noOfSeqStreams, sockaddrunion *destinationList, uint numDestAddresses)
 {
   smctrl_t* smctrl;
   if ((smctrl = mdi_read_smctrl()) == NULL)
@@ -1545,12 +1550,12 @@ void msm_connect(ushort noOfOutStreams, ushort noOfInStreams, sockaddrunion *des
     uint itag = mdi_read_local_tag();
     uint rwand = mdi_read_rwnd();
     uint itsn = mdi_generate_itag();
-    chunk_id_t initCID = mch_make_init_chunk(itag, rwand, noOfOutStreams, noOfInStreams, itsn);
+    chunk_id_t initCID = mch_make_init_chunk(itag, rwand, noOfOrderStreams, noOfSeqStreams, itsn);
     EVENTLOG4(DEBUG, "msm_connect()::INIT CHUNK (CID=%d) [itag=%d,rwnd=%d,itsn=%d]", initCID, itag, rwand, itsn);
 
     /* store the number of streams */
-    smctrl->outbound_stream = noOfOutStreams;
-    smctrl->inbound_stream = noOfInStreams;
+    smctrl->ordered_streams = noOfOrderStreams;
+    smctrl->sequenced_streams = noOfSeqStreams;
 
     if (support_pr_)
     {
@@ -3064,8 +3069,8 @@ void mdlm_read_streams(ushort* inStreams, ushort* outStreams)
 {
   deliverman_controller_t* se = mdi_read_mdlm();
   assert(se != NULL && "Called mdlm_read_streams, but no Streamengine is there !");
-  *inStreams = se->numReceiveStreams;
-  *outStreams = se->numSendStreams;
+  *inStreams = se->numOrderedStreams;
+  *outStreams = se->numSequencedStreams;
   assert(*inStreams != 0 && *outStreams != 0);
 }
 
@@ -3182,15 +3187,15 @@ inline geco_instance_t* find_geco_instance_by_id(uint geco_inst_id)
   }
   return NULL;
 }
-inline ushort get_local_inbound_stream(uint * geco_inst_id = NULL)
+inline ushort get_local_ordered_streams(uint * geco_inst_id = NULL)
 {
   if (curr_channel_ != NULL)
   {
-    return curr_channel_->geco_inst->noOfInStreams;
+    return curr_channel_->geco_inst->ordered_streams;
   }
   else if (curr_geco_instance_ != NULL)
   {
-    return curr_geco_instance_->noOfInStreams;
+    return curr_geco_instance_->ordered_streams;
   }
   else
   {
@@ -3199,7 +3204,7 @@ inline ushort get_local_inbound_stream(uint * geco_inst_id = NULL)
       curr_geco_instance_ = find_geco_instance_by_id(*geco_inst_id);
       if (curr_geco_instance_ != NULL)
       {
-        uint ins = curr_geco_instance_->noOfInStreams;
+        uint ins = curr_geco_instance_->ordered_streams;
         curr_geco_instance_ = NULL;
         return ins;
       }
@@ -3209,15 +3214,15 @@ inline ushort get_local_inbound_stream(uint * geco_inst_id = NULL)
   return 0;
 }
 
-inline ushort get_local_outbound_stream(uint * geco_inst_id = NULL)
+inline ushort get_local_sequenced_streams(uint * geco_inst_id = NULL)
 {
   if (curr_channel_ != NULL)
   {
-    return curr_channel_->geco_inst->noOfOutStreams;
+    return curr_channel_->geco_inst->sequenced_streams;
   }
   else if (curr_geco_instance_ != NULL)
   {
-    return curr_geco_instance_->noOfOutStreams;
+    return curr_geco_instance_->sequenced_streams;
   }
   else
   {
@@ -3226,7 +3231,7 @@ inline ushort get_local_outbound_stream(uint * geco_inst_id = NULL)
       curr_geco_instance_ = find_geco_instance_by_id(*geco_inst_id);
       if (curr_geco_instance_ != NULL)
       {
-        uint ins = curr_geco_instance_->noOfOutStreams;
+        uint ins = curr_geco_instance_->sequenced_streams;
         curr_geco_instance_ = NULL;
         return ins;
       }
@@ -3575,8 +3580,10 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
     return MULP_OUT_OF_RESOURCES;
 
   // return error, when numReceiveStreams is exceeded
+  uint numReceiveStreams =
+      dataChunk->comm_chunk_hdr.chunk_flags & DCHUNK_FLAG_ORDER ? mdlm->numOrderedStreams : mdlm->numSequencedStreams;
   dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-  if (dchunk->stream_id > mdlm->numReceiveStreams)
+  if (dchunk->stream_id > numReceiveStreams)
   {
     invalid_stream_id_err_t error_info;
     error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
@@ -3604,7 +3611,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
   dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[dchunk->stream_id] = true;
+  mdlm->recvStreamActivated[ORDERED_STREAM_IDX][dchunk->stream_id] = true;
 
   if(dchunk->chunk_flags & DCHUNK_FLAG_ORDER)
   {
@@ -3644,15 +3651,14 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
   dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
-  const auto& upper = std::upper_bound(mdlm->r.begin(), mdlm->r.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
-  mdlm->r.insert(upper, dchunk);
+  mdlm->r.push_back(dchunk); // ordered by tsn already
 
   return MULP_SUCCESS;
 }
 
 /// called from mrecv to forward received uro and urs chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_uros_t* dataChunk, uint dchunk_pdu_len,
+int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChunk, uint dchunk_pdu_len,
     ushort address_index)
 {
   static delivery_data_t* dchunk;
@@ -3668,7 +3674,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_uros_t* dataCh
 
   // return error, when numReceiveStreams is exceeded
   dchunk->stream_id = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-  if (dchunk->stream_id > mdlm->numReceiveStreams)
+  if (dchunk->stream_id > mdlm->numSequencedStreams)
   {
     invalid_stream_id_err_t error_info;
     error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
@@ -3695,12 +3701,14 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_uros_t* dataCh
   dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[dchunk->stream_id] = true;
+  mdlm->recvStreamActivated[SEQUENCED_STREAM_IDX][dchunk->stream_id] = true;
 
   // REORDERING BASED ON SSN
-  //const auto& upper = std::upper_bound(mdlm->recv_streams[dchunk->stream_id].prePduList.begin(), mdlm->recv_streams[dchunk->stream_id].prePduList.end(), dchunk, mdlm_sort_ssn_delivery_data_cmp);
-  //mdlm->recv_streams[dchunk->stream_id].prePduList.insert(upper, dpdu);
-
+  //auto& prelist = mdlm->recv_streams[SEQUENCED_STREAM_IDX][dchunk->stream_id].prePduList;
+  //const auto& upper = std::upper_bound(prelist.begin(), prelist.end(), dchunk, mdlm_sort_ssn_delivery_data_cmp);
+  //prelist.insert(upper, dpdu);
+  const auto& upper = std::upper_bound(mdlm->urs.begin(), mdlm->urs.end(), dchunk, mdlm_sort_ssn_delivery_data_cmp);
+  mdlm->urs.insert(upper, dchunk);
   return MULP_SUCCESS;
 }
 
@@ -3747,31 +3755,49 @@ void mdi_on_peer_data_arrive(int64 tsn, ushort streamID, int streamSN, uint leng
 int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 {
   int retval;
-  for (uint i = 0; i < mdlm->numReceiveStreams; i++)
+  for (uint i = 0; i < mdlm->numOrderedStreams; i++)
   {
-    if (!mdlm->recv_streams[i].prePduList.empty())
-    {
-      for (auto dpdu : mdlm->recv_streams[i].prePduList)
+      auto& prePduList = mdlm->recv_streams[ORDERED_STREAM_IDX][i].prePduList;
+      if (!prePduList.empty())
       {
-        mdlm->recv_streams[i].pduList.push_back(dpdu);
-        mdi_on_peer_data_arrive(dpdu->ddata[0]->tsn, i, dpdu->ddata[0]->stream_sn, dpdu->total_length);
+        auto& pduList = mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].pduList;
+        for (auto dpdu : prePduList)
+        {
+          pduList.push_back(dpdu);
+          mdi_on_peer_data_arrive(dpdu->ddata[0]->tsn, i, dpdu->ddata[0]->stream_sn, dpdu->total_length);
+        }
       }
-    }
+  }
+  for (uint i = 0; i < mdlm->numSequencedStreams; i++)
+  {
+      auto& prePduList = mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].prePduList;
+      if (!prePduList.empty())
+      {
+        auto& pduList = mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].pduList;
+        for (auto dpdu : prePduList)
+        {
+          pduList.push_back(dpdu);
+          mdi_on_peer_data_arrive(dpdu->ddata[0]->tsn, i, dpdu->ddata[0]->stream_sn, dpdu->total_length);
+        }
+      }
   }
   return retval;
 }
 
 /*
+ * All packets of the same ordering type are ordered relative to each other.
+ * stream-id is used for relative ordering of packets in relation to other packets on the same stream
+ * Packets in sequence drop older packets.
+ *
  * Lets say you send data 1,2,3,4,5,6.
  * Here's the order and substance of what you might get back:
  *
  * UNRELIABLE - 5, 1, 6
- * UNRELIABLE_SEQUENCED - 5 (6 was lost in transit, 1,2,3,4 arrived later than 5)
  * RELIABLE - 5, 1, 4, 6, 2, 3
+ *
+ * UNRELIABLE_SEQUENCED - 5 (6 was lost in transit, 1,2,3,4 arrived later than 5)
  * RELIABLE_ORDERED - 1, 2, 3, 4, 5, 6
  * RELIABLE_SEQUENCED - 1,2,3,4 arrived later than 5, first receive 5, 6, then received 1,2,3,4)
- *
- * stream-id is used for relative ordering of packets in relation to other packets on the same stream
  * */
 int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 {
@@ -3787,16 +3813,23 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
   static uint i;
   static uint itemPosition;
   static std::list<delivery_data_t*>::iterator firstItemItr;
+  static recv_stream_t* recv_streams;
 
   i = firstTSN = itemPosition = 0;
   complete = false;
   currentSID = currentSSN = nrOfChunks = 0;
 
   // one-off settings will be reset everytime mdlm_search_ready_pdu() is called
-  for (i = 0; i < mdlm->numReceiveStreams; i++)
+  for (i = 0; i < mdlm->numSequencedStreams; i++)
   {
-    mdlm->recv_streams[i].highestSSN = 0;
-    mdlm->recv_streams[i].highestSSNused = false;
+    mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].highestSSN = 0;
+    mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].highestSSNused = false;
+  }
+
+  for (i = 0; i < mdlm->numOrderedStreams; i++)
+  {
+    mdlm->recv_streams[ORDERED_STREAM_IDX][i].highestSSN = 0;
+    mdlm->recv_streams[ORDERED_STREAM_IDX][i].highestSSNused = false;
   }
 
   // search complete pdu from rchunks chunk list
@@ -3807,24 +3840,22 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
     currentSID = d_chunk->stream_id;
     currentSSN = d_chunk->stream_sn;
     unordered = d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER;
+    recv_streams = &mdlm->recv_streams[ORDERED_STREAM_IDX][currentSID];
 
     EVENTLOG3(VERBOSE, "Handling chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
     // say we have ssn 0 1 2  5 8
     // at beginning, highestSSN =0, csn = 0
     // higest <= currentSSN => safter(higest, currentSSN)
-    if (mdlm->recv_streams[currentSID].highestSSNused && safter(mdlm->recv_streams[currentSID].highestSSN, currentSSN))
+    if (recv_streams->highestSSNused && safter(recv_streams->highestSSN, currentSSN))
     {
       EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
       msm_abort_channel(ECC_PROTOCOL_VIOLATION);
       return MULP_PROTOCOL_VIOLATION;
     }
 
-    if (!unordered)
-    {
-      mdlm->recv_streams[currentSID].highestSSN = currentSSN;
-      mdlm->recv_streams[currentSID].highestSSNused = true;
-    }
+    recv_streams->highestSSN = currentSSN;
+    recv_streams->highestSSNused = true;
 
     // start assemble fragmented ulp msg
     if (d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG)
@@ -3837,8 +3868,8 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 
       // only ordered or unordered chunk wanted
       if (unordered
-          || (sbefore(currentSSN, mdlm->recv_streams[currentSID].nextSSN)
-              || currentSSN == mdlm->recv_streams[currentSID].nextSSN))
+          || (sbefore(currentSSN, recv_streams->nextSSN)
+              || currentSSN == recv_streams->nextSSN))
       {
         if (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
         {
@@ -3943,9 +3974,9 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
           // ddata stored all segmented chunks that have same sid
           // so we use ddata[0]->stream_id to locate the stream
           // all pdus in prePduList are continueous and ordered by ssn
-          mdlm->recv_streams[d_pdu->ddata[0]->stream_id].prePduList.push_back(d_pdu);
-          if (mdlm->recv_streams[d_pdu->ddata[0]->stream_id].nextSSN == currentSSN)
-            mdlm->recv_streams[d_pdu->ddata[0]->stream_id].nextSSN++;
+          recv_streams->prePduList.push_back(d_pdu);
+          if (recv_streams->nextSSN == currentSSN)
+            recv_streams->nextSSN++;
 
           nrOfChunks = 0;
           firstItemItr = mdlm->ro.end();
@@ -3991,25 +4022,26 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 
   }
 
-  for (auto itr = mdlm->uro.begin(); itr != mdlm->uro.end();)
+  for (auto itr = mdlm->urs.begin(); itr != mdlm->urs.end();)
   {
     d_chunk = *itr;
     currentSID = d_chunk->stream_id;
     currentSSN = d_chunk->stream_sn;
+    recv_streams = &(mdlm->recv_streams[SEQUENCED_STREAM_IDX][currentSID]);
     EVENTLOG3(VERBOSE, "Handling uro chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
     // say we have ssn 0 1 2  5 8
     // at beginning, highestSSN =0, csn = 0
     // higest <= currentSSN => safter(higest, currentSSN)
-    if (mdlm->recv_streams[currentSID].highestSSNused && safter(mdlm->recv_streams[currentSID].highestSSN, currentSSN))
+    if (recv_streams->highestSSNused && safter(recv_streams->highestSSN, currentSSN))
     {
       EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
       msm_abort_channel(ECC_PROTOCOL_VIOLATION);
       return MULP_PROTOCOL_VIOLATION;
     }
 
-    mdlm->recv_streams[currentSID].highestSSN = currentSSN;
-    mdlm->recv_streams[currentSID].highestSSNused = true;
+    recv_streams->highestSSN = currentSSN;
+    recv_streams->highestSSNused = true;
 
     // start assemble fragmented ulp msg
     if ((d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
@@ -4018,11 +4050,11 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
       nrOfChunks = 1; // common-case: not segment chunk
 
       // only ordered or unordered chunk wanted
-      if ((safter(currentSSN, mdlm->recv_streams[currentSID].newestSSN)
-          || currentSSN == mdlm->recv_streams[currentSID].newestSSN))
+      if ((safter(currentSSN, recv_streams->newestSSN)
+          || currentSSN == recv_streams->newestSSN))
       {
         // when loop ends, this will be set to highest ssn of the uro chunk
-        mdlm->recv_streams[currentSID].newestSSN = currentSSN;
+        recv_streams->newestSSN = currentSSN;
 
         if ((d_pdu = (delivery_pdu_t*) geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__)) == NULL)
           return MULP_OUT_OF_RESOURCES;
@@ -4052,7 +4084,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
         // ddata stored all segmented chunks that have same sid
         // so we use ddata[0]->stream_id to locate the stream
         // all pdus in prePduList are continueous and ordered by ssn
-        mdlm->recv_streams[d_pdu->ddata[0]->stream_id].prePduList.push_back(d_pdu);
+        recv_streams->prePduList.push_back(d_pdu);
 
         nrOfChunks = 0;
         currentSID = 0;
@@ -4066,14 +4098,10 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
       return MULP_PROTOCOL_VIOLATION;
     }
   }
-  for (auto itr = mdlm->urs.begin(); itr != mdlm->urs.end();)
-  {
 
-  }
   for (auto itr = mdlm->ur.begin(); itr != mdlm->ur.end();)
   {
     d_chunk = *itr;
-    currentSID = d_chunk->stream_id;
     EVENTLOG(VERBOSE, "Handling uruo chunk with tsn");
 
     if ((d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
@@ -4104,12 +4132,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
         d_pdu->total_length += d_pdu->ddata[i]->data_length;
       }
       assert(std::distance(firstItemItr, itr) == nrOfChunks - 1);
-
-      // insert this pdu to prepdu list and update ssn if possible
-      // ddata stored all segmented chunks that have same sid
-      // so we use ddata[0]->stream_id to locate the stream
-      // all pdus in prePduList are continueous and ordered by ssn
-      mdlm->recv_streams[d_pdu->ddata[0]->stream_id].prePduList.push_back(d_pdu);
+      // @TODO just deliver to ulp
       nrOfChunks = 0;
     }
     else
@@ -4120,7 +4143,6 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
     }
   }
 
-  mdlm->uro.clear();
   mdlm->urs.clear();
   mdlm->r.clear();
 
@@ -4228,7 +4250,6 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
         if (mdlm_process_data_chunk(mdlm, (data_chunk_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
           mrecv->new_chunk_received = false;
       }
-      /* else: ABORT has been sent and the association (possibly) removed in callback! */
     }
     else
     {
@@ -4271,10 +4292,9 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
           mrecv->new_chunk_received = false;
       }else
       {
-        if (mdlm_process_data_chunk(mdlm, (dchunk_uros_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+        if (mdlm_process_data_chunk(mdlm, (dchunk_urs_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
           mrecv->new_chunk_received = false;
       }
-      /* else: ABORT has been sent and the association (possibly) removed in callback! */
     }
   }
 
@@ -4300,7 +4320,7 @@ int msm_process_init_chunk(init_chunk_t * init)
   /*2) validate init geco_instance_params*/
   uchar abortcid;
   smctrl_t* smctrl = mdi_read_smctrl();
-  if (!mch_read_ostreams(init_cid) || !mch_read_instreams(init_cid) || !mch_read_itag(init_cid))
+  if (!mch_read_ordered_streams(init_cid) || !mch_read_sequenced_streams(init_cid) || !mch_read_itag(init_cid))
   {
     EVENTLOG(DEBUG, "2) validate init geco_instance_params [zero streams  or zero init TAG] -> send abort ");
 
@@ -4349,8 +4369,8 @@ int msm_process_init_chunk(init_chunk_t * init)
     }
   }
 
-  ushort inbound_stream;
-  ushort outbound_stream;
+  ushort ordered_streams;
+  ushort sequenced_streams;
   uchar init_ack_cid;
   uint init_tag;
 
@@ -4360,14 +4380,14 @@ int msm_process_init_chunk(init_chunk_t * init)
   {
     EVENTLOG(INFO, "event: received normal init chunk from peer");
 
-    /*4.1) get in out stream number*/
-    inbound_stream = std::min(mch_read_ostreams(init_cid), get_local_inbound_stream());
-    outbound_stream = std::min(mch_read_instreams(init_cid), get_local_outbound_stream());
+    /*4.1) get in stream number*/
+    ordered_streams =mch_read_ordered_streams(init_cid);
+    sequenced_streams = mch_read_sequenced_streams(init_cid);
 
     /* 4.2) alloc init ack chunk, init tag used as init tsn */
     init_tag = mdi_generate_itag();
-    init_ack_cid = mch_make_init_ack_chunk(init_tag, curr_geco_instance_->default_myRwnd, outbound_stream,
-        inbound_stream, init_tag);
+    init_ack_cid = mch_make_init_ack_chunk(init_tag, curr_geco_instance_->default_myRwnd, ordered_streams,
+        sequenced_streams, init_tag);
 
     /*4.3) read and validate peer addrlist carried in the received init chunk*/
     assert(my_supported_addr_types_ != 0);
@@ -4478,14 +4498,14 @@ int msm_process_init_chunk(init_chunk_t * init)
       // make init ack with geco_instance_params from init chunk I sent
       uint itag = ntohl(smctrl->my_init_chunk->init_fixed.init_tag);
       uint rwnd = ntohl(smctrl->my_init_chunk->init_fixed.rwnd);
-      ushort outbound_streams = ntohs(smctrl->my_init_chunk->init_fixed.outbound_streams);
-      ushort inbound_streams = ntohs(smctrl->my_init_chunk->init_fixed.inbound_streams);
+      ushort ordered_streams = ntohs(smctrl->my_init_chunk->init_fixed.ordered_streams);
+      ushort sequenced_streams = ntohs(smctrl->my_init_chunk->init_fixed.sequenced_streams);
       uint itsn = ntohl(smctrl->my_init_chunk->init_fixed.initial_tsn);
-      init_ack_cid = mch_make_init_ack_chunk(itag, rwnd, outbound_streams, inbound_streams, itsn);
+      init_ack_cid = mch_make_init_ack_chunk(itag, rwnd, ordered_streams, sequenced_streams, itsn);
 
 #ifdef  _DEBUG
-      EVENTLOG5(DEBUG, "INIT ACK CHUNK [itag=%d,rwnd=%d,itsn=%d,outbound_streams=%d,inbound_streams=%d]", itag, rwnd,
-          itsn, outbound_streams, inbound_streams);
+      EVENTLOG5(DEBUG, "INIT ACK CHUNK [itag=%d,rwnd=%d,itsn=%d,ordered_streams=%d,sequenced_streams=%d]", itag, rwnd,
+          itsn, ordered_streams, sequenced_streams);
 #endif
 
       tmp_peer_addreslist_size_ = mdi_read_peer_addreslist(tmp_peer_addreslist_, (uchar*) init,
@@ -4576,7 +4596,7 @@ int msm_process_init_chunk(init_chunk_t * init)
         EVENTLOG(NOTICE, "msm_process_init_chunk():: UNSUPPOTED ADDR TYPES -> send abort with tbit unset !");
         chunk_id_t abort_cid = mch_make_simple_chunk(CHUNK_ABORT,
         FLAG_TBIT_UNSET);
-        char* errstr = "peer does not supports your adress types !";
+        const char* errstr = "peer does not supports your adress types !";
         mch_write_error_cause(abort_cid,
         ECC_PEER_NOT_SUPPORT_ADDR_TYPES, (uchar*) errstr, strlen(errstr) + 1);
         mdi_lock_bundle_ctrl();
@@ -4619,9 +4639,9 @@ int msm_process_init_chunk(init_chunk_t * init)
       smctrl->local_tie_tag = mdi_generate_itag();
       smctrl->peer_tie_tag = mdi_generate_itag();
 
-      /*5.4) get in out stream number*/
-      inbound_stream = std::min(mch_read_ostreams(init_cid), get_local_inbound_stream());
-      outbound_stream = std::min(mch_read_instreams(init_cid), get_local_outbound_stream());
+      /*5.4) get in stream number*/
+      ordered_streams =mch_read_ordered_streams(init_cid);
+      sequenced_streams = mch_read_sequenced_streams(init_cid);
 
       /*5.5) an INIT ACK using the same parameters it sent in its
        original INIT chunk (including its Initiate Tag, unchanged) */
@@ -4629,8 +4649,8 @@ int msm_process_init_chunk(init_chunk_t * init)
 
       /* make and fills init ack*/
       init_ack_cid = mch_make_init_ack_chunk(smctrl->my_init_chunk->init_fixed.init_tag,
-          smctrl->my_init_chunk->init_fixed.rwnd, smctrl->my_init_chunk->init_fixed.outbound_streams,
-          smctrl->my_init_chunk->init_fixed.inbound_streams, smctrl->my_init_chunk->init_fixed.initial_tsn);
+          smctrl->my_init_chunk->init_fixed.rwnd, smctrl->my_init_chunk->init_fixed.ordered_streams,
+                   smctrl->my_init_chunk->init_fixed.sequenced_streams, smctrl->my_init_chunk->init_fixed.initial_tsn);
 
       /*5.6) get local addr list and append them to INIT ACK*/
       tmp_local_addreslist_size_ = mdi_validate_localaddrs_before_write_to_init(tmp_local_addreslist_,
@@ -4777,8 +4797,8 @@ int msm_process_init_chunk(init_chunk_t * init)
       }
 
       /*7.2) get in out stream number*/
-      inbound_stream = std::min(mch_read_ostreams(init_cid), get_local_inbound_stream());
-      outbound_stream = std::min(mch_read_instreams(init_cid), get_local_outbound_stream());
+      ordered_streams =mch_read_ordered_streams(init_cid);
+      sequenced_streams = mch_read_sequenced_streams(init_cid);
 
       /* 7.3) prepare init ack
        -the INIT ACK MUST contain a new Initiate Tag(randomly generated;
@@ -4791,7 +4811,8 @@ int msm_process_init_chunk(init_chunk_t * init)
       // save a-sides init-tag from init-chunk to be used as a verification tag of the sctp-
       // message carrying the initAck (required since peer may have changed the verification tag).
       init_ack_cid = mch_make_init_ack_chunk(init_tag, curr_channel_->receive_control->my_rwnd,
-          curr_channel_->deliverman_control->numSendStreams, curr_channel_->deliverman_control->numReceiveStreams,
+          curr_channel_->deliverman_control->numOrderedStreams,
+          curr_channel_->deliverman_control->numSequencedStreams,
           smctrl->peer_cookie_chunk->cookie.local_initack.initial_tsn);
 
       /*7.4) get local addr list and append them to INIT ACK*/
@@ -5278,59 +5299,73 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN, unsigned int numbe
  It creates and initializes the Lists for Sending and Receiving Data.
  It is called by dispatcher layer. returns: the pointer to the Stream Engine
  */
-deliverman_controller_t* mdlm_new(unsigned int numberReceiveStreams, /* max of streams to receive */
-unsigned int numberSendStreams, /* max of streams to send */
+deliverman_controller_t* mdlm_new(unsigned int numberOrderStreams,unsigned int numberSeqStreams, /* max of streams to receive */
+
 bool assocSupportsPRSCTP)
 {
-  EVENTLOG3(VERBOSE, "- - - Enter mdlm_new(new_stream_engine: #inStreams=%d, #outStreams=%d, unreliable == %s)",
-      numberReceiveStreams, numberSendStreams, (assocSupportsPRSCTP == true) ? "true" : "false");
+  EVENTLOG3(VERBOSE, "- - - Enter mdlm_new(new_stream_engine: #numberSeqReceiveStreams=%d, #numberOrderReceiveStreams=%d, unreliable == %s)",
+      numberSeqStreams, numberOrderStreams, (assocSupportsPRSCTP == true) ? "true" : "false");
 
   deliverman_controller_t* tmp = new deliverman_controller_t;
   if (tmp == NULL)
     ERRLOG(FALTAL_ERROR_EXIT, "deliverman_controller_t Malloc failed");
 
-  if ((tmp->recv_streams = new recv_stream_t[numberReceiveStreams]) == NULL)
+  if ((tmp->recv_streams[SEQUENCED_STREAM_IDX] = new recv_stream_t[numberSeqStreams]) == NULL ||
+      (tmp->recv_streams[ORDERED_STREAM_IDX] = new recv_stream_t[numberOrderStreams]) == NULL)
   {
     delete tmp;
     ERRLOG(FALTAL_ERROR_EXIT, "recv_streams Malloc failed");
   }
-  if ((tmp->recvStreamActivated = new bool[numberReceiveStreams]) == NULL)
+
+  if ((tmp->recvStreamActivated[SEQUENCED_STREAM_IDX] = new bool[numberSeqStreams]) == NULL ||
+      (tmp->recvStreamActivated[ORDERED_STREAM_IDX] = new bool[numberOrderStreams]) == NULL)
   {
-    delete tmp->recv_streams;
+    delete[] tmp->recv_streams[SEQUENCED_STREAM_IDX];
+    delete[] tmp->recv_streams[ORDERED_STREAM_IDX];
     delete tmp;
     ERRLOG(FALTAL_ERROR_EXIT, "recvStreamActivated Malloc failed");
   }
 
   uint i;
+  for (i = 0; i < numberSeqStreams; i++)
+    tmp->recvStreamActivated[SEQUENCED_STREAM_IDX][i] = false;
 
-  for (i = 0; i < numberReceiveStreams; i++)
-    tmp->recvStreamActivated[i] = false;
+  for (i = 0; i < numberOrderStreams; i++)
+    tmp->recvStreamActivated[ORDERED_STREAM_IDX][i] = false;
 
-  if ((tmp->send_streams = new send_stream_t[numberSendStreams]) == NULL)
+  if ((tmp->send_streams[SEQUENCED_STREAM_IDX] = new send_stream_t[numberSeqStreams]) == NULL)
   {
-    delete tmp->recvStreamActivated;
-    delete tmp->recv_streams;
+    delete[] tmp->recvStreamActivated[SEQUENCED_STREAM_IDX];
+    delete[] tmp->recvStreamActivated[ORDERED_STREAM_IDX];
+    delete[] tmp->recv_streams[SEQUENCED_STREAM_IDX];
+    delete[] tmp->recv_streams[ORDERED_STREAM_IDX];
     delete tmp;
     ERRLOG(FALTAL_ERROR_EXIT, "send_streams Malloc failed");
   }
 
-  tmp->numSendStreams = numberSendStreams;
-  tmp->numReceiveStreams = numberReceiveStreams;
+  tmp->numOrderedStreams = numberOrderStreams;
+  tmp->numSequencedStreams = numberSeqStreams;
   tmp->unreliable = assocSupportsPRSCTP;
   tmp->queuedBytes = 0;
 
-  for (i = 0; i < numberReceiveStreams; i++)
+  for (i = 0; i < numberSeqStreams; i++)
   {
-    (tmp->recv_streams)[i].nextSSN = 0;
-    (tmp->recv_streams)[i].index = 0; /* for ordered chunks, next ssn */
-    (tmp->recv_streams)[i].highestSSN = 0;
-    (tmp->recv_streams)[i].highestSSNused = false;
+    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].nextSSN = 0;
+    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].index = 0; /* for ordered chunks, next ssn */
+    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].highestSSN = 0;
+    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].highestSSNused = false;
+    (tmp->send_streams)[SEQUENCED_STREAM_IDX][i].nextSSN = 0;
   }
 
-  for (i = 0; i < numberSendStreams; i++)
+  for (i = 0; i < numberOrderStreams; i++)
   {
-    (tmp->send_streams[i]).nextSSN = 0;
+    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].nextSSN = 0;
+    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].index = 0; /* for ordered chunks, next ssn */
+    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].highestSSN = 0;
+    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].highestSSNused = false;
+    (tmp->send_streams)[ORDERED_STREAM_IDX][i].nextSSN = 0;
   }
+
   return (tmp);
 
   EVENTLOG(VERBOSE, "- - - Leave mdlm_new()");
@@ -5342,17 +5377,35 @@ void mdlm_free(deliverman_controller_t* se)
 
   delete se->send_streams;
 
-  for (uint i = 0; i < se->numReceiveStreams; i++)
+  for (uint i = 0; i < se->numOrderedStreams; i++)
   {
     EVENTLOG1(VERBOSE, "delete mdlm_free(): freeing data for receive stream %d", i);
     /* whatever is still in these lists, delete it before freeing the lists */
-    auto& pdulist = se->recv_streams[i].pduList;
+    auto& pdulist = se->recv_streams[ORDERED_STREAM_IDX][i].pduList;
     for (auto it = pdulist.begin(); it != pdulist.end();)
     {
       free_delivery_pdu((*it));
       pdulist.erase(it++);
     }
-    auto& predulist = se->recv_streams[i].prePduList;
+    auto& predulist = se->recv_streams[ORDERED_STREAM_IDX][i].prePduList;
+    for (auto it = predulist.begin(); it != predulist.end();)
+    {
+      free_delivery_pdu((*it));
+      predulist.erase(it++);
+    }
+  }
+
+  for (uint i = 0; i < se->numSequencedStreams; i++)
+  {
+    EVENTLOG1(VERBOSE, "delete mdlm_free(): freeing data for receive stream %d", i);
+    /* whatever is still in these lists, delete it before freeing the lists */
+    auto& pdulist = se->recv_streams[SEQUENCED_STREAM_IDX][i].pduList;
+    for (auto it = pdulist.begin(); it != pdulist.end();)
+    {
+      free_delivery_pdu((*it));
+      pdulist.erase(it++);
+    }
+    auto& predulist = se->recv_streams[SEQUENCED_STREAM_IDX][i].prePduList;
     for (auto it = predulist.begin(); it != predulist.end();)
     {
       free_delivery_pdu((*it));
@@ -5361,7 +5414,8 @@ void mdlm_free(deliverman_controller_t* se)
   }
 
   delete[] se->recvStreamActivated;
-  delete[] se->recv_streams;
+  delete[] se->recv_streams[SEQUENCED_STREAM_IDX];
+  delete[] se->recv_streams[ORDERED_STREAM_IDX];
   delete se;
 
   EVENTLOG(VERBOSE, "- - - Leave mdlm_free()");
@@ -5379,14 +5433,14 @@ void mdlm_free(deliverman_controller_t* se)
  * and mdi_initAssociation must be called when the initAck with valid Cookie is received.
  *
  * @param  remoteSideReceiverWindow  peer_rwnd size that the peer allowed in this association
- * @param  noOfInStreams  number of incoming (receive) streams after negotiation
- * @param  noOfOutStreams number of outgoing (send) streams after negotiation
+ * @param  noOfInStreams  seq stream number
+ * @param  noOfOutStreams order stream number
  * @param  remoteInitialTSN     initial  TSN of the peer
  * @param  tagRemote            tag of the peer
  * @param  localInitialTSN      my initial TSN, needed for initializing my flow control
  * @return 0 for success, else 1 for error
  */
-ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams, ushort noOfOutStreams,
+ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfOrderStreams, ushort noOfSeqStreams,
     uint remoteInitialTSN, uint tagRemote, uint localInitialTSN, bool assocSupportsPRSCTP, bool assocSupportsADDIP)
 {
   EVENTLOG(DEBUG, "- - - Enter mdi_init_channel()");
@@ -5414,7 +5468,7 @@ ushort mdi_init_channel(uint remoteSideReceiverWindow, ushort noOfInStreams, ush
       curr_channel_->maxSendQueue);
   curr_channel_->receive_control = mrecv_new(remoteInitialTSN, curr_channel_->remote_addres_size,
       curr_channel_->geco_inst);
-  curr_channel_->deliverman_control = mdlm_new(noOfInStreams, noOfOutStreams, with_pr);
+  curr_channel_->deliverman_control = mdlm_new(noOfOrderStreams, noOfSeqStreams, with_pr);
 
   EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id, curr_channel_->local_tag);
   return 0;
@@ -5484,7 +5538,7 @@ inline static reltransfer_controller_t* mreltx_restart(reltransfer_controller_t*
   return mreltx_new(numOfPaths, iTSN);
 }
 
-static bool mdi_restart_channel(uint new_rwnd, ushort noOfInStreams, ushort noOfOutStreams, uint remoteInitialTSN,
+static bool mdi_restart_channel(uint new_rwnd, ushort noOfOrderStreams, ushort noOfSeqStreams, uint remoteInitialTSN,
     uint localInitialTSN, short primaryAddress, short noOfPaths, union sockaddrunion *destinationAddressList,
     bool assocSupportsPRSCTP, bool assocSupportsADDIP)
 {
@@ -5498,8 +5552,8 @@ static bool mdi_restart_channel(uint new_rwnd, ushort noOfInStreams, ushort noOf
   }
 
   EVENTLOG6(VERBOSE,
-      "mdi_restart_channel()::in streams: %u, out streams: %u, rwnd: %u, paths: %u, remote initial TSN:  %u, local initial TSN",
-      noOfInStreams, noOfOutStreams, new_rwnd, noOfPaths, remoteInitialTSN, localInitialTSN);
+      "mdi_restart_channel()::noOfOrderStreams: %u, noOfSeqStreams: %u, rwnd: %u, paths: %u, remote initial TSN:  %u, local initial TSN",
+      noOfOrderStreams, noOfSeqStreams, new_rwnd, noOfPaths, remoteInitialTSN, localInitialTSN);
   curr_channel_->reliable_transfer_control = mreltx_restart(curr_channel_->reliable_transfer_control, noOfPaths,
       localInitialTSN);
   mfc_restart(new_rwnd, localInitialTSN, curr_channel_->maxSendQueue);
@@ -5510,7 +5564,7 @@ static bool mdi_restart_channel(uint new_rwnd, ushort noOfInStreams, ushort noOf
 
   assert(curr_channel_->deliverman_control != NULL);
   mdlm_free(curr_channel_->deliverman_control);
-  curr_channel_->deliverman_control = mdlm_new(noOfInStreams, noOfOutStreams, withPRSCTP);
+  curr_channel_->deliverman_control = mdlm_new(noOfOrderStreams, noOfSeqStreams, withPRSCTP);
 
   assert(curr_channel_->path_control != NULL);
   mpath_free(curr_channel_->path_control);
@@ -5541,7 +5595,7 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
   int result;
   int process_further = 0;
   uint state, idx;
-  ushort inbound_stream, outbound_stream;
+  ushort ordered_streams, sequenced_streams;
   chunk_id_t errorCID = 0;
   bool preferredSet = false, peerSupportsADDIP = false, peerSupportsIPV4 = false, peerSupportsIPV6 = false;
   short preferredPath;
@@ -5553,7 +5607,7 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
   {
     //2) discard init ack recived in state other than cookie wait
     EVENTLOG(INFO, "************************** RECV INIT ACK CHUNK AT COOKIE WAIT ******************************8");
-    if (!mch_read_ostreams(initAckCID) || !mch_read_instreams(initAckCID) || !mch_read_itag(initAckCID))
+    if (!mch_read_ordered_streams(initAckCID) || !mch_read_sequenced_streams(initAckCID) || !mch_read_itag(initAckCID))
     {
       EVENTLOG(DEBUG, "2) validate init geco_instance_params [zero streams  or zero init TAG] -> send abort ");
 
@@ -5612,8 +5666,8 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
     }
 
     /*get in out stream number*/
-    inbound_stream = std::min(mch_read_ostreams(initAckCID), get_local_inbound_stream());
-    outbound_stream = std::min(mch_read_instreams(initAckCID), get_local_outbound_stream());
+    ordered_streams =mch_read_ordered_streams(initAckCID);
+    sequenced_streams = mch_read_sequenced_streams(initAckCID);
 
     /* read and validate peer addrlist carried in the received initack chunk */
     assert(my_supported_addr_types_ != 0);
@@ -5634,11 +5688,11 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
     bool peersupportpr = peer_supports_pr(initAck);
     bool peersupportaddip = peer_supports_addip(initAck);
     uint my_init_itag = ntohl(smctrl->my_init_chunk->init_fixed.init_tag);
-    mdi_init_channel(peer_rwnd, inbound_stream, outbound_stream, peer_itsn, peer_itag, my_init_itag, peersupportpr,
+    mdi_init_channel(peer_rwnd, ordered_streams, sequenced_streams, peer_itsn, peer_itag, my_init_itag, peersupportpr,
         peersupportaddip);
 
-    EVENTLOG2(VERBOSE, "msm_process_init_ack_chunk()::called mdi_init_channel(in-streams=%u, out-streams=%u)",
-        inbound_stream, outbound_stream);
+    EVENTLOG2(VERBOSE, "msm_process_init_ack_chunk()::called mdi_init_channel(ordered_streams=%u, sequenced_streams=%u)",
+        ordered_streams, sequenced_streams);
 
     // make cookie echo to en to peer
     cookie_param_t* cookie_param = mch_read_cookie(initAck);
@@ -5692,8 +5746,8 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
     smctrl->peer_cookie_chunk = (cookie_echo_chunk_t *) mch_complete_simple_chunk(cookieecho_cid);
     smctrl->local_tie_tag = curr_channel_ == NULL ? 0 : curr_channel_->local_tag;
     smctrl->peer_tie_tag = mch_read_itag(initAckCID);
-    smctrl->inbound_stream = inbound_stream;
-    smctrl->outbound_stream = outbound_stream;
+    smctrl->ordered_streams = ordered_streams;
+    smctrl->sequenced_streams = sequenced_streams;
     mch_remove_simple_chunk(cookieecho_cid);
     mch_remove_simple_chunk(initAckCID);
 
@@ -5876,8 +5930,8 @@ smctrl_t* msm_new(void)
   tmp->channel_id = curr_channel_->channel_id;
   tmp->my_init_chunk = NULL;
   tmp->peer_cookie_chunk = NULL;
-  tmp->outbound_stream = curr_geco_instance_->noOfOutStreams;
-  tmp->inbound_stream = curr_geco_instance_->noOfInStreams;
+  tmp->ordered_streams = curr_geco_instance_->ordered_streams;
+  tmp->sequenced_streams = curr_geco_instance_->sequenced_streams;
   tmp->local_tie_tag = 0;
   tmp->peer_tie_tag = 0;
   tmp->max_init_retrans_count = curr_geco_instance_->default_maxInitRetransmits;
@@ -6329,7 +6383,7 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
       mdi_set_channel_remoteaddrlist(tmp_peer_addreslist_, tmp_peer_addreslist_size_);
     }
 
-    mdi_init_channel(mch_read_rwnd(initCID), mch_read_instreams(initAckCID), mch_read_ostreams(initAckCID),
+    mdi_init_channel(mch_read_rwnd(initCID), mch_read_ordered_streams(initAckCID), mch_read_sequenced_streams(initAckCID),
         mch_read_itsn(initCID), cookie_remote_tag, mch_read_itsn(initAckCID), peer_supports_pr(cookie_echo),
         peer_supports_addip(cookie_echo));
 
@@ -6339,13 +6393,13 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
         curr_channel_->bundle_control->data_position = curr_channel_->bundle_control->sack_position =
             default_bundle_ctrl_->geco_packet_fixed_size;
 
-    smctrl->outbound_stream = mch_read_ostreams(initAckCID);
-    smctrl->inbound_stream = mch_read_instreams(initAckCID);
+    smctrl->ordered_streams = mch_read_ordered_streams(initAckCID);
+    smctrl->sequenced_streams = mch_read_sequenced_streams(initAckCID);
     ushort cookiesize = cookie_echo->chunk_header.chunk_length;
     smctrl->peer_cookie_chunk = (cookie_echo_chunk_t*) geco_malloc_ext(cookiesize, __FILE__, __LINE__);
     memcpy_fast(smctrl->peer_cookie_chunk, cookie_echo, cookiesize);
-    EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u", smctrl->outbound_stream,
-        smctrl->inbound_stream);
+    EVENTLOG2(VERBOSE, "set msms ordered_streams to %u, sequenced_streams to %u", smctrl->ordered_streams,
+        smctrl->sequenced_streams);
 
     //bundle and send cookie ack
     cookie_ack_cid_ = mch_make_simple_chunk(CHUNK_COOKIE_ACK, FLAG_TBIT_UNSET);
@@ -6380,7 +6434,7 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
             curr_geco_instance_->supportedAddressTypes, tmp_peer_addreslist_, &tmp_peer_supported_types_,
             last_source_addr_);
         if (mdi_restart_channel(mch_read_rwnd(initCID), /*remoteSideReceiverWindow*/
-        mch_read_instreams(initAckCID), mch_read_ostreams(initAckCID), mch_read_itsn(initCID),/*remoteInitialTSN*/
+        mch_read_ordered_streams(initAckCID), mch_read_sequenced_streams(initAckCID), mch_read_itsn(initCID),/*remoteInitialTSN*/
         mch_read_itsn(initAckCID), /*localInitialTSN*/
         0,/*primaryAddress*/
         tmp_peer_addreslist_size_, tmp_peer_addreslist_, peer_supports_pr(cookie_echo),
@@ -6440,14 +6494,16 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
         mdi_set_channel_remoteaddrlist(tmp_peer_addreslist_, tmp_peer_addreslist_size_);
       }
 
-      mdi_init_channel(mch_read_rwnd(initCID), mch_read_instreams(initAckCID), mch_read_ostreams(initAckCID),
+      ushort ordered_streams = mch_read_ordered_streams(initAckCID);
+      ushort sequenced_streams = mch_read_sequenced_streams(initAckCID);
+      mdi_init_channel(mch_read_rwnd(initCID), ordered_streams, sequenced_streams,
           mch_read_itsn(initCID), cookie_remote_tag, mch_read_itsn(initAckCID), peer_supports_pr(cookie_echo),
           peer_supports_addip(cookie_echo));
 
-      smctrl->outbound_stream = mch_read_ostreams(initAckCID);
-      smctrl->inbound_stream = mch_read_instreams(initAckCID);
-      EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u", smctrl->outbound_stream,
-          smctrl->inbound_stream);
+      smctrl->ordered_streams = ordered_streams;
+      smctrl->sequenced_streams = sequenced_streams;
+      EVENTLOG2(VERBOSE, "set msm ordered_streams to %u, sequenced_streams to %u", smctrl->ordered_streams,
+          smctrl->sequenced_streams);
 
       // update my remote tag with cookie remote tag
       curr_channel_->remote_tag = cookie_remote_tag;
@@ -6493,18 +6549,18 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
         }
 
         uint peer_rwnd = mch_read_rwnd(initCID);
-        ushort our_in = mch_read_instreams(initAckCID);
-        ushort our_os = mch_read_ostreams(initAckCID);
+        ushort ordered_streams = mch_read_ordered_streams(initAckCID);
+        ushort sequenced_streams = mch_read_sequenced_streams(initAckCID);
         uint peer_itsn = mch_read_itsn(initCID);
         uint our_itsn = mch_read_itsn(initAckCID);
         bool peer_spre = peer_supports_pr(cookie_echo);
         bool peer_saddip = peer_supports_addip(cookie_echo);
-        mdi_init_channel(peer_rwnd, our_in, our_os, peer_itsn, cookie_remote_tag, our_itsn, peer_spre, peer_saddip);
+        mdi_init_channel(peer_rwnd, ordered_streams, sequenced_streams, peer_itsn, cookie_remote_tag, our_itsn, peer_spre, peer_saddip);
 
-        smctrl->outbound_stream = mch_read_ostreams(initAckCID);
-        smctrl->inbound_stream = mch_read_instreams(initAckCID);
-        EVENTLOG2(VERBOSE, "Set Outbound Stream to %u, Inbound Streams to %u", smctrl->outbound_stream,
-            smctrl->inbound_stream);
+        smctrl->ordered_streams = ordered_streams;
+        smctrl->sequenced_streams = sequenced_streams;
+        EVENTLOG2(VERBOSE, "set msm ordered_streams to %u, sequenced_streams to %u", smctrl->ordered_streams,
+            smctrl->sequenced_streams);
 
         // stop t1-init timer
         if (smctrl->init_timer_id != NULL)
@@ -8731,7 +8787,7 @@ void freeport(unsigned short portSeized)
   portsSeized[portSeized] = 0;
 }
 
-int mulp_new_geco_instance(unsigned short localPort, unsigned short noOfInStreams, unsigned short noOfOutStreams,
+int mulp_new_geco_instance(unsigned short localPort, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,
     unsigned int noOfLocalAddresses, unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
     ulp_cbs_t ULPcallbackFunctions)
 {
@@ -8748,7 +8804,7 @@ int mulp_new_geco_instance(unsigned short localPort, unsigned short noOfInStream
   geco_channel_t* old_assoc = curr_channel_;
 
   // validate streams
-  if ((noOfInStreams == 0) || (noOfOutStreams == 0) || (noOfLocalAddresses == 0) || (localAddressList == NULL))
+  if ((noOfOrderStreams == 0) || (noOfSeqStreams == 0) || (noOfLocalAddresses == 0) || (localAddressList == NULL))
   {
     ERRLOG(FALTAL_ERROR_EXIT, "mulp_new_geco_instance()::invalid parameters !");
   }
@@ -8814,8 +8870,8 @@ int mulp_new_geco_instance(unsigned short localPort, unsigned short noOfInStream
   }
 
   curr_geco_instance_->local_port = localPort;
-  curr_geco_instance_->noOfInStreams = noOfInStreams;
-  curr_geco_instance_->noOfOutStreams = noOfOutStreams;
+  curr_geco_instance_->ordered_streams = noOfOrderStreams;
+  curr_geco_instance_->sequenced_streams = noOfSeqStreams;
   curr_geco_instance_->is_inaddr_any = is_inaddr_any;
   curr_geco_instance_->is_in6addr_any = is_in6addr_any;
   curr_geco_instance_->use_ip4 = with_ipv4;
@@ -8995,15 +9051,15 @@ int mulp_delete_geco_instance(int instance_idx)
   return ret;
 }
 
-int mulp_connect(unsigned int instanceid, unsigned short noOfOutStreams, char destinationAddress[MAX_IPADDR_STR_LEN],
+int mulp_connect(unsigned int instanceid, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams, char destinationAddress[MAX_IPADDR_STR_LEN],
     unsigned short destinationPort, void* ulp_data)
 {
   char dAddress[1][MAX_IPADDR_STR_LEN];
   //memcpy(dAddress, destinationAddress, MAX_IPADDR_STR_LEN);
   memcpy_fast(dAddress, destinationAddress, MAX_IPADDR_STR_LEN);
-  return mulp_connectx(instanceid, noOfOutStreams, dAddress, 1, 1, destinationPort, ulp_data);
+  return mulp_connectx(instanceid, noOfOrderStreams, noOfSeqStreams,dAddress, 1, 1, destinationPort, ulp_data);
 }
-int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
+int mulp_connectx(unsigned int instanceid, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,
     char destinationAddresses[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN], unsigned int noOfDestinationAddresses,
     unsigned int maxSimultaneousInits, unsigned short destinationPort, void* ulp_data)
 {
@@ -9088,7 +9144,11 @@ int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
     }
   }
   // we always try
-  msm_connect(noOfOutStreams, curr_geco_instance_->noOfInStreams, dest_su, noOfDestinationAddresses);
+  if(noOfOrderStreams < curr_geco_instance_->ordered_streams)
+    noOfOrderStreams = curr_geco_instance_->ordered_streams;
+  if(noOfSeqStreams < curr_geco_instance_->sequenced_streams)
+    noOfSeqStreams = curr_geco_instance_->sequenced_streams;
+  msm_connect(noOfOrderStreams, noOfSeqStreams, dest_su, noOfDestinationAddresses);
   uint channel_id = curr_channel_->channel_id;
   return channel_id;
 }
@@ -9224,8 +9284,8 @@ int mulp_set_connection_default_params(unsigned int instanceid, geco_instance_pa
   instance->default_ipTos = params->ipTos;
   instance->default_maxSendQueue = params->maxSendQueue;
   instance->default_maxRecvQueue = params->maxRecvQueue;
-  instance->noOfInStreams = params->inStreams;
-  instance->noOfOutStreams = params->outStreams;
+  instance->ordered_streams = params->ordered_streams;
+  instance->sequenced_streams = params->sequenced_streams;
   return MULP_SUCCESS;
 }
 int mulp_get_connection_default_params(unsigned int instanceid, geco_instance_params_t* geco_instance_params)
@@ -9270,8 +9330,8 @@ int mulp_get_connection_default_params(unsigned int instanceid, geco_instance_pa
   geco_instance_params->ipTos = instance->default_ipTos;
   geco_instance_params->maxSendQueue = instance->default_maxSendQueue;
   geco_instance_params->maxRecvQueue = instance->default_maxRecvQueue;
-  geco_instance_params->inStreams = instance->noOfInStreams;
-  geco_instance_params->outStreams = instance->noOfOutStreams;
+  geco_instance_params->ordered_streams = instance->ordered_streams;
+  geco_instance_params->sequenced_streams = instance->sequenced_streams;
   return MULP_SUCCESS;
 }
 

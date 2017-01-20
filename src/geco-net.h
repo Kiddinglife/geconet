@@ -152,9 +152,9 @@ struct geco_instance_params_t
     /* the lifetime of a cookie */
     unsigned int validCookieLife;
     /*  (get/set) */
-    unsigned short outStreams;
+    unsigned short ordered_streams;
     /*  (get/set) */
-    unsigned short inStreams;
+    unsigned short sequenced_streams;
     /* does the assoc support unreliable transfer*/
     bool support_particial_reliability;
     /* does the assoc support adding/deleting IP addresses*/
@@ -450,9 +450,9 @@ int mulp_delete_geco_instance(int instance_name);
 /// @param destinationPort       destination port
 /// @param ulp_data             pointer to an ULP data structure, will be passed with callbacks !
 /// @return connection ID, 0 in case of failures
-int mulp_connect(unsigned int instanceid, unsigned short noOfOutStreams, char destinationAddress[MAX_IPADDR_STR_LEN],
+int mulp_connect(unsigned int instanceid, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,char destinationAddress[MAX_IPADDR_STR_LEN],
     unsigned short destinationPort, void* ulp_data);
-int mulp_connectx(unsigned int instanceid, unsigned short noOfOutStreams,
+int mulp_connectx(unsigned int instanceid,  unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,
     char destinationAddresses[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN], unsigned int noOfDestinationAddresses,
     unsigned int maxSimultaneousInits, unsigned short destinationPort, void* ulp_data);
 

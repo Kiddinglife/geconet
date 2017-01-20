@@ -96,10 +96,10 @@ init_chunk_fixed_t* mch_read_init_fixed(uint initcid);
 /* reads the simple_chunks_ type of a chunk.*/
 uchar mch_read_chunkid(uchar chunkID);
 uchar mch_read_chunk_type(chunk_id_t chunkID);
-/*reads the number of output streams from an init or initAck */
-ushort mch_read_ostreams(uchar init_chunk_id);
-/*reads the number of input streams from an init or initAck */
-ushort mch_read_instreams(uchar init_chunk_id);
+/*reads the number of ordered_streams from an init or initAck */
+ushort mch_read_ordered_streams(uchar init_chunk_id);
+/*reads the number of sequenced_streams from an init or initAck */
+ushort mch_read_sequenced_streams(uchar init_chunk_id);
 uint mch_read_itag(uchar init_chunk_id);
 uchar* mch_find_first_chunk_of(uchar * packet_value, uint packet_val_len, uint chunk_type);
 // @brief returns the suggested cookie lifespan increment if a cookie preservative is present in a init chunk.
@@ -165,7 +165,7 @@ uchar mch_make_simple_chunk(simple_chunk_t* chunk);
 */
 uint mch_make_simple_chunk(uint chunk_type, uchar flag);
 /* makes an initAck and initializes the the fixed part of initAck */
-chunk_id_t mch_make_init_ack_chunk(uint initTag, uint rwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN);
+chunk_id_t mch_make_init_ack_chunk(uint initTag, uint arwnd, ushort ordersm, ushort seqsm, uint initialTSN);
 /* makes an initAck and initializes the the fixed part of initAck */
 chunk_id_t mch_make_init_chunk(uint initTag, uint rwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN);
 chunk_id_t mch_make_cookie_echo(cookie_param_t * cookieParam);

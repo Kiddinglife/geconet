@@ -730,7 +730,7 @@ uint mch_make_simple_chunk(uint chunk_type, uchar flag)
   return simple_chunk_index_;
 }
 
-chunk_id_t mch_make_init_ack_chunk(uint initTag, uint arwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN)
+chunk_id_t mch_make_init_ack_chunk(uint initTag, uint arwnd, ushort ordersm, ushort seqsm, uint initialTSN)
 {
   assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
   init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
@@ -743,13 +743,13 @@ chunk_id_t mch_make_init_ack_chunk(uint initTag, uint arwnd, ushort noOutStreams
   initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
   initChunk->init_fixed.init_tag = htonl(initTag);
   initChunk->init_fixed.rwnd = htonl(arwnd);
-  initChunk->init_fixed.outbound_streams = htons(noOutStreams);
-  initChunk->init_fixed.inbound_streams = htons(noInStreams);
+  initChunk->init_fixed.ordered_streams = htons(ordersm);
+  initChunk->init_fixed.sequenced_streams = htons(seqsm);
   initChunk->init_fixed.initial_tsn = htonl(initialTSN);
   return add2chunklist((simple_chunk_t*) initChunk, "create init ack chunk %u");
 }
 
-chunk_id_t mch_make_init_chunk(uint initTag, uint arwnd, ushort noOutStreams, ushort noInStreams, uint initialTSN)
+chunk_id_t mch_make_init_chunk(uint initTag, uint arwnd, ushort noOrderStreams, ushort noSeqStreams, uint initialTSN)
 {
   assert(sizeof(init_chunk_t) == INIT_CHUNK_TOTAL_SIZE);
   init_chunk_t* initChunk = (init_chunk_t*) geco_malloc_ext(
@@ -762,8 +762,8 @@ chunk_id_t mch_make_init_chunk(uint initTag, uint arwnd, ushort noOutStreams, us
   initChunk->chunk_header.chunk_length = INIT_CHUNK_FIXED_SIZES;
   initChunk->init_fixed.init_tag = htonl(initTag);
   initChunk->init_fixed.rwnd = htonl(arwnd);
-  initChunk->init_fixed.outbound_streams = htons(noOutStreams);
-  initChunk->init_fixed.inbound_streams = htons(noInStreams);
+  initChunk->init_fixed.ordered_streams = htons(noOrderStreams);
+  initChunk->init_fixed.sequenced_streams = htons(noSeqStreams);
   initChunk->init_fixed.initial_tsn = htonl(initialTSN);
   return add2chunklist((simple_chunk_t*) initChunk, "create init ack chunk %u");
 }
@@ -791,7 +791,7 @@ uchar mch_read_chunkid(uchar chunkID)
   return simple_chunks_[chunkID]->chunk_header.chunk_id;
 }
 
-ushort mch_read_ostreams(uchar init_chunk_id)
+ushort mch_read_ordered_streams(uchar init_chunk_id)
 {
   if (simple_chunks_[init_chunk_id] == NULL)
   {
@@ -803,7 +803,7 @@ ushort mch_read_ostreams(uchar init_chunk_id)
   uint chunkid = scptr->chunk_header.chunk_id;
   if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
   {
-    ushort osnum = ntohs(((init_chunk_t*) scptr)->init_fixed.outbound_streams);
+    ushort osnum = ntohs(((init_chunk_t*) scptr)->init_fixed.ordered_streams);
     return osnum;
   }
   else
@@ -813,7 +813,7 @@ ushort mch_read_ostreams(uchar init_chunk_id)
   }
 }
 
-ushort mch_read_instreams(uchar init_chunk_id)
+ushort mch_read_sequenced_streams(uchar init_chunk_id)
 {
   if (simple_chunks_[init_chunk_id] == NULL)
   {
@@ -825,7 +825,7 @@ ushort mch_read_instreams(uchar init_chunk_id)
   uint chunkid = scptr->chunk_header.chunk_id;
   if (chunkid == CHUNK_INIT || chunkid == CHUNK_INIT_ACK)
   {
-    ushort isnum = ntohs(((init_chunk_t*) scptr)->init_fixed.inbound_streams);
+    ushort isnum = ntohs(((init_chunk_t*) scptr)->init_fixed.sequenced_streams);
     return isnum;
   }
   else
