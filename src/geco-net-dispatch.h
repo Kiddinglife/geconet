@@ -429,9 +429,12 @@ struct deliverman_controller_t
 {
     uint numSequencedStreams;
     uint numOrderedStreams;
-    recv_stream_t* recv_streams[STREAM_COUNT]; // sequence streams 1 and ordered streams 0
-    send_stream_t* send_streams[STREAM_COUNT];
-    bool* recvStreamActivated[STREAM_COUNT];
+    recv_stream_t* recv_seq_streams;
+    recv_stream_t* recv_order_streams;
+    bool* recv_seq_streams_activated;
+    bool* recv_order_streams_actived;
+    send_stream_t* send_seq_streams;
+    send_stream_t* send_order_streams;
     uint queuedBytes;
     bool unreliable;
     bool unordered;

@@ -524,12 +524,12 @@ inline int mdlm_read_queued_chunks()
   for (i = 0; i < (int) se->numSequencedStreams; i++)
   {
     /* Add number of all chunks (i.e. lengths of all pduList lists of all streams */
-    num_of_chunks += se->recv_streams[SEQUENCED_STREAM_IDX][i].pduList.size();
+    num_of_chunks += se->recv_seq_streams[i].pduList.size();
   }
   for (i = 0; i < (int) se->numOrderedStreams; i++)
   {
     /* Add number of all chunks (i.e. lengths of all pduList lists of all streams */
-    num_of_chunks += se->recv_streams[ORDERED_STREAM_IDX][i].pduList.size();
+    num_of_chunks += se->recv_order_streams[i].pduList.size();
   }
   return num_of_chunks;
 }
@@ -3611,7 +3611,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
   dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[ORDERED_STREAM_IDX][dchunk->stream_id] = true;
+  mdlm->recv_order_streams_actived[dchunk->stream_id] = true;
 
   if(dchunk->chunk_flags & DCHUNK_FLAG_ORDER)
   {
@@ -3701,7 +3701,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
   dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
-  mdlm->recvStreamActivated[SEQUENCED_STREAM_IDX][dchunk->stream_id] = true;
+  mdlm->recv_seq_streams_activated[dchunk->stream_id] = true;
 
   // REORDERING BASED ON SSN
   //auto& prelist = mdlm->recv_streams[SEQUENCED_STREAM_IDX][dchunk->stream_id].prePduList;
@@ -3757,10 +3757,10 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
   int retval;
   for (uint i = 0; i < mdlm->numOrderedStreams; i++)
   {
-      auto& prePduList = mdlm->recv_streams[ORDERED_STREAM_IDX][i].prePduList;
+      auto& prePduList = mdlm->recv_order_streams[i].prePduList;
       if (!prePduList.empty())
       {
-        auto& pduList = mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].pduList;
+        auto& pduList = mdlm->recv_order_streams[i].pduList;
         for (auto dpdu : prePduList)
         {
           pduList.push_back(dpdu);
@@ -3770,10 +3770,10 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
   }
   for (uint i = 0; i < mdlm->numSequencedStreams; i++)
   {
-      auto& prePduList = mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].prePduList;
+      auto& prePduList = mdlm->recv_seq_streams[i].prePduList;
       if (!prePduList.empty())
       {
-        auto& pduList = mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].pduList;
+        auto& pduList =  mdlm->recv_seq_streams[i].pduList;
         for (auto dpdu : prePduList)
         {
           pduList.push_back(dpdu);
@@ -3822,14 +3822,14 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
   // one-off settings will be reset everytime mdlm_search_ready_pdu() is called
   for (i = 0; i < mdlm->numSequencedStreams; i++)
   {
-    mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].highestSSN = 0;
-    mdlm->recv_streams[SEQUENCED_STREAM_IDX][i].highestSSNused = false;
+    mdlm->recv_seq_streams[i].highestSSN = 0;
+    mdlm->recv_seq_streams[i].highestSSNused = false;
   }
 
   for (i = 0; i < mdlm->numOrderedStreams; i++)
   {
-    mdlm->recv_streams[ORDERED_STREAM_IDX][i].highestSSN = 0;
-    mdlm->recv_streams[ORDERED_STREAM_IDX][i].highestSSNused = false;
+    mdlm->recv_order_streams[i].highestSSN = 0;
+    mdlm->recv_order_streams[i].highestSSNused = false;
   }
 
   // search complete pdu from rchunks chunk list
@@ -3840,7 +3840,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
     currentSID = d_chunk->stream_id;
     currentSSN = d_chunk->stream_sn;
     unordered = d_chunk->chunk_flags & DCHUNK_FLAG_UNORDER;
-    recv_streams = &mdlm->recv_streams[ORDERED_STREAM_IDX][currentSID];
+    recv_streams = &mdlm->recv_order_streams[currentSID];
 
     EVENTLOG3(VERBOSE, "Handling chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
@@ -4027,7 +4027,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
     d_chunk = *itr;
     currentSID = d_chunk->stream_id;
     currentSSN = d_chunk->stream_sn;
-    recv_streams = &(mdlm->recv_streams[SEQUENCED_STREAM_IDX][currentSID]);
+    recv_streams = &(mdlm->recv_seq_streams[currentSID]);
     EVENTLOG3(VERBOSE, "Handling uro chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
     // say we have ssn 0 1 2  5 8
@@ -5310,35 +5310,36 @@ bool assocSupportsPRSCTP)
   if (tmp == NULL)
     ERRLOG(FALTAL_ERROR_EXIT, "deliverman_controller_t Malloc failed");
 
-  if ((tmp->recv_streams[SEQUENCED_STREAM_IDX] = new recv_stream_t[numberSeqStreams]) == NULL ||
-      (tmp->recv_streams[ORDERED_STREAM_IDX] = new recv_stream_t[numberOrderStreams]) == NULL)
+  if ((tmp->recv_seq_streams = new recv_stream_t[numberSeqStreams]) == NULL ||
+      (tmp->recv_order_streams = new recv_stream_t[numberOrderStreams]) == NULL)
   {
     delete tmp;
     ERRLOG(FALTAL_ERROR_EXIT, "recv_streams Malloc failed");
   }
 
-  if ((tmp->recvStreamActivated[SEQUENCED_STREAM_IDX] = new bool[numberSeqStreams]) == NULL ||
-      (tmp->recvStreamActivated[ORDERED_STREAM_IDX] = new bool[numberOrderStreams]) == NULL)
+  if ((tmp->recv_seq_streams_activated = new bool[numberSeqStreams]) == NULL ||
+      (tmp->recv_order_streams_actived = new bool[numberOrderStreams]) == NULL)
   {
-    delete[] tmp->recv_streams[SEQUENCED_STREAM_IDX];
-    delete[] tmp->recv_streams[ORDERED_STREAM_IDX];
+    delete[] tmp->recv_seq_streams;
+    delete[] tmp->recv_order_streams;
     delete tmp;
     ERRLOG(FALTAL_ERROR_EXIT, "recvStreamActivated Malloc failed");
   }
 
   uint i;
   for (i = 0; i < numberSeqStreams; i++)
-    tmp->recvStreamActivated[SEQUENCED_STREAM_IDX][i] = false;
+    tmp->recv_seq_streams_activated[i] = false;
 
   for (i = 0; i < numberOrderStreams; i++)
-    tmp->recvStreamActivated[ORDERED_STREAM_IDX][i] = false;
+    tmp->recv_order_streams_actived[i] = false;
 
-  if ((tmp->send_streams[SEQUENCED_STREAM_IDX] = new send_stream_t[numberSeqStreams]) == NULL)
+  if ((tmp->send_order_streams= new send_stream_t[numberOrderStreams]) == NULL ||
+      (tmp->send_seq_streams= new send_stream_t[numberSeqStreams]) == NULL)
   {
-    delete[] tmp->recvStreamActivated[SEQUENCED_STREAM_IDX];
-    delete[] tmp->recvStreamActivated[ORDERED_STREAM_IDX];
-    delete[] tmp->recv_streams[SEQUENCED_STREAM_IDX];
-    delete[] tmp->recv_streams[ORDERED_STREAM_IDX];
+    delete[] tmp->recv_seq_streams_activated;
+    delete[] tmp->recv_order_streams_actived;
+    delete[] tmp->recv_seq_streams;
+    delete[] tmp->recv_order_streams;
     delete tmp;
     ERRLOG(FALTAL_ERROR_EXIT, "send_streams Malloc failed");
   }
@@ -5350,20 +5351,20 @@ bool assocSupportsPRSCTP)
 
   for (i = 0; i < numberSeqStreams; i++)
   {
-    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].nextSSN = 0;
-    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].index = 0; /* for ordered chunks, next ssn */
-    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].highestSSN = 0;
-    (tmp->recv_streams)[SEQUENCED_STREAM_IDX][i].highestSSNused = false;
-    (tmp->send_streams)[SEQUENCED_STREAM_IDX][i].nextSSN = 0;
+    (tmp->recv_seq_streams)[i].nextSSN = 0;
+    (tmp->recv_seq_streams)[i].index = 0; /* for ordered chunks, next ssn */
+    (tmp->recv_seq_streams)[i].highestSSN = 0;
+    (tmp->recv_seq_streams)[i].highestSSNused = false;
+    (tmp->send_seq_streams)[i].nextSSN = 0;
   }
 
   for (i = 0; i < numberOrderStreams; i++)
   {
-    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].nextSSN = 0;
-    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].index = 0; /* for ordered chunks, next ssn */
-    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].highestSSN = 0;
-    (tmp->recv_streams)[ORDERED_STREAM_IDX][i].highestSSNused = false;
-    (tmp->send_streams)[ORDERED_STREAM_IDX][i].nextSSN = 0;
+    (tmp->recv_order_streams)[i].nextSSN = 0;
+    (tmp->recv_order_streams)[i].index = 0; /* for ordered chunks, next ssn */
+    (tmp->recv_order_streams)[i].highestSSN = 0;
+    (tmp->recv_order_streams)[i].highestSSNused = false;
+    (tmp->recv_order_streams)[i].nextSSN = 0;
   }
 
   return (tmp);
@@ -5375,19 +5376,17 @@ void mdlm_free(deliverman_controller_t* se)
 {
   EVENTLOG(VERBOSE, "- - - Enter mdlm_free()");
 
-  delete se->send_streams;
-
   for (uint i = 0; i < se->numOrderedStreams; i++)
   {
     EVENTLOG1(VERBOSE, "delete mdlm_free(): freeing data for receive stream %d", i);
     /* whatever is still in these lists, delete it before freeing the lists */
-    auto& pdulist = se->recv_streams[ORDERED_STREAM_IDX][i].pduList;
+    auto& pdulist = se->recv_order_streams[i].pduList;
     for (auto it = pdulist.begin(); it != pdulist.end();)
     {
       free_delivery_pdu((*it));
       pdulist.erase(it++);
     }
-    auto& predulist = se->recv_streams[ORDERED_STREAM_IDX][i].prePduList;
+    auto& predulist = se->recv_order_streams[i].prePduList;
     for (auto it = predulist.begin(); it != predulist.end();)
     {
       free_delivery_pdu((*it));
@@ -5399,13 +5398,13 @@ void mdlm_free(deliverman_controller_t* se)
   {
     EVENTLOG1(VERBOSE, "delete mdlm_free(): freeing data for receive stream %d", i);
     /* whatever is still in these lists, delete it before freeing the lists */
-    auto& pdulist = se->recv_streams[SEQUENCED_STREAM_IDX][i].pduList;
+    auto& pdulist = se->recv_seq_streams[i].pduList;
     for (auto it = pdulist.begin(); it != pdulist.end();)
     {
       free_delivery_pdu((*it));
       pdulist.erase(it++);
     }
-    auto& predulist = se->recv_streams[SEQUENCED_STREAM_IDX][i].prePduList;
+    auto& predulist = se->recv_seq_streams[i].prePduList;
     for (auto it = predulist.begin(); it != predulist.end();)
     {
       free_delivery_pdu((*it));
@@ -5413,9 +5412,12 @@ void mdlm_free(deliverman_controller_t* se)
     }
   }
 
-  delete[] se->recvStreamActivated;
-  delete[] se->recv_streams[SEQUENCED_STREAM_IDX];
-  delete[] se->recv_streams[ORDERED_STREAM_IDX];
+  delete [] se->send_order_streams;
+  delete [] se->send_seq_streams;
+  delete[] se->recv_seq_streams_activated;
+  delete[] se->recv_order_streams_actived;
+  delete[] se->recv_seq_streams;
+  delete[] se->recv_order_streams;
   delete se;
 
   EVENTLOG(VERBOSE, "- - - Leave mdlm_free()");
