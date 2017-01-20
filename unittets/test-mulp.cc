@@ -161,8 +161,8 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
 		ULPcallbackFunctions);
 	curr_geco_instance_ = geco_instances_[instid];
 	ASSERT_EQ(curr_geco_instance_->local_port, localPort);
-	ASSERT_EQ(curr_geco_instance_->noOfInStreams, noOfInStreams);
-	ASSERT_EQ(curr_geco_instance_->noOfOutStreams, noOfOutStreams);
+	ASSERT_EQ(curr_geco_instance_->sequenced_streams, noOfOutStreams);
+	ASSERT_EQ(curr_geco_instance_->ordered_streams, noOfInStreams);
 	ASSERT_EQ(curr_geco_instance_->is_inaddr_any, true);
 	ASSERT_EQ(curr_geco_instance_->is_in6addr_any, true);
 	ASSERT_EQ(curr_geco_instance_->use_ip4, true);
@@ -517,8 +517,8 @@ TEST(MULP, test_mdi_new_and_delete_channel)
 	ASSERT_EQ(msm->channel_id, curr_channel_->channel_id);
 	ASSERT_EQ(msm->my_init_chunk, (init_chunk_t*)NULL);
 	ASSERT_EQ(msm->peer_cookie_chunk, (cookie_echo_chunk_t*)NULL);
-	ASSERT_EQ(msm->outbound_stream, curr_geco_instance_->noOfOutStreams);
-	ASSERT_EQ(msm->inbound_stream, curr_geco_instance_->noOfInStreams);
+	ASSERT_EQ(msm->sequenced_streams, curr_geco_instance_->sequenced_streams);
+	ASSERT_EQ(msm->ordered_streams, curr_geco_instance_->ordered_streams);
 	ASSERT_EQ(msm->local_tie_tag, 0);
 	ASSERT_EQ(msm->peer_tie_tag, 0);
 	ASSERT_EQ(msm->max_init_retrans_count,
@@ -650,7 +650,7 @@ TEST(MULP, test_mulp_connect)
 	curr_geco_instance_ = geco_instances_[instid];
 
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, "::1", localPort,
+	mulp_connect(instid, noOfInStreams,noOfOutStreams, "::1", localPort,
 		&ULPcallbackFunctions);
 	geco_channel_t* curr_channel_ = channels_[0];
 
@@ -760,11 +760,12 @@ TEST(MULP, test_connection_pharse)
 	// cline code
 	mdi_connect_udp_sfd_ = true;
 	noOfOutStreams = 12;
-	mulp_connect(instid, noOfOutStreams, (char*) "127.0.0.1", localPort, &ULPcallbackFunctions);
+	mulp_connect(instid, noOfInStreams,noOfOutStreams, (char*) "127.0.0.1", localPort, &ULPcallbackFunctions);
 
 	//poll to receive the init, send initack
-	while (flag)
-		mtra_poll();
+	do {
+          mtra_poll();
+	}while (flag);
 
 	// client code
 	msm_abort_channel();
