@@ -3651,7 +3651,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
   dchunk->packet_params_t = g_packet_params;
   mdlm->queuedBytes += dchunk_pdu_len;
 
-  // mdlm->r.push_back(dchunk); // ordered by tsn already
+  //mdlm->r.push_back(dchunk); // ordered by tsn already
 
   return MULP_SUCCESS;
 }
@@ -3854,7 +3854,11 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
  * rs sid 0 = 2,3
  *
  * done !
- * */
+ *
+ * there are two more streams for ur and r chunks in default
+ * so total number of streams = sequenced_streams+order_streams+2
+ *
+ */
 int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 {
   static delivery_pdu_t* d_pdu;
