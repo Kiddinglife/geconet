@@ -843,4 +843,10 @@ if (d_pdu->ddata != NULL)\
     delete d_pdu;\
 }
 
+#define free_packet_params(len) \
+if((int)(len) <= 0 && g_packet_params!=NULL) {geco_free_ext(g_packet_params, __FILE__, __LINE__);g_packet_params = NULL;}\
+else if(g_packet_params!=NULL) {while ((len) & 3) (len)++; g_packet_params->released_bytes += (len);\
+if (g_packet_params->released_bytes == g_packet_params->total_packet_bytes)\
+{geco_free_ext(g_packet_params, __FILE__, __LINE__);g_packet_params = NULL;}}
+
 #endif /* MY_GLOBALS_H_ */

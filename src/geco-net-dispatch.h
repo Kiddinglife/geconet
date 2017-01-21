@@ -440,8 +440,10 @@ struct deliverman_controller_t
     bool unordered;
     // reliable, reliable&ordered, reliable&sequenced,
     // unreliable, unreliable&ordered or unreliable&sequenced
-    std::list<delivery_data_t*> ro,rs,urs;
-    std::list<delivery_pdu_t*> r,ur;
+	// parse packet and put dchunk to againest list, they must be ordered
+    std::list<delivery_data_t*> ro,rs,r,urs;
+	std::list<delivery_pdu_t*> ur_prepduList;
+	std::list<delivery_pdu_t*> r_prepduList;
 };
 
 /**

@@ -703,6 +703,13 @@ communicationLostNotif(unsigned int, unsigned short, void*)
 #include "geco-net-transport.h"
 TEST(MULP, test_connection_pharse)
 {
+	
+	if (sbefore(32768, 0))
+	{
+		printf("32767, 0\n");
+	}
+	exit(0);
+
 	//precondition lib has been inited
 	initialize_library();
 	mtra_add_stdin_cb(stdin_cb);
