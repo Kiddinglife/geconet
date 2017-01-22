@@ -703,8 +703,11 @@ communicationLostNotif(unsigned int, unsigned short, void*)
 #include "geco-net-transport.h"
 TEST(MULP, test_connection_pharse)
 {
-	
-	if (sbefore(32768, 0))
+	// short 32767 - 0 = 32767 > 0
+	// short 32768 - 0 = 32768  = -1 < 0
+	short a = 65535;
+	printf(" short 65535 = %d\n", a);
+	if (sbefore(2, 30000))
 	{
 		printf("32767, 0\n");
 	}

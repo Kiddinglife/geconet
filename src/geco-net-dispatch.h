@@ -442,8 +442,8 @@ struct deliverman_controller_t
     // unreliable, unreliable&ordered or unreliable&sequenced
 	// parse packet and put dchunk to againest list, they must be ordered
     std::list<delivery_data_t*> ro,rs,r,urs;
-	std::list<delivery_pdu_t*> ur_prepduList;
-	std::list<delivery_pdu_t*> r_prepduList;
+	std::list<delivery_pdu_t*> ur_pduList;
+	std::list<delivery_pdu_t*> r_pduList;
 };
 
 /**
