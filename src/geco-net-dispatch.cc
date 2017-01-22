@@ -5516,6 +5516,8 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN, unsigned int numbe
 
 	tmp->numofdestaddrlist = number_of_destination_addresses;
 	tmp->sack_chunk = new sack_chunk_t;
+	tmp->sack_chunk->chunk_header.chunk_id = CHUNK_SACK;
+	tmp->sack_chunk->chunk_header.chunk_flags = 0;
 	tmp->cumulative_tsn = remote_initial_TSN - 1; /* as per section 4.1 */
 	tmp->lowest_duplicated_tsn = remote_initial_TSN - 1;
 	tmp->highest_duplicated_tsn = remote_initial_TSN - 1;
@@ -7273,9 +7275,12 @@ void mdi_process_asconf_ack_chunk(simple_chunk_t* simple_chunk)
 	//@TODO
 }
 
-void mdlm_do_notifications()
+int mdlm_do_notifications()
 {
-	//@TODO
+	deliverman_controller_t* mdlm = mdi_read_mdlm();
+	assert(mdlm != NULL);
+	int retval = mdlm_search_ready_pdu(mdlm);
+	return retval == MULP_SUCCESS ? mdlm_deliver_ready_pdu(mdlm) : retval;
 }
 
 bool mrecv_create_sack(int* last_src_path_, bool force_sack)
@@ -7284,9 +7289,44 @@ bool mrecv_create_sack(int* last_src_path_, bool force_sack)
 	return 0;
 }
 
+/// 1.called by bundling, after new data has been processed (so we may start building a sack chunk)
+/// 2.by streamengine, when ULP has read some data, and we want to update the RWND.
 void mrecv_all_chunks_processed(bool new_data_received)
 {
-	//@TODO
+	recv_controller_t* mrecv = mdi_read_mrecv();
+	assert(mrecv != NULL);
+
+	if (new_data_received)
+		mrecv->datagrams_received++;
+
+	ushort num_of_frags = mrecv->fragmented_data_chunks_list.size();
+	ushort num_of_dups = mrecv->duplicated_data_chunks_list.size();
+	EVENTLOG2(VVERBOSE, "mrecv_all_chunks_processed()::len of frag_list==%u, len of dup_list==%u",
+		num_of_frags, num_of_dups);
+
+	// limit number of Fragments/Duplicates according to PATH MTU
+	// @TODO
+
+	// update curr rwnd
+	uint bytes_queued = mdlm_read_queued_bytes();
+	uint current_rwnd = bytes_queued >= mrecv->my_rwnd ? 0 : mrecv->my_rwnd - bytes_queued;
+	// MAX_PACKET_PDU is constant no matter it is udp-tunneled or not
+	// advertising rwnd to sender for avoiding silly window syndrome (SWS),
+	if (current_rwnd > 0 && current_rwnd <= 2 * MAX_PACKET_PDU)
+		current_rwnd = 1;
+
+	sack_chunk_t* sack = mrecv->sack_chunk;
+	// each frag haa start and end ssn so multiplies another 2
+	ushort len16 = SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE +
+		num_of_dups * sizeof(uint) + (num_of_frags<<1) * sizeof(ushort);
+	sack->chunk_header.chunk_length = htons(len16);
+	sack->sack_fixed.cumulative_tsn_ack = htonl(mrecv->cumulative_tsn);
+	// @FIXME   deduct size of data still in queue, that is waiting to be picked up by an ULP 
+	sack->sack_fixed.a_rwnd = htonl(current_rwnd);
+	sack->sack_fixed.num_of_fragments = htons(num_of_frags);
+	sack->sack_fixed.num_of_duplicates = htons(num_of_dups);
+
+
 }
 
 /*
