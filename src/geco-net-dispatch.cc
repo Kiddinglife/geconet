@@ -109,6 +109,7 @@ geco_instance_t *curr_geco_instance_;
 geco_channel_t *curr_channel_;
 static int mdi_send_sfd_;
 packet_params_t* g_packet_params;
+uint current_rwnd = 0;
 
 /// these one-shot state variables are so frequently used in recv_gco_packet()  to improve performances 
 int* curr_bundle_chunks_send_addr_ = 0;
@@ -3277,18 +3278,20 @@ uint mdlm_read_queued_bytes()
 	return mdlm != NULL ? mdlm->queuedBytes : 0;
 }
 
-bool mrecv_after_highest_duptsn(recv_controller_t* mrecv, uint chunk_tsn)
+bool mrecv_after_highest_tsn(recv_controller_t* mrecv, uint chunk_tsn)
 {
-	if (uafter(chunk_tsn, mrecv->highest_duplicated_tsn))
+  // every time we received a reliable chunk, it first goes here to update highest tsn if possible
+  if (uafter(chunk_tsn, mrecv->highest_tsn))
 	{
-		mrecv->highest_duplicated_tsn = chunk_tsn;
+		mrecv->highest_tsn = chunk_tsn;
 		return true;
 	}
+  // it is possibly dup chunk or new chunk
 	return false;
 }
 bool mrecv_before_lowest_duptsn(recv_controller_t* mrecv, uint chunk_tsn)
 {
-	if (ubefore(chunk_tsn, mrecv->lowest_duplicated_tsn))
+  if (ubefore(chunk_tsn, mrecv->lowest_duplicated_tsn))
 	{
 		mrecv->lowest_duplicated_tsn = chunk_tsn;
 		return true;
@@ -3500,16 +3503,16 @@ bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 	if (ubetween(mrecv->lowest_duplicated_tsn, chunk_tsn, mrecv->cumulative_tsn))
 		return true;
 
-	// Given cstna=2, chunk_tsn=6, received sequence 2-4.5-7...,  dups sequence lowest 0, highest 5 =>
-	// !ubetween(2, 6, 5)  =>return false => it is new chunk frag passing to mrecv_update_framents() for further processing
-	if (!ubetween(mrecv->cumulative_tsn, chunk_tsn, mrecv->highest_duplicated_tsn))
+	// Given cstna=2, chunk_tsn=6, current received sequence 0 1 2 45 7...,  dups sequence lowest 2, highest 7 =>
+	// !ubetween(2, 6, 7)  =>return false => it is new chunk frag passing to mrecv_update_framents() for further processing
+	if (!ubetween(mrecv->cumulative_tsn, chunk_tsn, mrecv->highest_tsn))
 		return false;
 
 	// frag list is empty which means this is first time received new chunk
 	if (mrecv->fragmented_data_chunks_list.empty())
 		return false;
 
-	// now chunk_tsn between any fragment boundary must be dup, otherwise must be new
+	// now chunk_tsn between any fragment start and end boundary must be dup, otherwise must be new
 	for (segment32_t& seg : mrecv->fragmented_data_chunks_list)
 	{
 		if (ubetween(seg.start_tsn, chunk_tsn, seg.stop_tsn))
@@ -3832,10 +3835,8 @@ void mdi_on_peer_data_arrive(int64 tsn, int streamID, int streamSN, uint length)
 {
 
 }
-int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
+void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 {
-	int retval;
-
 	// deliver ordered chunks
 	for (uint i = 0; i < mdlm->numOrderedStreams; i++)
 	{
@@ -3849,6 +3850,7 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 			for (auto dpdu : prePduList)
 			{
 				pduList.push_back(dpdu);
+			  mdlm->queuedBytes-=dpdu->total_length;
 				mdi_on_peer_data_arrive(
 					(dpdu->ddata[0]->chunk_flags & DCHUNK_FLAG_RELIABLE) ? dpdu->ddata[0]->tsn : -1,
 					i, dpdu->ddata[0]->stream_sn, dpdu->total_length);
@@ -3870,6 +3872,7 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 			for (auto dpdu : prePduList)
 			{
 				pduList.push_back(dpdu);
+		    mdlm->queuedBytes-=dpdu->total_length;
 				mdi_on_peer_data_arrive(
 					(dpdu->ddata[0]->chunk_flags & DCHUNK_FLAG_RELIABLE) ? dpdu->ddata[0]->tsn : -1,
 					i, dpdu->ddata[0]->stream_sn, dpdu->total_length);
@@ -3881,14 +3884,25 @@ int mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 	// deliver unsequenced and unordered chunks
 	for (auto dpdu : mdlm->ur_pduList)
 	{
-		mdi_on_peer_data_arrive(-1, -1, -1, dpdu->total_length);
+    mdlm->queuedBytes-=dpdu->total_length;
+	  mdi_on_peer_data_arrive(-1, -1, -1, dpdu->total_length);
 	}
 	for (auto dpdu : mdlm->r_pduList)
 	{
-		mdi_on_peer_data_arrive(((delivery_data_t*)(dpdu->ddata))->tsn, -1, -1, dpdu->total_length);
+    mdlm->queuedBytes-=dpdu->total_length;
+	  mdi_on_peer_data_arrive(((delivery_data_t*)(dpdu->ddata))->tsn, -1, -1, dpdu->total_length);
 	}
 
-	return retval;
+  recv_controller_t* mrecv = mdi_read_mrecv();
+  assert(mrecv!=NULL);
+  // update curr rwnd
+  current_rwnd = mdlm->queuedBytes >= mrecv->my_rwnd ? 0 : mrecv->my_rwnd - mdlm->queuedBytes;
+  // MAX_PACKET_PDU is constant no matter it is udp-tunneled or not
+  // advertising rwnd to sender for avoiding silly window syndrome (SWS),
+  if (current_rwnd > 0 && current_rwnd <= 2 * MAX_PACKET_PDU)
+    current_rwnd = 1;
+  // update arwnd tp prepare for creation of sack chunk in mrecv_create_sack()
+  mrecv->sack_chunk->sack_fixed.a_rwnd = htonl(current_rwnd);
 }
 
 /*
@@ -4406,7 +4420,6 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 	static uint assoc_state;
 	static bool bubbleup_ctsna;
 	static uint bytes_queued;
-	static uint current_rwnd;
 	static recv_controller_t* mrecv;
 	static smctrl_t* msm;
 	static uchar chunk_flag;
@@ -4443,7 +4456,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 	if (chunk_flag & DCHUNK_FLAG_RELIABLE)
 	{
 		chunk_tsn = ntohl(data_chunk->data_chunk_hdr.trans_seq_num);
-		if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv->highest_duplicated_tsn))
+		if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv->highest_tsn))
 			|| assoc_state == ChannelState::ShutdownReceived || assoc_state == ChannelState::ShutdownAckSent)
 		{
 			// drop data chunk when:
@@ -4458,14 +4471,14 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
 		EVENTLOG2(VERBOSE, "mrecv_process_data_chunk()::chunk_tsn %u, chunk_len %u", chunk_tsn, chunk_len);
 		if (mrecv_before_lowest_duptsn(mrecv, chunk_tsn))
-			// tsn is even lower than the lowest_duplicated_tsn one received so far
-			// it must be dup
+			// lower than the lowest_duplicated_tsn one received so far,it must be dup
 			mrecv_update_duplicates(mrecv, chunk_tsn);
-		else if (mrecv_after_highest_duptsn(mrecv, chunk_tsn))
+		else if (mrecv_after_highest_tsn(mrecv, chunk_tsn))
 		{
-			// tsn is even higher than the highest_duplicated_tsn one received so far
-			// it might be dup or new chunk, just pass it to mrecv_update_fragments() for further processing
+			// higher than the highest_tsn received so far,it must be new chunk
 			bubbleup_ctsna = mrecv_update_fragments(mrecv, chunk_tsn);
+			assert(mrecv->new_chunk_received == true);
+		  assert(bubbleup_ctsna == true);
 		}
 		else if (mrecv_chunk_is_duplicate(mrecv, chunk_tsn))
 			mrecv_update_duplicates(mrecv, chunk_tsn);
@@ -5520,7 +5533,7 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN, unsigned int numbe
 	tmp->sack_chunk->chunk_header.chunk_flags = 0;
 	tmp->cumulative_tsn = remote_initial_TSN - 1; /* as per section 4.1 */
 	tmp->lowest_duplicated_tsn = remote_initial_TSN - 1;
-	tmp->highest_duplicated_tsn = remote_initial_TSN - 1;
+	tmp->highest_tsn = remote_initial_TSN - 1;
 	tmp->contains_valid_sack = false;
 	tmp->timer_running = false;
 	tmp->datagrams_received = -1;
@@ -5738,7 +5751,7 @@ void mrecv_restart(int my_rwnd, uint new_remote_TSN)
 
 	rxc->cumulative_tsn = new_remote_TSN - 1;
 	rxc->lowest_duplicated_tsn = new_remote_TSN - 1;
-	rxc->highest_duplicated_tsn = new_remote_TSN - 1;
+	rxc->highest_tsn = new_remote_TSN - 1;
 
 	rxc->contains_valid_sack = false;
 	rxc->timer_running = false;
@@ -7280,7 +7293,9 @@ int mdlm_do_notifications()
 	deliverman_controller_t* mdlm = mdi_read_mdlm();
 	assert(mdlm != NULL);
 	int retval = mdlm_search_ready_pdu(mdlm);
-	return retval == MULP_SUCCESS ? mdlm_deliver_ready_pdu(mdlm) : retval;
+	if(retval == MULP_SUCCESS)
+	  mdlm_deliver_ready_pdu(mdlm);
+	return retval;
 }
 
 bool mrecv_create_sack(int* last_src_path_, bool force_sack)
@@ -7293,38 +7308,78 @@ bool mrecv_create_sack(int* last_src_path_, bool force_sack)
 /// 2.by streamengine, when ULP has read some data, and we want to update the RWND.
 void mrecv_all_chunks_processed(bool new_data_received)
 {
-	recv_controller_t* mrecv = mdi_read_mrecv();
+  static uint pos;
+  static ushort count, len16;
+  static int num_of_frags,num_of_dups, frag_start32,frag_stop32;
+  static segment16_t seg16;
+  static duplicate_tsn_t dup;
+
+  recv_controller_t* mrecv = mdi_read_mrecv();
 	assert(mrecv != NULL);
+  pos = 0;
 
 	if (new_data_received)
 		mrecv->datagrams_received++;
 
-	ushort num_of_frags = mrecv->fragmented_data_chunks_list.size();
-	ushort num_of_dups = mrecv->duplicated_data_chunks_list.size();
+	num_of_frags = mrecv->fragmented_data_chunks_list.size();
+	num_of_dups = mrecv->duplicated_data_chunks_list.size();
 	EVENTLOG2(VVERBOSE, "mrecv_all_chunks_processed()::len of frag_list==%u, len of dup_list==%u",
 		num_of_frags, num_of_dups);
-
 	// limit number of Fragments/Duplicates according to PATH MTU
-	// @TODO
-
-	// update curr rwnd
-	uint bytes_queued = mdlm_read_queued_bytes();
-	uint current_rwnd = bytes_queued >= mrecv->my_rwnd ? 0 : mrecv->my_rwnd - bytes_queued;
-	// MAX_PACKET_PDU is constant no matter it is udp-tunneled or not
-	// advertising rwnd to sender for avoiding silly window syndrome (SWS),
-	if (current_rwnd > 0 && current_rwnd <= 2 * MAX_PACKET_PDU)
-		current_rwnd = 1;
+	assert(curr_channel_ !=NULL);
+	last_src_path_ = path_map[*last_source_addr_];
+	int max_size = curr_channel_->path_control->path_params[last_src_path_].eff_pmtu
+	    - SACK_CHUNK_FIXED_SIZE - CHUNK_FIXED_SIZE - num_of_frags*sizeof(uint);
+	assert(max_size >0);
+	while(num_of_dups>0 && num_of_dups*sizeof(uint) > max_size) num_of_dups--;
+	max_size -= num_of_dups*sizeof(uint);
+	while(num_of_frags>0 && num_of_frags*sizeof(uint) > max_size) num_of_frags--;
+  max_size -= num_of_frags*sizeof(uint);
+  assert(max_size >= 0);
+  EVENTLOG3(VERBOSE, "mrecv_all_chunks_processed()::num_of_dups %d, num_of_frags %d, remianing pmtu %d",
+      num_of_dups, num_of_frags,max_size);
 
 	sack_chunk_t* sack = mrecv->sack_chunk;
 	// each frag haa start and end ssn so multiplies another 2
-	ushort len16 = SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE +
-		num_of_dups * sizeof(uint) + (num_of_frags<<1) * sizeof(ushort);
+	len16 = SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE + num_of_dups * sizeof(uint) + (num_of_frags<<1) * sizeof(ushort);
 	sack->chunk_header.chunk_length = htons(len16);
 	sack->sack_fixed.cumulative_tsn_ack = htonl(mrecv->cumulative_tsn);
-	// @FIXME   deduct size of data still in queue, that is waiting to be picked up by an ULP 
-	sack->sack_fixed.a_rwnd = htonl(current_rwnd);
 	sack->sack_fixed.num_of_fragments = htons(num_of_frags);
 	sack->sack_fixed.num_of_duplicates = htons(num_of_dups);
+
+	// write gaps blocks
+	for(auto& f32: mrecv->fragmented_data_chunks_list)
+	{
+    if(count >= num_of_frags) break;
+    EVENTLOG3(VVERBOSE,
+        "cumulative_tsn==%u, fragment.start==%u, fragment.stop==%u",
+        mrecv->cumulative_tsn, f32.start_tsn, f32.stop_tsn);
+    frag_start32 = (f32.start_tsn - mrecv->cumulative_tsn);
+    frag_stop32 = (f32.stop_tsn - mrecv->cumulative_tsn);
+    EVENTLOG2(VVERBOSE, "frag_start16==%d, frag_stop16==%d", frag_start32,frag_stop32);
+    if (frag_start32 > UINT16_MAX||frag_stop32 > UINT16_MAX) // UINT16_MAX = 65535
+    {
+      EVENTLOG(NOTICE, "mrecv_all_chunks_processed()::Fragment offset becomes too big->BREAK LOOP");
+      break;
+    }
+    seg16.start = (ushort)frag_start32;
+    seg16.stop = (ushort)frag_stop32;
+    memcpy_fast(&sack->fragments_and_dups[pos], &seg16, sizeof(segment16_t));
+    pos += sizeof(segment16_t);
+    count++;
+	}
+
+	count = 0;
+	//write dups
+  for(auto& dptr: mrecv->duplicated_data_chunks_list)
+  {
+    if(count >= num_of_dups) break;
+    memcpy_fast(&sack->fragments_and_dups[pos], &dptr, sizeof(duplicate_tsn_t));
+    pos += sizeof(duplicate_tsn_t);
+    count++;
+  }
+
+  //start sack timer
 
 
 }

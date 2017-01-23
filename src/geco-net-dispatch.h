@@ -164,7 +164,7 @@ struct recv_controller_t  //recv_ctrl
     /*stores highest tsn received so far, taking care of wraps
      * i.e. highest < lowest indicates a wrap */
     uint lowest_duplicated_tsn;
-    uint highest_duplicated_tsn;
+    uint highest_tsn;
     bool contains_valid_sack;
     bool timer_running;
     bool new_chunk_received; /*indicates whether a received chunk is truly new */
