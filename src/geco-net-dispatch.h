@@ -165,11 +165,11 @@ struct recv_controller_t  //recv_ctrl
      * i.e. highest < lowest indicates a wrap */
     uint lowest_duplicated_tsn;
     uint highest_tsn;
-    bool contains_valid_sack;
+    bool sack_updated;
     bool timer_running;
     bool new_chunk_received; /*indicates whether a received chunk is truly new */
     timeout* sack_timer; /* timer for delayed sacks */
-    int datagrams_received;
+    int packet_contain_dchunk_received;
     uint sack_flag; /* 1 (sack each data chunk) or 2 (sack every second chunk)*/
     uint last_address;
     uint channel_id;
