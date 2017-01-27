@@ -335,6 +335,8 @@ struct init_chunk_t
 
 /*************************** selective acknowledgements defs ***************************/
 //  see RFC4960 Section 2.3.3 
+#define SACK_NON_ZERO_FRAGMENT 1 // 01
+#define SACK_NON_ZERO_DUPLICATE 2 // 10
 #define SACK_CHUNK_FIXED_SIZE (2*sizeof(uint)+2*sizeof(ushort))
 #define MAX_SACK_CHUNK_VALUE_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE - CHUNK_FIXED_SIZE - SACK_CHUNK_FIXED_SIZE )
