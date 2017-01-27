@@ -57,36 +57,36 @@
  */
 typedef struct bundling_instance_struct
 {
-    /*@{ */
-    /** buffer for control chunks */
-    guchar ctrl_buf[MAX_MTU_SIZE];
-    /** buffer for sack chunks */
-    guchar sack_buf[MAX_MTU_SIZE];
-    /** buffer for data chunks */
-    guchar data_buf[MAX_MTU_SIZE];
-    /* Leave some space for the SCTP common header */
-    /**  current position in the buffer for control chunks */
-    guint ctrl_position;
-    /**  current position in the buffer for sack chunks */
-    guint sack_position;
-    /**  current position in the buffer for data chunks */
-    guint data_position;
-    /** is there data to be sent in the buffer ? */
-    gboolean data_in_buffer;
-    /**  is there a control chunk  to be sent in the buffer ? */
-    gboolean ctrl_chunk_in_buffer;
-    /**  is there a sack chunk  to be sent in the buffer ? */
-    gboolean sack_in_buffer;
-    /** status flag for correct sequence of actions */
-    gboolean got_send_request;
-    /** */
-    gboolean got_send_address;
-    /** */
-    gboolean locked;
-    /** did we receive a shutdown, either by ULP or peer ? */
-    gboolean got_shutdown;
-    /** */
-    guint requested_destination;
+  /*@{ */
+  /** buffer for control chunks */
+  guchar ctrl_buf[MAX_MTU_SIZE];
+  /** buffer for sack chunks */
+  guchar sack_buf[MAX_MTU_SIZE];
+  /** buffer for data chunks */
+  guchar data_buf[MAX_MTU_SIZE];
+  /* Leave some space for the SCTP common header */
+  /**  current position in the buffer for control chunks */
+  guint ctrl_position;
+  /**  current position in the buffer for sack chunks */
+  guint sack_position;
+  /**  current position in the buffer for data chunks */
+  guint data_position;
+  /** is there data to be sent in the buffer ? */
+  gboolean data_in_buffer;
+  /**  is there a control chunk  to be sent in the buffer ? */
+  gboolean ctrl_chunk_in_buffer;
+  /**  is there a sack chunk  to be sent in the buffer ? */
+  gboolean sack_in_buffer;
+  /** status flag for correct sequence of actions */
+  gboolean got_send_request;
+  /** */
+  gboolean got_send_address;
+  /** */
+  gboolean locked;
+  /** did we receive a shutdown, either by ULP or peer ? */
+  gboolean got_shutdown;
+  /** */
+  guint requested_destination;
 /*@} */
 
 } bundling_instance;
@@ -97,37 +97,39 @@ typedef struct bundling_instance_struct
  */
 static bundling_instance *global_buffer;
 
-void bu_init_bundling(void)
+void
+bu_init_bundling (void)
 {
-    global_buffer = (bundling_instance*) mbu_new();
+  global_buffer = (bundling_instance*) mbu_new ();
 }
 
 /**
  * Creates a new bundling instance and returns a pointer to its data.
  * @return pointer to an instance of the bundling data
  */
-gpointer mbu_new(void)
+gpointer
+mbu_new (void)
 {
-    /* Alloc new bundling_instance data struct */
-    bundling_instance *ptr;
+  /* Alloc new bundling_instance data struct */
+  bundling_instance *ptr;
 
-    ptr = (bundling_instance*) malloc(sizeof(bundling_instance));
-    if (!ptr)
-    {
-        error_log(ERROR_MAJOR, "Malloc failed");
-        return 0;
-    }
-    ptr->ctrl_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
-    ptr->data_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
-    ptr->sack_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
+  ptr = (bundling_instance*) malloc (sizeof(bundling_instance));
+  if (!ptr)
+  {
+    error_log(ERROR_MAJOR, "Malloc failed");
+    return 0;
+  }
+  ptr->ctrl_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
+  ptr->data_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
+  ptr->sack_position = sizeof(SCTP_common_header); /* start adding data after that header ! */
 
-    ptr->data_in_buffer = FALSE;
-    ptr->ctrl_chunk_in_buffer = FALSE;
-    ptr->sack_in_buffer = FALSE;
-    ptr->got_send_request = FALSE;
-    ptr->got_send_address = FALSE;
-    ptr->locked = FALSE;
-    return ptr;
+  ptr->data_in_buffer = FALSE;
+  ptr->ctrl_chunk_in_buffer = FALSE;
+  ptr->sack_in_buffer = FALSE;
+  ptr->got_send_request = FALSE;
+  ptr->got_send_address = FALSE;
+  ptr->locked = FALSE;
+  return ptr;
 }
 
 /**
@@ -135,50 +137,56 @@ gpointer mbu_new(void)
  *
  * @param Pointer which was returned by mbu_new()
  */
-void bu_delete(gpointer buPtr)
+void
+bu_delete (gpointer buPtr)
 {
-    event_log(INTERNAL_EVENT_0, "deleting bundling");
-    free(buPtr);
+  event_log(INTERNAL_EVENT_0, "deleting bundling");
+  free (buPtr);
 }
 
 /**
  * Keep sender from sending data right away - wait after received chunks have
  * been diassembled completely.
  */
-void bu_lock_sender()
+void
+bu_lock_sender ()
 {
-    bundling_instance *bu_ptr;
-    event_log(VERBOSE, "bu_lock_sender() was called... ");
+  bundling_instance *bu_ptr;
+  event_log(VERBOSE, "bu_lock_sender() was called... ");
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
-    if (!bu_ptr)
-    { /* Assume that no association exists, so we take the global bundling buffer */
-        event_log(VERBOSE, "Setting global bundling buffer ");
-        bu_ptr = global_buffer;
-    }
-    bu_ptr->locked = TRUE;
-    bu_ptr->got_send_request = FALSE;
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
+  if (!bu_ptr)
+  { /* Assume that no association exists, so we take the global bundling buffer */
+    event_log(VERBOSE, "Setting global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
+  bu_ptr->locked = TRUE;
+  bu_ptr->got_send_request = FALSE;
 }
 
 /**
  * Enable sending again - wait after received chunks have
  * been diassembled completely.
  */
-void bu_unlock_sender(guint* ad_idx)
+void
+bu_unlock_sender (guint* ad_idx)
 {
-    bundling_instance *bu_ptr;
+  bundling_instance *bu_ptr;
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
-    if (!bu_ptr)
-    { /* Assume that no association exists, so we take the global bundling buffer */
-        event_log(VERBOSE, "Setting global bundling buffer ");
-        bu_ptr = global_buffer;
-    }
-    bu_ptr->locked = FALSE;
-    event_logi(VERBOSE, "bu_unlock_sender() was called..and got %s send request -> processing",
-            (bu_ptr->got_send_request == TRUE) ? "A" : "NO");
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
+  if (!bu_ptr)
+  { /* Assume that no association exists, so we take the global bundling buffer */
+    event_log(VERBOSE, "Setting global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
+  bu_ptr->locked = FALSE;
+  event_logi(
+      VERBOSE,
+      "bu_unlock_sender() was called..and got %s send request -> processing",
+      (bu_ptr->got_send_request == TRUE) ? "A" : "NO");
 
-    if (bu_ptr->got_send_request == TRUE) bu_sendAllChunks(ad_idx);
+  if (bu_ptr->got_send_request == TRUE)
+    bu_sendAllChunks (ad_idx);
 
 }
 
@@ -189,54 +197,62 @@ void bu_unlock_sender(guint* ad_idx)
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return error value, 0 on success, -1 on error
  */
-gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int * dest_index)
+gint
+bu_put_SACK_Chunk (SCTP_sack_chunk * chunk, unsigned int * dest_index)
 {
-    gint result;
-    bundling_instance *bu_ptr;
-    gboolean lock;
+  gint result;
+  bundling_instance *bu_ptr;
+  gboolean lock;
 
-    event_log(INTERNAL_EVENT_0, "bu_put_SACK_Chunk() was called ");
+  event_log(INTERNAL_EVENT_0, "bu_put_SACK_Chunk() was called ");
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
 
-    if (!bu_ptr)
-    { /* Assume that no association exists, so we take the global bundling buffer */
-        event_log(VERBOSE, "Copying SACK to global bundling buffer ");
-        bu_ptr = global_buffer;
-    }
+  if (!bu_ptr)
+  { /* Assume that no association exists, so we take the global bundling buffer */
+    event_log(VERBOSE, "Copying SACK to global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
 
-    if (SACK_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t * ) chunk) >= MAX_SCTP_PDU)
-    {
-        lock = bu_ptr->locked;
-        event_logi(VERBOSE, "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
-                (dest_index==NULL)?0:*dest_index);
-        if (lock) bu_ptr->locked = FALSE;
-        result = bu_sendAllChunks(dest_index);
-        if (lock) bu_ptr->locked = TRUE;
-    }
-    else if (dest_index != NULL)
-    {
-        bu_ptr->got_send_address = TRUE;
-        bu_ptr->requested_destination = *dest_index;
-    }
+  if (SACK_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t * ) chunk)
+      >= MAX_SCTP_PDU)
+  {
+    lock = bu_ptr->locked;
+    event_logi(
+        VERBOSE,
+        "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
+        (dest_index==NULL)?0:*dest_index);
+    if (lock)
+      bu_ptr->locked = FALSE;
+    result = bu_sendAllChunks (dest_index);
+    if (lock)
+      bu_ptr->locked = TRUE;
+  }
+  else if (dest_index != NULL)
+  {
+    bu_ptr->got_send_address = TRUE;
+    bu_ptr->requested_destination = *dest_index;
+  }
 
-    if (bu_ptr->sack_in_buffer == TRUE)
-    { /* multiple calls in between */
-        event_log(INTERNAL_EVENT_0,
-                "bu_put_SACK_Chunk was called a second time, deleting first chunk");
-        bu_ptr->sack_position = sizeof(SCTP_common_header);
-    }
+  if (bu_ptr->sack_in_buffer == TRUE)
+  { /* multiple calls in between */
+    event_log(
+        INTERNAL_EVENT_0,
+        "bu_put_SACK_Chunk was called a second time, deleting first chunk");
+    bu_ptr->sack_position = sizeof(SCTP_common_header);
+  }
 
-    memcpy(&(bu_ptr->sack_buf[bu_ptr->sack_position]), chunk,
-            CHUNKP_LENGTH((chunk_fixed_t * ) chunk));
-    bu_ptr->sack_position += CHUNKP_LENGTH((chunk_fixed_t * ) chunk);
-    bu_ptr->sack_in_buffer = TRUE;
+  memcpy (&(bu_ptr->sack_buf[bu_ptr->sack_position]), chunk,
+          CHUNKP_LENGTH((chunk_fixed_t * ) chunk));
+  bu_ptr->sack_position += CHUNKP_LENGTH((chunk_fixed_t * ) chunk);
+  bu_ptr->sack_in_buffer = TRUE;
 
-    event_logii(VERBOSE, "Put SACK Chunk Length : %u , Total buffer size now: %u\n",
-            CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
+  event_logii(VERBOSE,
+              "Put SACK Chunk Length : %u , Total buffer size now: %u\n",
+              CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
-    /* SACK always multiple of 32 bytes, do not care about padding */
-    return 0;
+  /* SACK always multiple of 32 bytes, do not care about padding */
+  return 0;
 }
 
 /**
@@ -246,71 +262,80 @@ gint bu_put_SACK_Chunk(SCTP_sack_chunk * chunk, unsigned int * dest_index)
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return TODO : error value, 0 on success
  */
-gint bu_put_Ctrl_Chunk(SCTP_simple_chunk * chunk, unsigned int * dest_index)
+gint
+bu_put_Ctrl_Chunk (SCTP_simple_chunk * chunk, unsigned int * dest_index)
 {
-    gint result;
-    bundling_instance *bu_ptr;
-    gint count;
-    gboolean lock;
+  gint result;
+  bundling_instance *bu_ptr;
+  gint count;
+  gboolean lock;
 
-    event_log(INTERNAL_EVENT_0, "bu_put_Ctrl_Chunk() was called");
+  event_log(INTERNAL_EVENT_0, "bu_put_Ctrl_Chunk() was called");
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
 
-    if (!bu_ptr)
-    { /* Assume that no association exists, so we take the global bundling buffer */
-        event_log(VERBOSE, "Copying Control Chunk to global bundling buffer ");
-        bu_ptr = global_buffer;
-    }
+  if (!bu_ptr)
+  { /* Assume that no association exists, so we take the global bundling buffer */
+    event_log(VERBOSE, "Copying Control Chunk to global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
 
-    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t * ) chunk) >= MAX_SCTP_PDU)
+  if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t * ) chunk)
+      >= MAX_SCTP_PDU)
+  {
+    lock = bu_ptr->locked;
+    event_logi(
+        VERBOSE,
+        "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
+        (dest_index==NULL)?0:*dest_index);
+    if (lock)
+      bu_ptr->locked = FALSE;
+    result = bu_sendAllChunks (dest_index);
+    if (lock)
+      bu_ptr->locked = TRUE;
+  }
+  else if (dest_index != NULL)
+  {
+    bu_ptr->got_send_address = TRUE;
+    bu_ptr->requested_destination = *dest_index;
+  }
+
+  memcpy (&(bu_ptr->ctrl_buf[bu_ptr->ctrl_position]), chunk,
+          CHUNKP_LENGTH((chunk_fixed_t * ) chunk));
+  bu_ptr->ctrl_position += CHUNKP_LENGTH((chunk_fixed_t * ) chunk);
+  /* insert padding, if necessary */
+  if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0)
+  {
+    for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4));
+        count++)
     {
-        lock = bu_ptr->locked;
-        event_logi(VERBOSE, "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
-                (dest_index==NULL)?0:*dest_index);
-        if (lock) bu_ptr->locked = FALSE;
-        result = bu_sendAllChunks(dest_index);
-        if (lock) bu_ptr->locked = TRUE;
+      bu_ptr->ctrl_buf[bu_ptr->ctrl_position] = 0;
+      bu_ptr->ctrl_position++;
     }
-    else if (dest_index != NULL)
-    {
-        bu_ptr->got_send_address = TRUE;
-        bu_ptr->requested_destination = *dest_index;
-    }
+  }
+  event_logii(
+      VERBOSE,
+      "Put Control Chunk Length : %u , Total buffer size now (includes pad): %u\n",
+      CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
-    memcpy(&(bu_ptr->ctrl_buf[bu_ptr->ctrl_position]), chunk,
-            CHUNKP_LENGTH((chunk_fixed_t * ) chunk));
-    bu_ptr->ctrl_position += CHUNKP_LENGTH((chunk_fixed_t * ) chunk);
-    /* insert padding, if necessary */
-    if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0)
-    {
-        for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4)); count++)
-        {
-            bu_ptr->ctrl_buf[bu_ptr->ctrl_position] = 0;
-            bu_ptr->ctrl_position++;
-        }
-    }
-    event_logii(VERBOSE,
-            "Put Control Chunk Length : %u , Total buffer size now (includes pad): %u\n",
-            CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
-
-    bu_ptr->ctrl_chunk_in_buffer = TRUE;
-    return 0;
+  bu_ptr->ctrl_chunk_in_buffer = TRUE;
+  return 0;
 }
 
-gboolean bu_userDataOutbound(void)
+gboolean
+bu_userDataOutbound (void)
 {
-    bundling_instance *bu_ptr;
+  bundling_instance *bu_ptr;
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
-    if (!bu_ptr)
-    { /* Assume that no association exists, so we take the global bundling buffer */
-        event_log(VERBOSE, "Setting global bundling buffer ");
-        bu_ptr = global_buffer;
-    }
-    event_logi(VERBOSE, "bu_userDataOutbound() was called... and is %s ",
-            (bu_ptr->data_in_buffer == TRUE) ? "TRUE" : "FALSE");
-    return bu_ptr->data_in_buffer;
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
+  if (!bu_ptr)
+  { /* Assume that no association exists, so we take the global bundling buffer */
+    event_log(VERBOSE, "Setting global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
+  event_logi(VERBOSE, "bu_userDataOutbound() was called... and is %s ",
+             (bu_ptr->data_in_buffer == TRUE) ? "TRUE" : "FALSE");
+  return bu_ptr->data_in_buffer;
 }
 
 /**
@@ -320,59 +345,69 @@ gboolean bu_userDataOutbound(void)
  * @param chunk pointer to chunk, that is to be put in the bundling buffer
  * @return TODO : error value, 0 on success
  */
-gint bu_put_Data_Chunk(SCTP_simple_chunk * chunk, unsigned int * dest_index)
+gint
+bu_put_Data_Chunk (SCTP_simple_chunk * chunk, unsigned int * dest_index)
 {
-    gint result;
-    bundling_instance *bu_ptr;
-    gint count;
-    gboolean lock;
+  gint result;
+  bundling_instance *bu_ptr;
+  gint count;
+  gboolean lock;
 
-    event_log(INTERNAL_EVENT_0, "bu_put_Data_Chunk() was called ");
+  event_log(INTERNAL_EVENT_0, "bu_put_Data_Chunk() was called ");
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
 
-    if (!bu_ptr)
-    { /* Assume that no association exists, so we take the global bundling buffer */
-        event_log(VERBOSE, "Copying data to global bundling buffer ");
-        bu_ptr = global_buffer;
-    }
+  if (!bu_ptr)
+  { /* Assume that no association exists, so we take the global bundling buffer */
+    event_log(VERBOSE, "Copying data to global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
 
-    if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t * ) chunk) >= MAX_SCTP_PDU)
+  if (TOTAL_SIZE(bu_ptr) + CHUNKP_LENGTH((chunk_fixed_t * ) chunk)
+      >= MAX_SCTP_PDU)
+  {
+    lock = bu_ptr->locked;
+    event_logi(
+        VERBOSE,
+        "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
+        (dest_index==NULL)?0:*dest_index);
+    if (lock)
+      bu_ptr->locked = FALSE;
+    result = bu_sendAllChunks (dest_index);
+    if (lock)
+      bu_ptr->locked = TRUE;
+  }
+  else if (dest_index != NULL)
+  {
+    bu_ptr->got_send_address = TRUE;
+    bu_ptr->requested_destination = *dest_index;
+  }
+  memcpy (&(bu_ptr->data_buf[bu_ptr->data_position]), chunk,
+          CHUNKP_LENGTH((chunk_fixed_t * ) chunk));
+  bu_ptr->data_position += CHUNKP_LENGTH((chunk_fixed_t * ) chunk);
+
+  /* insert padding, if necessary */
+  if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0)
+  {
+    for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4));
+        count++)
     {
-        lock = bu_ptr->locked;
-        event_logi(VERBOSE, "Chunk Length exceeded MAX_SCTP_PDU : sending chunk to address %u !",
-                (dest_index==NULL)?0:*dest_index);
-        if (lock) bu_ptr->locked = FALSE;
-        result = bu_sendAllChunks(dest_index);
-        if (lock) bu_ptr->locked = TRUE;
+      bu_ptr->data_buf[bu_ptr->data_position] = 0;
+      bu_ptr->data_position++;
     }
-    else if (dest_index != NULL)
-    {
-        bu_ptr->got_send_address = TRUE;
-        bu_ptr->requested_destination = *dest_index;
-    }
-    memcpy(&(bu_ptr->data_buf[bu_ptr->data_position]), chunk,
-            CHUNKP_LENGTH((chunk_fixed_t * ) chunk));
-    bu_ptr->data_position += CHUNKP_LENGTH((chunk_fixed_t * ) chunk);
+  }
+  event_logii(
+      VERBOSE,
+      "Put Data Chunk Length : %u , Total buffer size (incl. padding): %u\n",
+      CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
 
-    /* insert padding, if necessary */
-    if ((CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4) != 0)
-    {
-        for (count = 0; count < (4 - (CHUNKP_LENGTH((chunk_fixed_t *) chunk) % 4)); count++)
-        {
-            bu_ptr->data_buf[bu_ptr->data_position] = 0;
-            bu_ptr->data_position++;
-        }
-    }
-    event_logii(VERBOSE, "Put Data Chunk Length : %u , Total buffer size (incl. padding): %u\n",
-            CHUNKP_LENGTH((chunk_fixed_t *) chunk), TOTAL_SIZE(bu_ptr));
+  bu_ptr->data_in_buffer = TRUE;
 
-    bu_ptr->data_in_buffer = TRUE;
+  /* if SACK is waiting, force sending it along */
+  if (rxc_sack_timer_is_running () == TRUE)
+    rxc_create_sack (dest_index, TRUE);
 
-    /* if SACK is waiting, force sending it along */
-    if (rxc_sack_timer_is_running() == TRUE) rxc_create_sack(dest_index, TRUE);
-
-    return 0;
+  return 0;
 }
 
 /**
@@ -386,137 +421,155 @@ gint bu_put_Data_Chunk(SCTP_simple_chunk * chunk, unsigned int * dest_index)
  *  @return                 Errorcode (0 for good case: length bytes sent; 1 or -1 for error)
  *  @param   ad_idx     pointer to address index or NULL if data is to be sent to default address
  */
-gint bu_sendAllChunks(guint * ad_idx)
+gint
+bu_sendAllChunks (guint * ad_idx)
 {
-    gint result, send_len = 0;
-    guchar *send_buffer = NULL;
-    bundling_instance *bu_ptr;
-    gshort idx = 0;
+  gint result, send_len = 0;
+  guchar *send_buffer = NULL;
+  bundling_instance *bu_ptr;
+  gshort idx = 0;
 
-    bu_ptr = (bundling_instance *) mdi_readBundling();
+  bu_ptr = (bundling_instance *) mdi_readBundling ();
 
-    event_log(INTERNAL_EVENT_0, "bu_sendAllChunks() is being executed...");
+  event_log(INTERNAL_EVENT_0, "bu_sendAllChunks() is being executed...");
 
-    if (!bu_ptr)
+  if (!bu_ptr)
+  {
+    event_log(VERBOSE, "Sending data from global bundling buffer ");
+    bu_ptr = global_buffer;
+  }
+  if (bu_ptr->locked == TRUE)
+  {
+    bu_ptr->got_send_request = TRUE;
+    if (ad_idx)
     {
-        event_log(VERBOSE, "Sending data from global bundling buffer ");
-        bu_ptr = global_buffer;
+      bu_ptr->got_send_address = TRUE;
+      bu_ptr->requested_destination = *ad_idx;
     }
-    if (bu_ptr->locked == TRUE)
-    {
-        bu_ptr->got_send_request = TRUE;
-        if (ad_idx)
-        {
-            bu_ptr->got_send_address = TRUE;
-            bu_ptr->requested_destination = *ad_idx;
-        }
-        event_log(INTERNAL_EVENT_0, "bu_sendAllChunks : sender is LOCKED ---> returning ");
-        return 1;
-    }
+    event_log(INTERNAL_EVENT_0,
+              "bu_sendAllChunks : sender is LOCKED ---> returning ");
+    return 1;
+  }
 
-    /* TODO : more intelligent path selection strategy */
-    /*         should take into account PM_INACTIVE */
-    if (ad_idx != NULL)
+  /* TODO : more intelligent path selection strategy */
+  /*         should take into account PM_INACTIVE */
+  if (ad_idx != NULL)
+  {
+    if (*ad_idx > 0xFFFF)
     {
-        if (*ad_idx > 0xFFFF)
-        {
-            error_log(ERROR_FATAL, "address_index too big !");
-        }
-        else
-        {
-            idx = (short) *ad_idx;
-        }
+      error_log(ERROR_FATAL, "address_index too big !");
     }
     else
     {
-        if (bu_ptr->got_send_address)
-        {
-            idx = (short) bu_ptr->requested_destination;
-        }
-        else
-        {
-            idx = -1; /* use last from address */
-        }
+      idx = (short) *ad_idx;
     }
-
-    event_logi(VVERBOSE, "bu_sendAllChunks : send to path %d ", idx);
-
-    if (bu_ptr->sack_in_buffer) send_buffer = bu_ptr->sack_buf;
-    else if (bu_ptr->ctrl_chunk_in_buffer) send_buffer = bu_ptr->ctrl_buf;
-    else if (bu_ptr->data_in_buffer) send_buffer = bu_ptr->data_buf;
+  }
+  else
+  {
+    if (bu_ptr->got_send_address)
+    {
+      idx = (short) bu_ptr->requested_destination;
+    }
     else
     {
-        error_log(ERROR_MINOR, "Nothing to send, but bu_sendAllChunks was called !");
-        return 1;
+      idx = -1; /* use last from address */
     }
+  }
 
-    if (bu_ptr->sack_in_buffer)
+  event_logi(VVERBOSE, "bu_sendAllChunks : send to path %d ", idx);
+
+  if (bu_ptr->sack_in_buffer)
+    send_buffer = bu_ptr->sack_buf;
+  else if (bu_ptr->ctrl_chunk_in_buffer)
+    send_buffer = bu_ptr->ctrl_buf;
+  else if (bu_ptr->data_in_buffer)
+    send_buffer = bu_ptr->data_buf;
+  else
+  {
+    error_log(ERROR_MINOR,
+              "Nothing to send, but bu_sendAllChunks was called !");
+    return 1;
+  }
+
+  if (bu_ptr->sack_in_buffer)
+  {
+    rxc_stop_sack_timer ();
+    /* SACKs by default go to the last active address, from which data arrived */
+    send_len = bu_ptr->sack_position; /* at least sizeof(SCTP_common_header) */
+    /* at most pointing to the end of SACK chunk */
+    event_logi(VVERBOSE, "bu_sendAllChunks(sack) : send_len == %d ", send_len);
+    if (bu_ptr->ctrl_chunk_in_buffer)
     {
-        rxc_stop_sack_timer();
-        /* SACKs by default go to the last active address, from which data arrived */
-        send_len = bu_ptr->sack_position; /* at least sizeof(SCTP_common_header) */
-        /* at most pointing to the end of SACK chunk */
-        event_logi(VVERBOSE, "bu_sendAllChunks(sack) : send_len == %d ", send_len);
-        if (bu_ptr->ctrl_chunk_in_buffer)
-        {
-            memcpy(&send_buffer[send_len], &(bu_ptr->ctrl_buf[sizeof(SCTP_common_header)]),
-                    (bu_ptr->ctrl_position - sizeof(SCTP_common_header)));
-            send_len += bu_ptr->ctrl_position - sizeof(SCTP_common_header);
-            event_logi(VVERBOSE, "bu_sendAllChunks(sack+ctrl) : send_len == %d ", send_len);
-        }
-        if (bu_ptr->data_in_buffer)
-        {
-            memcpy(&send_buffer[send_len], &(bu_ptr->data_buf[sizeof(SCTP_common_header)]),
-                    (bu_ptr->data_position - sizeof(SCTP_common_header)));
-            send_len += bu_ptr->data_position - sizeof(SCTP_common_header);
-            event_logi(VVERBOSE, "bu_sendAllChunks(sack+data) : send_len == %d ", send_len);
-        }
+      memcpy (&send_buffer[send_len],
+              &(bu_ptr->ctrl_buf[sizeof(SCTP_common_header)]),
+              (bu_ptr->ctrl_position - sizeof(SCTP_common_header)));
+      send_len += bu_ptr->ctrl_position - sizeof(SCTP_common_header);
+      event_logi(VVERBOSE, "bu_sendAllChunks(sack+ctrl) : send_len == %d ",
+                 send_len);
     }
-    else if (bu_ptr->ctrl_chunk_in_buffer)
+    if (bu_ptr->data_in_buffer)
     {
-        send_len = bu_ptr->ctrl_position;
-        event_logi(VVERBOSE, "bu_sendAllChunks(ctrl) : send_len == %d ", send_len);
-        if (bu_ptr->data_in_buffer)
-        {
-            memcpy(&send_buffer[send_len], &(bu_ptr->data_buf[sizeof(SCTP_common_header)]),
-                    (bu_ptr->data_position - sizeof(SCTP_common_header)));
-            send_len += bu_ptr->data_position - sizeof(SCTP_common_header);
-            event_logi(VVERBOSE, "bu_sendAllChunks(ctrl+data) : send_len == %d ", send_len);
-        }
-
+      memcpy (&send_buffer[send_len],
+              &(bu_ptr->data_buf[sizeof(SCTP_common_header)]),
+              (bu_ptr->data_position - sizeof(SCTP_common_header)));
+      send_len += bu_ptr->data_position - sizeof(SCTP_common_header);
+      event_logi(VVERBOSE, "bu_sendAllChunks(sack+data) : send_len == %d ",
+                 send_len);
     }
-    else if (bu_ptr->data_in_buffer) send_len = bu_ptr->data_position;
-
-    event_logi(VVERBOSE, "bu_sendAllChunks(finally) : send_len == %d ", send_len);
-
-    if (send_len > 1480)
+  }
+  else if (bu_ptr->ctrl_chunk_in_buffer)
+  {
+    send_len = bu_ptr->ctrl_position;
+    event_logi(VVERBOSE, "bu_sendAllChunks(ctrl) : send_len == %d ", send_len);
+    if (bu_ptr->data_in_buffer)
     {
-        fprintf(stderr, "MTU definitely exceeded (%u) - aborting\n", send_len);
-        fprintf(stderr, "sack_position: %u, ctrl_position: %u, data_position: %u\n",
-                bu_ptr->sack_position, bu_ptr->ctrl_position, bu_ptr->data_position);
-        exit(-1);
+      memcpy (&send_buffer[send_len],
+              &(bu_ptr->data_buf[sizeof(SCTP_common_header)]),
+              (bu_ptr->data_position - sizeof(SCTP_common_header)));
+      send_len += bu_ptr->data_position - sizeof(SCTP_common_header);
+      event_logi(VVERBOSE, "bu_sendAllChunks(ctrl+data) : send_len == %d ",
+                 send_len);
     }
 
-    if ((bu_ptr->data_in_buffer) && (idx != -1)) mpath_data_chunk_sent(idx);
+  }
+  else if (bu_ptr->data_in_buffer)
+    send_len = bu_ptr->data_position;
 
-    event_logii(VERBOSE, "bu_sendAllChunks() : sending message len==%u to adress idx=%d", send_len,
-            idx);
+  event_logi(VVERBOSE, "bu_sendAllChunks(finally) : send_len == %d ", send_len);
 
-    result = mdi_send_message((SCTP_message *) send_buffer, send_len, idx);
+  if (send_len > 1480)
+  {
+    fprintf (stderr, "MTU definitely exceeded (%u) - aborting\n", send_len);
+    fprintf (stderr,
+             "sack_position: %u, ctrl_position: %u, data_position: %u\n",
+             bu_ptr->sack_position, bu_ptr->ctrl_position,
+             bu_ptr->data_position);
+    exit (-1);
+  }
 
-    event_logi(VVERBOSE, "bu_sendAllChunks(): result == %s ", (result == 0) ? "OKAY" : "ERROR");
+  if ((bu_ptr->data_in_buffer) && (idx != -1))
+    mpath_data_chunk_sent (idx);
 
-    /* reset all positions */
-    bu_ptr->sack_in_buffer = FALSE;
-    bu_ptr->ctrl_chunk_in_buffer = FALSE;
-    bu_ptr->data_in_buffer = FALSE;
-    bu_ptr->got_send_request = FALSE;
-    bu_ptr->got_send_address = FALSE;
+  event_logii(VERBOSE,
+              "bu_sendAllChunks() : sending message len==%u to adress idx=%d",
+              send_len, idx);
 
-    bu_ptr->data_position = sizeof(SCTP_common_header);
-    bu_ptr->ctrl_position = sizeof(SCTP_common_header);
-    bu_ptr->sack_position = sizeof(SCTP_common_header);
+  result = mdi_send_message ((SCTP_message *) send_buffer, send_len, idx);
 
-    return result;
+  event_logi(VVERBOSE, "bu_sendAllChunks(): result == %s ",
+             (result == 0) ? "OKAY" : "ERROR");
+
+  /* reset all positions */
+  bu_ptr->sack_in_buffer = FALSE;
+  bu_ptr->ctrl_chunk_in_buffer = FALSE;
+  bu_ptr->data_in_buffer = FALSE;
+  bu_ptr->got_send_request = FALSE;
+  bu_ptr->got_send_address = FALSE;
+
+  bu_ptr->data_position = sizeof(SCTP_common_header);
+  bu_ptr->ctrl_position = sizeof(SCTP_common_header);
+  bu_ptr->sack_position = sizeof(SCTP_common_header);
+
+  return result;
 }
 
