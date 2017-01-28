@@ -3835,8 +3835,16 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChun
  */
 void mdi_on_peer_data_arrive(int64 tsn, int streamID, int streamSN, uint length)
 {
-
+	if (curr_channel_ != NULL)
+	{
+		EVENTLOG4(VERBOSE, "mdi_dataArriveNotif(assoc %u, streamID %u, length %u, tsn %u)", curr_channel_->channel_id, streamID, length, streamSN);
+		if (curr_geco_instance_->ulp_callbacks.dataArriveNotif != NULL)
+		{
+			curr_geco_instance_->ulp_callbacks.dataArriveNotif(curr_channel_->channel_id, streamID, length, streamSN, tsn, tsn < 0 ? 1 : 0, streamID < 0 ? 1 : 0, curr_channel_->ulp_dataptr);
+		}
+	}
 }
+
 void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 {
 	// deliver ordered chunks
@@ -7561,7 +7569,7 @@ int mreltx_process_sack(int* adr_index, sack_chunk_t* sack, uint totalLen)
 	ushort dup_len = num_of_dups * sizeof(uint);
 	if (var_len != gap_len + dup_len)
 	{
-		EVENTLOG4(NOTICE, 
+		EVENTLOG4(NOTICE,
 			"mreltx_process_sack()::Drop SACK chunk (incorrect length fields) chunk_len=%u, var_len=%u, gap_len=%u, dup_len=%u", chunk_len, var_len, gap_len, dup_len);
 		return -1;
 	}

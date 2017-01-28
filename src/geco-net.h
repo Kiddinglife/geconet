@@ -310,7 +310,7 @@ struct ulp_cbs_t
      *  @param 3 length of data
      *  @param 4 stream sequence number
      *  @param 5 tsn of (at least one) chunk belonging to the message
-     *  @param 6 protocol ID
+	 *  @param 6 unreliable flag (TRUE==1==unreliable, FALSE==0==reliable)
      *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
      *  @param 8 pointer to ULP data
      */
