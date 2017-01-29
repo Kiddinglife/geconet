@@ -272,7 +272,7 @@ gboolean rtx_is_in_fast_recovery(void)
  * @param   ctsna   the ctsna value, that has just been received in a sack
  * @return -1 if error (such as ctsna > than all chunk_tsn), 0 on success
  */
-int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
+int rtx_on_chunks_acked(unsigned int ctsna, unsigned int addr_index)
 {
 	reltransfer_controller_t *rtx;
 	internal_data_chunk_t *dat, *old_dat;
@@ -283,7 +283,7 @@ int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
 	unsigned int chunk_tsn;
 	GList* tmp;
 
-	event_logi(INTERNAL_EVENT_0, "rtx_dequeue_up_to...%u ", ctsna);
+	event_logi(INTERNAL_EVENT_0, "rtx_on_chunks_acked...%u ", ctsna);
 
 	rtx = (reltransfer_controller_t *)mdi_readReliableTransfer();
 	if (!rtx) {
@@ -291,7 +291,7 @@ int rtx_dequeue_up_to(unsigned int ctsna, unsigned int addr_index)
 		return (-1);
 	}
 	if (rtx->chunk_list_tsn_ascended == NULL) {
-		event_log(INTERNAL_EVENT_0, "List is NULL in rtx_dequeue_up_to()");
+		event_log(INTERNAL_EVENT_0, "List is NULL in rtx_on_chunks_acked()");
 		return -1;
 	}
 
@@ -563,9 +563,9 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
 		chunk_len, advertised_rwnd, var_len, gap_len, dup_len);
 
 	if (after(ctsna, rtx->lowest_tsn) || (ctsna == rtx->lowest_tsn)) {
-		event_logiii(VVERBOSE, "after(%u, %u) == true, call rtx_dequeue_up_to(%u)",
+		event_logiii(VVERBOSE, "after(%u, %u) == true, call rtx_on_chunks_acked(%u)",
 			ctsna, rtx->lowest_tsn, ctsna);
-		result = rtx_dequeue_up_to(ctsna, adr_index);
+		result = rtx_on_chunks_acked(ctsna, adr_index);
 		if (result < 0) {
 			event_log(EXTERNAL_EVENT_X,
 				"Bad ctsna arrived in SACK or no data in queue - discarding SACK");
@@ -577,20 +577,27 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
 
 	chunk_list_debug(VVERBOSE, rtx->chunk_list_tsn_ascended);
 
-	if (ntohs(sack->num_of_fragments) != 0) {
-		event_logi(VERBOSE, "Processing %u fragment reports", ntohs(sack->num_of_fragments));
+	if (ntohs(sack->num_of_fragments) != 0)
+	{
+		event_logi(VERBOSE, "Processing %u fragment reports",
+			ntohs(sack->num_of_fragments));
+
 		max_rtx_arraysize = g_list_length(rtx->chunk_list_tsn_ascended);
-		if (max_rtx_arraysize == 0) {
+		if (max_rtx_arraysize == 0)
+		{
 			/*rxc_send_sack_everytime(); */
 			event_log(VERBOSE,
 				"Size of retransmission list was zero, we received fragment report -> ignore");
 		}
-		else {
+		else
+		{
 			/* this may become expensive !!!!!!!!!!!!!!!! */
 			pos = 0;
 			dat = (internal_data_chunk_t*)g_list_nth_data(rtx->chunk_list_tsn_ascended, i);
-			if (rtx->chunk_list_tsn_ascended != NULL && dat != NULL) {
-				do {
+			if (rtx->chunk_list_tsn_ascended != NULL && dat != NULL)
+			{
+				do
+				{
 					frag = (fragment *) & (sack->fragments_and_dups[pos]);
 					low = ctsna + ntohs(frag->start);
 					hi = ctsna + ntohs(frag->stop);
@@ -676,11 +683,10 @@ int rtx_process_sack(unsigned int adr_index, void *sack_chunk, unsigned int tota
 						error_log(ERROR_MINOR, "Problem with fragment boundaries (low_2 <= hi_1)");
 						break;
 					}
-
 				} while ((pos < gap_len));
-
 			}  /* end: if(rtx->chunk_list_tsn_ascended != NULL && dat != NULL) */
-			else {
+			else
+			{
 				event_log(EXTERNAL_EVENT,
 					"Received duplicated SACK for Chunks that are not in the queue anymore");
 			}
@@ -1207,9 +1213,9 @@ unsigned int rtx_process_ctsna_from_shutdown_chunk(unsigned int ctsna)
 	rxc_send_sack_everytime();
 
 	if (after(ctsna, rtx->lowest_tsn) || (ctsna == rtx->lowest_tsn)) {
-		event_logiii(VVERBOSE, "after(%u, %u) == true, call rtx_dequeue_up_to(%u)",
+		event_logiii(VVERBOSE, "after(%u, %u) == true, call rtx_on_chunks_acked(%u)",
 			ctsna, rtx->lowest_tsn, ctsna);
-		result = rtx_dequeue_up_to(ctsna, 0);
+		result = rtx_on_chunks_acked(ctsna, 0);
 		if (result < 0) {
 			event_log(VVERBOSE, "Bad ctsna arrived in shutdown or no chunks in queue");
 		}

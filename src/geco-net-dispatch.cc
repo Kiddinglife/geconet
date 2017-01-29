@@ -7532,6 +7532,13 @@ static inline int mreltx_check_fast_recovery(reltransfer_controller_t* rtx, uint
 	return MULP_SUCCESS;
 }
 
+/// takes out chunks up to ctsna, updates newly acked bytes
+/// @param   ctsna   the ctsna value, that has just been received in a sack
+/// @return -1 if error (such as ctsna > than all chunk_tsn), 0 on success
+int mreltx_on_chunks_acked(uint ctsna, uint addr_index)
+{
+	return 0;
+}
 /**
 * this is called by bundling, when a SACK needs to be processed. This is a LONG function !
 * FIXME : check correct update of rtx->lowest_tsn !
@@ -7541,7 +7548,7 @@ static inline int mreltx_check_fast_recovery(reltransfer_controller_t* rtx, uint
 * @param  sack_chunk  pointer to the sack chunk
 * @return -1 on error, 0 if okay.
 */
-int mreltx_process_sack(int* adr_index, sack_chunk_t* sack, uint totalLen)
+int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 {
 	reltransfer_controller_t* rtx = mdi_read_mreltsf();
 	assert(rtx != NULL);
@@ -7579,6 +7586,38 @@ int mreltx_process_sack(int* adr_index, sack_chunk_t* sack, uint totalLen)
 		chunk_len, arwnd, var_len, gap_len, dup_len);
 
 	mreltx_check_fast_recovery(rtx, ctsna);
+	int retval;
+
+	if (uafter(ctsna, rtx->lowest_tsn) || ctsna == rtx->lowest_tsn)
+	{
+		if ((retval = mreltx_on_chunks_acked(ctsna, adr_index)) < 0)
+		{
+			EVENTLOG(VERBOSE,
+				"mreltx_process_sack()::Bad ctsna arrived in SACK or no data in queue - discarding SACK");
+			return -1;
+		}
+		rtx->lowest_tsn = ctsna;
+		EVENTLOG2(VERBOSE, "Updated rtx->lowest_tsn %u to  %u", rtx->lowest_tsn,ctsna);
+	}
+
+	uint max_rtx_arraysize;
+	if (num_of_gaps != 0)
+	{
+		EVENTLOG1(VERBOSE, "Processing %u fragment reports", num_of_gaps);
+		max_rtx_arraysize = rtx->chunk_list_tsn_ascended.size();
+#ifdef DEBUG
+		if (max_rtx_arraysize == 0)
+		{
+			EVENTLOG(DEBUG,
+				"Size of retransmission list was zero, we received fragment report");
+		}
+#endif // DEBUG
+	}
+	else
+	{
+		// no gaps reported in this sack 
+
+	}
 
 	return 0;
 }
