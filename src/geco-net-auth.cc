@@ -399,7 +399,6 @@ uchar* get_secre_key(int operation_code)
     {
       /* if you care for security, you need to use a cryptographically secure PRNG */
       tmp = generate_random_uint32();
-      //memcpy(&secret_key[count], &tmp, sizeof(uint));
       memcpy_fast(&secret_key[count], &tmp, sizeof(uint));
       count += sizeof(uint);
     }
@@ -411,6 +410,6 @@ uchar* get_secre_key(int operation_code)
 
 uint generate_random_uint32()
 {
-  //srand(gettimestamp() % UINT32_MAX); is called in mtra_init()
+  srand(gettimestamp() % UINT32_MAX);
   return rand();
 }

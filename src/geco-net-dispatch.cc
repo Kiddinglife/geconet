@@ -5118,15 +5118,6 @@ int msm_process_init_chunk(init_chunk_t * init)
 	mch_remove_simple_chunk(init_cid);
 	return ret;
 }
-int msm_process_sack_chunk(uint adr_index, void *sack_chunk, uint totalLen)
-{
-	EVENTLOG(VERBOSE, "Enter msm_process_sack_chunk()");
-	int ret = 0;
-
-leave:
-	EVENTLOG(VERBOSE, "Leave msm_process_sack_chunk()");
-	return ret;
-}
 
 void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES], int noOfAddresses)
 {
@@ -5289,11 +5280,9 @@ leave:
  * reliable transfer must be reset
  * @param rtx   pointer to a retransmit_controller_t, where acked bytes per address will be reset to 0
  */
-void mreltx_zero_newly_acked_bytes(reltransfer_controller_t * rtx)
+inline void mreltx_zero_newly_acked_bytes(reltransfer_controller_t * rtx)
 {
-	EVENTLOG(VERBOSE, "- - - Enter mreltx_zero_newly_acked_bytes()");
 	rtx->newly_acked_bytes = 0L;
-	EVENTLOG(VERBOSE, "- - - Leave mreltx_zero_newly_acked_bytes()");
 }
 reltransfer_controller_t* mreltx_new(uint numofdestaddrlist, uint iTSN)
 {
@@ -5307,7 +5296,7 @@ reltransfer_controller_t* mreltx_new(uint numofdestaddrlist, uint iTSN)
 	tmp->highest_tsn = iTSN - 1;
 	tmp->lastSentForwardTSN = iTSN - 1;
 	tmp->highest_acked = iTSN - 1;
-	tmp->lastReceivedCTSNA = iTSN - 1;
+	tmp->last_received_ctsna = iTSN - 1;
 	tmp->newly_acked_bytes = 0L;
 	tmp->num_of_chunks = 0L;
 	tmp->save_num_of_txm = 0L;
@@ -5317,7 +5306,7 @@ reltransfer_controller_t* mreltx_new(uint numofdestaddrlist, uint iTSN)
 	tmp->all_chunks_are_unacked = true;
 	tmp->fr_exit_point = 0L;
 	tmp->numofdestaddrlist = numofdestaddrlist;
-	tmp->advancedPeerAckPoint = iTSN - 1; /* a save bet */
+	tmp->advanced_peer_ack_point = iTSN - 1; /* a save bet */
 	mreltx_zero_newly_acked_bytes(tmp);
 
 	EVENTLOG(VERBOSE, "- - - Leave mreltx_new()");
@@ -7532,12 +7521,49 @@ static inline int mreltx_check_fast_recovery(reltransfer_controller_t* rtx, uint
 	return MULP_SUCCESS;
 }
 
-/// takes out chunks up to ctsna, updates newly acked bytes
+void mfc_remove_acked_chunks(uint ctsna)
+{
+  flow_controller_t* mfc = mdi_read_mfc();
+  assert(mfc != NULL);
+  internal_data_chunk_t* idchunk;
+  auto& chunk_list = mfc->chunk_list;
+  for (auto it = chunk_list.begin(); it != chunk_list.end();)
+  {
+    idchunk = *it;
+    if(uafter(idchunk->chunk_tsn, ctsna))
+      return;
+    chunk_list.erase(it++);
+    mfc->list_length--;
+    EVENTLOG2(VERBOSE, "mfc_remove_acked_chunks()::Removed chunk %u from Flowcontrol-List, Listlength now %u",
+        idchunk->chunk_tsn, mfc->list_length);
+  }
+}
+
+/// remove chunks up to ctsna, updates newly acked bytes
 /// @param   ctsna   the ctsna value, that has just been received in a sack
 /// @return -1 if error (such as ctsna > than all chunk_tsn), 0 on success
-int mreltx_on_chunks_acked(uint ctsna, uint addr_index)
+int mreltx_remove_acked_chunks(uint ctsna, uint addr_index)
 {
-	return 0;
+	reltransfer_controller_t* rtx = mdi_read_mreltsf();
+	assert(mreltx != NULL);
+
+  // first remove all stale chunks from flowcontrol list
+  // so that these are not referenced after they are freed here
+	mfc_remove_acked_chunks(ctsna);
+
+	uint chunk_tsn;
+  internal_data_chunk_t* idchunk;
+  auto& chunk_list = rtx->chunk_list_tsn_ascended;
+  while(!chunk_list.empty())
+  {
+    idchunk = chunk_list.pop_front();
+    chunk_tsn = idchunk->chunk_tsn;
+    EVENTLOG4(VERBOSE,"dat->num_of_transmissions==%u, chunk_tsn==%u, chunk_len=%u, ctsna==%u ",
+        idchunk->num_of_transmissions, chunk_tsn, idchunk->chunk_len, ctsna);
+
+  }
+
+  return 0;
 }
 /**
 * this is called by bundling, when a SACK needs to be processed. This is a LONG function !
@@ -7550,23 +7576,40 @@ int mreltx_on_chunks_acked(uint ctsna, uint addr_index)
 */
 int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 {
-	reltransfer_controller_t* rtx = mdi_read_mreltsf();
+  int retval;
+  reltransfer_controller_t* rtx = mdi_read_mreltsf();
 	assert(rtx != NULL);
 
-	//discard old sacks
+	//discard out-of-order sacks (always use newer sack)
 	uint ctsna = ntohl(sack->sack_fixed.cumulative_tsn_ack);
 	if (ubefore(ctsna, rtx->highest_acked))
-		return 0;
-	rtx->highest_acked = ctsna;
+	{
+    // we send 12345 tp peer =>
+	  // peer sends sack1 with ctsna 1
+	  // peer sends sack2 with ctsna 2
+	  // we receive sack2 first and set highest_acked to 2 =>
+	  // then receive sack1, ubefore(1,2) true =>
+	  return 0;
+	}
 
-	uint old_own_ctsna = rtx->lowest_tsn;
+	if(ubefore(ctsna, rtx->lowest_tsn) || uafter(ctsna, rtx->highest_tsn))
+	{
+	  return -1;
+	}
+
+  rtx->sack_arrival_time = gettimestamp();
+  rtx->highest_acked = ctsna;
+  rtx->last_received_ctsna = ctsna;
+  uint old_own_ctsna = rtx->lowest_tsn;
 	EVENTLOG2(VERBOSE, "Received ctsna==%u, old_own_ctsna==%u", ctsna, old_own_ctsna);
 
 	//verify chunk len
 	uint chunk_len = ntohs(sack->chunk_header.chunk_length);
 	if (chunk_len > totalLen) return -1;
 
-	// verify gaps and dups
+  mreltx_check_fast_recovery(rtx, ctsna);
+
+	//verify gaps and dups
 	ushort 	num_of_gaps = sack->chunk_header.chunk_flags & SACK_NON_ZERO_FRAGMENT ?
 		ntohs(sack->sack_fixed.num_of_fragments) : 0;
 	ushort num_of_dups = sack->chunk_header.chunk_flags & SACK_NON_ZERO_DUPLICATE ?
@@ -7585,12 +7628,12 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	EVENTLOG5(VERBOSE, "chunk_len=%u, a_rwnd=%u, var_len=%u, gap_len=%u, du_len=%u",
 		chunk_len, arwnd, var_len, gap_len, dup_len);
 
-	mreltx_check_fast_recovery(rtx, ctsna);
-	int retval;
-
+	// it is likely to receive more than one sack possibly
+	// with same ctsna but different gap blocks
+	// that is why we test if ctsna >= rtx->lowest_tsn
 	if (uafter(ctsna, rtx->lowest_tsn) || ctsna == rtx->lowest_tsn)
 	{
-		if ((retval = mreltx_on_chunks_acked(ctsna, adr_index)) < 0)
+	  if ((retval = mreltx_remove_acked_chunks(ctsna, adr_index)) < 0)
 		{
 			EVENTLOG(VERBOSE,
 				"mreltx_process_sack()::Bad ctsna arrived in SACK or no data in queue - discarding SACK");
@@ -7713,8 +7756,9 @@ int mdi_disassemle_packet()
 			break;
 
 		case CHUNK_SACK:
+		  //refer to section 6.2.1 processing a received SACK
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_SACK");
-			handle_ret = msm_process_sack_chunk(last_src_path_, chunk, curr_geco_packet_value_len_);
+			handle_ret = mreltx_process_sack(last_src_path_, (sack_chunk_t*)chunk, curr_geco_packet_value_len_);
 			break;
 
 		case CHUNK_HBREQ:

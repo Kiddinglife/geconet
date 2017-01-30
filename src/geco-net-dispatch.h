@@ -152,17 +152,14 @@ struct bundle_controller_t
     }
 };
 
-/**
- * this struct contains all necessary data for
- * creating SACKs from received data chunks
- * both are closely Connected as sack is created based on form recv data chunks
- */
-struct recv_controller_t  //recv_ctrl
+
+/// this struct contains all necessary data for creating SACKs from received data chunks
+/// both are closely Connected as sack is created based on form recv data chunks
+struct recv_controller_t
 {
     sack_chunk_t* sack_chunk;
     uint cumulative_tsn;
-    /*stores highest tsn received so far, taking care of wraps
-     * i.e. highest < lowest indicates a wrap */
+    // stores highest tsn received so far, taking care of wraps i.e. highest < lowest indicates a wrap
     uint lowest_duplicated_tsn;
     uint highest_tsn;
     bool sack_updated;
@@ -181,10 +178,9 @@ struct recv_controller_t  //recv_ctrl
     std::list<duplicate_tsn_t> duplicated_data_chunks_list;
 };
 
-/**
- * this struct contains the necessary data per (destination or) path.
- * There may be more than one within an channel
- */
+
+/// this struct contains the necessary data per (destination or) path.
+/// There may be more than one within an channel
 struct path_params_t
 {
     //id of path
@@ -236,21 +232,17 @@ struct path_params_t
     ushort eff_pmtu;
 };
 
-/**
- * this struct contains all necessary data for one instance of the path management
- * module. There is one such module per existing channel.
- */
+/// this struct contains all necessary data for one instance of the path management
+/// module. There is one such module per existing channel.
 struct geco_channel_t;
 struct path_controller_t
 {
     //channel id
     uint channel_id;
     geco_channel_t* channel_ptr;
-
     // store the current primary path
     int primary_path;
     int destaddr_in_init_sentbyme;
-
     //the number of paths used by this channel
     int path_num;
     //counter for all retransmittions over all paths
@@ -261,14 +253,14 @@ struct path_controller_t
     uint max_retrans_per_path;
     // initial RTO, a configurable parameter
     uint rto_initial;
-    /** minimum RTO, a configurable parameter */
+    //minimum RTO, a configurable parameter
     uint rto_min;
-    /** maximum RTO, a configurable parameter */
+    //maximum RTO, a configurable parameter
     uint rto_max;
     uint min_pmtu;
 };
 
-/**state controller structure. Stores the current state of the channel.*/
+/// state controller structure. Stores the current state of the channel.
 struct smctrl_t
 {
     /*@{ */
@@ -308,23 +300,19 @@ struct smctrl_t
     /*@} */
 };
 
-/**
- * this struct contains all necessary data for retransmissions
- * and processing of received SACKs,
- * both are closely Connected as retrans is determined based on recv sacks
- */
+
+ /// this struct contains all necessary data for retransmissions
+ /// and processing of received SACKs, both are closely Connected as
+ /// retrans is determined based on recv sacks
 struct reltransfer_controller_t
 {
     uint lowest_tsn; /*storing the lowest tsn that is in the list */
     uint highest_tsn;/*storing the highest tsn that is in the list */
     uint num_of_chunks;
     uint highest_acked;
-    /** a list that is ordered by ascending tsn values */
-    std::list<internal_data_chunk_t*> chunk_list_tsn_ascended;  //@fixme what is the type used ?
-
-    struct timeval sack_arrival_time;
-    struct timeval saved_send_time;
-    /*this val stores 0 if retransmitted chunks have been acked, else 1 */
+    uint64 sack_arrival_time;
+    uint64 saved_send_time;
+    //this val stores 0 if retransmitted chunks have been acked, else 1
     uint save_num_of_txm;
     uint newly_acked_bytes;
     uint numofdestaddrlist;
@@ -333,11 +321,13 @@ struct reltransfer_controller_t
     bool all_chunks_are_unacked;
     bool shutdown_received;
     bool fast_recovery_active;
-    /** the exit point is only valid, if we are in fast recovery */
+    //only valid if we are in fast recovery
     uint fr_exit_point;
-    uint advancedPeerAckPoint;
+    uint advanced_peer_ack_point;
     uint lastSentForwardTSN;
-    uint lastReceivedCTSNA;
+    uint last_received_ctsna;
+    //ordered by ascending tsn
+    std::list<internal_data_chunk_t*> chunk_list_tsn_ascended;
     std::vector<internal_data_chunk_t*> prChunks;
 };
 
