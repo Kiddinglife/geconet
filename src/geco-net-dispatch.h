@@ -50,7 +50,6 @@ struct geco_instance_t
 {
     /*The name of this SCTP-instance, used as key*/
     ushort dispatcher_name;
-
     /*The local port of this instance, or zero for don't cares.
      Once assigned this should not be changed !*/
     ushort local_port;
@@ -61,14 +60,11 @@ struct geco_instance_t
     bool is_in6addr_any;
     bool use_ip4;
     bool use_ip6;
-
     ulp_cbs_t ulp_callbacks; /*setup by app layer*/
-
     /*maximum number of incoming streams that this instance will take */
     ushort sequenced_streams;
     /*maximum number of outgoingng streams that this instance will take */
     ushort ordered_streams;
-
     /*default params for geco_inst initialization*/
     uint default_rtoInitial;
     uint default_validCookieLife;
@@ -84,7 +80,6 @@ struct geco_instance_t
     uint default_maxBurst;
     uint supportedAddressTypes;
     uchar default_ipTos;
-
     bool supportsPRSCTP;
     bool supportsADDIP;
 };
@@ -108,7 +103,6 @@ struct bundle_controller_t
     char sack_buf[MAX_GECO_PACKET_SIZE];
     /** buffer for data chunks */
     char data_buf[MAX_GECO_PACKET_SIZE];
-
     /* Leave some space for the SCTP common header */
     /**  current position in the buffer for control chunks */
     uint ctrl_position;
@@ -116,14 +110,12 @@ struct bundle_controller_t
     uint sack_position;
     /**  current position in the buffer for data chunks */
     uint data_position;
-
     /** is there data to be sent in the buffer ? */
     bool data_in_buffer;
     /**  is there a control chunk  to be sent in the buffer ? */
     bool ctrl_chunk_in_buffer;
     /**  is there a sack chunk  to be sent in the buffer ? */
     bool sack_in_buffer;
-
     /** status flag for correct sequence of actions */
     bool got_send_request;
     bool got_send_address;
@@ -152,7 +144,6 @@ struct bundle_controller_t
     }
 };
 
-
 /// this struct contains all necessary data for creating SACKs from received data chunks
 /// both are closely Connected as sack is created based on form recv data chunks
 struct recv_controller_t
@@ -177,7 +168,6 @@ struct recv_controller_t
     std::list<segment32_t> fragmented_data_chunks_list;
     std::list<duplicate_tsn_t> duplicated_data_chunks_list;
 };
-
 
 /// this struct contains the necessary data per (destination or) path.
 /// There may be more than one within an channel
@@ -263,7 +253,6 @@ struct path_controller_t
 /// state controller structure. Stores the current state of the channel.
 struct smctrl_t
 {
-    /*@{ */
     /** the state of this state machine */
     ChannelState channel_state;
     /** stores timer-ID of init/cookie-timer, used to stop this timer */
@@ -277,7 +266,6 @@ struct smctrl_t
     /** pointer to the init chunk data structure (for retransmissions) */
     init_chunk_t *my_init_chunk;  //!< init chunk sent by me MUST NOT free it as this is from mtra
     int addr_my_init_chunk_sent_to;
-
     /** pointer to the cookie chunk data structure (for retransmissions) */
     cookie_echo_chunk_t *peer_cookie_chunk; //MUST NOT free it as this is from mtra
     /** my tie tag for cross initialization and other sick cases */
@@ -297,13 +285,11 @@ struct smctrl_t
     /** the geco instance */
     geco_instance_t* instance;
     geco_channel_t* channel;
-    /*@} */
 };
 
-
- /// this struct contains all necessary data for retransmissions
- /// and processing of received SACKs, both are closely Connected as
- /// retrans is determined based on recv sacks
+/// this struct contains all necessary data for retransmissions
+/// and processing of received SACKs, both are closely Connected as
+/// retrans is determined based on recv sacks
 struct reltransfer_controller_t
 {
     uint lowest_tsn; /*storing the lowest tsn that is in the list */
@@ -331,17 +317,15 @@ struct reltransfer_controller_t
     std::vector<internal_data_chunk_t*> prChunks;
 };
 
-/**
- * this struct contains all relevant congestion control parameters for
- * one PATH to the destination/association peer endpoint
- */
+/// this struct contains all relevant congestion control parameters for
+/// one PATH to the destination/association peer endpoint
 struct congestion_parameters_t
 {
-    unsigned int cwnd;
-    unsigned int cwnd2;
-    unsigned int partial_bytes_acked;
-    unsigned int ssthresh;
-    unsigned int mtu;
+    uint cwnd;
+    uint cwnd2;
+    uint partial_bytes_acked;
+    uint ssthresh;
+    uint mtu;
     uint64 time_of_cwnd_adjustment;
     uint64 last_send_time;
 };
@@ -353,14 +337,13 @@ struct flow_controller_t
     uint numofdestaddrlist;
     congestion_parameters_t* cparams;
     uint current_tsn;
-    std::list<internal_data_chunk_t*> chunk_list;  //todo not really sure GList *chunk_list;
+    std::list<internal_data_chunk_t*> chunk_list;
     uint list_length;
-    /** one timer may be running per destination address */
+    //one timer may be running per destination address
     timeout** T3_timer;
-    /** for passing as parameter in callback functions */
+    //for passing as parameter in callback functions
     uint *addresses;
     uint channel_id;
-    /** */
     bool shutdown_received;
     bool waiting_for_sack;
     bool t3_retransmission_sent;
@@ -369,7 +352,7 @@ struct flow_controller_t
     uint maxQueueLen;
 };
 
-/*this stores all the data need to be delivered to the user*/
+/// this stores all the data need to be delivered to the user
 struct delivery_data_t
 {
     uchar chunk_flags;
@@ -378,13 +361,12 @@ struct delivery_data_t
     ushort stream_id;
     ushort stream_sn;
     uint fromAddressIndex;
-
     uchar* data; // usr data this is assigned from data chunk value
     bool can_free_at_once; //this is aseembled chunk we can delete for efficiency
     void* packet_params_t; // where this chunk is located
 };
 
-/*stores several chunks that can be delivered to the user as one message*/
+/// stores several chunks that can be delivered to the user as one message
 struct delivery_pdu_t
 {
     uint number_of_chunks;
@@ -430,10 +412,10 @@ struct deliverman_controller_t
     bool unordered;
     // reliable, reliable&ordered, reliable&sequenced,
     // unreliable, unreliable&ordered or unreliable&sequenced
-	// parse packet and put dchunk to againest list, they must be ordered
-    std::list<delivery_data_t*> ro,rs,r,urs;
-	std::list<delivery_pdu_t*> ur_pduList;
-	std::list<delivery_pdu_t*> r_pduList;
+    // parse packet and put dchunk to againest list, they must be ordered
+    std::list<delivery_data_t*> ro, rs, r, urs;
+    std::list<delivery_pdu_t*> ur_pduList;
+    std::list<delivery_pdu_t*> r_pduList;
 };
 
 /**
@@ -452,32 +434,25 @@ struct geco_channel_t
      it is used as a key to find a channel in the list,
      and never changes in the  live of the channel */
     uint channel_id;
-
     uint local_tag; /*The local tag of this channel*/
     uint remote_tag; /*The tag of remote side of this channel*/
-
     /*Pointer to the geco-instance this association belongs to.
      It is equal to the assignated port number of the ULP that uses this instance*/
     geco_instance_t* geco_inst;
-
     /* a single same port  plus multi different ip addresses consist of a uniqe channel*/
     ushort local_port;
     sockaddrunion *local_addres;
     uint local_addres_size;
-
     ushort remote_port;
-
     // it uses geco_malloc_ext() to alloc remeber to use geco_free_ext() to free mempey
     sockaddrunion *remote_addres;
     uint remote_addres_size;
-
     uchar ipTos;
     uint locally_supported_addr_types;
     uint maxSendQueue;
     uint maxRecvQueue;
     bool is_INADDR_ANY;
     bool is_IN6ADDR_ANY;
-
     flow_controller_t *flow_control;
     reltransfer_controller_t *reliable_transfer_control;
     recv_controller_t *receive_control;
@@ -485,14 +460,12 @@ struct geco_channel_t
     path_controller_t *path_control;
     bundle_controller_t *bundle_control;
     smctrl_t *state_machine_control;
-
     /* do I support the DCTP extensions ? */
     bool locally_supported_PRDCTP;
     bool locally_supported_ADDIP;
     /* and these values for our peer */
     bool remotely_supported_PRSCTP;
     bool remotely_supported_ADDIP;
-
     bool deleted; /** marks an association for deletion */
     void * ulp_dataptr; /* transparent pointer to some upper layer data */
 };

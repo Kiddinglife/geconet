@@ -61,9 +61,8 @@ enum ChannelState
   UnknownChannelState,
 };
 
-/* Return codes for a number of functions that treat incoming chunks */
-/* these are used in  bundle controller !
- /* stop -> stop processing not sending replying chunk */
+/// Return codes for a number of functions that treat incoming chunks
+/// these are used in  bundle controller stop processing not sending replying chunk
 enum ChunkProcessResult
   : int
   {
@@ -310,7 +309,7 @@ struct ulp_cbs_t
      *  @param 3 length of data
      *  @param 4 stream sequence number
      *  @param 5 tsn of (at least one) chunk belonging to the message
-	 *  @param 6 unreliable flag (TRUE==1==unreliable, FALSE==0==reliable)
+     *  @param 6 unreliable flag (TRUE==1==unreliable, FALSE==0==reliable)
      *  @param 7 unordered flag (TRUE==1==unordered, FALSE==0==normal, numbered chunk)
      *  @param 8 pointer to ULP data
      */
@@ -450,9 +449,9 @@ int mulp_delete_geco_instance(int instance_name);
 /// @param destinationPort       destination port
 /// @param ulp_data             pointer to an ULP data structure, will be passed with callbacks !
 /// @return connection ID, 0 in case of failures
-int mulp_connect(unsigned int instanceid, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,char destinationAddress[MAX_IPADDR_STR_LEN],
-    unsigned short destinationPort, void* ulp_data);
-int mulp_connectx(unsigned int instanceid,  unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,
+int mulp_connect(unsigned int instanceid, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,
+    char destinationAddress[MAX_IPADDR_STR_LEN], unsigned short destinationPort, void* ulp_data);
+int mulp_connectx(unsigned int instanceid, unsigned short noOfOrderStreams, unsigned short noOfSeqStreams,
     char destinationAddresses[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN], unsigned int noOfDestinationAddresses,
     unsigned int maxSimultaneousInits, unsigned short destinationPort, void* ulp_data);
 

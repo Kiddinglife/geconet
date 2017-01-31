@@ -321,7 +321,6 @@ rtx_on_chunks_acked (unsigned int ctsna, unsigned int addr_index)
   /* first remove all stale chunks from flowcontrol list           */
   /* so that these are not referenced after they are freed here    */
   fc_dequeue_acked_chunks (ctsna);
-
   tmp = g_list_first (rtx->chunk_list_tsn_ascended);
 
   while (tmp)
