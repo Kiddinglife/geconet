@@ -369,7 +369,6 @@ int mpath_disable_all_hb();
 /// @return error code, 0 for success, 1 for error (i.e. address index too large)
 int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall);
 
-/// @todo use safe random generator
 /// generates a random tag value for a new association, but not 0
 /// @return   generates a random tag value for a new association, but not 0
 inline uint mdi_generate_itag(void);
@@ -2598,7 +2597,6 @@ int mdi_send_bundled_chunks(int* ad_idx)
 	}
 
 	/* determine  path_param_id to use as dest addr
-	 * TODO - more intelligent path selection strategy
 	 * should take into account  eg. check path inactive or active */
 	int path_param_id;
 	if (ad_idx != NULL)
@@ -5384,7 +5382,7 @@ void mfc_free(flow_controller_t* fctrl_inst)
 }
 /**
  * Creates new instance of flowcontrol module and returns pointer to it
- * @TODO : get and update MTU (guessed values ?) per destination address
+ * use lowest MTU 576 per destination address
  * @param  peer_rwnd receiver window that peer allowed us when setting up the association
  * @param  my_iTSN my initial TSN value
  * @param  numofdestaddres the number of paths to the association peer
@@ -7698,7 +7696,7 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 			// just loop all chunks and reset acked to unacked
 			if ( !ptr->hasBeenDropped &&ptr->hasBeenAcked)
 			{
-				EVENTLOG(VERBOSE, "rtx_process_sack: RENEG --> fast retransmitting chunk tsn %u ", ptr->chunk_tsn);
+				EVENTLOG1(VERBOSE, "rtx_process_sack: RENEG --> fast retransmitting chunk tsn %u ", ptr->chunk_tsn);
 				/* retransmit it, chunk is not yet expired */
 				rtx_necessary = true;
 				mreltx_chunks[chunks2rtx] = ptr;
@@ -7778,7 +7776,6 @@ int mdi_disassemle_packet()
 		}
 
 		/*
-		 * TODO :
 		 * Add return values to the chunk-functions, where they can indicate what
 		 * to do with the rest of the datagram (i.e. DISCARD after stale COOKIE_ECHO
 		 * with tie tags that do not match the current ones)
