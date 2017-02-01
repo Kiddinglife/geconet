@@ -290,6 +290,7 @@ struct smctrl_t
 /// this struct contains all necessary data for retransmissions
 /// and processing of received SACKs, both are closely Connected as
 /// retrans is determined based on recv sacks
+#define RTX_CHUNK_MAX_SIZE 512
 struct reltransfer_controller_t
 {
     uint lowest_tsn; /*storing the lowest tsn that is in the list */
@@ -315,6 +316,7 @@ struct reltransfer_controller_t
     //ordered by ascending tsn
     std::list<internal_data_chunk_t*> chunk_list_tsn_ascended;
     std::vector<internal_data_chunk_t*> prChunks;
+    internal_data_chunk_t *rtx_chunks[RTX_CHUNK_MAX_SIZE];
 };
 
 /// this struct contains all relevant congestion control parameters for
