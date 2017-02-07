@@ -7681,12 +7681,26 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
   EVENTLOG2(VERBOSE, "mreltx_process_sack()::Received ctsna==%u, old_own_ctsna==%u", ctsna, old_own_ctsna);
 
   bool rtx_necessary = false, all_acked = false, new_acked = false;
-  uint chunks2rtx = 0, rtx_bytes = 0;
 
   if (num_of_gaps != 0)
   {
     // we have test chunklist_ascended must NOT be empty in mreltx_remove_acked_chunks()
     EVENTLOG1(VERBOSE, "mreltx_process_sack()::Processing %u fragment reports", num_of_gaps);
+    if (rtx->chunk_list_tsn_ascended.empty())
+    {
+      EVENTLOG(NOTICE,
+          "mreltx_process_sack()::rtx->chunk_list_tsn_ascended is empty, but we received fragment report -> ignore");
+    }
+    else
+    {
+      uint low, hi, pos = 0;
+      internal_data_chunk_t* dat;
+      do
+      {
+        dat = rtx->chunk_list_tsn_ascended.front();
+
+      } while (!rtx->chunk_list_tsn_ascended.empty());
+    }
   }
   else if (!rtx->all_chunks_are_unacked)
   {
@@ -7707,6 +7721,7 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
      *  12 are removed from sending buffer by mreltx_remove_acked_dchunks_to_ctsna()
      **/
     EVENTLOG(VERBOSE, "rtx_process_sack: resetting all *hasBeenAcked* attributes");
+    uint chunks2rtx = 0, rtx_bytes = 0;
     if (!rtx->chunk_list_tsn_ascended.empty())
     {
       for (auto ptr : rtx->chunk_list_tsn_ascended)
