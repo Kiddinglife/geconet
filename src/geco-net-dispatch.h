@@ -305,6 +305,8 @@ struct reltransfer_controller_t
     uint numofdestaddrlist;
     uint channel_id;
     uint peer_arwnd;
+    //dchunks that are still buffered in chunk_list_tsn_ascended after removals up to ctsna
+    //they maybe partially acked by gap blocks
     bool all_chunks_are_unacked;
     bool shutdown_received;
     bool fast_recovery_active;
