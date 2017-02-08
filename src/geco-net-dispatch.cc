@@ -7681,6 +7681,7 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	EVENTLOG2(VERBOSE, "mreltx_process_sack()::Received ctsna==%u, old_own_ctsna==%u", ctsna, old_own_ctsna);
 
 	uint chunks2rtx = 0, rtx_bytes = 0;
+	bool rtx_necessary = false;
 	if (num_of_gaps != 0)
 	{
 		// we have test chunklist_ascended must NOT be empty in mreltx_remove_acked_chunks()
@@ -7825,7 +7826,7 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	// also tell mpath, that we got a SACK, possibly updating RTT/RTO.
 	mreltx_update_rtt(adr_index, rtx);
 
-	bool rtx_necessary = false, all_acked = false, new_acked = false;
+	bool all_acked = false, new_acked = false;
 	if (rtx->chunk_list_tsn_ascended.empty())
 	{
 		if (rtx->highest_acked == rtx->highest_tsn)
