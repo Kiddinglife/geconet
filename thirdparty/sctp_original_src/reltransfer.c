@@ -676,8 +676,7 @@ rtx_process_sack (unsigned int adr_index, void *sack_chunk,
     {
       /* this may become expensive !!!!!!!!!!!!!!!! */
       pos = 0;
-      dat = (internal_data_chunk_t*) g_list_nth_data (
-          rtx->chunk_list_tsn_ascended, i);
+      dat = (internal_data_chunk_t*) g_list_nth_data (rtx->chunk_list_tsn_ascended, i);
       if (rtx->chunk_list_tsn_ascended != NULL && dat != NULL)
       {
         do
@@ -738,6 +737,7 @@ rtx_process_sack (unsigned int adr_index, void *sack_chunk,
                 }
               } /*  if(dat->hasBeenDropped == FALSE)  */
             } /*  if (dat->gap_reports == 4) */
+
             /* read next chunk */
             i++;
             dat = (internal_data_chunk_t*) g_list_nth_data (
