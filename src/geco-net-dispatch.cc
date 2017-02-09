@@ -241,11 +241,16 @@ int msm_process_shutdown_ack_chunk();
 /// called by bundling when a SHUTDOWN COMPLETE chunk was received from the peer.
 /// COMMUNICATION LOST is signaled to the ULP, timers stopped, and the association is marked for removal.
 int msm_process_shutdown_complete_chunk();
+/// Called by reliable transfer if all (sent !) chunks in its retransmission queue have been acked.
+/// This function is used to move from state SHUTDOWNPENDING to  SHUTDOWNSENT (after having sent a
+/// shutdown chunk) or to move from  SHUTDOWNRECEIVED to SHUTDOWNACKSENT (after having sent a
+/// shutdown-ack chunk)
+void msm_all_dchunks_acked();
 
 /// Function returns the outstanding byte count value of this association.
 /// @return current outstanding_bytes value, else -1
 int mfc_get_outstanding_bytes(void);
-uint mfc_get_queued_chunks_count(void);
+bool mfc_queued_chunks_empty(void);
 /// this function stops all currently running timers of the flowcontrol moduleand may be called when the shutdown is imminent
 void mfc_stop_timers(void);
 /// this function stops all currently running timers, and may be called when the shutdown is imminent
@@ -261,7 +266,7 @@ uint mreltx_get_peer_rwnd();
 int mreltx_set_peer_arwnd(uint new_arwnd);
 /// Function returns the number of chunks that are waiting in the queue to be acked
 /// @return size of the retransmission queue
-uint mreltx_get_unacked_chunks_count();
+bool mreltx_get_unacked_chunks_empty();
 /// called, when a Cookie, that indicates the peer's restart, is received in the ESTABLISHED stat-> we need to restart too
 static reltransfer_controller_t* mreltx_restart(reltransfer_controller_t* mreltx, uint numOfPaths, uint iTSN);
 
@@ -456,7 +461,20 @@ void mdi_on_shutdown_completed();
 void mdi_on_peer_shutdown_received();
 
 //\\ IMPLEMENTATIONS \\//
-inline uint mfc_get_queued_chunks_count(void)
+inline bool mfc_queued_chunks_empty(void)
+{
+	flow_controller_t* fc = mdi_read_mfc();
+	if (fc == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "mfc_readNumberOfQueuedChunks()::flow control instance not set !");
+		return 0;
+	}
+#ifdef _DEBUG
+	EVENTLOG1(VERBOSE, "mfc_readNumberOfQueuedChunks() returns %u", (uint)fc->chunk_list.size());
+#endif
+	return (uint)fc->chunk_list.empty();
+}
+inline uint mfc_get_queued_chunks_size(void)
 {
 	flow_controller_t* fc = mdi_read_mfc();
 	if (fc == NULL)
@@ -504,7 +522,7 @@ inline int mreltx_set_peer_arwnd(uint new_arwnd)
 	EVENTLOG1(VERBOSE, "mreltx_set_peer_arwnd to %u", rtx->peer_arwnd);
 	return 0;
 }
-inline uint mreltx_get_unacked_chunks_count()
+inline bool mreltx_get_unacked_chunks_empty()
 {
 	reltransfer_controller_t *rtx;
 	if ((rtx = (reltransfer_controller_t *)mdi_read_mreltsf()) == NULL)
@@ -512,10 +530,20 @@ inline uint mreltx_get_unacked_chunks_count()
 		ERRLOG(MAJOR_ERROR, "reltransfer_controller_t instance not set !");
 		return -1;
 	}
-	EVENTLOG1(VERBOSE, "mreltx_get_unacked_chunks_count() returns %u", rtx->chunk_list_tsn_ascended.size());
+	EVENTLOG1(VERBOSE, "mreltx_get_unacked_chunks_empty() returns %u", rtx->chunk_list_tsn_ascended.size());
+	return rtx->chunk_list_tsn_ascended.empty();
+}
+inline uint mreltx_get_unacked_chunks_size()
+{
+	reltransfer_controller_t *rtx;
+	if ((rtx = (reltransfer_controller_t *)mdi_read_mreltsf()) == NULL)
+	{
+		ERRLOG(MAJOR_ERROR, "reltransfer_controller_t instance not set !");
+		return -1;
+	}
+	EVENTLOG1(VERBOSE, "mreltx_get_unacked_chunks_size() returns %u", rtx->chunk_list_tsn_ascended.size());
 	return rtx->chunk_list_tsn_ascended.size();
 }
-
 inline int mdlm_read_queued_chunks()
 {
 	int i, num_of_chunks = 0;
@@ -1688,7 +1716,7 @@ void msm_shutdown()
 		EVENTLOG1(INFO, "event: msm_shutdown in state %02d --> aborting", smctrl->channel_state);
 		mpath_disable_all_hb();
 		/* stop reliable transfer and read its state */
-		readyForShutdown = (mreltx_get_unacked_chunks_count() == 0) && (mfc_get_queued_chunks_count() == 0);
+		readyForShutdown = mreltx_get_unacked_chunks_empty() && (mfc_queued_chunks_empty());
 		if (readyForShutdown)
 		{
 			// make and send shutdown
@@ -1716,7 +1744,7 @@ void msm_shutdown()
 			// but retransmits data to the far end if necessary to fill gaps
 			curr_channel_->flow_control->shutdown_received = true;
 			curr_channel_->reliable_transfer_control->shutdown_received = true;
-			// wait for msm_all_chunks_acked() from mreltx
+			// wait for msm_all_dchunks_acked() from mreltx
 			smctrl->channel_state = ChannelState::ShutdownPending;
 		}
 		break;
@@ -7129,7 +7157,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 	case ChannelState::ShutdownSent:
 		EVENTLOG(NOTICE, "event: receive shutdown chunk  in state ShutdownSent -> shutdown collisons !");
 		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
-		readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
+		readyForShutdown = mreltx_get_unacked_chunks_empty() && mfc_queued_chunks_empty();
 		if (readyForShutdown)
 		{
 			// retransmissions are not necessary, send shutdownAck
@@ -7156,7 +7184,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 	case ChannelState::Connected:
 		EVENTLOG(INFO, "event: receive shutdown chunk  in Connected State !");
 		mrecv_process_ctsna_from_shutdown_chunk(mch_read_ctsna(shutdownCID));
-		readyForShutdown = (mreltx_get_unacked_chunks_count() == 0 && mfc_get_queued_chunks_count() == 0);
+		readyForShutdown = mreltx_get_unacked_chunks_empty() && mfc_queued_chunks_empty();
 		if (readyForShutdown)
 		{
 			// Once all its outstanding data has been acknowledged, send shutdownAckretransmissions are not necessary now
@@ -7178,7 +7206,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 			// but retransmits data to the far end if necessary to fill gaps
 			curr_channel_->flow_control->shutdown_received = true;
 			curr_channel_->reliable_transfer_control->shutdown_received = true;
-			// waiting for msm_all_chunks_acked() from mreltx
+			// waiting for msm_all_dchunks_acked() from mreltx
 			smctrl->channel_state = ChannelState::ShutdownReceived;
 		}
 		mdi_on_peer_shutdown_received();
@@ -7615,6 +7643,11 @@ void mreltx_update_rtt(short adr_idx, reltransfer_controller_t * rtx)
 	}
 }
 
+void msm_all_dchunks_acked()
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
 /**
  * this is called by bundling, when a SACK needs to be processed. This is a LONG function !
  * FIXME : check correct update of rtx->lowest_tsn !
@@ -7640,14 +7673,17 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	if (ubefore(ctsna, rtx->highest_acked))
 		return 0;
 
-	// discard sack with wrong cumulative_tsn_ack beyond [rtx->lowest_tsn, rtx->highest_tsn]
-	if (ubefore(ctsna, rtx->lowest_tsn) || uafter(ctsna, rtx->highest_tsn))
-		return -1;
+	rtx->highest_acked = ctsna;
+	rtx->sack_arrival_time = gettimestamp();
+	rtx->last_received_ctsna = ctsna;
+	uint old_own_ctsna = rtx->lowest_tsn;
+	EVENTLOG2(VERBOSE, "mreltx_process_sack()::Received ctsna==%u, old_own_ctsna==%u", ctsna, old_own_ctsna);
 
 	// discard sack with wrong chunk len
 	uint chunk_len = ntohs(sack->chunk_header.chunk_length);
 	if (chunk_len > totalLen)
 		return -2;
+	mreltx_check_fast_recovery(rtx, ctsna);
 
 	// discard sack with wrong gaps and dups len
 	ushort num_of_gaps =
@@ -7666,22 +7702,20 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	// it is likely to receive more than one sack possibly
 	// with same ctsna but different gap blocks
 	// we have tested ctsna must be beween [rtx->lowest_tsn, rtx->highest_tsn] in the coedes above
-	if (mreltx_remove_acked_dchunks_to_ctsna(ctsna, adr_index) < 0)
+	if (uafter(ctsna, rtx->lowest_tsn) || (ctsna == rtx->lowest_tsn))
 	{
-		EVENTLOG(VERBOSE,
-			"mreltx_process_sack()::no data in queue or bad ctsna arrived in SACK (after all buffered chunks tsn)->discard sack");
-		return -4;
+		if (mreltx_remove_acked_dchunks_to_ctsna(ctsna, adr_index) < 0)
+		{
+			EVENTLOG(VERBOSE,
+				"mreltx_process_sack()::no data in queue or bad ctsna arrived in SACK (after all buffered chunks tsn)->discard sack");
+			return -4;
+		}
+		rtx->lowest_tsn = ctsna;
 	}
-	mreltx_check_fast_recovery(rtx, ctsna);
-
-	rtx->sack_arrival_time = gettimestamp();
-	rtx->lowest_tsn = rtx->highest_acked = rtx->last_received_ctsna = ctsna;
-	EVENTLOG2(VERBOSE, "mreltx_process_sack()::Updated rtx->lowest_tsn %u to  %u", rtx->lowest_tsn, ctsna);
-	uint old_own_ctsna = rtx->lowest_tsn;
-	EVENTLOG2(VERBOSE, "mreltx_process_sack()::Received ctsna==%u, old_own_ctsna==%u", ctsna, old_own_ctsna);
 
 	uint chunks2rtx = 0, rtx_bytes = 0;
 	bool rtx_necessary = false;
+	internal_data_chunk_t*  dat;
 	if (num_of_gaps != 0)
 	{
 		// we have test chunklist_ascended must NOT be empty in mreltx_remove_acked_chunks()
@@ -7697,7 +7731,6 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 			segment16_t* seg;
 			std::list<internal_data_chunk_t*>::iterator itr = rtx->chunk_list_tsn_ascended.begin();
 			std::list<internal_data_chunk_t*>::iterator end = rtx->chunk_list_tsn_ascended.end();
-			internal_data_chunk_t*  dat;
 			do
 			{
 				dat = *itr;
@@ -7829,14 +7862,41 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	bool all_acked = false, new_acked = false;
 	if (rtx->chunk_list_tsn_ascended.empty())
 	{
+		//12345 ->  rtx->highest_acked = rtx->lowest_tsn=2,rtx->highest_tsn=4, 34
+		// acked 34, rtx->highest_acked = rtx->lowest_tsn=4,rtx->highest_tsn=4
 		if (rtx->highest_acked == rtx->highest_tsn)
 			all_acked = true;
 		// new_acked == TRUE means our own ctsna has advanced :also see section 6.2.1 (Note)
 		// section 6.2.1.D.ii) 
 		rtx->peer_arwnd = arwnd;
 		rtx->lowest_tsn = rtx->highest_tsn;
-
+		if (uafter(rtx->lowest_tsn, old_own_ctsna))
+			new_acked = true;
+		// in the case where shutdown was requested by the ULP, and all is acked (i.e. ALL queues are empty) ! 
+		if (rtx->shutdown_received == true)
+		{
+			if (mfc_queued_chunks_empty())
+				msm_all_dchunks_acked();
+		}
 	}
+	else
+	{
+		// there are still chunks in that rtx queue
+		dat = rtx->chunk_list_tsn_ascended.front();
+		rtx->lowest_tsn = dat->chunk_tsn;
+		if (uafter(rtx->lowest_tsn, old_own_ctsna))
+			new_acked = true;
+	}
+
+	// send sack asap when shutdown received
+	if (rtx->shutdown_received == true)
+		curr_channel_->receive_control->sack_flag = 1;
+
+	EVENTLOG4(VERBOSE, "rtx->lowest_tsn==%u, new_acked==%s, all_acked==%s, rtx_necessary==%s\n",
+		rtx->lowest_tsn, ((new_acked == TRUE) ? "TRUE" : "FALSE"), ((all_acked == TRUE) ? "TRUE" : "FALSE"), ((rtx_necessary == TRUE) ? "TRUE" : "FALSE"));
+
+
+
 	return 0;
 }
 
@@ -9434,7 +9494,7 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 
 	EVENTLOG(NOTICE, "- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 	return geco_return_enum::good;
-	}
+}
 
 /* port management array */
 unsigned char portsSeized[65536];
@@ -9471,7 +9531,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-	}
+}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
@@ -10151,8 +10211,8 @@ int mulp_get_connection_params(unsigned int connectionid, connection_infos_t* st
 		status->outStreams = mdlm_read_ostreams();
 		status->currentReceiverWindowSize = mreltx_get_peer_rwnd();
 		status->outstandingBytes = mfc_get_outstanding_bytes();
-		status->noOfChunksInSendQueue = mfc_get_queued_chunks_count();
-		status->noOfChunksInRetransmissionQueue = mreltx_get_unacked_chunks_count();
+		status->noOfChunksInSendQueue = mfc_get_queued_chunks_size();
+		status->noOfChunksInRetransmissionQueue = mreltx_get_unacked_chunks_size();
 		status->noOfChunksInReceptionQueue = mdlm_read_queued_chunks();
 		status->rtoInitial = mpath_get_rto_initial();
 		status->rtoMin = mpath_get_rto_min();
