@@ -199,7 +199,7 @@ deliverman_controller_t* mdi_read_mdlm(void);
 path_controller_t* mdi_read_mpath();
 flow_controller_t* mdi_read_mfc(void);
 recv_controller_t* mdi_read_mrecv(void);
-smctrl_t* mdi_read_smctrl();
+smctrl_t* mdi_read_msm();
 
 /// this function aborts this association. And optionally adds an error parameter to the ABORT chunk that is sent out. */
 void msm_abort_channel(short error_type = 0, uchar* errordata = 0, ushort errordattalen = 0);
@@ -245,7 +245,7 @@ int msm_process_shutdown_complete_chunk();
 /// This function is used to move from state SHUTDOWNPENDING to  SHUTDOWNSENT (after having sent a
 /// shutdown chunk) or to move from  SHUTDOWNRECEIVED to SHUTDOWNACKSENT (after having sent a
 /// shutdown-ack chunk)
-void msm_all_dchunks_acked();
+void msm_shutdown_when_all_dchunk_acked();
 
 /// Function returns the outstanding byte count value of this association.
 /// @return current outstanding_bytes value, else -1
@@ -1362,7 +1362,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 
 inline int msm_get_cookielife(void)
 {
-	smctrl_t* smctrl_ = mdi_read_smctrl();
+	smctrl_t* smctrl_ = mdi_read_msm();
 	if (smctrl_ == NULL)
 	{
 		EVENTLOG(DEBUG, "msm_get_cookielife():  get state machine ctrl is NULL -> use default timespan 10000ms !");
@@ -1372,7 +1372,7 @@ inline int msm_get_cookielife(void)
 }
 inline uint msm_read_max_assoc_retrans_count()
 {
-	smctrl_t* smctrl_ = mdi_read_smctrl();
+	smctrl_t* smctrl_ = mdi_read_msm();
 	assert(smctrl_ != NULL);
 	return smctrl_->max_assoc_retrans_count;
 }
@@ -1391,7 +1391,7 @@ static int msm_timer_expired(timeout* timerID)
 	}
 	curr_geco_instance_ = curr_channel_->geco_inst;
 
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		ERRLOG(WARNNING_ERROR, "no smctrl with channel presents -> return");
@@ -1571,7 +1571,7 @@ static int msm_timer_expired(timeout* timerID)
 void msm_connect(ushort noOfOrderStreams, ushort noOfSeqStreams, sockaddrunion *destinationList, uint numDestAddresses)
 {
 	smctrl_t* smctrl;
-	if ((smctrl = mdi_read_smctrl()) == NULL)
+	if ((smctrl = mdi_read_msm()) == NULL)
 	{
 		ERRLOG(MAJOR_ERROR, "read smctrl_ failed");
 		return;
@@ -1666,7 +1666,7 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 {
 	// @TODO remember me free all queued chunks
 	// send queues or recv queues in mdlm
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "msm_abort_channel()::smctrl is NULL!");
@@ -1703,7 +1703,7 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 }
 void msm_shutdown()
 {
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "msm_shutdown()::smctrl is NULL!");
@@ -1744,7 +1744,7 @@ void msm_shutdown()
 			// but retransmits data to the far end if necessary to fill gaps
 			curr_channel_->flow_control->shutdown_received = true;
 			curr_channel_->reliable_transfer_control->shutdown_received = true;
-			// wait for msm_all_dchunks_acked() from mreltx
+			// wait for msm_shutdown_when_all_dchunk_acked() from mreltx
 			smctrl->channel_state = ChannelState::ShutdownPending;
 		}
 		break;
@@ -1790,7 +1790,7 @@ inline flow_controller_t* mdi_read_mfc(void)
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->flow_control;
 }
-inline smctrl_t* mdi_read_smctrl()
+inline smctrl_t* mdi_read_msm()
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->state_machine_control;
 }
@@ -2904,7 +2904,7 @@ uint mdi_read_curr_channel_id(void)
 }
 uint get_curr_channel_state()
 {
-	smctrl_t* smctrl = (smctrl_t*)mdi_read_smctrl();
+	smctrl_t* smctrl = (smctrl_t*)mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		/* error log */
@@ -4460,7 +4460,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
 	//resettings
 	bubbleup_ctsna = false;
-	msm = mdi_read_smctrl();
+	msm = mdi_read_msm();
 	assert(msm != NULL);
 	assoc_state = msm->channel_state;
 	mrecv = mdi_read_mrecv();
@@ -4600,7 +4600,7 @@ int msm_process_init_chunk(init_chunk_t * init)
 
 	/*2) validate init geco_instance_params*/
 	uchar abortcid;
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (!mch_read_ordered_streams(init_cid) || !mch_read_sequenced_streams(init_cid) || !mch_read_itag(init_cid))
 	{
 		EVENTLOG(DEBUG, "2) validate init geco_instance_params [zero streams  or zero init TAG] -> send abort ");
@@ -5855,14 +5855,14 @@ ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck)
 {
 	assert(initAck->chunk_header.chunk_id == CHUNK_INIT_ACK);
 	ChunkProcessResult return_state = ChunkProcessResult::Good;
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 
 	//1) alloc chunk id for the received init ack
 	chunk_id_t initAckCID = mch_make_simple_chunk((simple_chunk_t*)initAck);
 	if (smctrl == NULL)
 	{
 		mch_remove_simple_chunk(initAckCID);
-		ERRLOG(MINOR_ERROR, "msm_process_init_ack_chunk(): mdi_read_smctrl() returned NULL!");
+		ERRLOG(MINOR_ERROR, "msm_process_init_ack_chunk(): mdi_read_msm() returned NULL!");
 		return return_state;
 	}
 
@@ -6618,7 +6618,7 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 	}
 
 	assert(last_source_addr_ != NULL);
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		if (!mdi_new_channel(curr_geco_instance_, last_dest_port_, last_src_port_, cookie_local_tag,/*local tag*/
@@ -6632,7 +6632,7 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 			mch_free_simple_chunk(initAckCID);
 			return;
 		}
-		smctrl = mdi_read_smctrl();
+		smctrl = mdi_read_msm();
 		assert(smctrl != NULL);
 	}
 
@@ -6885,7 +6885,7 @@ static void msm_process_cookie_echo_chunk(cookie_echo_chunk_t * cookie_echo)
 
 int msm_process_abort_chunk()
 {
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "msm_abort_channel()::smctrl is NULL!");
@@ -6922,7 +6922,7 @@ static void msm_process_stale_cookie(simple_chunk_t* error_chunk)
 		return;
 	}
 
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT, "msm_abort_channel()::smctrl is NULL!");
@@ -7013,10 +7013,10 @@ void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk():  NOT CHUNK_COOKIE_ACK -> RETURN!");
 		return;
 	}
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
-		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_msm() returned NULL -> return !");
 		return;
 	}
 
@@ -7045,10 +7045,10 @@ void msm_process_cookie_ack_chunk(simple_chunk_t* cookieAck)
 
 int msm_process_shutdown_complete_chunk()
 {
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
-		ERRLOG(MINOR_ERROR, "msm_process_shutdown_complete_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		ERRLOG(MINOR_ERROR, "msm_process_shutdown_complete_chunk(): mdi_read_msm() returned NULL -> return !");
 		return -1;
 	}
 	ChunkProcessResult ret = ChunkProcessResult::Good;
@@ -7113,10 +7113,10 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 {
 	assert(simple_chunk->chunk_header.chunk_id == CHUNK_SHUTDOWN);
 	chunk_id_t shutdownCID = mch_make_simple_chunk(simple_chunk);
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
-		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		ERRLOG(MINOR_ERROR, "msm_process_cookie_ack_chunk(): mdi_read_msm() returned NULL -> return !");
 		mch_remove_simple_chunk(shutdownCID);
 		return -1;
 	}
@@ -7206,7 +7206,7 @@ int msm_process_shutdown_chunk(simple_chunk_t* simple_chunk)
 			// but retransmits data to the far end if necessary to fill gaps
 			curr_channel_->flow_control->shutdown_received = true;
 			curr_channel_->reliable_transfer_control->shutdown_received = true;
-			// waiting for msm_all_dchunks_acked() from mreltx
+			// waiting for msm_shutdown_when_all_dchunk_acked() from mreltx
 			smctrl->channel_state = ChannelState::ShutdownReceived;
 		}
 		mdi_on_peer_shutdown_received();
@@ -7230,10 +7230,10 @@ void mdi_on_shutdown_completed()
 
 int msm_process_shutdown_ack_chunk()
 {
-	smctrl_t* smctrl = mdi_read_smctrl();
+	smctrl_t* smctrl = mdi_read_msm();
 	if (smctrl == NULL)
 	{
-		ERRLOG(MINOR_ERROR, "msm_process_shutdown_ack_chunk(): mdi_read_smctrl() returned NULL -> return !");
+		ERRLOG(MINOR_ERROR, "msm_process_shutdown_ack_chunk(): mdi_read_msm() returned NULL -> return !");
 		return -1;
 	}
 
@@ -7642,10 +7642,67 @@ void mreltx_update_rtt(short adr_idx, reltransfer_controller_t * rtx)
 		mpath_chunks_acked(adr_idx, 0);
 	}
 }
-
-void msm_all_dchunks_acked()
+// when we have gap reports in incoming SACK chunks....
+void mrecv_send_sack_every_packet()
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	recv_controller_t* mrecv = mdi_read_mrecv();
+	assert(mrecv != NULL);
+	mrecv->sack_flag = 1;
+}
+// when we have no gap reports in incoming SACK chunks....
+void mrecv_send_sack_every_second_packet()
+{
+	recv_controller_t* mrecv = mdi_read_mrecv();
+	assert(mrecv != NULL);
+	mrecv->sack_flag = 2;
+}
+
+void msm_shutdown_when_all_dchunk_acked()
+{
+	smctrl_t* msm = mdi_read_msm();
+	assert(msm != NULL);
+	chunk_id_t chunkid;
+	switch (msm->channel_state)
+	{
+	case ChannelState::ShutdownPending:
+		// make and send shutdown
+		EVENTLOG(VERBOSE, "event: msm_shutdown_when_all_dchunk_acked() in state ShutdownPending");
+		chunkid = mch_make_shutdown_chunk(mrecv_read_cummulative_tsn_acked());
+		mdi_unlock_bundle_ctrl();
+		mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(chunkid), 0);
+		mdi_send_bundled_chunks(0);
+		mch_free_simple_chunk(chunkid);
+		// start timer
+		msm->init_timer_interval = mpath_read_rto(mpath_read_primary_path());
+		if (msm->init_timer_id != NULL)
+		{
+			mtra_timeouts_del(msm->init_timer_id);
+		}
+		msm->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, msm->init_timer_interval, &msm_timer_expired, &msm->channel_id);
+		// receive control must acknowledge every datachunk at once after the shutdown was sent
+		mrecv_send_sack_every_packet();
+		msm->init_retrans_count = 0;
+		msm->channel_state = ChannelState::ShutdownSent;
+		break;
+	case ChannelState::ShutdownReceived:
+		// make and send shutdownack
+		EVENTLOG(VERBOSE, "event: msm_shutdown_when_all_dchunk_acked() in state ShutdownReceived");
+		chunkid = mch_make_simple_chunk(CHUNK_SHUTDOWN, FLAG_TBIT_UNSET);
+		mdi_unlock_bundle_ctrl();
+		mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(chunkid), 0);
+		mdi_send_bundled_chunks(0);
+		mch_free_simple_chunk(chunkid);
+		if (msm->init_timer_id != NULL)
+		{
+			mtra_timeouts_del(msm->init_timer_id);
+		}
+		msm->init_timer_id = mtra_timeouts_add(TIMER_TYPE_SHUTDOWN, msm->init_timer_interval, &msm_timer_expired, &msm->channel_id);
+		msm->channel_state = ChannelState::ShutdownAckSent;
+		break;
+	default:
+		EVENTLOG1(NOTICE, "unexpected event: msm_shutdown_when_all_dchunk_acked() in state %d", msm->channel_state);
+		break;
+	}
 }
 
 /**
@@ -7662,7 +7719,7 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	reltransfer_controller_t* rtx = mdi_read_mreltsf();
 	assert(rtx != NULL);
 
-	//　discard out-of-order sacks (always use newer sack),this is not error so return 0
+	// discard out-of-order sacks (always use newer sack),this is not error so return 0
 	// we send 12345 tp peer =>
 	// peer sends sack1 with ctsna 1
 	// peer sends sack2 with ctsna 2
@@ -7695,6 +7752,7 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	ushort dup_len = num_of_dups * sizeof(uint);
 	if (var_len != gap_len + dup_len)
 		return -3;
+
 	uint arwnd = ntohl(sack->sack_fixed.a_rwnd);
 	EVENTLOG5(VERBOSE, "mreltx_process_sack()::chunk_len=%u, a_rwnd=%u, var_len=%u, gap_len=%u, du_len=%u", chunk_len,
 		arwnd, var_len, gap_len, dup_len);
@@ -7859,24 +7917,24 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 	// also tell mpath, that we got a SACK, possibly updating RTT/RTO.
 	mreltx_update_rtt(adr_index, rtx);
 
-	bool all_acked = false, new_acked = false;
+	bool all_acked = false, ctsna_advanced = false;
 	if (rtx->chunk_list_tsn_ascended.empty())
 	{
 		//12345 ->  rtx->highest_acked = rtx->lowest_tsn=2,rtx->highest_tsn=4, 34
 		// acked 34, rtx->highest_acked = rtx->lowest_tsn=4,rtx->highest_tsn=4
 		if (rtx->highest_acked == rtx->highest_tsn)
 			all_acked = true;
-		// new_acked == TRUE means our own ctsna has advanced :also see section 6.2.1 (Note)
-		// section 6.2.1.D.ii) 
+
+		// ctsna_advanced == TRUE means our own ctsna has advanced forward :also see section 6.2.1 (Note) section 6.2.1.D.ii) 
 		rtx->peer_arwnd = arwnd;
 		rtx->lowest_tsn = rtx->highest_tsn;
 		if (uafter(rtx->lowest_tsn, old_own_ctsna))
-			new_acked = true;
+			ctsna_advanced = true;
+
 		// in the case where shutdown was requested by the ULP, and all is acked (i.e. ALL queues are empty) ! 
-		if (rtx->shutdown_received == true)
+		if (rtx->shutdown_received  && mfc_queued_chunks_empty())
 		{
-			if (mfc_queued_chunks_empty())
-				msm_all_dchunks_acked();
+			msm_shutdown_when_all_dchunk_acked();
 		}
 	}
 	else
@@ -7885,15 +7943,15 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 		dat = rtx->chunk_list_tsn_ascended.front();
 		rtx->lowest_tsn = dat->chunk_tsn;
 		if (uafter(rtx->lowest_tsn, old_own_ctsna))
-			new_acked = true;
+			ctsna_advanced = true;
 	}
 
 	// send sack asap when shutdown received
 	if (rtx->shutdown_received == true)
 		curr_channel_->receive_control->sack_flag = 1;
 
-	EVENTLOG4(VERBOSE, "rtx->lowest_tsn==%u, new_acked==%s, all_acked==%s, rtx_necessary==%s\n",
-		rtx->lowest_tsn, ((new_acked == TRUE) ? "TRUE" : "FALSE"), ((all_acked == TRUE) ? "TRUE" : "FALSE"), ((rtx_necessary == TRUE) ? "TRUE" : "FALSE"));
+	EVENTLOG4(VERBOSE, "rtx->lowest_tsn==%u, ctsna_advanced==%s, all_acked==%s, rtx_necessary==%s\n",
+		rtx->lowest_tsn, ((ctsna_advanced == TRUE) ? "TRUE" : "FALSE"), ((all_acked == TRUE) ? "TRUE" : "FALSE"), ((rtx_necessary == TRUE) ? "TRUE" : "FALSE"));
 
 
 
@@ -9531,7 +9589,7 @@ int initialize_library(void)
 	{
 		EVENTLOG(NOTICE, "You must be root to use the lib (or make your program SETUID-root !).");
 		return MULP_INSUFFICIENT_PRIVILEGES;
-}
+	}
 	EVENTLOG1(DEBUG, "uid=%d", geteuid());
 #endif
 
