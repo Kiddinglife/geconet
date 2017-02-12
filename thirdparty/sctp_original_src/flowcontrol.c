@@ -1232,7 +1232,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd, unsig
  * @param   number_of_addresses so many addresses may have outstanding bytes
  *          actually that value may also be retrieved from the association struct (?)
  */
-void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ctsna,
+void fc_receive_sack_chunk(unsigned int address_index, unsigned int arwnd,unsigned int ctsna,
              boolean all_data_acked, boolean new_data_acked,
              unsigned int num_acked, unsigned int number_of_addresses)
 {
@@ -1249,7 +1249,7 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
     /* ------------------ DEBUGGING ----------------------------- */
 
     event_logii(INTERNAL_EVENT_0,
-                "fc_sack_info...bytes acked=%u on address %u ", num_acked, address_index);
+                "fc_receive_sack_chunk...bytes acked=%u on address %u ", num_acked, address_index);
     fc->t3_retransmission_sent = FALSE; /* we have received a SACK, so reset this */
 
     /* just check that the other guy is still alive */
@@ -1290,7 +1290,7 @@ void fc_sack_info(unsigned int address_index, unsigned int arwnd,unsigned int ct
     }
 
     return;
-}    /* end: fc_sack_info  */
+}    /* end: fc_receive_sack_chunk  */
 
 
 

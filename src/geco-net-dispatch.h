@@ -343,13 +343,14 @@ struct flow_controller_t
     uint current_tsn;
     std::list<internal_data_chunk_t*> chunk_list;
     uint list_length;
-    //one timer may be running per destination address
+    // one timer may be running per destination address
     timeout** T3_timer;
-    //for passing as parameter in callback functions
+    // for passing as parameter in callback functions
     uint *addresses;
     uint channel_id;
     bool shutdown_received;
     bool waiting_for_sack;
+	// set to true once not received sack as t3 timer timeoutst
     bool t3_retransmission_sent;
     bool one_packet_inflight;
     bool doing_retransmission;

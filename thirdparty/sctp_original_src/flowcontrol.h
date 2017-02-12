@@ -133,7 +133,7 @@ int fc_fast_retransmission(unsigned int address_index, unsigned int arwnd,unsign
  *          actually that value may also be retrieved from the association struct (?)
  * @param   num_acked_per_address array of integers, that hold number of bytes acked for each address
  */
-void fc_sack_info(unsigned int address_index, unsigned int arwnd, unsigned int ctsna,
+void fc_receive_sack_chunk(unsigned int address_index, unsigned int arwnd, unsigned int ctsna,
                   boolean all_data_acked,
                   boolean new_data_acked,
                   unsigned int num_acked,

@@ -5240,6 +5240,11 @@ cookie_param_t* mch_read_cookie(init_chunk_t* initack)
 	}
 }
 
+void mfc_debug_cparams(flow_controller_t* mfc, int loglevel)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
 bool peer_supports_pr(cookie_echo_chunk_t* cookie_echo)
 {
 #ifdef _DEBUG
@@ -5302,12 +5307,48 @@ leave:
 #endif
 	return ret;
 }
+/// called by Reliable Transfer, after it has got a SACK chunk
+/// @param  all_data_acked indicates whether or not all data chunks have been acked
+/// @param   ctsna_advanced indicates whether or not new data has been acked
+/// @param   num_acked number of bytes that have been newly acked, else 0
+/// @param   number_of_addresses so many addresses may have outstanding bytes
+/// actually that value may also be retrieved from the association struct (?)
+/// fc_sack_info
+void mfc_receive_sack_chunk(uint address_index, uint arwnd, uint ctsna, bool all_data_acked,
+	bool ctsna_advanced, uint num_acked, uint number_of_addresses)
+{
+#ifdef _DEBUG
+	EVENTLOG2(VERBOSE, "mfc_receive_sack_chunk()::bytes acked=%u on address %u ", num_acked, address_index);
+	mfc_debug_cparams(mfc, (int)VERBOSE);
+#endif
 
-/**
- * after submitting results from a SACK to flowcontrol, the counters in
- * reliable transfer must be reset
- * @param rtx   pointer to a retransmit_controller_t, where acked bytes per address will be reset to 0
- */
+	flow_controller_t* fc = mdi_read_mfc();
+	fc->t3_retransmission_sent = false;
+	// just check that the other guy is still alive 
+	fc->waiting_for_sack = false;
+	uint oldListLen = fc->list_length;
+	// @TODO
+}
+/// called by Reliable Transfer, when it requests retransmission
+/// in SDL diagram this signal is called (Req_RTX, RetransChunks)
+/// @param  all_data_acked indicates whether or not all data chunks have been acked
+/// @param   ctsna_advanced indicates whether or not new data has been acked
+/// @param   num_acked number of bytes that have been newly acked, else 0
+/// @param   number_of_addresses so many addresses may have outstanding bytes 
+/// actually that value may also be retrieved from the association struct (?)
+/// @param   number_of_rtx_chunks number indicatin, how many chunks are to be retransmitted in on datagram
+/// @param   chunks  array of pointers to data_chunk structures. These are to be retransmitted
+/// @return   -1 on error, 0 on success, (1 if problems occurred ?)
+int mfc_fast_retransmission(uint address_index, uint arwnd,
+	uint ctsna, uint rtx_bytes,
+	boolean all_data_acked, boolean ctsna_advanced,
+	uint num_acked, uint number_of_addresses,
+	int number_of_rtx_chunks, internal_data_chunk_t ** chunks)
+{
+	throw new std::exception("not implenmted");
+}
+/// after submitting results from a SACK to flowcontrol, the counters in reliable transfer must be reset
+/// @param rtx   pointer to a retransmit_controller_t, where acked bytes per address will be reset to 0
 inline void mreltx_zero_newly_acked_bytes(reltransfer_controller_t * rtx)
 {
 	rtx->newly_acked_bytes = 0L;
@@ -7948,13 +7989,31 @@ int mreltx_process_sack(int adr_index, sack_chunk_t* sack, uint totalLen)
 
 	// send sack asap when shutdown received
 	if (rtx->shutdown_received == true)
-		curr_channel_->receive_control->sack_flag = 1;
+		mrecv_send_sack_every_packet();
 
 	EVENTLOG4(VERBOSE, "rtx->lowest_tsn==%u, ctsna_advanced==%s, all_acked==%s, rtx_necessary==%s\n",
 		rtx->lowest_tsn, ((ctsna_advanced == TRUE) ? "TRUE" : "FALSE"), ((all_acked == TRUE) ? "TRUE" : "FALSE"), ((rtx_necessary == TRUE) ? "TRUE" : "FALSE"));
 
+	if (rtx_necessary == false)
+	{
+		mfc_receive_sack_chunk(adr_index, arwnd, ctsna, all_acked, ctsna_advanced, rtx->newly_acked_bytes, rtx->numofdestaddrlist);
+		mreltx_zero_newly_acked_bytes(rtx);
+	}
+	else
+	{
+		mfc_fast_retransmission(adr_index, arwnd, ctsna,
+			rtx_bytes, all_acked, ctsna_advanced,
+			rtx->newly_acked_bytes, rtx->numofdestaddrlist,
+			chunks2rtx, rtx->rtx_chunks);
+		mreltx_zero_newly_acked_bytes(rtx);
+	}
 
-
+	//@TODO do we have to think about  fwtsn?
+	if (ubefore(rtx->advanced_peer_ack_point, ctsna))
+	{
+		rtx->advanced_peer_ack_point = ctsna;
+	}
+	
 	return 0;
 }
 

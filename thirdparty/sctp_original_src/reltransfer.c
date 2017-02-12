@@ -907,7 +907,7 @@ rtx_process_sack (unsigned int adr_index, void *sack_chunk,
 
   if (rtx_necessary == FALSE)
   {
-    fc_sack_info (adr_index, advertised_rwnd, ctsna, all_acked, new_acked,
+    fc_receive_sack_chunk (adr_index, advertised_rwnd, ctsna, all_acked, new_acked,
                   rtx->newly_acked_bytes, rtx->numofdestaddrlist);
     mreltx_zero_newly_acked_bytes (rtx);
   }
@@ -1444,7 +1444,7 @@ rtx_process_ctsna_from_shutdown_chunk (unsigned int ctsna)
       new_acked = TRUE;
     if (rtx_queue_len == 0)
       all_acked = TRUE;
-    fc_sack_info (0, rtx->peer_arwnd, ctsna, (boolean) all_acked,
+    fc_receive_sack_chunk (0, rtx->peer_arwnd, ctsna, (boolean) all_acked,
                   (boolean) new_acked, rtx->newly_acked_bytes,
                   rtx->numofdestaddrlist);
     mreltx_zero_newly_acked_bytes (rtx);
