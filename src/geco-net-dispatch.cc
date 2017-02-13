@@ -5344,6 +5344,7 @@ int mfc_fast_retransmission(uint address_index, uint arwnd, uint ctsna, uint rtx
     internal_data_chunk_t ** chunks)
 {
   //@TODO
+	return 0;
 }
 /// after submitting results from a SACK to flowcontrol, the counters in reliable transfer must be reset
 /// @param rtx   pointer to a retransmit_controller_t, where acked bytes per address will be reset to 0
