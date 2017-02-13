@@ -676,7 +676,8 @@ rtx_process_sack (unsigned int adr_index, void *sack_chunk,
     {
       /* this may become expensive !!!!!!!!!!!!!!!! */
       pos = 0;
-      dat = (internal_data_chunk_t*) g_list_nth_data (rtx->chunk_list_tsn_ascended, i);
+      dat = (internal_data_chunk_t*) g_list_nth_data (
+          rtx->chunk_list_tsn_ascended, i);
       if (rtx->chunk_list_tsn_ascended != NULL && dat != NULL)
       {
         do
@@ -907,8 +908,9 @@ rtx_process_sack (unsigned int adr_index, void *sack_chunk,
 
   if (rtx_necessary == FALSE)
   {
-    fc_receive_sack_chunk (adr_index, advertised_rwnd, ctsna, all_acked, new_acked,
-                  rtx->newly_acked_bytes, rtx->numofdestaddrlist);
+    fc_receive_sack_chunk (adr_index, advertised_rwnd, ctsna, all_acked,
+                           new_acked, rtx->newly_acked_bytes,
+                           rtx->numofdestaddrlist);
     mreltx_zero_newly_acked_bytes (rtx);
   }
   else
@@ -1445,8 +1447,8 @@ rtx_process_ctsna_from_shutdown_chunk (unsigned int ctsna)
     if (rtx_queue_len == 0)
       all_acked = TRUE;
     fc_receive_sack_chunk (0, rtx->peer_arwnd, ctsna, (boolean) all_acked,
-                  (boolean) new_acked, rtx->newly_acked_bytes,
-                  rtx->numofdestaddrlist);
+                           (boolean) new_acked, rtx->newly_acked_bytes,
+                           rtx->numofdestaddrlist);
     mreltx_zero_newly_acked_bytes (rtx);
   }
   else
