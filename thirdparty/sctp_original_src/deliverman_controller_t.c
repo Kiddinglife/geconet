@@ -614,7 +614,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 					d_pdu->read_position += residual;
 					copiedBytes += residual;
 					residual = 0;
-				}，
+				}
 				else
 				{
 					event_logi(

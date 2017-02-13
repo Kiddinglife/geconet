@@ -720,13 +720,12 @@ static void mtra_fire_event(int num_of_events)
 	}
 #endif
 
-	//char* curr = internal_dctp_buffer;
+	char* curr = internal_dctp_buffer;
 	// use pool buffer to save  mem copy
-	g_packet_params = (packet_params_t*)geco_malloc_ext(sizeof(packet_params_t), __FILE__, __LINE__);
-	char* curr = g_packet_params->data;
+	//g_packet_params = (packet_params_t*)geco_malloc_ext(sizeof(packet_params_t), __FILE__, __LINE__);
+	//char* curr = g_packet_params->data;
 
-	//handle network events  individually right here
-	//socket_despts_size_ = socket fd size with stdin excluded
+	//handle network events  individually right here socket_despts_size_ = socket fd size with stdin excluded
 	for (; i < socket_despts_size_; i++)
 	{
 #ifdef _WIN32
@@ -748,9 +747,7 @@ static void mtra_fire_event(int num_of_events)
 		// handle error event
 		if (socket_despts[i].revents & POLLERR)
 		{
-			/* Assumed this callback funtion has been setup by ulp user
-			 *for treating/logging the error
-			 */
+			/* Assumed this callback funtion has been setup by ulp user for treating/logging the error*/
 			if (event_callbacks[i].eventcb_type == EVENTCB_TYPE_USER)
 			{
 				EVENTLOG1(VERBOSE, "Poll Error Condition on user fd %d\n", socket_despts[i].fd);
@@ -800,7 +797,7 @@ static void mtra_fire_event(int num_of_events)
 
 						  if (recvlen_ > 0)
 						  {
-							  g_packet_params->total_packet_bytes = recvlen_;
+							  //g_packet_params->total_packet_bytes = recvlen_;
 							  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src, &dest);
 						  }
 						  break;
@@ -827,7 +824,7 @@ static void mtra_fire_event(int num_of_events)
 						  // as if we never receive it
 						  if (recvlen_ > 0)
 						  {
-							  g_packet_params->total_packet_bytes = recvlen_;
+							  //g_packet_params->total_packet_bytes = recvlen_;
 							  mdi_recv_geco_packet(socket_despts[i].fd, curr, recvlen_, &src, &dest);
 						  }
 
@@ -1081,8 +1078,8 @@ void mtra_ctor()
 	test_dummy_.enable_stub_error_ = true;
 #endif
 
-	internal_udp_buffer_ = (char*)malloc(1500);
-	internal_dctp_buffer = (char*)malloc(1500);
+	internal_udp_buffer_ = (char*)malloc(PMTU_HIGHEST);
+	internal_dctp_buffer = (char*)malloc(PMTU_HIGHEST);
 	if ((uintptr_t)internal_udp_buffer_ % 4 > 0 || (uintptr_t)internal_dctp_buffer % 4 > 0)
 	{
 		perror("mtra_ctor()::internal_udp_buffer_ or internal_dctp_buffer not aligned !!");

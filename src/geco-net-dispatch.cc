@@ -3637,12 +3637,13 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
     return MULP_NO_USER_DATA;
   }
 
-  dchunk->data = dataChunk->chunk_value;
+  //dchunk->data = dataChunk->chunk_value;
+  memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
   dchunk->data_length = dchunk_pdu_len;
   dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
   dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
   dchunk->fromAddressIndex = address_index;
-  dchunk->packet_params_t = g_packet_params;
+  //dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_pdu_len;
   mdlm->recv_order_streams_actived[dchunk->stream_id] = true;
@@ -3678,11 +3679,12 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
   }
 
   dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
-  dchunk->data = dataChunk->chunk_value;
+  //dchunk->data = dataChunk->chunk_value;
+  memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_len);
   dchunk->data_length = dchunk_len;
   dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
   dchunk->fromAddressIndex = address_index;
-  dchunk->packet_params_t = g_packet_params;
+  //dchunk->packet_params_t = g_packet_params;
   mdlm->queuedBytes += dchunk_len;
 
   const auto& upper = std::upper_bound(mdlm->r.begin(), mdlm->r.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
@@ -3751,12 +3753,13 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
     return MULP_NO_USER_DATA;
   }
 
-  dchunk->data = dataChunk->chunk_value;
+  //dchunk->data = dataChunk->chunk_value;
+  memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_len);
   dchunk->data_length = dchunk_len;
   dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
   dchunk->stream_sn = ssn;
   dchunk->fromAddressIndex = address_index;
-  dchunk->packet_params_t = g_packet_params;
+  //dchunk->packet_params_t = g_packet_params;
 
   mdlm->queuedBytes += dchunk_len;
   mdlm->recv_seq_streams_activated[dchunk->stream_id] = true;
@@ -3818,11 +3821,12 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChun
     return MULP_NO_USER_DATA;
   }
 
-  dchunk->data = dataChunk->chunk_value;
+  //dchunk->data = dataChunk->chunk_value;
+  memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_len);
   dchunk->data_length = dchunk_len;
   dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
   dchunk->fromAddressIndex = address_index;
-  dchunk->packet_params_t = g_packet_params;
+  //dchunk->packet_params_t = g_packet_params;
   mdlm->queuedBytes += dchunk_len;
 
   delivery_pdu_t* d_pdu;

@@ -366,9 +366,9 @@ struct delivery_data_t
     ushort stream_id;
     ushort stream_sn;
     uint fromAddressIndex;
-    uchar* data; // usr data this is assigned from data chunk value
-    bool can_free_at_once; //this is aseembled chunk we can delete for efficiency
-    void* packet_params_t; // where this chunk is located
+    uchar data[MAX_NETWORK_PACKET_VALUE_SIZE]; // usr data this is assigned from data chunk value
+    //bool can_free_at_once; //this is aseembled chunk we can delete for efficiency
+   // void* packet_params_t; // where this chunk is located
 };
 
 /// stores several chunks that can be delivered to the user as one message
