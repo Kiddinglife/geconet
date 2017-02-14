@@ -5615,8 +5615,10 @@ RFC 4960          Stream Control Transmission Protocol    September 2007
    When an outstanding TSN is acknowledged or a HEARTBEAT sent to that
    address is acknowledged with a HEARTBEAT ACK, the endpoint shall
    clear the error counter of the destination transport address to which
-   the DATA chunk was last sent (or HEARTBEAT was sent).  When the peer
-   endpoint is multi-homed and the last chunk sent to it was a
+   the DATA chunk was last sent or HEARTBEAT was sent (use last sent dchunk is because 
+   eg. path1 2 3, we use last path 3, sack will very quickly received with path 123 
+   in any order so that error counter for p123 will be all reset to zero very quickly).  
+   When the peer　endpoint is multi-homed and the last chunk sent to it was a
    retransmission to an alternate address, there exists an ambiguity as
    to whether or not the acknowledgement should be credited to the
    address of the last chunk sent.  However, this ambiguity does not
