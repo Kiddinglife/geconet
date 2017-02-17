@@ -222,8 +222,7 @@ struct path_params_t
     ushort eff_pmtu;
 };
 
-/// this struct contains all necessary data for one instance of the path management
-/// module. There is one such module per existing channel.
+///　contains all necessary data for one instance of the path management　module　per existing channel.
 struct geco_channel_t;
 struct path_controller_t
 {

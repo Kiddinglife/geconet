@@ -36,6 +36,8 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // last pass on 26 Oct 2016
     // ::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
+    ::testing::GTEST_FLAG(filter) = "mpath.test_mpath_new_and_free";
+
     // last pass on 31 Oct 2016
     // ::testing::GTEST_FLAG(filter) = "MULP.*";
     // ::testing::GTEST_FLAG(filter) = "MULP.test_unused_port";
@@ -50,7 +52,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // current unit test summary
     // locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168....
     // cross-machina connection NOT ok
-   ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
+    // ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
     // last pass on 26 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MBU.*";
