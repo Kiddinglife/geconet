@@ -1112,7 +1112,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		removed_association = mpath_handle_chunks_retx((short)pathID);
 		if (removed_association == false)
 		{
-			if (pmData->path_params[pathID].timer_backoff == false)
+			if (pmData->path_params[pathID].timer_backoff == true)
 			{
 				pmData->path_params[pathID].rto = std::min(2 * pmData->path_params[pathID].rto, pmData->rto_max);
 				EVENTLOG2(INFO, "Backing off timer : Path %d, RTO= %u", pathID, pmData->path_params[pathID].rto);
