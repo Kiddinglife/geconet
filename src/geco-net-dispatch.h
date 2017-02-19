@@ -209,7 +209,7 @@ struct path_params_t
     // id of hb timer
     timeout* hb_timer_id;
     //time of last RTO update
-    uint64 last_rto_update_time;
+    uint64 rtt_update_time;
     //search_low          eff_pmtu         search_high
     //|                   |                  |
     //-------------------> non-probe size range
@@ -221,6 +221,7 @@ struct path_params_t
     //the largest non-probe packet permitted by PLPMTUD for the path. 1400
     ushort eff_pmtu;
 	uint64 cached_eff_pmtu_start_time;
+	bool hb_rtx;
 };
 
 ///　contains all necessary data for one instance of the path management　module　per existing channel.

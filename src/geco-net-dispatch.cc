@@ -333,16 +333,16 @@ void mpath_verify_unconfirmed_paths(uint remote_addres_size, ushort primaryPath)
 /// @param heartbeatChunk pointer to the heartbeat chunk
 /// @param source_address address we received the HB chunk from (and where it is echoed)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk, int source_address);
-/// Function is used to update RTT, SRTT, RTO values after chunks have been acked.
+/// Function is used to update RTT, SRTT, RTO values after data or hb chunk has been acked.
 /// CHECKME : this function is called too often with RTO == 0;
 /// Is there one update per RTT ?
 /// @param  pathID index of the path where data was acked
 /// @param  newRTT new RTT measured, when data was acked, or zero if it was retransmitted
-void mpath_handle_chunks_acked(short pathID, int roundtripTime);
-/// pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged.
+void mpath_update_rtt(short pathID, int roundtripTime);
+/// called by reliable transfer whenever data chunks have been acknowledged.
 /// @param pathID   last path-ID where chunks were sent to (and thus probably acked from)
 /// @param newRTT   the newly determined RTT in milliseconds, and 0 if retransmitted chunks had been acked
-void mpath_chunks_acked(short pathID, int newRTT);
+void mpath_chunk_acked(short pathID, int newRTT);
 /// mpath_handle_chunks_retx is called whenever datachunks are retransmitted or a hearbeat-request
 /// has not been acknowledged within the current heartbeat-intervall. It increases path- and peer-
 /// retransmission counters and compares these counters to the corresonding thresholds.
@@ -836,7 +836,8 @@ void mpath_verify_unconfirmed_paths(uint noOfPaths, ushort primaryPathID)
 			pmData->path_params[i].eff_pmtu = PMTU_LOWEST;
 			pmData->path_params[i].probing_pmtu = PMTU_HIGHEST;
 			pmData->path_params[i].state = PM_PATH_UNCONFIRMED;
-
+			pmData->path_params[i].rtt_update_time = 0; // update when
+			pmData->path_params[i].hb_rtx = false;
 			if (i == primaryPathID)
 			{
 				pmData->path_params[i].state = PM_ACTIVE;
@@ -859,18 +860,17 @@ void mpath_verify_unconfirmed_paths(uint noOfPaths, ushort primaryPathID)
 			pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT, timeout_ms,
 				&mpath_heartbeat_timer_expired, &pmData->channel_id, &pmData->path_params[i].path_id,
 				&pmData->path_params[i].probing_pmtu);
-			pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
 		}
 	}
 }
-void mpath_handle_chunks_acked(short pathID, int newRTT)
+void mpath_update_rtt(short pathID, int newRTT)
 {
 	path_controller_t* pmData = mdi_read_mpath();
 	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
 	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_do_hb: invalid path ID");
 
-	EVENTLOG2(NOTICE, "mpath_handle_chunks_acked: pathID: %u, new RTT: %u msecs", pathID, newRTT);
+	EVENTLOG2(NOTICE, "mpath_update_rtt: pathID: %u, new RTT: %u msecs", pathID, newRTT);
 
 	if (newRTT > 0) // newRTT = 0 if last send is retransmit.
 	{
@@ -892,20 +892,21 @@ void mpath_handle_chunks_acked(short pathID, int newRTT)
 			pmData->path_params[pathID].rto = std::max(std::min(pmData->path_params[pathID].rto, pmData->rto_max),
 				pmData->rto_min);
 		}
-		EVENTLOG3(NOTICE, "mpath_handle_chunks_acked: RTO update done: RTTVAR: %u msecs, SRTT: %u msecs, RTO: %u msecs",
+		EVENTLOG3(NOTICE, "mpath_update_rtt: RTO update done: RTTVAR: %u msecs, SRTT: %u msecs, RTO: %u msecs",
 			pmData->path_params[pathID].rttvar, pmData->path_params[pathID].srtt, pmData->path_params[pathID].rto);
 	}
 	else
 	{
-		EVENTLOG(DEBUG, "mpath_handle_chunks_acked: chunks acked without RTO-update");
+		EVENTLOG(DEBUG, "mpath_update_rtt: chunks acked without RTO-update");
 	}
 
 	// reset counters for endpoint and this path
 	pmData->path_params[pathID].retrans_count = 0;
 	pmData->total_retrans_count = 0;
 }
-void mpath_chunks_acked(short pathID, int newRTT)
+void mpath_chunk_acked(short pathID, int newRTT)
 {
+	// newRTT 0 if retransmitted chunks had been acked
 	path_controller_t* pmData = mdi_read_mpath();
 
 	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
@@ -932,30 +933,33 @@ void mpath_chunks_acked(short pathID, int newRTT)
 	if (pmData->path_params[pathID].state == PM_ACTIVE)
 	{
 		// Update RTO only if is the first data chunk acknowldged in this RTT intervall.
-		// rtt is mesured by a pair of send and ack.
+		// rtt is mesured by a pair of send and ack in same rto and this will be a counted round eg. dchunk&sack in rtx rto and hb&hback in rto or hbto
 		// But we may have more than send at diffrent time and more than one ack received at different time.
 		// we must use right matched send and ack to caculate the rtt. otherwise, do not update rto.
-		// when t3-rtx timer expired, we set resend to true to show there are two sends happening
-		// when the time receiving ack is earlier than gussed rto_update_time, we believe
-		// this is ack for the older send not the recent send and not update rtt
+		// 1. when t3-rtx timer expired, mreltx will set newrtt to 0 to show there are rtx happened => do not update rto.
+		// 2. when there are nultiple dchunks are sent in rto (rtt_update_time will be updated at each sending), 
+		// we must use the latest sack to update rto by comparing rtt_update_time.
+		// eg. t0:send dchunk1 and update rtt_update_time to t0+srtt, t1:sent dchunk2 
+		// if now < pmData->path_params[pathID].rtt_update_time, 
+		// 1. tx at t0, init predicted rtt to t0
+		// 2. acked at t1, update predicted rtt to t1
+		// next expected ack is predicted to be received is at t1 earliest >=t1, if < t1, 
+		// 	in ddition, guarlty must be lan than rtt  eg, rtt 20ms ulary can be 10ms otherwise, we cannot tell if it is first dchunk acked in rtt
 		uint64 now = gettimestamp();
-		if (now < pmData->path_params[pathID].last_rto_update_time)
+		if (now < pmData->path_params[pathID].rtt_update_time)
 		{
 			EVENTLOG2(NOTICE, "pm_chunksAcked: now %llu stamp - no update before %lu stamp", now,
-				pmData->path_params[pathID].last_rto_update_time);
+				pmData->path_params[pathID].rtt_update_time);
 			newRTT = 0;
 		}
-		else
-		{
-			if (newRTT != 0)
-			{
-				// only if actually new valid RTT measurement is taking place, do update the time
-				pmData->path_params[pathID].last_rto_update_time = now;
-				pmData->path_params[pathID].last_rto_update_time += pmData->path_params[pathID].srtt * stamps_per_ms();
-			}
-		}
-		mpath_handle_chunks_acked(pathID, newRTT);
+		mpath_update_rtt(pathID, newRTT);
 		pmData->path_params[pathID].dchunk_acked_in_last_rto = true;
+		if (newRTT != 0)
+		{
+			// only if actually new valid RTT measurement is taking place, do update the time
+			pmData->path_params[pathID].rtt_update_time = now;
+			pmData->path_params[pathID].rtt_update_time += pmData->path_params[pathID].srtt * stamps_per_ms();
+		}
 	}
 	else
 	{
@@ -1108,7 +1112,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	*/
 	if (pmData->path_params[pathID].hb_sent == true && pmData->path_params[pathID].heartbeatAcked == false)
 	{/* Heartbeat has been sent and not acknowledged: handle as retransmission */
-
+		pmData->path_params[pathID].hb_rtx = true; // there is no hb acked in last rto
 		removed_association = mpath_handle_chunks_retx((short)pathID);
 		if (removed_association == false)
 		{
@@ -1153,7 +1157,9 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	{
 		// hb sent true and acked true=> sent and acked in last rto or hb-interval 
 		// hb sent false and acked true=> acked sent hb in last last rto or hb-interval 
-		// 
+		if (pmData->path_params[pathID].heartbeatAcked == true && pmData->path_params[pathID].hb_rtx == true)
+			pmData->path_params[pathID].hb_rtx = false;
+
 		if (mtu == 0)
 		{
 			mtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
@@ -1269,16 +1275,26 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 		return;
 	}
 
-	uint sendingTime = mch_read_sendtime_from_heartbeat(heartbeatCID);
+	int roundtripTime;
+	if (pmData->path_params[pathID].hb_rtx == false)
+	{
+		uint sendingTime = mch_read_sendtime_from_heartbeat(heartbeatCID);
+		roundtripTime = get_safe_time_ms() - sendingTime;
+		EVENTLOG2(DEBUG, " HBAck for path %u, RTT = %d msecs", pathID, roundtripTime);
+	}
+	else
+	{
+		roundtripTime = 0;
+	}
+
 	ushort newpmtu = mch_read_pmtu_from_heartbeat(heartbeatCID);
 	mch_remove_simple_chunk(heartbeatCID);
-
-	int roundtripTime = get_safe_time_ms() - sendingTime;
-	EVENTLOG2(DEBUG, " HBAck for path %u, RTT = %d msecs", pathID, roundtripTime);
 	//exit(-1);
 
-	// reset error counters if received hback or sack
-	mpath_handle_chunks_acked(pathID, roundtripTime);
+	// reset error counters and/or update rtt if hb chunk is acked
+	// @remember we do not call mpath_chunk_acked() as we only send one hb chunk in a rto
+	// unlike dchunk that can be sent multiple times within a rto, so need to check if it is first hb acked in a rto
+	mpath_update_rtt(pathID, roundtripTime);
 
 	// Handling of acked heartbeats is the simular that that of acked data chunks.
 	short state = pmData->path_params[pathID].state;
@@ -7646,12 +7662,12 @@ void mreltx_update_rtt(short adr_idx, reltransfer_controller_t * rtx)
 		if ((rtt = (int)((rtx->sack_arrival_time - rtx->saved_send_time) / stamps_per_ms_double())) > 0)
 			;
 		{
-			mpath_chunks_acked(adr_idx, rtt);
+			mpath_chunk_acked(adr_idx, rtt);
 		}
 	}
 	else
 	{
-		mpath_chunks_acked(adr_idx, 0);
+		mpath_chunk_acked(adr_idx, 0);
 	}
 }
 // when we have gap reports in incoming SACK chunks....
