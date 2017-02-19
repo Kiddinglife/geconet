@@ -820,6 +820,7 @@ extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int e
 #define RTO_INITIAL     3000    /* 超时重传机制(RTO：Retransmission Timeout) */
 #define RTO_MIN                 1000
 #define RTO_MAX                 60000
+#define CACHED_EFF_PMTU_LIFE_TIME 300000 // 5 minutes
 
 #define DEFAULT_MAX_SENDQUEUE   0       /* unlimited send queue */
 #define DEFAULT_MAX_RECVQUEUE   0       /* unlimited recv queue - unused really */

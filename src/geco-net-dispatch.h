@@ -181,12 +181,12 @@ struct path_params_t
     bool hb_enabled;
     //true as long as RTO calc has been done
     bool firstRTO;
-    //only once per hb-interval
+    //only backoff once per hb-interval
     bool timer_backoff;
     //set to true when data chunks are acked
-    bool data_chunk_acked;
+    bool dchunk_acked_in_last_rto;
     // true if chunks have been senr over this path within last RTO
-    bool data_chunks_sent_in_last_rto;
+    bool dchunk_sent_in_last_rto;
     //set to true when a hb is sent
     bool hb_sent;
     /*set to true when a hearbeat is acknowledged and to false when a
@@ -220,6 +220,7 @@ struct path_params_t
     ushort search_high;
     //the largest non-probe packet permitted by PLPMTUD for the path. 1400
     ushort eff_pmtu;
+	uint64 cached_eff_pmtu_start_time;
 };
 
 ///　contains all necessary data for one instance of the path management　module　per existing channel.

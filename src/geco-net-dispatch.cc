@@ -363,7 +363,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID);
 /// checks RTTs, normally resets error counters, may set path back to ACTIVE state
 /// @param heartbeatChunk pointer to the received heartbeat ack chunk
 void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk);
-/// helper function, that simply sets the data_chunks_sent_in_last_rto flag of this path management instance to true
+/// helper function, that simply sets the dchunk_sent_in_last_rto flag of this path management instance to true
 /// @param pathID  index of the address, where flag is set
 void mpath_data_chunk_sent(short pathID);
 /// pm_setPrimaryPath sets the primary path.
@@ -675,7 +675,7 @@ short mpath_set_primary_path(short pathID)
 		if (pmData->path_params[pathID].state == PM_ACTIVE)
 		{
 			pmData->primary_path = pathID;
-			pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
+			pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
 			EVENTLOG1(INFO, "pm_setPrimaryPath: path %d is primary", pathID);
 			return GECONET_ERRNO::SUCESS;
 		}
@@ -692,7 +692,7 @@ void mpath_data_chunk_sent(short pathID)
 	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
 	assert(pathID >= 0 && pathID < pmData->path_num && "mpath_do_hb: invalid path ID");
 	EVENTLOG1(VERBOSE, "mpath_data_chunk_sent(%d)", pathID);
-	pmData->path_params[pathID].data_chunks_sent_in_last_rto = true;
+	pmData->path_params[pathID].dchunk_sent_in_last_rto = true;
 }
 int mpath_read_path_status(short pathID)
 {
@@ -828,10 +828,10 @@ void mpath_verify_unconfirmed_paths(uint noOfPaths, ushort primaryPathID)
 			pmData->path_params[i].hb_sent = false;
 			pmData->path_params[i].heartbeatAcked = false;
 			pmData->path_params[i].timer_backoff = false;
-			pmData->path_params[i].data_chunk_acked = false;
-			pmData->path_params[i].data_chunks_sent_in_last_rto = false;
+			pmData->path_params[i].dchunk_acked_in_last_rto = false;
+			pmData->path_params[i].dchunk_sent_in_last_rto = false;
 			pmData->path_params[i].hb_interval = PM_INITIAL_HB_INTERVAL;
-			pmData->path_params[i].hb_timer_id = 0;
+			pmData->path_params[i].hb_timer_id = NULL;
 			pmData->path_params[i].path_id = i;
 			pmData->path_params[i].eff_pmtu = PMTU_LOWEST;
 			pmData->path_params[i].probing_pmtu = PMTU_HIGHEST;
@@ -840,23 +840,26 @@ void mpath_verify_unconfirmed_paths(uint noOfPaths, ushort primaryPathID)
 			if (i == primaryPathID)
 			{
 				pmData->path_params[i].state = PM_ACTIVE;
+				// @remember me
 				// this is timeout used for test if primary path becomes idle so it will be reset when dchunk acked
-				timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
+				// this is for pure path verifi but now we need to do pmtu probe with hb so use timeout_ms 0
+				//timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
+				timeout_ms = 0; // send pmtu hb at once on primary path as we want reach max throughoit asap
 			}
 			else
 			{
 				j++;
-				j < maxburst ? timeout_ms = j*GRANULARITY :/* send HB quickly on first four maxburst unconfirmed paths*/
-					timeout_ms = (j - maxburst) * pmData->path_params[i].rto; /* send HB every MINIRTO on other unconfirmed paths */
+				j < maxburst ? timeout_ms = j*SACK_DELAY :/* send a pmtu hb every SACK_DELAY quickly on first 8 unconfirmed paths*/
+					timeout_ms = (j - maxburst) * RTO_MIN; /* send a pmtu hb every RTO_MIN on other unconfirmed paths */
 			}
 
 			EVENTLOG1(0, "timeout = %d", timeout_ms);
 			assert(pmData->path_params[i].hb_timer_id == NULL);
 			/* after RTO we can do next RTO update */
-			pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
 			pmData->path_params[i].hb_timer_id = mtra_timeouts_add(TIMER_TYPE_HEARTBEAT, timeout_ms,
 				&mpath_heartbeat_timer_expired, &pmData->channel_id, &pmData->path_params[i].path_id,
 				&pmData->path_params[i].probing_pmtu);
+			pmData->path_params[i].last_rto_update_time = get_safe_time_ms();
 		}
 	}
 }
@@ -952,7 +955,7 @@ void mpath_chunks_acked(short pathID, int newRTT)
 			}
 		}
 		mpath_handle_chunks_acked(pathID, newRTT);
-		pmData->path_params[pathID].data_chunk_acked = true;
+		pmData->path_params[pathID].dchunk_acked_in_last_rto = true;
 	}
 	else
 	{
@@ -1002,7 +1005,7 @@ bool mpath_handle_chunks_retx(short pathID)
 		return true;
 	}
 
-	if (pmData->path_params[pathID].retrans_count >= pmData->max_retrans_per_path && 
+	if (pmData->path_params[pathID].retrans_count >= pmData->max_retrans_per_path &&
 		pmData->path_params[pathID].state != PM_INACTIVE)
 	{
 		// Set state of this path to inactive and notify change of state to ULP
@@ -1034,13 +1037,13 @@ bool mpath_handle_chunks_retx(short pathID)
 		if (pathID == pmData->primary_path)
 		{
 			//reset alternative path data acked and sent to false and they will be chaged to true very quickly when send data chunks on it.
-			pmData->path_params[pID].data_chunks_sent_in_last_rto = false;
-			pmData->path_params[pID].data_chunk_acked = false;
+			pmData->path_params[pID].dchunk_sent_in_last_rto = false;
+			pmData->path_params[pID].dchunk_acked_in_last_rto = false;
 			pmData->primary_path = pID;
 
 			//reset primary path data acked and sent to false so that we can do hb for it again by seting hb timer in hb_timer_expired()
-			pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
-			pmData->path_params[pathID].data_chunk_acked = false;
+			pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
+			pmData->path_params[pathID].dchunk_acked_in_last_rto = false;
 			EVENTLOG2(INFO, "mpath_handle_chunks_retx():: primary path %d becomes inactive, change path %d to primary",
 				pathID, pID);
 		}
@@ -1066,6 +1069,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 {
 	uint associationID = *(uint*)timerID->callback.arg1;
 	int pathID = *(int *)timerID->callback.arg2;
+	// mtu 0 means this is hb probe otherwise this is mptu hb probe
 	int mtu = timerID->callback.arg3 == NULL ? 0 : *(int*)timerID->callback.arg3;
 
 	curr_channel_ = channels_[associationID];
@@ -1077,33 +1081,34 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	assert(pathID >= 0);
 	assert(pmData != NULL);
 
-	EVENTLOG2(0, "Heartbeat timer expired for path %u at time ms %u",
-		pathID, get_safe_time_ms());
+	EVENTLOG2(0, "Heartbeat timer expired for path %u at time ms %u", pathID, get_safe_time_ms());
 
 	chunk_id_t heartbeatCID = 0;
 	bool removed_association = false;
 	int ret = 0;
-	uint newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+	//uint newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+	uint newtimeout = pmData->path_params[pathID].rto;
 
-	/* Heartbeat has been sent and not acknowledged: handle as retransmission */
+	/*
+	In each RTO, a probe may be sent on an active UNCONFIRMED path in an
+	attempt to move it to the CONFIRMED state.  If during this probing
+	the path becomes inactive, this rate is lowered to the normal
+	HEARTBEAT rate.  At the expiration of the RTO timer, the error
+	counter of any path that was probed but not CONFIRMED is incremented
+	by one and subjected to path failure detection, as defined in Section
+	8.2.  When probing UNCONFIRMED addresses, however, the association
+	overall error count is NOT incremented.
+
+	* Handling of unacked heartbeats is the same as that of unacked data chunks.
+	* The state after calling pm_chunksRetransmitted may have changed to inactive.
+	* If commLost is detected in mpath_handle_chunks_retx(), the current association
+	* is marked for deletetion. Doing so, all timers are stop. The HB-timers are
+	* stopped by calling pm_disableHB in mdi_deleteCurrentAssociation().
+	* heartBeatEnabled  is also set to false
+	*/
 	if (pmData->path_params[pathID].hb_sent == true && pmData->path_params[pathID].heartbeatAcked == false)
-	{
-		/*
-		In each RTO, a probe may be sent on an active UNCONFIRMED path in an
-		attempt to move it to the CONFIRMED state.  If during this probing
-		the path becomes inactive, this rate is lowered to the normal
-		HEARTBEAT rate.  At the expiration of the RTO timer, the error
-		counter of any path that was probed but not CONFIRMED is incremented
-		by one and subjected to path failure detection, as defined in Section
-		8.2.  When probing UNCONFIRMED addresses, however, the association
-		overall error count is NOT incremented.*/
-		/*
-		* Handling of unacked heartbeats is the same as that of unacked data chunks.
-		* The state after calling pm_chunksRetransmitted may have changed to inactive.
-		* If commLost is detected in mpath_handle_chunks_retx(), the current association
-		* is marked for deletetion. Doing so, all timers are stop. The HB-timers are
-		* stopped by calling pm_disableHB in mdi_deleteCurrentAssociation().
-		* heartBeatEnabled  is also set to false */
+	{/* Heartbeat has been sent and not acknowledged: handle as retransmission */
+
 		removed_association = mpath_handle_chunks_retx((short)pathID);
 		if (removed_association == false)
 		{
@@ -1112,14 +1117,17 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 				pmData->path_params[pathID].rto = std::min(2 * pmData->path_params[pathID].rto, pmData->rto_max);
 				EVENTLOG2(INFO, "Backing off timer : Path %d, RTO= %u", pathID, pmData->path_params[pathID].rto);
 			}
-
-			if (mtu > 0)
+			if (mtu != 0)
 			{
-				if (
-					/*probe packet is lost but recent path network (last rto) are in good condition, treat as pmtu issue,*/
-					(pmData->path_params[pathID].data_chunks_sent_in_last_rto && pmData->path_params[pathID].data_chunk_acked) ||
-					/*idle path, isolated probe packet lost, treat as pmtu issue*/
-					(!pmData->path_params[pathID].data_chunks_sent_in_last_rto && !pmData->path_params[pathID].data_chunk_acked))
+				if ((pmData->path_params[pathID].dchunk_sent_in_last_rto == true &&
+					pmData->path_params[pathID].dchunk_acked_in_last_rto == true) ||
+					/*not acked but no congestion occures, must be pmtu is too big*/
+					(pmData->path_params[pathID].dchunk_sent_in_last_rto == false &&
+						pmData->path_params[pathID].dchunk_acked_in_last_rto == false &&
+						pmData->path_params[pathID].retrans_count > 1)
+					/*not acked on idle path,  possibly pmtu too big or congestion control,
+					here we try send old mtu one more time if not acked again,
+					retrans_count will be set to 2, umtil then, we think it is pmtu too big*/)
 				{
 					//send smaller hb&&pmtu probe again
 					if (mtu < PMTU_HIGHEST)
@@ -1131,42 +1139,62 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 						heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
 					}
 				}
-				else
-				{
-					/*7.6.2 after a probe failure event and suppressed congestion
-					 control, PLPMTUD MUST NOT probe again until an interval that is
-					 larger than the expected interval between congestion control events.
-					 here we do not send hb we ecpect t3-rtx timer timeouts to detect connection lost
-					 also we reset the timeout to rto, when it timeouts, data chunks should be acked */
-					newtimeout = pmData->path_params[pathID].rto;
-				}
+			}
+			else
+			{// mtu with 0 value means this is a hb probe wiyhout pmtu
+				// only send one pure hb probe in hb-interval
+				timerID->callback.arg3 = NULL;
+				newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+				heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
 			}
 		}
 	}
 	else
 	{
-		// send heartbeat if no chunks have been acked in the last HB-intervall (path is idle).
+		// hb sent true and acked true=> sent and acked in last rto or hb-interval 
+		// hb sent false and acked true=> acked sent hb in last last rto or hb-interval 
+		// 
 		if (mtu == 0)
 		{
-			timerID->callback.arg3 = 0;
-			mtu = 0;
-			if (generate_random_uint32() % 10 == 6)
+			mtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
+			if (mtu <= PMTU_HIGHEST)
 			{
-				// hit ratio for pmtu hb probe is 1/10 which is lamostly hbintervel*10 = 300000ms = 300s = 5 minutes
-				// so eff pmtu will be cached at most 5 minutes
-				if (pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE <= PMTU_HIGHEST)
+				if (pmData->path_params[pathID].hb_sent &&
+					/*only when pmtu&hb probe suceeds, test if cached pmtu expired*/
+					get_safe_time_ms() - pmData->path_params[pathID].cached_eff_pmtu_start_time >= CACHED_EFF_PMTU_LIFE_TIME)
+					/*eff pmtu will be cached at most 5 minutes*/
 				{
-					mtu = pmData->path_params[pathID].probing_pmtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
+					pmData->path_params[pathID].probing_pmtu = mtu;
 					timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
 				}
 			}
+			else
+			{
+				// reset to zero
+				mtu = 0;
+				timerID->callback.arg3 = NULL;
+				newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+			}
+			// mtu with 0 value means this is a hb probe wiyhout pmtu
 			heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
 		}
 		else
 		{
-			pmData->path_params[pathID].probing_pmtu = mtu;
-			timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
-			heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
+			if (pmData->path_params[pathID].heartbeatAcked == true)
+			{// pmtu&hb probe suceeds, switch to normal hb probe
+				timerID->callback.arg3 = NULL;
+				mtu = 0;
+				newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+				heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
+			}
+			else
+			{
+				// here we send probe hb chunk from mpath_verfy_paths()
+				// use rto as timeout for verifi pmtu&hb probe
+				pmData->path_params[pathID].probing_pmtu = mtu;
+				timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
+				heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
+			}
 		}
 	}
 
@@ -1187,13 +1215,13 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 			// just readd this timer back with different timeouts
 			mtra_timeouts_readd(timerID, newtimeout);
 			/* reset this flag, so we can check, whether the path was idle */
-			pmData->path_params[pathID].data_chunks_sent_in_last_rto = false;
+			pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
 		}
 
 		//reset states
 		pmData->path_params[pathID].heartbeatAcked = false;
 		pmData->path_params[pathID].timer_backoff = false;
-		pmData->path_params[pathID].data_chunk_acked = false;
+		pmData->path_params[pathID].dchunk_acked_in_last_rto = false;
 	}
 
 	mdi_clear_current_channel();
@@ -1268,6 +1296,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 		assert(pmData->path_params[pathID].hb_timer_id->callback.action == &mpath_heartbeat_timer_expired);
 		assert(pmData->path_params[pathID].hb_timer_id->callback.type == TIMER_TYPE_HEARTBEAT);
 		assert(pmData->path_params[pathID].hb_timer_id->flags == 0);
+		// this means pmtu&hb probe suceeds, switch to pure hb probe interval
 		mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id,
 			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto);
 	}
@@ -1275,6 +1304,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	// update this path's pmtu
 	if (newpmtu > 0)
 	{
+		pmData->path_params[pathID].cached_eff_pmtu_start_time = get_safe_time_ms();
 		pmData->path_params[pathID].eff_pmtu = newpmtu;
 		bool smallest = true;
 		// update smallest channel pmtu pmtu is zero this is pure hb probe
@@ -1299,7 +1329,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	EVENTLOG2(DEBUG, "-------------->Receive HB PROBE WITH BYTES OF %d on path %d", newpmtu, pathID);
 	//exit(-1);
 	// stop pmtu probe on this path as we already get the best max eff pmtu
-	pmData->path_params[pathID].hb_timer_id->callback.arg3 = 0;
+	pmData->path_params[pathID].hb_timer_id->callback.arg3 = NULL;
 	pmData->path_params[pathID].heartbeatAcked = true;
 	pmData->path_params[pathID].timer_backoff = false;
 }
