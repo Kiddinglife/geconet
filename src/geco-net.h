@@ -45,7 +45,7 @@
 #define MULP_INVALID_STREAM_ID              -17
 #define MULP_NO_USER_DATA                   -18
 #define MULP_PROTOCOL_VIOLATION             -19
-#define MULP_SPECIFIC_FUNCTION_ERROR         1
+#define MULP_SPECIFIC_FUNCTION_ERROR         -20
 
 enum ChannelState
 {
