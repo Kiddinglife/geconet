@@ -613,7 +613,44 @@ inline ushort mdlm_read_ostreams(void)
 	return se->numOrderedStreams + se->numSequencedStreams;
 }
 
-//-------------------------- mpath
+
+
+/////////////////////////////////////////////// Path Management Moudle (pm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
+path_controller_t* mpath_new(short numberOfPaths, short primaryPath)
+{
+	assert(curr_channel_ != NULL);
+	path_controller_t* pmData = NULL;
+	if ((pmData = (path_controller_t*)geco_malloc_ext(sizeof(path_controller_t),
+		__FILE__, __LINE__)) == NULL)
+		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+	pmData->path_params = NULL;
+	pmData->primary_path = primaryPath;
+	pmData->path_num = numberOfPaths;
+	pmData->channel_id = curr_channel_->channel_id;
+	pmData->channel_ptr = curr_channel_;
+	pmData->max_retrans_per_path =
+		curr_geco_instance_->default_pathMaxRetransmits;
+	pmData->rto_initial = curr_geco_instance_->default_rtoInitial;
+	pmData->rto_min = curr_geco_instance_->default_rtoMin;
+	pmData->rto_max = curr_geco_instance_->default_rtoMax;
+	pmData->min_pmtu = PMTU_LOWEST;
+	return pmData;
+}
+void mpath_free(path_controller_t *pmData)
+{
+	assert(pmData != NULL && pmData->path_params != NULL);
+	EVENTLOG(INFO, "deleting pathmanagement");
+
+	for (int i = 0; i < pmData->path_num; i++)
+	{
+		if (pmData->path_params[i].hb_timer_id != NULL)
+		{
+			mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
+			pmData->path_params[i].hb_timer_id = 0;
+		}
+	}
+	geco_free_ext(pmData->path_params, __FILE__, __LINE__);
+}
 /*getters and setters*/
 int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall)
 {
@@ -1427,7 +1464,11 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	pmData->path_params[pathID].heartbeatAcked = true;
 	pmData->path_params[pathID].timer_backoff = false;
 }
+/////////////////////////////////////////////// Path Management Moudle (pm) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 
+
+
+/////////////////////////////////////////////// state machine Moudle (pm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 inline int msm_get_cookielife(void)
 {
 	smctrl_t* smctrl_ = mdi_read_msm();
@@ -1879,7 +1920,11 @@ void msm_shutdown()
 		break;
 	}
 }
+/////////////////////////////////////////////// state machine Moudle (pm) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 
+
+
+/////////////////////////////////////////////// dispatcher Moudle (pm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 inline recv_controller_t* mdi_read_mrecv(void)
 {
 	return curr_channel_ == NULL ? NULL : curr_channel_->receive_control;
@@ -2272,7 +2317,6 @@ inline uint mdi_generate_itag(void)
 	} while (tag == 0);
 	return tag;
 }
-
 bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 {
 	bool ret = false;
@@ -3077,7 +3121,6 @@ void mdi_unlock_bundle_ctrl(int* ad_idx)
 	EVENTLOG1(DEBUG, "mdi_unlock_bundle_ctrl()::got %s send request",
 		(bundle_ctrl->got_send_request == true) ? "A" : "NO");
 }
-
 void mdi_lock_bundle_ctrl()
 {
 	bundle_controller_t* bundle_ctrl = (bundle_controller_t*)mdi_read_mbu(
@@ -3311,17 +3354,6 @@ static void mdi_print_channel()
 	print_addrlist(curr_channel_->remote_addres,
 		curr_channel_->remote_addres_size);
 }
-
-void mdlm_read_streams(ushort* inStreams, ushort* outStreams)
-{
-	deliverman_controller_t* se = mdi_read_mdlm();
-	assert(
-		se != NULL && "Called mdlm_read_streams, but no Streamengine is there !");
-	*inStreams = se->numOrderedStreams;
-	*outStreams = se->numSequencedStreams;
-	assert(*inStreams != 0 && *outStreams != 0);
-}
-
 void mdi_on_peer_connected(uint status)
 {
 #ifdef _DEBUG
@@ -3416,7 +3448,6 @@ void mdi_on_peer_connected(uint status)
 		}
 	}
 }
-
 void mdi_on_peer_restarted(void)
 {
 	assert(curr_channel_ != NULL);
@@ -3426,12 +3457,26 @@ void mdi_on_peer_restarted(void)
 	curr_geco_instance_->ulp_callbacks.restartNotif(curr_channel_->channel_id,
 		curr_channel_->ulp_dataptr);
 }
-
 inline void mdi_clear_current_channel(void)
 {
 	curr_channel_ = NULL;
 	curr_geco_instance_ = NULL;
 }
+/////////////////////////////////////////////// dispatcher Moudle (pm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
+
+
+
+
+void mdlm_read_streams(ushort* inStreams, ushort* outStreams)
+{
+	deliverman_controller_t* se = mdi_read_mdlm();
+	assert(
+		se != NULL && "Called mdlm_read_streams, but no Streamengine is there !");
+	*inStreams = se->numOrderedStreams;
+	*outStreams = se->numSequencedStreams;
+	assert(*inStreams != 0 && *outStreams != 0);
+}
+
 inline geco_instance_t* find_geco_instance_by_id(uint geco_inst_id)
 {
 	for (auto& inst : geco_instances_)
@@ -3530,6 +3575,9 @@ uint mdlm_read_queued_bytes()
 	return mdlm != NULL ? mdlm->queuedBytes : 0;
 }
 
+
+
+/////////////////////////////////////////////// receiver Moudle (mrecv) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 bool mrecv_after_highest_tsn(recv_controller_t* mrecv, uint chunk_tsn)
 {
 	// every time we received a reliable chunk, it first goes here to update highest tsn if possible
@@ -3824,7 +3872,11 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 		"mrecv_bubbleup_ctsna()::after update,rxc->cumulative_tsn is now %u",
 		mrecv->cumulative_tsn);
 }
+/////////////////////////////////////////////// receiver Moudle (mrecv) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 
+
+
+/////////////////////////////////////////////// mdeliverman Moudle (mdlm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 bool mdlm_sort_tsn_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
 {
 	return ubefore(one->tsn, two->tsn);
@@ -3894,7 +3946,6 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
 	}
 	return MULP_SUCCESS;
 }
-
 /// called from mrecv to forward received rchunks (no sid and ssn) to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
@@ -3929,7 +3980,6 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
 
 	return MULP_SUCCESS;
 }
-
 /// called from mrecv to forward received uro and urs chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
@@ -4045,7 +4095,6 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
 
 	return MULP_SUCCESS;
 }
-
 /// called from mrecv to forward received urchunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
@@ -4101,7 +4150,6 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm,
 	}
 	return MULP_SUCCESS;
 }
-
 /**
  *  indicates new data has arrived from peer (chapter 10.2.) destined for the ULP
  *
@@ -4125,7 +4173,6 @@ void mdi_on_peer_data_arrive(int64 tsn, int streamID, int streamSN, uint length)
 		}
 	}
 }
-
 void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 {
 	// deliver ordered chunks
@@ -4200,7 +4247,6 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 	// update arwnd tp prepare for creation of sack chunk in mrecv_create_sack()
 	mrecv->sack_chunk->sack_fixed.a_rwnd = htonl(current_rwnd);
 }
-
 /*
  * All packets of the same ordering type are ordered relative to each other.
  * stream-id is used for relative ordering of packets in relation to other packets on the same stream
@@ -4732,7 +4778,6 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 
 	return 1;
 }
-
 /*
  * function that gets chunks from the Lists, transforms them to PDUs, puts them
  * to the pduList, and calls DataArrive-Notification
@@ -4746,6 +4791,9 @@ int mdlm_notify_data_arrive()
 		mdlm_deliver_ready_pdu(mdlm);
 	return retval;
 }
+/////////////////////////////////////////////// mdeliverman Moudle (mdlm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
+
+
 
 int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
@@ -6632,43 +6680,6 @@ bundle_controller_t* mbu_new()
 }
 
 /////////////////////////////////////////////// Bundle Moudle (bu) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
-
-/////////////////////////////////////////////// Path Management Moudle (pm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
-path_controller_t* mpath_new(short numberOfPaths, short primaryPath)
-{
-	assert(curr_channel_ != NULL);
-	path_controller_t* pmData = NULL;
-	if ((pmData = (path_controller_t*)geco_malloc_ext(sizeof(path_controller_t),
-		__FILE__, __LINE__)) == NULL)
-		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
-	pmData->path_params = NULL;
-	pmData->primary_path = primaryPath;
-	pmData->path_num = numberOfPaths;
-	pmData->channel_id = curr_channel_->channel_id;
-	pmData->channel_ptr = curr_channel_;
-	pmData->max_retrans_per_path =
-		curr_geco_instance_->default_pathMaxRetransmits;
-	pmData->rto_initial = curr_geco_instance_->default_rtoInitial;
-	pmData->rto_min = curr_geco_instance_->default_rtoMin;
-	pmData->rto_max = curr_geco_instance_->default_rtoMax;
-	pmData->min_pmtu = PMTU_LOWEST;
-	return pmData;
-}
-void mpath_free(path_controller_t *pmData)
-{
-	assert(pmData != NULL && pmData->path_params != NULL);
-	EVENTLOG(INFO, "deleting pathmanagement");
-
-	for (int i = 0; i < pmData->path_num; i++)
-	{
-		if (pmData->path_params[i].hb_timer_id != NULL)
-		{
-			mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
-			pmData->path_params[i].hb_timer_id = 0;
-		}
-	}
-	geco_free_ext(pmData->path_params, __FILE__, __LINE__);
-}
 
 /////////////////////////////////////////////// State Machina Moudle (sm) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 smctrl_t* msm_new(void)
