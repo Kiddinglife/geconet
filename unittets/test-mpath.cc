@@ -18,7 +18,8 @@ static geco_channel_t curr_channel =
   { 0 };
 static geco_instance_t curr_geco_instance =
   { 0 };
-static path_params_t path_params = {0};
+static path_params_t path_params =
+  { 0 };
 
 ///////////////////// TEST(mpath, test_mpath_new_and_free) ///////////////////////////
 extern path_controller_t*
@@ -33,12 +34,12 @@ TEST(mpath, test_mpath_new_and_free)
   curr_channel_->channel_id = 8;
   curr_geco_instance_ = &curr_geco_instance;
   path_controller_t* mpath = mpath_new (numberOfPaths, primaryPath);
-  mpath->path_params = (path_params_t*)geco_malloc_ext(sizeof(path_params_t), __FILE__, __LINE__);
-  memset(mpath->path_params, 0, sizeof(path_params_t));
+  mpath->path_params = (path_params_t*) geco_malloc_ext (sizeof(path_params_t),
+                                                         __FILE__, __LINE__);
+  memset (mpath->path_params, 0, sizeof(path_params_t));
   EXPECT_EQ(mpath->channel_id, curr_channel_->channel_id);
   EXPECT_EQ(mpath->primary_path, primaryPath);
-  mpath_free(mpath);
+  mpath_free (mpath);
 }
-
 
 
