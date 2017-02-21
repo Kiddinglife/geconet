@@ -911,10 +911,7 @@ void mpath_verify_unconfirmed_paths(uint noOfPaths, ushort primaryPathID) 	// mp
 			if (i == primaryPathID)
 			{
 				pmData->path_params[i].state = PM_ACTIVE;
-				// @remember me
-				// this is timeout used for test if primary path becomes idle so it will be reset when dchunk acked
 				// this is for pure path verifi but now we need to do pmtu probe with hb so use timeout_ms 0
-				//timeout_ms = pmData->path_params[i].hb_interval + pmData->path_params[i].rto;
 				timeout_ms = 0; // send pmtu hb at once on primary path as we want reach max throughoit asap
 			}
 			else
@@ -1343,16 +1340,13 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk,
 	int source_address)
 {
-	EVENTLOG1(INFO, "mpath_process_heartbeat_chunk()::source_address (%d)",
-		source_address);
-	//return;
+	EVENTLOG1(VERBOSE, "mpath_process_heartbeat_chunk()::source_address (%d)",source_address);
 	assert(curr_channel_ != NULL);
 	if (curr_channel_->state_machine_control->channel_state == CookieEchoed
 		|| curr_channel_->state_machine_control->channel_state == Connected)
 	{
 		heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
-		heartbeatChunk->chunk_header.chunk_length = htons(
-			20 + ntohs(heartbeatChunk->hmaclen));
+		heartbeatChunk->chunk_header.chunk_length = htons(20 + ntohs(heartbeatChunk->hmaclen));
 		mdi_bundle_ctrl_chunk((simple_chunk_t*)heartbeatChunk);
 		mdi_send_bundled_chunks();
 	}
