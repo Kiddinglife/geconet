@@ -37,6 +37,7 @@ main(int argc, char** argv)
 	// ::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
 	//::testing::GTEST_FLAG(filter) = "mpath.test_mpath_new_and_free";
+        ::testing::GTEST_FLAG(filter) = "mpath.test_make_geco_instance";
 
 	// last pass on 31 Oct 2016
 	//::testing::GTEST_FLAG(filter) = "MULP.*";
@@ -49,7 +50,7 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "MULP.test_mdi_new_and_delete_channel";
 	//::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
 	// current unit test summary locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168.... cross-machina connection NOT ok
-   // ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
+        // ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
 	// last pass on 26 Oct 2016
 	//::testing::GTEST_FLAG(filter) = "MBU.*";
@@ -60,7 +61,7 @@ main(int argc, char** argv)
 
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_bundle_ctrl_chunk";
-	::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
+	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_read_peer_addreslist";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_first_chunk_of";

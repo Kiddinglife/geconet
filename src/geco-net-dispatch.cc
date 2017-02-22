@@ -11028,7 +11028,7 @@ int mulp_get_lib_params(lib_params_t *lib_params)
 	lib_params->support_particial_reliability = support_pr_;
 	lib_params->delayed_ack_interval = delayed_ack_interval_;
 	lib_params->udp_bind_port = mtra_read_udp_local_bind_port();
-	EVENTLOG6(VERBOSE,
+	EVENTLOG6(DEBUG,
 		"\nmulp_get_lib_params():: \nsend_ootb_aborts %s,\nchecksum_algorithm %s,\nsupport_dynamic_addr_config %s,\nsupport_particial_reliability %s,\n"
 		"delayed_ack_interval %d,udp_bind_port %d\n",
 		(send_abort_for_oob_packet_ == true) ? "true" : "false",

@@ -319,14 +319,14 @@ TEST(MULP, test_mulp_mulp_new_and_delete_geco_instnce)
   ASSERT_EQ(ipv4_sockets_geco_instance_users, 1);
   ASSERT_EQ(ipv6_sockets_geco_instance_users, 0);
 
-  //ip4 and ip6 that are not found in local addr list, should cause fatal error exits
+  //ip4 and ip6 that are not found in local addr list, should cause fatal error exits so uncomment to run it
   //localPort = 131;
   //noOfLocalAddresses = 2;
   //strcpy((char*)localAddressList[0], "10.0.0.113");
   //strcpy((char*)localAddressList[1], "fe80::e5e2:146e:25a2:4015");
   //instid = mulp_new_geco_instance(localPort, noOfInStreams, noOfOutStreams, noOfLocalAddresses, localAddressList, ULPcallbackFunctions);
 
-  //ip4 and ip6  one of them  is not found in local addr list, should cause fatal error exits
+  //ip4 and ip6  one of them  is not found in local addr list, should cause fatal error exits so uncomment to run it
   //localPort = 132;
   //noOfLocalAddresses = 2;
   //strcpy((char*)localAddressList[0], "10.0.0.114");
