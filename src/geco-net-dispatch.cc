@@ -23,8 +23,6 @@ struct transportaddr_hash_functor
 {
 	size_t operator()(const transport_addr_t &addr) const
 	{
-		EVENTLOG1(DEBUG, "hashcode=%u",
-			transportaddr2hashcode(addr.local_saddr, addr.peer_saddr) % 1000);
 		return transportaddr2hashcode(addr.local_saddr, addr.peer_saddr);
 	}
 };
@@ -638,18 +636,20 @@ path_controller_t* mpath_new(short numberOfPaths, short primaryPath)
 }
 void mpath_free(path_controller_t *pmData)
 {
-	assert(pmData != NULL && pmData->path_params != NULL);
+	//assert(pmData != NULL && pmData->path_params != NULL);
 	EVENTLOG(INFO, "deleting pathmanagement");
-
-	for (int i = 0; i < pmData->path_num; i++)
+	if (pmData != NULL && pmData->path_params != NULL)
 	{
-		if (pmData->path_params[i].hb_timer_id != NULL)
+		for (int i = 0; i < pmData->path_num; i++)
 		{
-			mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
-			pmData->path_params[i].hb_timer_id = 0;
+			if (pmData->path_params[i].hb_timer_id != NULL)
+			{
+				mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
+				pmData->path_params[i].hb_timer_id = 0;
+			}
 		}
+		geco_free_ext(pmData->path_params, __FILE__, __LINE__);
 	}
-	geco_free_ext(pmData->path_params, __FILE__, __LINE__);
 }
 /*getters and setters*/
 int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall)
@@ -702,26 +702,33 @@ int mpath_disable_hb(short pathID)
 int mpath_disable_all_hb()
 {
 	path_controller_t* pmData = mdi_read_mpath();
-	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
-	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
-	for (int pathID = 0; pathID < pmData->path_num; pathID++)
+	if (pmData != NULL)
 	{
-		if (pmData->path_params[pathID].hb_enabled)
+		if (pmData->path_params != NULL)
 		{
-			if (pmData->path_params[pathID].hb_timer_id != NULL)
+			for (int pathID = 0; pathID < pmData->path_num; pathID++)
 			{
-				mtra_timeouts_stop(pmData->path_params[pathID].hb_timer_id);
+				if (pmData->path_params[pathID].hb_enabled)
+				{
+					if (pmData->path_params[pathID].hb_timer_id != NULL)
+					{
+						mtra_timeouts_stop(pmData->path_params[pathID].hb_timer_id);
+					}
+					pmData->path_params[pathID].hb_enabled = false;
+					EVENTLOG1(INFO, "mpath_disable_all_hb: path %d hb is disabled", pathID);
+					return MULP_SUCCESS;
+				}
 			}
-			pmData->path_params[pathID].hb_enabled = false;
-			EVENTLOG1(INFO, "mpath_disable_hb: path %d hb is disabled", pathID);
 		}
+		EVENTLOG(MINOR_ERROR, "mpath_disable_all_hb: pmData->path_params == NULL");
+		return MULP_SPECIFIC_FUNCTION_ERROR;
 	}
-	return MULP_SUCCESS;
+	EVENTLOG(MINOR_ERROR, "mpath_disable_all_hb: pmData == NULL");
+	return MULP_SPECIFIC_FUNCTION_ERROR;
 }
 short mpath_set_primary_path(short pathID)
 {
 	path_controller_t* pmData = mdi_read_mpath();
-	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
 	if (pmData != NULL)
 	{
 		if (pmData->path_params != NULL)
@@ -1340,7 +1347,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk,
 	int source_address)
 {
-	EVENTLOG1(VERBOSE, "mpath_process_heartbeat_chunk()::source_address (%d)",source_address);
+	EVENTLOG1(VERBOSE, "mpath_process_heartbeat_chunk()::source_address (%d)", source_address);
 	assert(curr_channel_ != NULL);
 	if (curr_channel_->state_machine_control->channel_state == CookieEchoed
 		|| curr_channel_->state_machine_control->channel_state == Connected)
@@ -3042,26 +3049,7 @@ void mdi_init(void)
 	enable_mock_dispatcher_process_init_chunk_ = false;
 #endif
 }
-void mdi_delete_curr_channel(void)
-{
-	uint path_id;
-	if (curr_channel_ != NULL)
-	{
-		mpath_disable_all_hb();
-		mfc_stop_timers();
-		mrecv_stop_sack_timer();
 
-		/* mark channel as deleted, it will be deleted when get_channel(..) encounters a "deleted" channel*/
-		channels_[curr_channel_->channel_id] = NULL;
-		available_channel_ids_[available_channel_ids_size_] =
-			curr_channel_->channel_id;
-		available_channel_ids_size_++;
-		curr_channel_->deleted = true;
-		EVENTLOG1(DEBUG,
-			"mdi_delete_curr_channel()::channel ID %u marked for deletion",
-			curr_channel_->channel_id);
-	}
-}
 void mdi_on_disconnected(uint status)
 {
 	assert(curr_channel_ != NULL);
@@ -5571,7 +5559,6 @@ void set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],
 		noOfAddresses * sizeof(sockaddrunion), __FILE__,
 		__LINE__);
 	assert(curr_channel_->remote_addres != NULL);
-	//memcpy(curr_channel_->remote_addres, destaddrlist, noOfAddresses * sizeof(sockaddrunion));
 	memcpy_fast(curr_channel_->remote_addres, destaddrlist,
 		noOfAddresses * sizeof(sockaddrunion));
 	curr_channel_->remote_addres_size = noOfAddresses;
@@ -6679,7 +6666,7 @@ bundle_controller_t* mbu_new()
 smctrl_t* msm_new(void)
 {
 	assert(curr_channel_ != NULL);
-	smctrl_t* tmp = new smctrl_t();
+	smctrl_t* tmp = (smctrl_t*)geco_malloc_ext(sizeof(smctrl_t), __FILE__, __LINE__);
 	tmp->channel_state = ChannelState::Closed;
 	tmp->init_timer_id = NULL;
 	tmp->init_timer_interval = RTO_INITIAL;
@@ -6825,7 +6812,7 @@ bool mdi_new_channel(geco_instance_t* instance, ushort local_port,
 		{
 			geco_free_ext(curr_channel_, __FILE__, __LINE__);
 			curr_channel_ = NULL;
-			ERRLOG(FALTAL_ERROR_EXIT,
+			ERRLOG(MINOR_ERROR,
 				"mdi_new_channel()::tried to alloc an existing channel -> return false !");
 			return false;
 		}
@@ -10361,6 +10348,56 @@ int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len,
 	EVENTLOG(NOTICE,
 		"- - - - - - - - - - Leave recv_geco_packet() - - - - - - - - - -\n");
 	return geco_return_enum::good;
+}
+
+void mdi_delete_curr_channel(void)
+{
+	uint path_id;
+	if (curr_channel_ != NULL)
+	{
+		mpath_disable_all_hb();
+		mfc_stop_timers();
+		mrecv_stop_sack_timer();
+		mpath_free(curr_channel_->path_control);
+		mfc_free(curr_channel_->flow_control);
+		mdlm_free(curr_channel_->deliverman_control);
+		mrecv_free(curr_channel_->receive_control);
+		mreltx_free(curr_channel_->reliable_transfer_control);
+
+		curr_channel_->deleted = true;
+		channels_[curr_channel_->channel_id] = NULL;
+		available_channel_ids_[available_channel_ids_size_] =
+			curr_channel_->channel_id;
+		available_channel_ids_size_++;
+
+#ifdef _DEBUG
+		uint size = channel_map_.size();
+		uint total = 0;
+#endif // _DEBUG
+
+		EVENTLOG1(DEBUG,"mdi_delete_curr_channel()::channel_map_.size() %d",total);
+		for (uint i = 0; i < curr_channel_->local_addres_size; i++)
+		{
+			curr_trans_addr_.local_saddr = curr_channel_->local_addres + i;
+			for (uint ii = 0; ii < curr_channel_->remote_addres_size; ii++)
+			{
+				curr_trans_addr_.peer_saddr = curr_channel_->remote_addres + ii;
+				if (curr_trans_addr_.peer_saddr->sa.sa_family == curr_trans_addr_.local_saddr->sa.sa_family)
+				{
+#ifdef _DEBUG
+					total++;
+#endif // _DEBUG
+					channel_map_.erase(curr_trans_addr_);
+				}
+			}
+		}
+#ifdef _DEBUG
+		assert(total == (size - channel_map_.size()));
+#endif // _DEBUG
+		EVENTLOG1(DEBUG,
+			"mdi_delete_curr_channel()::channel ID %u marked for deletion",
+			curr_channel_->channel_id);
+	}
 }
 
 /* port management array */
