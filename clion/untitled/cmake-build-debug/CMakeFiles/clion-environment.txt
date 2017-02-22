@@ -1,1 +1,0 @@
-CMake: 3.6.3@/home/jackiez/Downloads/clion-2016.3.3/bin/cmake/bin/cmake

@@ -1,3 +1,0 @@
-/home/jackiez/20160219/geconet/clion/untitled/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/jackiez/20160219/geconet/clion/untitled/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/jackiez/20160219/geconet/clion/untitled/cmake-build-debug/CMakeFiles/untitled.dir
