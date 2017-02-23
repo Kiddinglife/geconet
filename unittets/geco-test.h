@@ -32,8 +32,8 @@ const bool PR = true;
 
 extern int UT_INST_ID;
 extern int UT_CHANNEL_ID;
-extern uint UT_LOCAL_ADDR_LIST_SIZE;
-extern uint UT_REMOTE_ADDR_LIST_SIZE;
+const uint UT_LOCAL_ADDR_LIST_SIZE = 2;
+const uint UT_REMOTE_ADDR_LIST_SIZE = 2;
 extern ulp_cbs_t UT_ULPcallbackFunctions;
 
 extern int myRWND;

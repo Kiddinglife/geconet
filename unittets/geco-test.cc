@@ -9,8 +9,6 @@
 
 int UT_INST_ID = -1;
 int UT_CHANNEL_ID = -1;
-uint UT_LOCAL_ADDR_LIST_SIZE = 2;
-uint UT_REMOTE_ADDR_LIST_SIZE = 2;
 static uchar UT_LOCAL_ADDR_LIST[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN] =
   { 0 };
 ulp_cbs_t UT_ULPcallbackFunctions = { 0 };
@@ -89,7 +87,12 @@ alloc_geco_channel ()
   sockaddrunion dest_su[UT_REMOTE_ADDR_LIST_SIZE];
   str2saddr (dest_su, "192.168.1.1", UT_PEER_PORT);
   str2saddr (dest_su + 1, "192.168.1.2", UT_PEER_PORT);
-  alloc_geco_instance ();
+  // sometimes delete_curr_channle() is called that will zero curr_geco_instance_  and so  
+  // UT_INST_ID can be used as flag to show if still existing. if so, reuse the existing curr_geco_instance_
+  if(UT_INST_ID <0)
+	  alloc_geco_instance();
+  else
+	  curr_geco_instance_ = geco_instances_[UT_INST_ID];
   mdi_new_channel (curr_geco_instance_, UT_LOCAL_PORT, UT_PEER_PORT, UT_ITAG,
                    UT_PRI_PATH_ID, UT_REMOTE_ADDR_LIST_SIZE, dest_su);
   mdi_init_channel (UT_ARWND, UT_ORDER_STREAM, UT_SEQ_STREAM, UT_ITSN, UT_ITAG,
@@ -109,7 +112,6 @@ free_geco_channel ()
     free_geco_instance ();
     UT_CHANNEL_ID = -1;
   }
-
   curr_geco_instance_ = NULL;
   curr_channel_ = NULL;
 }
