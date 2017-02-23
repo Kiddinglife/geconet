@@ -81,9 +81,8 @@ TEST_F(mpath, test_mpath_verify_unconfirmed_paths)
 bool mpath_handle_chunks_retx(short pathID);
 TEST_F(mpath, test_handle_chunks_retx)
 {
-  //given a completed mpath
-  mpath_verify_unconfirmed_paths (UT_REMOTE_ADDR_LIST_SIZE, UT_PRI_PATH_ID);
   //given max_channel_retrans_count = 2,max_retrans_per_path = 1
+  mpath_verify_unconfirmed_paths (UT_REMOTE_ADDR_LIST_SIZE, UT_PRI_PATH_ID);
   uint old_max_rtx_counter = curr_channel_->state_machine_control->max_assoc_retrans_count;
   uint old_max_retrans_per_path = mpath_->max_retrans_per_path;
   mpath_->max_retrans_per_path = 2;
@@ -233,10 +232,16 @@ TEST_F(mpath, test_handle_chunks_retx)
   mpath_->max_retrans_per_path = old_max_retrans_per_path;
 }
 
-TEST(mpath, test_heartbeat_timer_expired)
+TEST_F(mpath, test_heartbeat_timer_expired)
 {
-  // MUST FILL PARAMS
-  mpath_verify_unconfirmed_paths (UT_REMOTE_ADDR_LIST_SIZE, UT_PRI_PATH_ID);
+	//given max_channel_retrans_count = 2,max_retrans_per_path = 1
+	mpath_verify_unconfirmed_paths(UT_REMOTE_ADDR_LIST_SIZE, UT_PRI_PATH_ID);
+	uint old_max_rtx_counter = curr_channel_->state_machine_control->max_assoc_retrans_count;
+	uint old_max_retrans_per_path = mpath_->max_retrans_per_path;
+	mpath_->max_retrans_per_path = 2;
+	curr_channel_->state_machine_control->max_assoc_retrans_count = UT_REMOTE_ADDR_LIST_SIZE*mpath_->max_retrans_per_path;
+	bool ret;
 
+	//TODO
 }
 
