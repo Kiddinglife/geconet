@@ -333,7 +333,7 @@ int mpath_do_hb(int pathID);
 /// path. For this reason it is recommended to call this function when communication up is called.
 /// @params noOfPaths  number of paths to the destination endpoint
 /// @param  primaryPathID   index to the address that is to be used as primary address
-void mpath_verify_unconfirmed_paths(uint remote_addres_size,
+void mpath_set_paths(uint remote_addres_size,
     ushort primaryPath);
 /// pm_heartbeat is called when a heartbeat was received from the peer.
 /// This function just takes that chunk, and sends it back.
@@ -871,7 +871,7 @@ int mpath_do_hb(int pathID)
   return MULP_SPECIFIC_FUNCTION_ERROR;
 }
 /*library functions*/
-void mpath_verify_unconfirmed_paths(uint noOfPaths, ushort primaryPathID) // mpath_set_paths
+void mpath_set_paths(uint noOfPaths, ushort primaryPathID) // mpath_set_paths
 {
   // it is possible that a misbehaving peer may supply addresses that it does not own
   // starts at established state and end when all confirmed
@@ -3387,7 +3387,7 @@ void mdi_on_peer_connected(uint status)
   assert(primaryPath < curr_channel_->remote_addres_size);
 
   // set number of paths and primary path at pathmanegement and start heartbeat
-  mpath_verify_unconfirmed_paths(curr_channel_->remote_addres_size,
+  mpath_set_paths(curr_channel_->remote_addres_size,
       primaryPath);
 
 #ifdef _DEBUG
@@ -6319,7 +6319,7 @@ static bool mdi_restart_channel(uint new_rwnd, ushort noOfOrderStreams,
   mdi_set_channel_remoteaddrlist(destinationAddressList, noOfPaths);
   curr_channel_->path_control = mpath_new(noOfPaths, primaryAddress);
   assert(curr_channel_->path_control != NULL);
-  mpath_verify_unconfirmed_paths(noOfPaths, primaryAddress);
+  mpath_set_paths(noOfPaths, primaryAddress);
 
   return true;
 }

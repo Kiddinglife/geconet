@@ -44,6 +44,9 @@
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add directory="/home/jackiez/20160219/geconet/clion/gecounittest/../../thirdparty/googlemock/include"/>
+					<Add directory="/home/jackiez/20160219/geconet/clion/gecounittest/../../thirdparty/googletest/include"/>
+					<Add directory="/home/jackiez/20160219/geconet/clion/gecounittest/../../src"/>
 					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
 					<Add directory="/usr/local/include"/>
 					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
@@ -67,6 +70,9 @@
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add directory="/home/jackiez/20160219/geconet/clion/gecounittest/../../thirdparty/googlemock/include"/>
+					<Add directory="/home/jackiez/20160219/geconet/clion/gecounittest/../../thirdparty/googletest/include"/>
+					<Add directory="/home/jackiez/20160219/geconet/clion/gecounittest/../../src"/>
 					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
 					<Add directory="/usr/local/include"/>
 					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>

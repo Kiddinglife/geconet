@@ -12,3 +12,6 @@ set(SOURCE_FILES
         ../../unittets/geco-test.cc
         ../../unittets/geco-test.h)
 add_executable(gecounittest ${SOURCE_FILES})
+include_directories(../../thirdparty/googlemock/include ../../thirdparty/googletest/include ../../src)
+link_directories(../geconetlib/cmake-build-debug ../../thirdparty/libs ../geconetlib/cmake-build-release)
+target_link_libraries (gecounittest public geconet_d gmock)

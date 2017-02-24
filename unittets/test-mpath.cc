@@ -200,6 +200,7 @@ TEST_F(mpath, test_handle_chunks_retx)
 }
 
 extern int mpath_heartbeat_timer_expired(timeout* timerID);
+extern timeouts* mtra_read_timeouts();
 TEST_F(mpath, test_heartbeat_timer_expired)
 {
   bool ret;
@@ -207,7 +208,7 @@ TEST_F(mpath, test_heartbeat_timer_expired)
   //given path0,timeouts and timerID
   timeouts* ts = mtra_read_timeouts();
   ASSERT_NE(ts, nullptr);
-  path_params_t* path = mpath_->path_params[0];
+  path_params_t* path = &mpath_->path_params[0];
   ASSERT_NE(path, nullptr);
   timeout* timerID = path->hb_timer_id;
   ASSERT_NE(timerID, nullptr);

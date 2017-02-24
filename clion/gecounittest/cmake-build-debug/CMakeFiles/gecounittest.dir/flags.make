@@ -6,5 +6,5 @@ CXX_FLAGS = -g   -std=gnu++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = 
+CXX_INCLUDES = -I/home/jackiez/20160219/geconet/clion/gecounittest/../../thirdparty/googlemock/include -I/home/jackiez/20160219/geconet/clion/gecounittest/../../thirdparty/googletest/include -I/home/jackiez/20160219/geconet/clion/gecounittest/../../src 
 
