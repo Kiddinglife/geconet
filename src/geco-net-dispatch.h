@@ -32,8 +32,6 @@
 #include "geco-net-common.h"
 #include "geco-malloc.h"
 #include "geco-net.h"
-#include "geco-net-auth.h"
-#include "geco-net-chunk.h"
 
 struct timeout;
 
