@@ -5,6 +5,8 @@
 #include "geco-ds-malloc.h"
 #include "geco-net.h"
 #include <algorithm>
+#include <assert.h>
+#include "spdlog/spdlog.h"
 
 #define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
@@ -333,8 +335,7 @@ int mpath_do_hb(int pathID);
 /// path. For this reason it is recommended to call this function when communication up is called.
 /// @params noOfPaths  number of paths to the destination endpoint
 /// @param  primaryPathID   index to the address that is to be used as primary address
-void mpath_set_paths(uint remote_addres_size,
-    ushort primaryPath);
+void mpath_set_paths(uint remote_addres_size, ushort primaryPath);
 /// pm_heartbeat is called when a heartbeat was received from the peer.
 /// This function just takes that chunk, and sends it back.
 /// @param heartbeatChunk pointer to the heartbeat chunk
@@ -1187,7 +1188,8 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
   assert(pathID >= 0);
   assert(pmData != NULL);
 
-  EVENTLOG2(0, "Heartbeat timer expired for path %u at time ms %u", pathID,
+  spdlog::get("console")->info(
+      "Heartbeat timer expired for path {} at time ms {}", pathID,
       get_safe_time_ms());
 
   chunk_id_t heartbeatCID = 0;
@@ -1267,22 +1269,25 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
   {
     if (mtu == 0)
     {
+      bool dohb = true;
       mtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
+      uint now = get_safe_time_ms();
       if (mtu <= PMTU_HIGHEST)
       {
         if (pmData->path_params[pathID].hb_sent
             &&
             /*only when pmtu&hb probe suceeds, test if cached pmtu expired*/
-            get_safe_time_ms()
-                - pmData->path_params[pathID].cached_eff_pmtu_start_time
+            now - pmData->path_params[pathID].cached_eff_pmtu_start_time
                 >= CACHED_EFF_PMTU_LIFE_TIME)
         /*eff pmtu will be cached at most 5 minutes*/
         {
           pmData->path_params[pathID].probing_pmtu = mtu;
           timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
+          dohb = false;
+          assert(newtimeout == pmData->path_params[pathID].rto);
         }
       }
-      else
+      if (dohb)
       {
         // reset to zero
         mtu = 0;
@@ -1291,7 +1296,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
             + pmData->path_params[pathID].rto;
       }
       // mtu with 0 value means this is a hb probe wiyhout pmtu
-      heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint) pathID, mtu);
+      heartbeatCID = mch_make_hb_chunk(now, (uint) pathID, mtu);
     }
     else
     {
@@ -1321,9 +1326,8 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
     pmData->path_params[pathID].hb_sent = false;
     if (heartbeatCID != 0)
     {
-      EVENTLOG2(DEBUG,
-          "--------------> timeout Send HB PROBE WITH BYTES OF %d on path %d",
-          mtu, pathID);
+      EVENTLOG2(DEBUG, "--------------> timeout Send %s PROBE on path %d",
+          mtu == 0 ? "HB" : "PMTU", pathID);
       mdi_bundle_ctrl_chunk(mch_complete_simple_chunk(heartbeatCID));
       pmData->path_params[pathID].hb_sent =
           mdi_send_bundled_chunks(&pathID) > -1 ? true : false;
@@ -1454,7 +1458,8 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
     if (smallest)
     {
       pmData->min_pmtu = newpmtu;
-      curr_channel_->bundle_control->geco_packet_fixed_size == sizeof(uint) ?
+      curr_channel_->bundle_control->geco_packet_fixed_size
+          == GECO_PACKET_FIXED_SIZE_USE_UDP ?
           curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE
               - UDP_HDR_SIZE :
           curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE;
@@ -2651,6 +2656,7 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex,
 
   assert(geco_packet != NULL);
   assert(length != 0);
+  assert(geco_packet_fixed_size > 0);
 
   int len = 0;
   geco_packet_t* geco_packet_ptr = (geco_packet_t*) geco_packet;
@@ -2766,7 +2772,6 @@ int mdi_send_geco_packet(char* geco_packet, uint length, short destAddressIndex,
           curr_channel_->remote_tag);
 
     tos = curr_channel_->ipTos;
-    assert(curr_channel_->bundle_control->geco_packet_fixed_size != 0);
     if (!mdi_udp_tunneled_ && !mdi_connect_udp_sfd_)
     {
       geco_packet_ptr->pk_comm_hdr.src_port = htons(curr_channel_->local_port);
@@ -3346,7 +3351,6 @@ void mdi_on_peer_connected(uint status)
 
   assert(curr_channel_ != NULL);
   assert(curr_geco_instance_ != NULL);
-  assert(last_source_addr_ != NULL);
 
   // reset mbu geco packet size
   if (default_bundle_ctrl_->geco_packet_fixed_size != 0
@@ -3387,8 +3391,7 @@ void mdi_on_peer_connected(uint status)
   assert(primaryPath < curr_channel_->remote_addres_size);
 
   // set number of paths and primary path at pathmanegement and start heartbeat
-  mpath_set_paths(curr_channel_->remote_addres_size,
-      primaryPath);
+  mpath_set_paths(curr_channel_->remote_addres_size, primaryPath);
 
 #ifdef _DEBUG
   unsigned short noOfInStreams;

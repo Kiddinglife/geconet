@@ -184,9 +184,6 @@ gecounittest_BINARY_DIR:STATIC=/home/jackiez/20160219/geconet/clion/gecounittest
 //Value Computed by CMake
 gecounittest_SOURCE_DIR:STATIC=/home/jackiez/20160219/geconet/clion/gecounittest
 
-//The directory containing a CMake configuration file for my_library.
-my_library_DIR:PATH=my_library_DIR-NOTFOUND
-
 
 ########################
 # INTERNAL cache entries

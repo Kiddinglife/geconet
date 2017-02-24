@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "geco-test.h"
+//#include "spdlog/spdlog.h"
 
 struct mpath : public testing::Test
 {
@@ -213,21 +214,42 @@ TEST_F(mpath, test_heartbeat_timer_expired)
   timeout* timerID = path->hb_timer_id;
   ASSERT_NE(timerID, nullptr);
 
-  //1 when mtu=0,
+  //1 when hb not sent and not acked: mtu 0,hb_sent false,heartbeatAcked false
   void* old_arg3 = timerID->callback.arg3;
-  timerID->callback.arg3 = nullptr;
-  //andwhen hb_sent=false,
-  path->hb_sent = false;
-  //then do nothing but readd timout with rto
   timeout_t old_exps = timerID->expires;
+  timerID->callback.arg3 = nullptr;
+  path->hb_sent = false;
   mpath_heartbeat_timer_expired(timerID);
-  ASSERT_EQ(timerID, mpath_->path_params[0].hb_timer_id);
-  ASSERT_LT(old_exps,timerID->expires);
-  // reset everything to init value
+  //then send hb probe with mtu 0
+  ASSERT_EQ(timerID, path->hb_timer_id);
+  ASSERT_EQ(false, path->dchunk_sent_in_last_rto);
+  ASSERT_EQ(false, path->dchunk_acked_in_last_rto);
+  ASSERT_FLOAT_EQ((timerID->expires-old_exps)/stamps_per_ms_double(),path->rto+path->hb_interval);
+  ASSERT_EQ(timerID->callback.arg3, nullptr);
+  //reset everything to init value
   timerID->callback.arg3 = old_arg3;
   path->hb_sent = false;
   timerID->expires = old_exps;
 
+  //2 when hb sent and not acked: mtu 0,hb_sent true,heartbeatAcked false
+  old_arg3 = timerID->callback.arg3;
+  old_exps = timerID->expires;
+  uint old_retrans_count = path->retrans_count;
+  bool old_hb_sent = path->hb_sent;
+  timerID->callback.arg3 = nullptr;
+  path->hb_sent = true;
+  mpath_heartbeat_timer_expired(timerID);
+  //then send hb probe with mtu 0
+  ASSERT_EQ(path->retrans_count, 1);
+  ASSERT_NE(curr_channel_, nullptr);
+  ASSERT_FLOAT_EQ((timerID->expires-old_exps)/stamps_per_ms_double(),path->rto+path->hb_interval);
+  ASSERT_EQ(timerID->callback.arg3, nullptr);
+  //reset everything to init value
+  timerID->callback.arg3 = old_arg3;
+  path->hb_sent = false;
+  timerID->expires = old_exps;
+  path->hb_sent = old_hb_sent;
+  //
   //TODO
 }
 

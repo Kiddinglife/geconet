@@ -11,7 +11,7 @@ set(SOURCE_FILES
         ../../unittets/test-wheel-timer.cc
         ../../unittets/geco-test.cc
         ../../unittets/geco-test.h)
-add_executable(gecounittest ${SOURCE_FILES})
 include_directories(../../thirdparty/googlemock/include ../../thirdparty/googletest/include ../../src)
-link_directories(../geconetlib/cmake-build-debug ../../thirdparty/libs ../geconetlib/cmake-build-release)
-target_link_libraries (gecounittest public geconet_d gmock)
+link_directories(../geconetlib/cmake-build-debug ../../thirdparty/libs)
+add_executable(gecounittest ${SOURCE_FILES})
+target_link_libraries(gecounittest geconet_d gmock_ubuntu pthread)
