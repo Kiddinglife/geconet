@@ -81,13 +81,15 @@ set_channel_remote_addrlist(sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],
 	int noOfAddresses);
 extern void
 mdi_delete_curr_channel();
+extern void
+mpath_set_paths (uint noOfPaths, ushort primaryPathID);
 void
 alloc_geco_channel()
 {
 	sockaddrunion dest_su[UT_REMOTE_ADDR_LIST_SIZE];
 	str2saddr(dest_su, "192.168.1.1", UT_PEER_PORT);
 	str2saddr(dest_su + 1, "192.168.1.2", UT_PEER_PORT);
-	// sometimes delete_curr_channle() is called that will zero curr_geco_instance_  and so  
+	// sometimes delete_curr_channle() is called that will zero curr_geco_instance_  and so
 	// UT_INST_ID can be used as flag to show if still existing. if so, reuse the existing curr_geco_instance_
 	if (UT_INST_ID < 0)
 		alloc_geco_instance();
@@ -97,10 +99,16 @@ alloc_geco_channel()
 		UT_PRI_PATH_ID, UT_REMOTE_ADDR_LIST_SIZE, dest_su);
 	mdi_init_channel(UT_ARWND, UT_ORDER_STREAM, UT_SEQ_STREAM, UT_ITSN, UT_ITAG,
 		UT_ITSN, PR, ADDIP);
+	//fills channel_map
 	set_channel_remote_addrlist(dest_su, UT_REMOTE_ADDR_LIST_SIZE);
 	UT_CHANNEL_ID = channels_size_ - 1;
 	curr_channel_ = channels_[0];
 	curr_channel_->geco_inst = curr_geco_instance_;
+        //make max_channel_retrans_count = 2,max_retrans_per_path = 1 to ease test
+        mpath_set_paths (UT_REMOTE_ADDR_LIST_SIZE, UT_PRI_PATH_ID);
+        curr_channel_->path_control->max_retrans_per_path = 2;
+        curr_channel_->state_machine_control->max_assoc_retrans_count =
+            UT_REMOTE_ADDR_LIST_SIZE*curr_channel_->path_control->max_retrans_per_path;
 }
 
 void

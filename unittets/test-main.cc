@@ -36,8 +36,9 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // last pass on 26 Oct 2016
     // ::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
-    //::testing::GTEST_FLAG(filter) = "mpath.test_mpath_verify_unconfirmed_paths";
-    ::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";
+    ::testing::GTEST_FLAG(filter) = "mpath.*";
+    //::testing::GTEST_FLAG(filter) = "mpath.test_set_paths";
+    //::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";
     //::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";
     //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
     //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";

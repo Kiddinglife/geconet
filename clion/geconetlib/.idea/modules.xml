@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/geconet.iml" filepath="$PROJECT_DIR$/.idea/geconet.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/geconetlib.iml" filepath="$PROJECT_DIR$/.idea/geconetlib.iml" />
     </modules>
   </component>
 </project>

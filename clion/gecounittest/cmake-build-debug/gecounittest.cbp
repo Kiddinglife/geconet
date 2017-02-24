@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="gecounittest"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gecounittest">
+				<Option output="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/gecounittest" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 gecounittest"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gecounittest/fast">
+				<Option output="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/gecounittest" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 gecounittest/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/gecounittest/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/geco-test.cc">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/geco-test.h">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-main.cc">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-mbu.cc">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-mdi.cpp">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-mpath.cc">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-mtra.cpp">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-mulp.cc">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/unittets/test-wheel-timer.cc">
+			<Option target="gecounittest"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/clion/gecounittest/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

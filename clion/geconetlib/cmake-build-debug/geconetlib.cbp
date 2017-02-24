@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="geconetlib"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="geconet_d">
+				<Option output="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/libgeconet_d.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 geconet_d"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="geconet_d/fast">
+				<Option output="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/libgeconet_d.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/usr/include/c++/5"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
+					<Add directory="/usr/include/c++/5/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 geconet_d/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-bit-stream.cpp">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-bit-stream.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-common.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-ds-config.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-ds-malloc.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-ds-timer.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-malloc.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-malloc.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-auth.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-auth.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-chunk.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-chunk.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-common.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-common.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-config.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-dispatch.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-dispatch.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-msg.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-timer.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-transport.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net-transport.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-net.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/geco-thread.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/spsc-queue.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/timestamp.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/timestamp.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/wheel-timer-bitops.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/wheel-timer-debug.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/wheel-timer-queue.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/wheel-timer.cc">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/src/wheel-timer.h">
+			<Option target="geconet_d"/>
+		</Unit>
+		<Unit filename="/home/jackiez/20160219/geconet/clion/geconetlib/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
