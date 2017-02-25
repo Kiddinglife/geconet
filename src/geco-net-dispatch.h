@@ -189,7 +189,7 @@ struct path_params_t
 	bool hb_sent;
 	/*set to true when a hearbeat is acknowledged and to false when a
 	 heartbeat is sent when the heartbeat timer expires. */
-	bool heartbeatAcked;
+	bool hb_acked;
 	// conuter for retrans on a single path
 	uint retrans_count;
 	// rto

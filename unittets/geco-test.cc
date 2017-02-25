@@ -153,3 +153,8 @@ TEST(UT_HELPER, test_make_geco_channel)
   alloc_geco_channel ();
   free_geco_channel ();
 }
+
+extern void reset_channel()
+{
+	
+}

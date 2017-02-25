@@ -55,4 +55,5 @@ extern void
 alloc_geco_channel ();
 extern void
 free_geco_channel ();
+extern void reset_channel();
 #endif /* UNITTETS_GECO_TEST_H_ */

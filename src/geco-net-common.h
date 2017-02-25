@@ -255,9 +255,9 @@ enum SENDING_DEST_ADDR_TYPE
 	PRIMARY_ADDR = -1, LAST_SOURCE_ADDR = -2, RESET_VALUE = -3
 };
 
-/* ms default interval to timeout when no timers in poll
+/* ms default interval to timeout when no data received in socket
  * it is alos the resolution of wheel-timer*/
-#define GRANULARITY 50 //ms
+#define GRANULARITY 1 //ms
 
  /* the maximum length of an IP address string (IPv4 or IPv6, NULL terminated) */
  /* see RFC 1884 (mixed IPv6/Ipv4 addresses)   */
