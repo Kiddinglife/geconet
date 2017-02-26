@@ -11,6 +11,7 @@
 #include "gmock/gmock.h"
 
 #include "geco-test.h"
+#include "geco-net-chunk.h"
 
 struct mpath : public testing::Test
 {
@@ -29,7 +30,7 @@ struct mpath : public testing::Test
 	uint old_rto;
 	uint old_first_rto;
 	uint64 old_rtt_update_time;
-
+	uint old_state;
 	virtual void SetUp()
 	{
 		alloc_geco_channel();
@@ -48,6 +49,7 @@ struct mpath : public testing::Test
 		old_rto = path->rto;
 		old_first_rto = path->firstRTO;
 		old_rtt_update_time = path->rtt_update_time;
+		old_state = path->state;
 	}
 	virtual void TearDown()
 	{
@@ -71,6 +73,7 @@ struct mpath : public testing::Test
 		path->rto = old_rto;
 		path->firstRTO = old_first_rto;
 		path->rtt_update_time = old_rtt_update_time;
+		path->state = old_state;
 	}
 };
 
@@ -350,10 +353,10 @@ TEST_F(mpath, test_data_chunk_acked)
 	reset();
 
 	//3 when  0 < newrtt < rto_max, path inactive
-	mpath_data_chunk_acked(path->path_id, mpath_->rto_max / 2);
+	mpath_data_chunk_acked(path->path_id, mpath_->rto_min / 2);
 	path->state = PM_INACTIVE;
 	//then do nothing but just return 
-	ASSERT_EQ(path->srtt, old_srtt);
+	ASSERT_EQ(path->srtt, mpath_->rto_min / 2);
 	reset();
 
 	//3 when  newrtt 0, path active
@@ -378,9 +381,51 @@ TEST_F(mpath, test_data_chunk_acked)
 	reset();
 }
 
-extern void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk);
-TEST_F(mpath, test_process_heartbeat_ack_chunk)
+extern void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk);
+TEST_F(mpath, test_hb_ack_received)
 {
 	bool ret;
-	//TODO
+	chunk_id_t hbid;
+	heartbeat_chunk_t* hback;
+
+	//1 when path id is illegal
+	hbid = mch_make_hb_chunk(get_safe_time_ms() - 50, mpath_->path_num, 0);
+	hback = (heartbeat_chunk_t*)mch_complete_simple_chunk(hbid);
+	hback->chunk_header.chunk_id = CHUNK_HBACK;
+	hback->chunk_header.chunk_length = htons(20 + ntohs(hback->hmaclen));
+	mpath_hb_ack_received(hback);
+	//then do nothing but just return
+	mch_free_simple_chunk(hbid);
+	reset();
+
+	//2 when hmac illegal
+	hbid = mch_make_hb_chunk(get_safe_time_ms() - 50, mpath_->path_num, 0);
+	hback = (heartbeat_chunk_t*)mch_complete_simple_chunk(hbid);
+	hback->chunk_header.chunk_id = CHUNK_HBACK;
+	hback->chunk_header.chunk_length = htons(20 + ntohs(hback->hmaclen));
+	hback->mtu = 1; // make it illegal hmac by changing mtu to non-zero
+	mpath_hb_ack_received(hback);
+	//then do nothing but just return
+	mch_free_simple_chunk(hbid);
+	reset();
+
+	//3 when path id good hmac good path inactive
+	path->state = PM_INACTIVE;
+	mpath_->path_params[1].eff_pmtu = 1500;
+	hbid = mch_make_hb_chunk(get_safe_time_ms() - 50, path->path_id, 1024);
+	hback = (heartbeat_chunk_t*)mch_complete_simple_chunk(hbid);
+	hback->chunk_header.chunk_id = CHUNK_HBACK;
+	hback->chunk_header.chunk_length = htons(20 + ntohs(hback->hmaclen));
+	mpath_hb_ack_received(hback);
+	//then should update rtt pmtu, active path, readd timer
+	ASSERT_EQ(path->state, PM_ACTIVE);
+	ASSERT_EQ(path->hb_acked, true);
+	ASSERT_EQ(path->hb_timer_id->callback.arg3, nullptr);
+	ASSERT_GT(path->cached_eff_pmtu_start_time, 0);
+	ASSERT_EQ(path->eff_pmtu, 1024);
+	ASSERT_EQ(mpath_->min_pmtu, 1024);
+	ASSERT_EQ(curr_channel_->bundle_control->curr_max_pdu, 1024 - IP_HDR_SIZE - UDP_HDR_SIZE);
+	ASSERT_EQ(curr_channel_->flow_control->cparams->mtu, 1024 - IP_HDR_SIZE - 12);
+	mch_free_simple_chunk(hbid);
+	reset();
 }

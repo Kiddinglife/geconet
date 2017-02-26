@@ -340,7 +340,7 @@ void mpath_set_paths(uint remote_addres_size, ushort primaryPath);
 /// This function just takes that chunk, and sends it back.
 /// @param heartbeatChunk pointer to the heartbeat chunk
 /// @param source_address address we received the HB chunk from (and where it is echoed)
-void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk,
+void mpath_hb_received(heartbeat_chunk_t* heartbeatChunk,
 	int source_address);
 /// Function is used to update RTT, SRTT, RTO values after data or hb chunk has been acked.
 /// CHECKME : this function is called too often with RTO == 0;
@@ -371,7 +371,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID);
 /// pm_heartbeatAck is called when a heartbeat acknowledgement was received from the peer.
 /// checks RTTs, normally resets error counters, may set path back to ACTIVE state
 /// @param heartbeatChunk pointer to the received heartbeat ack chunk
-void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk);
+void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk);
 /// helper function, that simply sets the data_chunk_sent flag of this path management instance to true
 /// @param pathID  index of the address, where flag is set
 void mpath_data_chunk_sent(short pathID);
@@ -1250,50 +1250,63 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		&& pmData->path_params[pathID].hb_acked == false)
 	{/* Heartbeat has been sent and not acknowledged: handle as retransmission */
 		removed_association = mpath_handle_chunks_rtx((short)pathID);
-		if (removed_association == false)
+		if (pmData->path_params[pathID].timer_backoff == true)
 		{
-			if (pmData->path_params[pathID].timer_backoff == true)
+			pmData->path_params[pathID].rto = std::min(
+				2 * pmData->path_params[pathID].rto, pmData->rto_max);
+			EVENTLOG2(INFO, "Backing off timer : Path %d, RTO= %u", pathID,
+				pmData->path_params[pathID].rto);
+		}
+		if (mtu != 0)
+		{
+			if ((pmData->path_params[pathID].data_chunk_sent == true
+				&& pmData->path_params[pathID].data_chunk_acked == true)
+				||
+				/*not acked but no congestion occures, must be pmtu is too big*/
+				(pmData->path_params[pathID].data_chunk_sent == false
+					&& pmData->path_params[pathID].data_chunk_acked == false
+					&& pmData->path_params[pathID].retrans_count > 1)
+				/*not acked on idle path,  possibly pmtu too big or congestion control,
+				 here we try send old mtu one more time if not acked again,
+				 retrans_count will be set to 2, umtil then, we think it is pmtu too big*/)
 			{
-				pmData->path_params[pathID].rto = std::min(
-					2 * pmData->path_params[pathID].rto, pmData->rto_max);
-				EVENTLOG2(INFO, "Backing off timer : Path %d, RTO= %u", pathID,
-					pmData->path_params[pathID].rto);
-			}
-			if (mtu != 0)
-			{
-				if ((pmData->path_params[pathID].data_chunk_sent == true
-					&& pmData->path_params[pathID].data_chunk_acked == true)
-					||
-					/*not acked but no congestion occures, must be pmtu is too big*/
-					(pmData->path_params[pathID].data_chunk_sent == false
-						&& pmData->path_params[pathID].data_chunk_acked == false
-						&& pmData->path_params[pathID].retrans_count > 1)
-					/*not acked on idle path,  possibly pmtu too big or congestion control,
-					 here we try send old mtu one more time if not acked again,
-					 retrans_count will be set to 2, umtil then, we think it is pmtu too big*/)
+				//send smaller hb&&pmtu probe again
+				if (mtu < PMTU_HIGHEST)
+					mtu -= PMTU_CHANGE_RATE;
+				if (mtu > (int) PMTU_LOWEST)
 				{
-					//send smaller hb&&pmtu probe again
-					if (mtu < PMTU_HIGHEST)
-						mtu -= PMTU_CHANGE_RATE;
-					if (mtu > (int) PMTU_LOWEST
-						&& mtu != pmData->path_params[pathID].eff_pmtu)
-					{	//if == eff pmtu, which means we  last test upwards not acked, we still use the cached eff not sending probe again
+					//if == eff pmtu, which means we  last test upwards not acked, we still use the cached eff not sending probe again
+					if (mtu != pmData->path_params[pathID].eff_pmtu)
+					{
 						pmData->path_params[pathID].probing_pmtu = mtu;
 						timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
 						heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID,
 							mtu);
+						// pmtu probe does not increase err counter
+						pmData->total_retrans_count--;
+						pmData->path_params[pathID].retrans_count--;
 					}
 				}
+				else
+				{
+					// we reach the loweset pmtu, all pmtu probe with mtu greater than pmtu_loweset all timeout and unacked
+					// here we stop probe any more just use pmtu loweset and switch to mormal hb probe
+					pmData->path_params[pathID].eff_pmtu = PMTU_LOWEST;
+					pmData->path_params[pathID].cached_eff_pmtu_start_time = get_safe_time_ms();
+					timerID->callback.arg3 = NULL;
+					newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+					heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, 0);
+				}
 			}
-			else
-			{	// mtu with 0 value means this is a hb probe wiyhout pmtu
-			  // only send one pure hb probe in hb-interval
-				timerID->callback.arg3 = NULL;
-				newtimeout = pmData->path_params[pathID].hb_interval
-					+ pmData->path_params[pathID].rto;
-				heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID,
-					mtu);
-			}
+		}
+		else
+		{	// mtu with 0 value means this is a hb probe wiyhout pmtu
+		  // only send one pure hb probe in hb-interval
+			timerID->callback.arg3 = NULL;
+			newtimeout = pmData->path_params[pathID].hb_interval
+				+ pmData->path_params[pathID].rto;
+			heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID,
+				mtu);
 		}
 	}
 	else
@@ -1383,10 +1396,10 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	//else we have called 	mdi_clear_current_channel() in mpath_handle_chunks_rtx so here no need call it again
 	return ret;
 }
-void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk,
+void mpath_hb_received(heartbeat_chunk_t* heartbeatChunk,
 	int source_address)
 {
-	EVENTLOG1(VERBOSE, "mpath_process_heartbeat_chunk()::source_address (%d)",
+	EVENTLOG1(VERBOSE, "mpath_hb_received()::source_address (%d)",
 		source_address);
 	assert(curr_channel_ != NULL);
 	if (curr_channel_->state_machine_control->channel_state == CookieEchoed
@@ -1399,19 +1412,10 @@ void mpath_process_heartbeat_chunk(heartbeat_chunk_t* heartbeatChunk,
 		mdi_send_bundled_chunks();
 	}
 }
-void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
+void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk)
 {
 	path_controller_t* pmData = (path_controller_t *)mdi_read_mpath();
-	if (pmData == NULL)
-	{
-		ERRLOG(FALTAL_ERROR_EXIT,
-			"mpath_process_heartbeat_ack_chunk():: mdi_read_mpath() failed");
-	}
-	if (pmData->path_params == NULL)
-	{
-		ERRLOG(FALTAL_ERROR_EXIT,
-			"mpath_process_heartbeat_ack_chunk():: path_params is NULL !");
-	}
+	assert(pmData != NULL && "mpath_hb_ack_received():: path_controller_t is NULL");
 
 	chunk_id_t heartbeatCID = mch_make_simple_chunk(
 		(simple_chunk_t*)heartbeatChunk);
@@ -1426,7 +1430,7 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	short pathID = mch_read_path_idx_from_heartbeat(heartbeatCID);
 	if (!(pathID >= 0 && pathID < pmData->path_num))
 	{
-		EVENTLOG1(INFO, "pm_heartbeatAck: invalid path ID %d", pathID);
+		EVENTLOG1(VERBOSE, "pm_heartbeatAck: invalid path ID %d", pathID);
 		return;
 	}
 
@@ -1434,7 +1438,6 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 	int roundtripTime = get_safe_time_ms() - sendingTime;
 	ushort newpmtu = mch_read_pmtu_from_heartbeat(heartbeatCID);
 	mch_remove_simple_chunk(heartbeatCID);
-	//exit(-1);
 
 	// reset error counters and/or update rtt if hb chunk is acked
 	// @remember we do not call mpath_data_chunk_acked() as we only send one hb chunk in a rto
@@ -1498,14 +1501,14 @@ void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk)
 		}
 	}
 
-	EVENTLOG2(DEBUG,
-		"-------------->Receive HB PROBE WITH BYTES OF %d on path %d", newpmtu,
-		pathID);
-	//exit(-1);
 	// stop pmtu probe on this path as we already get the best max eff pmtu
 	pmData->path_params[pathID].hb_timer_id->callback.arg3 = NULL;
 	pmData->path_params[pathID].hb_acked = true;
 	pmData->path_params[pathID].timer_backoff = false;
+
+	EVENTLOG2(DEBUG,
+		"-------------->Receive HB PROBE WITH BYTES OF %d on path %d", newpmtu,
+		pathID);
 }
 /////////////////////////////////////////////// Path Management Moudle (pm) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 
@@ -2251,13 +2254,13 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 								}
 							}
 						}
+					}
 				}
-			}
 				else
 				{
 					EVENTLOG(DEBUG, "Too many addresses found during IPv4 reading");
 				}
-		}
+			}
 			break;
 		case VLPARAM_SUPPORTED_ADDR_TYPES:
 			if (peer_supported_addr_types != NULL)
@@ -2278,14 +2281,14 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 					*peer_supported_addr_types);
 			}
 			break;
-	}
+		}
 		read_len += vlp_len;
 		while (read_len & 3)
 			++read_len;
 		curr_pos = chunk + read_len;
-}  // while
+	}  // while
 
-// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
+	// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
 	if (!ignore_last_src_addr)
 	{
 		is_new_addr = true;
@@ -2392,8 +2395,8 @@ bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
-			}
 		}
+	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -2446,7 +2449,7 @@ bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-	}
+}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
 	bool receivedFromPeer)
@@ -8758,13 +8761,13 @@ int mdi_disassemle_packet()
 
 		case CHUNK_HBREQ:
 			EVENTLOG(DEBUG, "*******************  Bundling received HB_REQ chunk");
-			mpath_process_heartbeat_chunk((heartbeat_chunk_t*)chunk,
+			mpath_hb_received((heartbeat_chunk_t*)chunk,
 				last_src_path_);
 			break;
 
 		case CHUNK_HBACK:
 			EVENTLOG(DEBUG, "*******************  Bundling received HB_ACK chunk");
-			mpath_process_heartbeat_ack_chunk((heartbeat_chunk_t*)simple_chunk);
+			mpath_hb_ack_received((heartbeat_chunk_t*)simple_chunk);
 			break;
 
 		case CHUNK_FORWARD_TSN:

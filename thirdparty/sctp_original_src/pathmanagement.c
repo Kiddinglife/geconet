@@ -333,20 +333,20 @@ handleChunksAcked (short pathID, unsigned int newRTT)
 /*----------------- Functions to answer peer HB requests -----------------------------------------*/
 
 /** done
- mpath_process_heartbeat_chunk is called when a heartbeat was received from the peer.
+ mpath_hb_received is called when a heartbeat was received from the peer.
  This function just takes that chunk, and sends it back.
  @param heartbeatChunk pointer to the heartbeat chunk
  @param source_address address we received the HB chunk from (and where it is echoed)
  */
 void
-mpath_process_heartbeat_chunk (SCTP_heartbeat * heartbeatChunk,
+mpath_hb_received (SCTP_heartbeat * heartbeatChunk,
                                unsigned int source_address)
 {
   heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
 
   bu_put_Ctrl_Chunk ((SCTP_simple_chunk *) heartbeatChunk, &source_address);
   bu_sendAllChunks (&source_address);
-} /* end: mpath_process_heartbeat_chunk */
+} /* end: mpath_hb_received */
 
 /*------------------- Signals --------------------------------------------------------------------*/
 

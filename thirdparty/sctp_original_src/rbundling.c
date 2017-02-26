@@ -488,7 +488,7 @@ rbu_rcvDatagram (guint address_index, guchar * datagram, guint len)
       case CHUNK_HBREQ:
         event_log(INTERNAL_EVENT_0,
                   "*******************  Bundling received HB_REQ chunk");
-        mpath_process_heartbeat_chunk ((SCTP_heartbeat *) chunk, address_index);
+        mpath_hb_received ((SCTP_heartbeat *) chunk, address_index);
         break;
       case CHUNK_HBACK:
         event_log(INTERNAL_EVENT_0,

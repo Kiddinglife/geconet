@@ -813,8 +813,8 @@ extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int e
 #define  RTO_BETA              0.25f
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10
 #define MAX_INIT_RETRANS_ATTEMPTS    8
-#define MAX_PATH_RETRANS_TIMES    5
-#define VALID_COOKIE_LIFE_TIME  10000 //MS
+#define MAX_PATH_RETRANS_TIMES         5
+#define VALID_COOKIE_LIFE_TIME  100000 //MS
 
 #define SACK_DELAY    200
 #define RTO_INITIAL     3000    /* 超时重传机制(RTO：Retransmission Timeout) */
