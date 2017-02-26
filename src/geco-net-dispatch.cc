@@ -327,7 +327,7 @@ int mpath_read_rto(short pathID);
 int mpath_read_primary_path();
 /// simple function that sends a heartbeat chunk to the indicated address
 /// @param  pathID index to the address, where HB is to be sent to
-int mpath_do_hb(int pathID);
+int mpath_do_hb(int pathID, ushort mtu);
 /// mpath_set_paths modufies number of paths and sets the primary path.
 /// This is required for association setup, where the local ULP provides
 /// only one path and the peer may provide additional paths.
@@ -372,7 +372,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID);
 /// checks RTTs, normally resets error counters, may set path back to ACTIVE state
 /// @param heartbeatChunk pointer to the received heartbeat ack chunk
 void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk);
-/// helper function, that simply sets the dchunk_sent_in_last_rto flag of this path management instance to true
+/// helper function, that simply sets the data_chunk_sent flag of this path management instance to true
 /// @param pathID  index of the address, where flag is set
 void mpath_data_chunk_sent(short pathID);
 /// pm_setPrimaryPath sets the primary path.
@@ -619,7 +619,10 @@ path_controller_t* mpath_new(short numberOfPaths, short primaryPath)
 	path_controller_t* pmData = NULL;
 	if ((pmData = (path_controller_t*)geco_malloc_ext(sizeof(path_controller_t),
 		__FILE__, __LINE__)) == NULL)
-		ERRLOG(FALTAL_ERROR_EXIT, "Malloc failed");
+	{
+		ERRLOG(WARNNING_ERROR, "Malloc failed");
+		return NULL;
+	}
 	pmData->path_params = NULL;
 	pmData->primary_path = primaryPath;
 	pmData->path_num = numberOfPaths;
@@ -637,66 +640,86 @@ void mpath_free(path_controller_t *pmData)
 {
 	//assert(pmData != NULL && pmData->path_params != NULL);
 	EVENTLOG(INFO, "deleting pathmanagement");
-	if (pmData != NULL && pmData->path_params != NULL)
+	if (pmData != NULL)
 	{
-		for (int i = 0; i < pmData->path_num; i++)
+		if (pmData->path_params != NULL)
 		{
-			if (pmData->path_params[i].hb_timer_id != NULL)
+			for (int i = 0; i < pmData->path_num; i++)
 			{
-				mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
-				pmData->path_params[i].hb_timer_id = 0;
+				if (pmData->path_params[i].hb_timer_id != NULL)
+				{
+					mtra_timeouts_del(pmData->path_params[i].hb_timer_id);
+					pmData->path_params[i].hb_timer_id = 0;
+				}
 			}
+			geco_free_ext(pmData->path_params, __FILE__, __LINE__);
 		}
-		geco_free_ext(pmData->path_params, __FILE__, __LINE__);
+		geco_free_ext(pmData, __FILE__, __LINE__);
 	}
 }
 /*getters and setters*/
 int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall)
 {
 	path_controller_t* pmData = mdi_read_mpath();
-	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
-	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
-	if (pathID >= 0 && pathID < pmData->path_num)
+	if (pmData != NULL)
 	{
-		pmData->path_params[pathID].hb_enabled = true;
-		if (hearbeatIntervall > 0)
-			pmData->path_params[pathID].hb_interval = hearbeatIntervall;
-		EVENTLOG2(VERBOSE, "mpath_enable_hb: chose interval %u msecs for path %d",
-			hearbeatIntervall, pathID);
-		pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
-		pmData->path_params[pathID].dchunk_acked_in_last_rto = false;
-		pmData->path_params[pathID].rtt_update_time = gettimestamp();
-		assert(pmData->path_params[pathID].hb_timer_id != NULL);
-		mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id,
-			pmData->path_params[pathID].rto);
-		EVENTLOG1(VERBOSE,
-			"mpath_enable_hb()::restarted timer - going off in %u msecs",
-			pmData->path_params[pathID].rto);
-		return GECONET_ERRNO::SUCESS;
+		if (pmData->path_params != NULL)
+		{
+			if (pathID >= 0 && pathID < pmData->path_num)
+			{
+				pmData->path_params[pathID].hb_enabled = true;
+				if (hearbeatIntervall > 0)
+					pmData->path_params[pathID].hb_interval = hearbeatIntervall;
+				EVENTLOG2(VERBOSE,
+					"mpath_enable_hb: chose interval %u msecs for path %d",
+					hearbeatIntervall, pathID);
+				pmData->path_params[pathID].data_chunk_sent = false;
+				pmData->path_params[pathID].data_chunk_acked = false;
+				pmData->path_params[pathID].rtt_update_time = gettimestamp();
+				assert(pmData->path_params[pathID].hb_timer_id != NULL);
+				mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id,
+					pmData->path_params[pathID].rto);
+				EVENTLOG1(VERBOSE,
+					"mpath_enable_hb()::restarted timer - going off in %u msecs",
+					pmData->path_params[pathID].rto);
+				return MULP_SUCCESS;
+			}
+			EVENTLOG1(MINOR_ERROR, "mpath_enable_hb: invalid path ID %d", pathID);
+			return MULP_PARAMETER_PROBLEM;
+		}
+		EVENTLOG(MINOR_ERROR, "mpath_enable_hb: pmData->path_params == NULL");
+		return MULP_SPECIFIC_FUNCTION_ERROR;
 	}
-	EVENTLOG1(VERBOSE, "mpath_enable_hb()::invalid path ID %d", pathID);
-	return GECONET_ERRNO::ILLEGAL_FUNC_PARAM;
+	EVENTLOG(MINOR_ERROR, "mpath_enable_hb: pmData == NULL");
+	return MULP_SPECIFIC_FUNCTION_ERROR;
 }
 int mpath_disable_hb(short pathID)
 {
 	path_controller_t* pmData = mdi_read_mpath();
-	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
-	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
-	if (pathID >= 0 && pathID < pmData->path_num)
+	if (pmData != NULL)
 	{
-		if (pmData->path_params[pathID].hb_enabled)
+		if (pmData->path_params != NULL)
 		{
-			if (pmData->path_params[pathID].hb_timer_id != NULL)
+			if (pathID >= 0 && pathID < pmData->path_num)
 			{
-				mtra_timeouts_stop(pmData->path_params[pathID].hb_timer_id);
+				if (pmData->path_params[pathID].hb_enabled)
+				{
+					if (pmData->path_params[pathID].hb_timer_id != NULL)
+					{
+						mtra_timeouts_stop(pmData->path_params[pathID].hb_timer_id);
+					}
+					pmData->path_params[pathID].hb_enabled = false;
+				}
+				return MULP_SUCCESS;
 			}
-			pmData->path_params[pathID].hb_enabled = false;
-			EVENTLOG1(INFO, "mpath_disable_hb: path %d is primary", pathID);
+			EVENTLOG1(MINOR_ERROR, "mpath_disable_hb: invalid path ID %d", pathID);
+			return MULP_PARAMETER_PROBLEM;
 		}
-		return GECONET_ERRNO::SUCESS;
+		EVENTLOG(MINOR_ERROR, "mpath_disable_hb: pmData->path_params == NULL");
+		return MULP_SPECIFIC_FUNCTION_ERROR;
 	}
-	EVENTLOG1(VERBOSE, "mpath_do_hb: invalid path ID %d", pathID);
-	return GECONET_ERRNO::ILLEGAL_FUNC_PARAM;
+	EVENTLOG(MINOR_ERROR, "mpath_disable_hb: pmData == NULL");
+	return MULP_SPECIFIC_FUNCTION_ERROR;
 }
 int mpath_disable_all_hb()
 {
@@ -738,13 +761,13 @@ short mpath_set_primary_path(short pathID)
 				if (pmData->path_params[pathID].state == PM_ACTIVE)
 				{
 					pmData->primary_path = pathID;
-					pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
-					pmData->path_params[pathID].dchunk_acked_in_last_rto = false;
+					pmData->path_params[pathID].data_chunk_sent = false;
+					pmData->path_params[pathID].data_chunk_acked = false;
 					EVENTLOG1(VERBOSE, "pm_setPrimaryPath: path %d is primary", pathID);
-					return MULP_PARAMETER_PROBLEM;
+					return MULP_SUCCESS;
 				}
 				EVENTLOG1(MINOR_ERROR, "mpath_do_hb: path %d is PM_INACTIVE", pathID);
-				return MULP_SUCCESS;
+				return MULP_PARAMETER_PROBLEM;
 			}
 			EVENTLOG1(MINOR_ERROR, "mpath_do_hb: invalid path ID %d", pathID);
 			return MULP_PARAMETER_PROBLEM;
@@ -755,14 +778,14 @@ short mpath_set_primary_path(short pathID)
 	EVENTLOG(MINOR_ERROR, "mpath_do_hb: pmData == NULL");
 	return MULP_SPECIFIC_FUNCTION_ERROR;
 }
-void mpath_data_chunk_sent(short pathID)
+inline void mpath_data_chunk_sent(short pathID)
 {
 	path_controller_t* pmData = mdi_read_mpath();
 	assert(pmData != NULL);
 	assert(pmData->path_params != NULL);
 	assert(pathID >= 0 && pathID < pmData->path_num);
 	EVENTLOG1(VERBOSE, "mpath_data_chunk_sent(%d)", pathID);
-	pmData->path_params[pathID].dchunk_sent_in_last_rto = true;
+	pmData->path_params[pathID].data_chunk_sent = true;
 }
 int mpath_read_path_status(short pathID)
 {
@@ -831,8 +854,8 @@ int mpath_read_rto(short pathID)
 			return MULP_PARAMETER_PROBLEM;
 		}
 		EVENTLOG(MINOR_ERROR,
-			"mpath_do_hb: pmData->path_params == NULL-> pmData->rto_initial");
-		return pmData->rto_initial;
+			"mpath_do_hb: pmData->path_params == NULL-> pmData");
+		return MULP_SPECIFIC_FUNCTION_ERROR;
 	}
 	EVENTLOG(MINOR_ERROR, "mpath_do_hb: pmData == NULL");
 	return MULP_SPECIFIC_FUNCTION_ERROR;
@@ -854,9 +877,9 @@ int mpath_do_hb(int pathID, ushort mtu)
 		{
 			if (pathID >= 0 && pathID < pmData->path_num)
 			{
-				if (mtu > PMTU_HIGHEST) 
+				if (mtu > PMTU_HIGHEST)
 					mtu = PMTU_HIGHEST;
-				else if (mtu < PMTU_LOWEST) 
+				else if (mtu < PMTU_LOWEST)
 					mtu = PMTU_LOWEST;
 				while (mtu & 3) mtu++;
 				chunk_id_t heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(),
@@ -915,8 +938,8 @@ void mpath_set_paths(uint noOfPaths, ushort primaryPathID) // mpath_set_paths
 			pmData->path_params[i].hb_sent = false;
 			pmData->path_params[i].hb_acked = false;
 			pmData->path_params[i].timer_backoff = false;
-			pmData->path_params[i].dchunk_acked_in_last_rto = false;
-			pmData->path_params[i].dchunk_sent_in_last_rto = false;
+			pmData->path_params[i].data_chunk_acked = false;
+			pmData->path_params[i].data_chunk_sent = false;
 			pmData->path_params[i].hb_interval = PM_INITIAL_HB_INTERVAL;
 			pmData->path_params[i].hb_timer_id = NULL;
 			pmData->path_params[i].path_id = i;
@@ -999,25 +1022,24 @@ void mpath_data_chunk_acked(short pathID, int newRTT)
 {
 	// newRTT 0 if retransmitted chunks had been acked
 	path_controller_t* pmData = mdi_read_mpath();
-	assert(pmData != NULL && "mpath_do_hb: GOT path_ctrl NULL");
-	assert(pmData->path_params != NULL && "mpath_do_hb: path_params is NULL");
-	if (pathID >= 0 && pathID < pmData->path_num)
-	{
-		ERRLOG1(MINOR_ERROR, "pm_chunksAcked: invalid path ID: %d", pathID);
-		return;
-	}
-	if (newRTT < 0)
-	{
-		ERRLOG(MINOR_ERROR, "pm_chunksAcked: Warning: newRTT < 0");
-		return;
-	}
-	if (newRTT > (int) pmData->rto_max)
-	{
-		ERRLOG1(MINOR_ERROR, "pm_chunksAcked: Warning: RTO > RTO_MAX: %d", newRTT);
-		return;
-	}
+	assert(pmData != NULL &&
+		"mpath_data_chunk_acked: GOT path_ctrl NULL");
+	assert(pmData->path_params != NULL &&
+		"mpath_data_chunk_acked: path_params is NULL");
+	assert(pathID >= 0 && pathID < pmData->path_num &&
+		"mpath_data_chunk_acked: invalid path");
+	assert(newRTT >= 0 &&
+		"mpath_data_chunk_acked: Warning: newRTT < 0 -> return");
 
 	newRTT = std::min((uint)newRTT, pmData->rto_max);
+	// if newRTT == pmData->rto_max, which means:
+	// as newrtt > 0 so this is not cased by rtx of data chunk
+	// newrtt is time of receving sack minus time of tx data chunk.
+	// reason could be that receiver's recv buffer gets full
+	// and sender has to wait a long time for receiver to have more space
+	// in such way, there is a very rare  lanteny of sack received.
+	// so we use pmData->rto_max to have a fair rtt update
+
 	if (pmData->path_params[pathID].state == PM_ACTIVE)
 	{
 		// Why we need compare rtt_update_time?
@@ -1042,19 +1064,23 @@ void mpath_data_chunk_acked(short pathID, int newRTT)
 		// 2.3. received sack1 for dchunk1 at t3, t3 > rto_update(t0) => set rto_update = t3+srtt
 		// and call mpath_update_rtt() to update rtt and rto based on pair (dchunk1 and scack1)
 		// 2.4. received sack2 for dchunk2 at t4,  t4 < rto_update(t3+srtt) => set newRTT = 0 and not update rtt by ignoring sack2
-		uint64 now = gettimestamp();
-		if (now < pmData->path_params[pathID].rtt_update_time)
+		uint64 now;
+		if (newRTT != 0)
 		{
-			EVENTLOG2(NOTICE,
-				"pm_chunksAcked: now %llu stamp - no update before %lu stamp", now,
-				pmData->path_params[pathID].rtt_update_time);
-			newRTT = 0;
+			now = gettimestamp();
+			if (now < pmData->path_params[pathID].rtt_update_time)
+			{
+				EVENTLOG2(NOTICE,
+					"pm_chunksAcked: now %llu stamp - no update before %lu stamp", now,
+					pmData->path_params[pathID].rtt_update_time);
+				newRTT = 0;
+			}
 		}
 		mpath_update_rtt(pathID, newRTT);
 		// reset counters for endpoint and this path
 		pmData->path_params[pathID].retrans_count = 0;
 		pmData->total_retrans_count = 0;
-		pmData->path_params[pathID].dchunk_acked_in_last_rto = true;
+		pmData->path_params[pathID].data_chunk_acked = true;
 		if (newRTT != 0)
 		{
 			pmData->path_params[pathID].rtt_update_time = now;
@@ -1134,6 +1160,7 @@ bool mpath_handle_chunks_rtx(short pathID)
 			/* No active parts are left, communication lost to ULP */
 			mdi_on_disconnected(ConnectionLostReason::PeerUnreachable);
 			mdi_delete_curr_channel();
+			mdi_clear_current_channel();
 			// currchannel will be used later anyway ! so not clear
 			// mdi_clear_current_channel();
 			EVENTLOG(DEBUG,
@@ -1144,13 +1171,13 @@ bool mpath_handle_chunks_rtx(short pathID)
 		if (pathID == pmData->primary_path)
 		{
 			//reset alternative path data acked and sent to false and they will be chaged to true very quickly when send data chunks on it.
-			pmData->path_params[pID].dchunk_sent_in_last_rto = false;
-			pmData->path_params[pID].dchunk_acked_in_last_rto = false;
+			pmData->path_params[pID].data_chunk_sent = false;
+			pmData->path_params[pID].data_chunk_acked = false;
 			pmData->primary_path = pID;
 
 			//reset primary path data acked and sent to false so that we can do hb for it again by seting hb timer in hb_timer_expired()
-			pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
-			pmData->path_params[pathID].dchunk_acked_in_last_rto = false;
+			pmData->path_params[pathID].data_chunk_sent = false;
+			pmData->path_params[pathID].data_chunk_acked = false;
 			EVENTLOG2(INFO,
 				"mpath_handle_chunks_rtx():: primary path %d becomes inactive, change path %d to primary",
 				pathID, pID);
@@ -1234,12 +1261,12 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 			}
 			if (mtu != 0)
 			{
-				if ((pmData->path_params[pathID].dchunk_sent_in_last_rto == true
-					&& pmData->path_params[pathID].dchunk_acked_in_last_rto == true)
+				if ((pmData->path_params[pathID].data_chunk_sent == true
+					&& pmData->path_params[pathID].data_chunk_acked == true)
 					||
 					/*not acked but no congestion occures, must be pmtu is too big*/
-					(pmData->path_params[pathID].dchunk_sent_in_last_rto == false
-						&& pmData->path_params[pathID].dchunk_acked_in_last_rto == false
+					(pmData->path_params[pathID].data_chunk_sent == false
+						&& pmData->path_params[pathID].data_chunk_acked == false
 						&& pmData->path_params[pathID].retrans_count > 1)
 					/*not acked on idle path,  possibly pmtu too big or congestion control,
 					 here we try send old mtu one more time if not acked again,
@@ -1344,13 +1371,13 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 			// just readd this timer back with different timeouts
 			mtra_timeouts_readd(timerID, newtimeout);
 			/* reset this flag, so we can check, whether the path was idle */
-			pmData->path_params[pathID].dchunk_sent_in_last_rto = false;
+			pmData->path_params[pathID].data_chunk_sent = false;
 		}
 
 		//reset states
 		pmData->path_params[pathID].hb_acked = false;
 		pmData->path_params[pathID].timer_backoff = false;
-		pmData->path_params[pathID].dchunk_acked_in_last_rto = false;
+		pmData->path_params[pathID].data_chunk_acked = false;
 		mdi_clear_current_channel();
 	}
 	//else we have called 	mdi_clear_current_channel() in mpath_handle_chunks_rtx so here no need call it again
@@ -2224,13 +2251,13 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 								}
 							}
 						}
-					}
 				}
+			}
 				else
 				{
 					EVENTLOG(DEBUG, "Too many addresses found during IPv4 reading");
 				}
-			}
+		}
 			break;
 		case VLPARAM_SUPPORTED_ADDR_TYPES:
 			if (peer_supported_addr_types != NULL)
@@ -2251,14 +2278,14 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 					*peer_supported_addr_types);
 			}
 			break;
-		}
+	}
 		read_len += vlp_len;
 		while (read_len & 3)
 			++read_len;
 		curr_pos = chunk + read_len;
-	}  // while
+}  // while
 
-	// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
+// we do not to validate last_source_assr here as we have done that in recv_geco_pacjet()
 	if (!ignore_last_src_addr)
 	{
 		is_new_addr = true;
@@ -2365,8 +2392,8 @@ bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		default:
 			ERRLOG(MAJOR_ERROR, "contains_local_host_addr():no such addr family!");
 			ret = false;
+			}
 		}
-	}
 	/*2) otherwise try to find from local addr list stored in curr geco instance*/
 	if (curr_geco_instance_ != NULL)
 	{
@@ -2419,7 +2446,7 @@ bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
 		}
 	}
 	return ret;
-}
+	}
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
 	bool receivedFromPeer)

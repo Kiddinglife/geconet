@@ -24,6 +24,11 @@ struct mpath : public testing::Test
 	path_params_t* path;
 	bool old_hb_acked;
 	uint old_total_retrans_count;
+	uint old_srtt;
+	uint old_rttvar;
+	uint old_rto;
+	uint old_first_rto;
+	uint64 old_rtt_update_time;
 
 	virtual void SetUp()
 	{
@@ -38,13 +43,18 @@ struct mpath : public testing::Test
 		old_hb_acked = path->hb_acked;
 		old_channel = curr_channel_;
 		old_total_retrans_count = mpath_->total_retrans_count;
+		old_srtt = path->srtt;
+		old_rttvar = path->rttvar;
+		old_rto = path->rto;
+		old_first_rto = path->firstRTO;
+		old_rtt_update_time = path->rtt_update_time;
 	}
 	virtual void TearDown()
 	{
 		free_geco_channel();
 	}
 
-	void reset_path()
+	void reset()
 	{
 		//reset everything of 'path' to its init valuess
 		mpath_->total_retrans_count = old_total_retrans_count;
@@ -56,6 +66,11 @@ struct mpath : public testing::Test
 		path->hb_acked = old_hb_acked;
 		curr_channel_ = old_channel;
 		curr_geco_instance_ = curr_channel_->geco_inst;
+		path->srtt = old_srtt;
+		path->rttvar = old_rttvar;
+		path->rto = old_rto;
+		path->firstRTO = old_first_rto;
+		path->rtt_update_time = old_rtt_update_time;
 	}
 };
 
@@ -90,8 +105,8 @@ TEST_F(mpath, test_set_paths)
 		ASSERT_EQ(mpath_->path_params[i].hb_sent, false);
 		ASSERT_EQ(mpath_->path_params[i].hb_acked, false);
 		ASSERT_EQ(mpath_->path_params[i].timer_backoff, false);
-		ASSERT_EQ(mpath_->path_params[i].dchunk_acked_in_last_rto, false);
-		ASSERT_EQ(mpath_->path_params[i].dchunk_sent_in_last_rto, false);
+		ASSERT_EQ(mpath_->path_params[i].data_chunk_acked, false);
+		ASSERT_EQ(mpath_->path_params[i].data_chunk_sent, false);
 		ASSERT_EQ(mpath_->path_params[i].hb_interval, PM_INITIAL_HB_INTERVAL);
 		ASSERT_EQ(mpath_->path_params[i].path_id, i);
 		ASSERT_EQ(mpath_->path_params[i].eff_pmtu, PMTU_LOWEST);
@@ -174,7 +189,7 @@ TEST_F(mpath, test_handle_chunks_retx)
 	mpath_->path_params[1].retrans_count = 0;
 	mpath_->path_params[1].state = PM_PATH_UNCONFIRMED;
 	mpath_->total_retrans_count = 0;
-	//7 when unconfirmed paths' total_retrans_count >= max_channel_retrans_count,
+	//7 when all paths are unconfirmed and total_retrans_count >= max_channel_retrans_count,
 	ret = mpath_handle_chunks_rtx(0);
 	ret = mpath_handle_chunks_rtx(1);
 	ret = mpath_handle_chunks_rtx(0);
@@ -201,20 +216,21 @@ TEST_F(mpath, test_handle_chunks_retx)
 	mpath_ = curr_channel_->path_control;
 	//9 when primary path becomes inactive,
 	mpath_->primary_path = 0;
-	mpath_->path_params[0].dchunk_sent_in_last_rto = true;
+	mpath_->path_params[0].data_chunk_sent = true;
 	ret = mpath_handle_chunks_rtx(0);
 	ret = mpath_handle_chunks_rtx(0);
 	// then use path1 as primary path even it is unconfirmed
 	ASSERT_EQ(mpath_->primary_path, 1);
-	ASSERT_EQ(mpath_->path_params[0].dchunk_sent_in_last_rto, false);
-	ASSERT_EQ(mpath_->path_params[1].dchunk_acked_in_last_rto, false);
+	ASSERT_EQ(mpath_->path_params[0].data_chunk_sent, false);
+	ASSERT_EQ(mpath_->path_params[1].data_chunk_acked, false);
 	//reset to initial mpath value
-	mpath_->path_params[0].dchunk_sent_in_last_rto = false;
+	mpath_->path_params[0].data_chunk_sent = false;
 	mpath_->path_params[0].retrans_count = 0;
 	mpath_->path_params[0].state = PM_PATH_UNCONFIRMED;
 	mpath_->path_params[1].retrans_count = 0;
 	mpath_->path_params[1].state = PM_PATH_UNCONFIRMED;
 	mpath_->total_retrans_count = 0;
+	reset();
 }
 
 extern int mpath_heartbeat_timer_expired(timeout* timerID);
@@ -231,11 +247,11 @@ TEST_F(mpath, test_heartbeat_timer_expired)
 	ASSERT_EQ(curr_channel_, nullptr);
 	ASSERT_EQ(timerID->callback.arg3, nullptr);
 	ASSERT_EQ(timerID, path->hb_timer_id);
-	ASSERT_EQ(false, path->dchunk_sent_in_last_rto);
-	ASSERT_EQ(false, path->dchunk_acked_in_last_rto);
+	ASSERT_EQ(false, path->data_chunk_sent);
+	ASSERT_EQ(false, path->data_chunk_acked);
 	ASSERT_EQ(path->retrans_count, 0);
-	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto + path->hb_interval)), 0.1f);
-	reset_path();
+	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto + path->hb_interval)), 1.f);
+	reset();
 	//2 when mtu 0, hb_sent true, hb_acked false
 	timerID->callback.arg3 = nullptr;
 	path->hb_sent = true;
@@ -245,11 +261,11 @@ TEST_F(mpath, test_heartbeat_timer_expired)
 	ASSERT_EQ(timerID->callback.arg3, nullptr);
 	ASSERT_EQ(path->probing_pmtu, PMTU_HIGHEST);
 	ASSERT_EQ(timerID, path->hb_timer_id);
-	ASSERT_EQ(false, path->dchunk_sent_in_last_rto);
-	ASSERT_EQ(false, path->dchunk_acked_in_last_rto);
+	ASSERT_EQ(false, path->data_chunk_sent);
+	ASSERT_EQ(false, path->data_chunk_acked);
 	ASSERT_EQ(path->retrans_count, 1);
-	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto + path->hb_interval)), 0.1f);
-	reset_path();
+	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto + path->hb_interval)), 1.f);
+	reset();
 	//3 when mtu !0, hb_sent false, hb_acked false
 	path->hb_sent = false;
 	mpath_heartbeat_timer_expired(timerID);
@@ -258,11 +274,11 @@ TEST_F(mpath, test_heartbeat_timer_expired)
 	ASSERT_EQ(*(uint*)(timerID->callback.arg3), PMTU_HIGHEST);
 	ASSERT_EQ(path->probing_pmtu, PMTU_HIGHEST);
 	ASSERT_EQ(timerID, path->hb_timer_id);
-	ASSERT_EQ(false, path->dchunk_sent_in_last_rto);
-	ASSERT_EQ(false, path->dchunk_acked_in_last_rto);
+	ASSERT_EQ(false, path->data_chunk_sent);
+	ASSERT_EQ(false, path->data_chunk_acked);
 	ASSERT_EQ(path->retrans_count, 0);
-	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto)), 0.1f);
-	reset_path();
+	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto)), 1.f);
+	reset();
 	//4 when mtu !0, hb_sent false, hb_acked true
 	path->hb_sent = false;
 	path->hb_acked = true;
@@ -272,11 +288,11 @@ TEST_F(mpath, test_heartbeat_timer_expired)
 	ASSERT_EQ(timerID->callback.arg3, nullptr);
 	ASSERT_EQ(path->probing_pmtu, PMTU_HIGHEST);
 	ASSERT_EQ(timerID, path->hb_timer_id);
-	ASSERT_EQ(false, path->dchunk_sent_in_last_rto);
-	ASSERT_EQ(false, path->dchunk_acked_in_last_rto);
+	ASSERT_EQ(false, path->data_chunk_sent);
+	ASSERT_EQ(false, path->data_chunk_acked);
 	ASSERT_EQ(path->retrans_count, 0);
-	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto + path->hb_interval)), 0.1f);
-	reset_path();
+	ASSERT_LE(abs((timerID->expires - old_exps) / stamps_per_ms_double() - (double)(path->rto + path->hb_interval)), 1.f);
+	reset();
 	//5 when total_retrans_count >= max_channel_retrans_count,
 	mpath_->total_retrans_count = mpath_->max_retrans_per_path*mpath_->path_num;
 	mpath_->path_params[1].state = PM_ACTIVE;
@@ -298,7 +314,7 @@ TEST_F(mpath, test_update_rtt)
 	mpath_update_rtt(path->path_id, 0);
 	//then should not update rtt  pmData->path_params[pathID].firstRTO
 	ASSERT_EQ(path->firstRTO, true);
-	reset_path();
+	reset();
 	//2 when it is Not retransmit acked
 	mpath_update_rtt(path->path_id, 50);
 	//then should update rtt
@@ -312,5 +328,59 @@ TEST_F(mpath, test_update_rtt)
 	ASSERT_EQ(path->srtt, 50);
 	ASSERT_EQ(path->rttvar, 18);
 	ASSERT_EQ(path->rto, mpath_->rto_min);
-	reset_path();
+	reset();
+}
+
+extern void mpath_data_chunk_acked(short pathID, int newRTT);
+TEST_F(mpath, test_data_chunk_acked)
+{
+	bool ret;
+
+	//1 when newrtt >= rto_max 
+	mpath_data_chunk_acked(path->path_id, mpath_->rto_max + 1);
+	//then should use rto_max to update rtt
+	ASSERT_EQ(path->srtt, mpath_->rto_max);
+	reset();
+
+	//2 when  newrtt  0, path inactive
+	mpath_data_chunk_acked(path->path_id, 0);
+	path->state = PM_INACTIVE;
+	//then do nothing but just return 
+	ASSERT_EQ(path->srtt, old_srtt);
+	reset();
+
+	//3 when  0 < newrtt < rto_max, path inactive
+	mpath_data_chunk_acked(path->path_id, mpath_->rto_max / 2);
+	path->state = PM_INACTIVE;
+	//then do nothing but just return 
+	ASSERT_EQ(path->srtt, old_srtt);
+	reset();
+
+	//3 when  newrtt 0, path active
+	mpath_data_chunk_acked(path->path_id, 0);
+	path->state = PM_ACTIVE;
+	//then update path error counter
+	ASSERT_EQ(path->retrans_count, 0);
+	ASSERT_EQ(mpath_->total_retrans_count, 0);
+	ASSERT_EQ(path->data_chunk_acked, true);
+	reset();
+
+	//4 when  0 < newrtt < rto_max, path active
+	mpath_data_chunk_acked(path->path_id, 50);
+	path->state = PM_ACTIVE;
+	//then update path error counter, rto_update_time
+	ASSERT_EQ(path->retrans_count, 0);
+	ASSERT_EQ(mpath_->total_retrans_count, 0);
+	ASSERT_EQ(path->data_chunk_acked, true);
+	int interval =
+		(path->rtt_update_time - old_rtt_update_time) / stamps_per_ms_double();
+	ASSERT_GT(interval, path->srtt);// SRTT 50MS + SYTEM INTERVAL 8.7MS
+	reset();
+}
+
+extern void mpath_process_heartbeat_ack_chunk(heartbeat_chunk_t* heartbeatChunk);
+TEST_F(mpath, test_process_heartbeat_ack_chunk)
+{
+	bool ret;
+	//TODO
 }

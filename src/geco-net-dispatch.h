@@ -182,9 +182,9 @@ struct path_params_t
 	//only backoff once per hb-interval
 	bool timer_backoff;
 	//set to true when data chunks are acked
-	bool dchunk_acked_in_last_rto;
+	bool data_chunk_acked;
 	// true if chunks have been senr over this path within last RTO
-	bool dchunk_sent_in_last_rto;
+	bool data_chunk_sent;
 	//set to true when a hb is sent
 	bool hb_sent;
 	/*set to true when a hearbeat is acknowledged and to false when a
