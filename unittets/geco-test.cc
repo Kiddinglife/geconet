@@ -7,19 +7,15 @@
 
 #include "geco-test.h"
 
+/**
+ * ut specific implementations
+ */
 int UT_INST_ID = -1;
 int UT_CHANNEL_ID = -1;
-static uchar UT_LOCAL_ADDR_LIST[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN] =
+uchar UT_LOCAL_ADDR_LIST[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN] =
   { 0 };
 ulp_cbs_t UT_ULPcallbackFunctions =
   { 0 };
-
-extern int
-mulp_new_geco_instance (
-    unsigned short localPort, unsigned short noOfOrderStreams,
-    unsigned short noOfSeqStreams, unsigned int noOfLocalAddresses,
-    unsigned char localAddressList[MAX_NUM_ADDRESSES][MAX_IPADDR_STR_LEN],
-    ulp_cbs_t ULPcallbackFunctions);
 void
 alloc_geco_instance ()
 {
@@ -68,25 +64,6 @@ free_geco_instance ()
   curr_geco_instance_ = NULL;
 }
 
-extern bool
-mdi_new_channel (geco_instance_t* instance, ushort local_port,
-                 ushort remote_port, uint tagLocal,
-                 short primaryDestinitionAddress,
-                 ushort noOfDestinationAddresses,
-                 sockaddrunion *destinationAddressLis);
-extern ushort
-mdi_init_channel (uint remoteSideReceiverWindow, ushort noOfOrderStreams,
-                  ushort noOfSeqStreams, uint remoteInitialTSN, uint tagRemote,
-                  uint localInitialTSN, bool assocSupportsPRSCTP,
-                  bool assocSupportsADDIP);
-extern void
-set_channel_remote_addrlist (sockaddrunion destaddrlist[MAX_NUM_ADDRESSES],
-                             int noOfAddresses);
-extern void
-mdi_delete_curr_channel ();
-extern void mdi_on_peer_connected(uint status);
-extern bool mdi_connect_udp_sfd_;
-extern bundle_controller_t* default_bundle_ctrl_;
 void
 alloc_geco_channel ()
 {
@@ -152,9 +129,4 @@ TEST(UT_HELPER, test_make_geco_channel)
 {
   alloc_geco_channel ();
   free_geco_channel ();
-}
-
-extern void reset_channel()
-{
-	
 }

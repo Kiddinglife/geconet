@@ -1,6 +1,6 @@
 
 #include "geco-net-dispatch.h"
-#include "spdlog\spdlog.h"
+#include "spdlog/spdlog.h"
 #include "geco-net-transport.h"
 #include "geco-net-chunk.h"
 #include "geco-net-auth.h"

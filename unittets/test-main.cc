@@ -54,24 +54,24 @@ main(int argc, char** argv)
 	// no need for calling testing::InitGoogleTest() separately.
 	testing::InitGoogleMock(&argc, argv);
 
-	// last pass on 26 Oct 2016
 	//::testing::GTEST_FLAG(filter) = "GLOBAL_MODULE.*";
 
-	// last pass on 26 Oct 2016
 	// ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.*";
 	//::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
 	// ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_timer_mgr";
 	//::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_wheel_timer";
 	//::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_bitops";
 
-	// last pass on 31 Oct 2016
 	// ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.*";
 	// ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_alloc_dealloc";
 	// ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_alloc_dealloc";
 	// ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_geco_new_delete";
 
-	// last pass on 26 Oct 2016
 	// ::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
+
+        //::testing::GTEST_FLAG(filter) = "UT_HELPER.*";
+        //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
+        //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
 	::testing::GTEST_FLAG(filter) = "mpath.*";
 	//::testing::GTEST_FLAG(filter) = "mpath.test_set_paths"; 
@@ -79,10 +79,8 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";
 	//::testing::GTEST_FLAG(filter) = "mpath.test_heartbeat_timer_expired";
 	//::testing::GTEST_FLAG(filter) = "mpath.test_update_rtt"; 
-	// ::testing::GTEST_FLAG(filter) = "mpath.test_data_chunk_acked";
+	//::testing::GTEST_FLAG(filter) = "mpath.test_data_chunk_acked";
 	//::testing::GTEST_FLAG(filter) = "mpath.test_hb_ack_received";
-	//::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
-	//::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
 	// last pass on 31 Oct 2016
 	//::testing::GTEST_FLAG(filter) = "MULP.*";
@@ -97,11 +95,9 @@ main(int argc, char** argv)
 	// current unit test summary locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168.... cross-machina connection NOT ok
 	// ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
-	// last pass on 26 Oct 2016
 	//::testing::GTEST_FLAG(filter) = "MBU.*";
 	//::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
-	// last pass on 31 Oct 2016
 	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
 
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
