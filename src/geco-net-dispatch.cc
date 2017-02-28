@@ -9090,8 +9090,8 @@ bool cmp_geco_instance(const geco_instance_t& traget, const geco_instance_t& b)
 		if (af == AF_INET)
 			return true;
 	}
-	else //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
-	{
+	//else //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
+	//{
 		// find if at least there is an ip addr thate quals
 		for (int i = 0; i < traget.local_addres_size; i++)
 		{
@@ -9104,36 +9104,14 @@ bool cmp_geco_instance(const geco_instance_t& traget, const geco_instance_t& b)
 				}
 			}
 		}
-	}
+	//}
 	return false;
-
-	//if (!a.is_in6addr_any && !b.is_in6addr_any && !a.is_inaddr_any && !b.is_inaddr_any)
-	//{
-	//	int i, j;
-	//	/*find if at least there is an ip addr thate quals*/
-	//	for (i = 0; i < a.local_addres_size; i++)
-	//	{
-	//		for (j = 0; j < b.local_addres_size; j++)
-	//		{
-	//			if (saddr_equals(&(a.local_addres_list[i]), &(b.local_addres_list[j]), true))
-	//			{
-	//				return true;
-	//			}
-	//		}
-	//	}
-	//	return false;
-	//}
-	//else
-	//{
-	//	/* one has IN_ADDR_ANY OR IN6_ADDR_ANY : return equal ! */
-	//	return true;
-	//}
 }
 
 geco_instance_t* mdi_find_geco_instance(sockaddrunion* dest_addr,
 	ushort dest_port)
 {
-	if (geco_instances_.size() == 0)
+	if (geco_instances_.empty())
 	{
 		ERRLOG(MAJOR_ERROR,
 			"dispatch_layer_t::mdi_find_geco_instance()::geco_instances_.size() == 0");

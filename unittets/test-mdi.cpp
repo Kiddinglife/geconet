@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
+
 #include "geco-test.h"
 
 #define reset_geco_packet_fixed() \
@@ -102,387 +103,378 @@
            uint dctp_packet_len = 0; int ret = good
 
 static void
-init_inst (geco_instance_t& inst, ushort destport, const char** src_ips,
-           uint src_ips_len, sockaddrunion* dest)
+init_inst(geco_instance_t& inst, ushort destport, const char** src_ips,
+	uint src_ips_len, sockaddrunion* dest)
 {
-  for (uint i = 0; i < src_ips_len; i++)
-  {
-    str2saddr (&dest[i], src_ips[i], destport);
-  }
-  inst.local_addres_size = src_ips_len;
-  inst.local_addres_list = dest;
-  inst.local_port = destport;
-  geco_instances_.push_back (&inst);
+	for (uint i = 0; i < src_ips_len; i++)
+	{
+		str2saddr(&dest[i], src_ips[i], destport);
+	}
+	inst.local_addres_size = src_ips_len;
+	inst.local_addres_list = dest;
+	inst.local_port = destport;
+	geco_instances_.push_back(&inst);
 }
 static void
-init_channel (geco_channel_t& channel, ushort srcport, ushort destport,
-              const char** src_ips, uint src_ips_len, const char** dest_ips,
-              uint dest_ips_len, sockaddrunion* srclist,
-              sockaddrunion* destlist)
+init_channel(geco_channel_t& channel, ushort srcport, ushort destport,
+	const char** src_ips, uint src_ips_len, const char** dest_ips,
+	uint dest_ips_len, sockaddrunion* srclist,
+	sockaddrunion* destlist)
 {
-  for (uint i = 0; i < src_ips_len; i++)
-  {
-    str2saddr (&srclist[i], src_ips[i], srcport);
-  }
-  for (uint i = 0; i < dest_ips_len; i++)
-  {
-    str2saddr (&destlist[i], dest_ips[i], destport);
-  }
-  channel.remote_addres = srclist;
-  channel.local_addres = destlist;
-  channel.remote_port = srcport;
-  channel.local_port = destport;
-  channel.remote_addres_size = src_ips_len;
-  channel.local_addres_size = dest_ips_len;
-  channel.deleted = false;
-  channel.is_IN6ADDR_ANY = false;
-  channel.is_INADDR_ANY = false;
+	for (uint i = 0; i < src_ips_len; i++)
+	{
+		str2saddr(&srclist[i], src_ips[i], srcport);
+	}
+	for (uint i = 0; i < dest_ips_len; i++)
+	{
+		str2saddr(&destlist[i], dest_ips[i], destport);
+	}
+	channel.remote_addres = srclist;
+	channel.local_addres = destlist;
+	channel.remote_port = srcport;
+	channel.local_port = destport;
+	channel.remote_addres_size = src_ips_len;
+	channel.local_addres_size = dest_ips_len;
+	channel.deleted = false;
+	channel.is_IN6ADDR_ANY = false;
+	channel.is_INADDR_ANY = false;
 }
 static void
-init_addrlist (bool isip4, ushort port, const char** ipstrs, uint len,
-               sockaddrunion* addrlist)
+init_addrlist(bool isip4, ushort port, const char** ipstrs, uint len,
+	sockaddrunion* addrlist)
 {
-  for (uint i = 0; i < len; i++)
-  {
-    str2saddr (&addrlist[i], ipstrs[i], port);
-  }
+	for (uint i = 0; i < len; i++)
+	{
+		str2saddr(&addrlist[i], ipstrs[i], port);
+	}
 }
 
-TEST(DISPATCHER_MODULE, test_mdis_find_geco_instance)
+// passed on 28/02/2017
+TEST(DISPATCHER_MODULE, test_find_geco_instance)
 {
-  /* 6) find dctp instancefor this packet
-   *  if this packet is for a server dctp instance,
-   *  we will find that dctp instance and let it handle this packet
-   *  (i.e. we have the dctp instance's localPort set and
-   *  it matches the packet's destination port)*/
-  geco_instance_t inst;
-  const int destaddrsize = 6;
-  const char* destipstrs[destaddrsize] =
-    { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
-        "192.168.1.5" };
-  const ushort destport = 9989;
-  sockaddrunion dest_addrs[destaddrsize];
-  init_inst (inst, destport, destipstrs, destaddrsize, dest_addrs);
+	// given
+	const int destaddrsize = 6;
+	const char* destipstrs[destaddrsize] =
+	{ "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
+		"192.168.1.5" };
+	const ushort destport = 9989;
 
-  sockaddrunion* last_dest_addr;
-  ushort last_dest_port;
-  geco_instance_t* ret = 0;
+	geco_instance_t inst;
+	sockaddrunion dest_addrs[destaddrsize];
+	init_inst(inst, destport, destipstrs, destaddrsize, dest_addrs);
 
-  // 1)  if is_in6addr_any and is_inaddr_any are both false
-  inst.is_in6addr_any = inst.is_inaddr_any = false;
-  // 1.1) if last_dest_port, last_dest_addr and addr family both matches
-  last_dest_port = inst.local_port;
-  for (uint i = 0; i < inst.local_addres_size; i++)
-  {
-    last_dest_addr = &inst.local_addres_list[i];
-    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
-    //  1.1.1) should found this inst
-    EXPECT_EQ(ret, &inst);
-  }
-  // 1.2) if last_dest_port NOT mathces
-  last_dest_port = inst.local_port - 1;
-  for (uint i = 0; i < inst.local_addres_size; i++)
-  {
-    last_dest_addr = &inst.local_addres_list[i];
-    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
-    //  1.2.1) should NOT found this inst
-    EXPECT_EQ(ret, nullptr);
-  }
-  // 1.3) if last_dest_addr NOT matches
-  last_dest_port = inst.local_port;
-  for (uint i = 0; i < inst.local_addres_size; i++)
-  {
-    sockaddrunion tmp = inst.local_addres_list[i];
-    s4addr(&tmp) -= 1;  // just minus to make it different
-    last_dest_addr = &tmp;
-    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
-    //  1.3.1) should NOT found this inst
-    EXPECT_EQ(ret, nullptr);
-  }
-  // 1.4) if addr family NOT matches
-  last_dest_port = inst.local_port;
-  for (uint i = 0; i < inst.local_addres_size; i++)
-  {
-    sockaddrunion tmp = inst.local_addres_list[i];
-    saddr_family(&tmp) == AF_INET ?
-    saddr_family(&tmp) = AF_INET6 :
-                                    saddr_family(&tmp) = AF_INET;
-    last_dest_addr = &tmp;
-    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
-    //  1.4.1) should NOT found this inst
-    EXPECT_EQ(ret, nullptr);
-  }
-  // 2)  if is_in6addr_any is true
-  inst.is_in6addr_any = true;
-  // 2.1) last_dest_addr and addr family ALL NOT match, but last_dest_port_matches
-  for (uint i = 0; i < inst.local_addres_size; i++)
-  {
-    sockaddrunion tmp = inst.local_addres_list[i];
-    s4addr(&tmp) -= 1;  // just minus to make it different
-    saddr_family(&tmp) == AF_INET ?
-    saddr_family(&tmp) = AF_INET6 :
-                                    saddr_family(&tmp) = AF_INET;
-    last_dest_addr = &tmp;
-    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
-    //  2.1.1) should still found this inst
-    EXPECT_EQ(ret, &inst);
-  }
+	sockaddrunion* last_dest_addr;
+	ushort last_dest_port;
+	geco_instance_t* ret = 0;
+
+	// 1)  when is_in6addr_any and is_inaddr_any are both false
+	inst.is_in6addr_any = inst.is_inaddr_any = false;
+
+	// 1.1) and when last_dest_port, last_dest_addr and addr family both matches
+	last_dest_port = inst.local_port;
+	for (uint i = 0; i < inst.local_addres_size; i++)
+	{
+		last_dest_addr = &inst.local_addres_list[i];
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  1.1.1) then should found this inst
+		EXPECT_EQ(ret, &inst);
+	}
+
+	// 1.2) and when last_dest_port NOT mathces
+	last_dest_port = inst.local_port - 1;
+	for (uint i = 0; i < inst.local_addres_size; i++)
+	{
+		last_dest_addr = &inst.local_addres_list[i];
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  1.2.1) then should NOT found this inst
+		EXPECT_EQ(ret, nullptr);
+	}
+
+	// 1.3) and when last_dest_addr NOT matches
+	last_dest_port = inst.local_port;
+	for (uint i = 0; i < inst.local_addres_size; i++)
+	{
+		sockaddrunion tmp = inst.local_addres_list[i];
+		s4addr(&tmp) -= 1;  // just minus to make it different
+		last_dest_addr = &tmp;
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  1.3.1) then should NOT found this inst
+		EXPECT_EQ(ret, nullptr);
+	}
+
+	// 1.4) and when addr family NOT matches
+	last_dest_port = inst.local_port;
+	for (uint i = 0; i < inst.local_addres_size; i++)
+	{
+		sockaddrunion tmp = inst.local_addres_list[i];
+		saddr_family(&tmp) == AF_INET ?
+			saddr_family(&tmp) = AF_INET6 :
+			saddr_family(&tmp) = AF_INET;
+		last_dest_addr = &tmp;
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  1.4.1) then should NOT found this inst
+		EXPECT_EQ(ret, nullptr);
+	}
+
+	// 2) when  is_in6addr_any true, is_in4addr_any false 
+	// assume receive this packet and so addr family must  match
+	// HERE local_addres_size IS ALL IP4 ADDR
+	inst.is_in6addr_any = true;
+	for (uint i = 0; i < inst.local_addres_size; i++)
+	{
+		sockaddrunion tmp = inst.local_addres_list[i];
+		//  2.1) and when af(make it ip6) NOT matches (original ip4)
+		saddr_family(&tmp) = AF_INET6;
+		last_dest_addr = &tmp;
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  2.1.1) should still found this inst
+		EXPECT_EQ(ret, &inst);
+		//  2.2) and when af matches (ip4)
+		saddr_family(&tmp) = AF_INET;
+		last_dest_addr = &tmp;
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  2.2.1) should still found this inst
+		EXPECT_EQ(ret, &inst);
+		//  2.2.1) and when dest addr NOT matches 
+		s4addr(&tmp) -= 1;  // just minus to make it not to be found in local_addres_
+		saddr_family(&tmp) = AF_INET;
+		last_dest_addr = &tmp;
+		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
+		//  2.2.1) should NOT found this inst
+		EXPECT_EQ(ret, nullptr);
+	}
 }
 
-// last run and passed on 22 Agu 2016
-extern void
-mdi_set_channel_remoteaddrlist (sockaddrunion addresses[MAX_NUM_ADDRESSES],
-                                int noOfAddresses);
-extern geco_channel_t*
-mdi_find_channel ();
-struct transportaddr_hash_functor
+// passed on 28/02/2017
+TEST(DISPATCHER_MODULE, test_find_channel)
 {
-    size_t
-    operator() (const transport_addr_t &addr) const
-    {
-      return transportaddr2hashcode (addr.local_saddr, addr.peer_saddr);
-    }
-};
+	// given
+	const int src_ips_len = 3;
+	const char* src_ips[src_ips_len] =
+	{ "192.168.1.0", "192.168.1.1", "192.168.1.2" };
+	const int dest_ips_len = 3;
+	const char* dest_ips[dest_ips_len] =
+	{ "192.168.1.3", "192.168.1.4", "192.168.1.5" };
+	const ushort ports[] =
+	{ 100, 101 };  // src-dest
+	sockaddrunion remote_addres[src_ips_len];
+	sockaddrunion local_addres[dest_ips_len];
+	geco_channel_t channel;
+	for (uint i = 0; i < src_ips_len; i++)
+	{
+		str2saddr(&remote_addres[i], src_ips[i], ports[0]);
+	}
+	for (uint i = 0; i < dest_ips_len; i++)
+	{
+		str2saddr(&local_addres[i], dest_ips[i], ports[1]);
+	}
+	channel.channel_id = 5;
+	channel.remote_addres = 0;
+	channel.local_addres = local_addres;
+	channel.remote_port = ports[0];
+	channel.local_port = ports[1];
+	channel.remote_addres_size = 0;
+	channel.local_addres_size = dest_ips_len;
+	channel.deleted = false;
+	channel.is_IN6ADDR_ANY = false;
+	channel.is_INADDR_ANY = false;
 
-struct transportaddr_cmp_functor
-{
-    bool
-    operator() (const transport_addr_t& addr1,
-                const transport_addr_t &addr2) const
-    {
-      return saddr_equals (addr1.local_saddr, addr2.local_saddr)
-          && saddr_equals (addr1.peer_saddr, addr2.peer_saddr);
-    }
-};
-#ifdef _WIN32
-extern std::unordered_map<transport_addr_t, uint, transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
-#else
-extern std::tr1::unordered_map<transport_addr_t, uint,
-    transportaddr_hash_functor, transportaddr_cmp_functor> channel_map_;
-#endif
-extern transport_addr_t curr_trans_addr_;
-TEST(DISPATCHER_MODULE, test_mdis_find_channel)
-{
-  const int src_ips_len = 3;
-  const char* src_ips[src_ips_len] =
-    { "192.168.1.0", "192.168.1.1", "192.168.1.2" };
-  const int dest_ips_len = 3;
-  const char* dest_ips[dest_ips_len] =
-    { "192.168.1.3", "192.168.1.4", "192.168.1.5" };
-  const ushort ports[] =
-    { 100, 101 };  // src-dest
-  sockaddrunion remote_addres[src_ips_len];
-  sockaddrunion local_addres[dest_ips_len];
+	// stub the related variables
+	geco_channel_t* chanids[8] =
+	{ 0 };
+	channels_ = chanids;
+	curr_channel_ = &channel;
+	channels_[5] = curr_channel_;
+	mdi_set_channel_remoteaddrlist(remote_addres, src_ips_len);
 
-  geco_channel_t channel;
-  //init_channel(channel, ports[0], ports[1], src_ips, src_ips_len, dest_ips,dest_ips_len, remote_addres, local_addres);
-  for (uint i = 0; i < src_ips_len; i++)
-  {
-    str2saddr (&remote_addres[i], src_ips[i], ports[0]);
-  }
-  for (uint i = 0; i < dest_ips_len; i++)
-  {
-    str2saddr (&local_addres[i], dest_ips[i], ports[1]);
-  }
-  channel.channel_id = 5;
-  channel.remote_addres = 0;
-  channel.local_addres = local_addres;
-  channel.remote_port = ports[0];
-  channel.local_port = ports[1];
-  channel.remote_addres_size = 0;
-  channel.local_addres_size = dest_ips_len;
-  channel.deleted = false;
-  channel.is_IN6ADDR_ANY = false;
-  channel.is_INADDR_ANY = false;
+	//temps
+	geco_channel_t* found;
+	sockaddrunion* last_src_addr;
+	sockaddrunion* last_dest_addr;
+	ushort last_src_port = channel.remote_port;
+	ushort last_dest_port = channel.local_port;
+	sockaddrunion tmp_addr;
 
-  // stub the related variables
-  geco_channel_t* chanids[8] =
-    { 0 };
-  channels_ = chanids;
-  curr_channel_ = &channel;
-  channels_[5] = curr_channel_;
-  mdi_set_channel_remoteaddrlist (remote_addres, src_ips_len);
+	// 0) when all matching
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		last_dest_addr = &channel.local_addres[i];
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			last_src_addr = &channel.remote_addres[j];
+			//then should find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, curr_channel_);
+		}
+	}
 
-  //temps
-  geco_channel_t* found;
-  sockaddrunion* last_src_addr;
-  sockaddrunion* last_dest_addr;
-  ushort last_src_port = channel.remote_port;
-  ushort last_dest_port = channel.local_port;
-  sockaddrunion tmp_addr;
+	// 1) when src port not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		last_dest_addr = &channel.local_addres[i];
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			last_src_addr = &channel.remote_addres[j];
+			last_src_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
+			// then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
 
-  // 0) found
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    last_dest_addr = &channel.local_addres[i];
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      last_src_addr = &channel.remote_addres[j];
-      //1.1) should  find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, curr_channel_);
-    }
-  }
-  // 1) if src port not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    last_dest_addr = &channel.local_addres[i];
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      last_src_addr = &channel.remote_addres[j];
-      last_src_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-      //1.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //2) if dest port not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    last_dest_addr = &channel.local_addres[i];
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      last_src_addr = &channel.remote_addres[j];
-      last_dest_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-      //2.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //3) if dest and src port not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    last_dest_addr = &channel.local_addres[i];
-    last_dest_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      last_src_addr = &channel.remote_addres[j];
-      last_src_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-      //3.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //4) if dest addr not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    tmp_addr = channel.local_addres[i];
-    s4addr(&tmp_addr) -= 1;  // just minus to make it different
-    last_dest_addr = &tmp_addr;
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      last_src_addr = &channel.remote_addres[j];
-      //3.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //5) if  src addr not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    last_dest_addr = &channel.local_addres[i];
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      tmp_addr = channel.remote_addres[i];
-      s4addr(&tmp_addr) -= 1;  // just minus to make it different
-      last_src_addr = &tmp_addr;
-      //5.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //6) if  dest and addr not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    tmp_addr = channel.local_addres[i];
-    s4addr(&tmp_addr) -= 1;  // just minus to make it different
-    last_dest_addr = &tmp_addr;
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      sockaddrunion tmp_addr2;
-      tmp_addr2 = channel.remote_addres[i];
-      s4addr(&tmp_addr2) -= 1;  // just minus to make it different
-      last_src_addr = &tmp_addr2;
-      //6.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //7) if dest addr family not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    tmp_addr = channel.local_addres[i];
-    saddr_family(&tmp_addr) == AF_INET ?
-    saddr_family(&tmp_addr) = AF_INET6 :
-                                         saddr_family(&tmp_addr) = AF_INET;
-    last_dest_addr = &tmp_addr;
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      last_src_addr = &channel.remote_addres[j];
-      //7.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //8) if src addr family not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    last_dest_addr = &channel.local_addres[i];
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      tmp_addr = channel.remote_addres[i];
-      saddr_family(&tmp_addr) == AF_INET ?
-      saddr_family(&tmp_addr) = AF_INET6 :
-                                           saddr_family(&tmp_addr) =
-                                           AF_INET;
-      last_src_addr = &tmp_addr;
-      //5.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
-  //6) if  dest and addr not equal
-  for (uint i = 0; i < channel.local_addres_size; i++)
-  {
-    tmp_addr = channel.local_addres[i];
-    saddr_family(&tmp_addr) == AF_INET ?
-    saddr_family(&tmp_addr) = AF_INET6 :
-                                         saddr_family(&tmp_addr) = AF_INET;
-    last_dest_addr = &tmp_addr;
-    for (uint j = 0; j < channel.remote_addres_size; j++)
-    {
-      sockaddrunion tmp_addr2;
-      tmp_addr2 = channel.remote_addres[i];
-      saddr_family(&tmp_addr2) == AF_INET ?
-      saddr_family(&tmp_addr2) = AF_INET6 :
-                                            saddr_family(&tmp_addr2) =
-                                            AF_INET;
-      last_src_addr = &tmp_addr2;
-      //6.1) should not find channel
-      curr_trans_addr_.local_saddr = last_dest_addr;
-      curr_trans_addr_.peer_saddr = last_src_addr;
-      found = mdi_find_channel ();
-      EXPECT_EQ(found, (geco_channel_t*)NULL);
-    }
-  }
+	//2) when dest port not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		last_dest_addr = &channel.local_addres[i];
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			last_src_addr = &channel.remote_addres[j];
+			last_dest_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+
+	//3) when dest and src port not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		last_dest_addr = &channel.local_addres[i];
+		last_dest_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			last_src_addr = &channel.remote_addres[j];
+			last_src_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+
+	//4) when dest addr not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		tmp_addr = channel.local_addres[i];
+		s4addr(&tmp_addr) -= 1;  // just minus to make it different
+		last_dest_addr = &tmp_addr;
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			last_src_addr = &channel.remote_addres[j];
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+
+	//5) when src addr not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		last_dest_addr = &channel.local_addres[i];
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			tmp_addr = channel.remote_addres[i];
+			s4addr(&tmp_addr) -= 1;  // just minus to make it different
+			last_src_addr = &tmp_addr;
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+
+	//6) when  dest and addr not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		tmp_addr = channel.local_addres[i];
+		s4addr(&tmp_addr) -= 1;  // just minus to make it different
+		last_dest_addr = &tmp_addr;
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			sockaddrunion tmp_addr2;
+			tmp_addr2 = channel.remote_addres[i];
+			s4addr(&tmp_addr2) -= 1;  // just minus to make it different
+			last_src_addr = &tmp_addr2;
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+
+	//7) when dest addr family not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		tmp_addr = channel.local_addres[i];
+		saddr_family(&tmp_addr) == AF_INET ?
+			saddr_family(&tmp_addr) = AF_INET6 :
+			saddr_family(&tmp_addr) = AF_INET;
+		last_dest_addr = &tmp_addr;
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			last_src_addr = &channel.remote_addres[j];
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+	//8) when src addr family not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		last_dest_addr = &channel.local_addres[i];
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			tmp_addr = channel.remote_addres[i];
+			saddr_family(&tmp_addr) == AF_INET ?
+				saddr_family(&tmp_addr) = AF_INET6 :
+				saddr_family(&tmp_addr) =
+				AF_INET;
+			last_src_addr = &tmp_addr;
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
+
+	//9) when dest and src af both not equal
+	for (uint i = 0; i < channel.local_addres_size; i++)
+	{
+		tmp_addr = channel.local_addres[i];
+		saddr_family(&tmp_addr) == AF_INET ?
+			saddr_family(&tmp_addr) = AF_INET6 :
+			saddr_family(&tmp_addr) = AF_INET;
+		last_dest_addr = &tmp_addr;
+		for (uint j = 0; j < channel.remote_addres_size; j++)
+		{
+			sockaddrunion tmp_addr2;
+			tmp_addr2 = channel.remote_addres[i];
+			saddr_family(&tmp_addr2) == AF_INET ?
+				saddr_family(&tmp_addr2) = AF_INET6 :
+				saddr_family(&tmp_addr2) =
+				AF_INET;
+			last_src_addr = &tmp_addr2;
+			//then should not find channel
+			curr_trans_addr_.local_saddr = last_dest_addr;
+			curr_trans_addr_.peer_saddr = last_src_addr;
+			found = mdi_find_channel();
+			EXPECT_EQ(found, (geco_channel_t*)NULL);
+		}
+	}
 }
 
 //// last run and passed on 22 Agu 2016

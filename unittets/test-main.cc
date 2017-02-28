@@ -69,12 +69,12 @@ main(int argc, char** argv)
 
 	// ::testing::GTEST_FLAG(filter) = "AUTH_MODULE.*";
 
-        //::testing::GTEST_FLAG(filter) = "UT_HELPER.*";
-        //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
-        //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
+		//::testing::GTEST_FLAG(filter) = "UT_HELPER.*";
+		//::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
+		//::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
 	//::testing::GTEST_FLAG(filter) = "mpath.*";
-        ::testing::GTEST_FLAG(filter) = "mpath.test_alg0";
+	//::testing::GTEST_FLAG(filter) = "mpath.test_alg0";
 	//::testing::GTEST_FLAG(filter) = "mpath.test_set_paths"; 
 	//::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx"; 
 	//::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";
@@ -101,7 +101,9 @@ main(int argc, char** argv)
 
 	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin";
 
-	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
+	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*"; 
+	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_geco_instance"; // passed on 28/02/2017
+	::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_find_channel";  // passed on 28/02/2017
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_bundle_ctrl_chunk";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_read_peer_addreslist";
@@ -112,7 +114,6 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_vlparam_from_setup_chunk";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contains_chunk";
 	//::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_geco_instance";
-	//::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_channel";
 
 	// Release and close all loggers
 	int ret = RUN_ALL_TESTS();
