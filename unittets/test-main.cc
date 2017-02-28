@@ -73,7 +73,8 @@ main(int argc, char** argv)
         //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
         //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
-	::testing::GTEST_FLAG(filter) = "mpath.*";
+	//::testing::GTEST_FLAG(filter) = "mpath.*";
+        ::testing::GTEST_FLAG(filter) = "mpath.test_alg0";
 	//::testing::GTEST_FLAG(filter) = "mpath.test_set_paths"; 
 	//::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx"; 
 	//::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";

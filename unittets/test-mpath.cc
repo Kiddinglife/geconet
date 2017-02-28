@@ -454,3 +454,108 @@ TEST_F(mpath, test_hb_ack_received)
   mch_free_simple_chunk (hbid);
   reset ();
 }
+
+#include <vector>
+static bool
+alg0_find (int target, std::vector<std::vector<int>>& array)
+{
+  uint rows = array.size ();
+  if (rows == 0 || array[0].empty ())
+    return false;
+  if (target < array[0][0]
+      || target > array[rows - 1][array[rows - 1].size () - 1])
+    return false;
+
+  int row = 0, col = 0;
+  for (; row < rows; row++)
+  {
+    uint cols = array[row].size ();
+    int max = array[row][cols - 1];
+    int min = array[row][0];
+    if (target == min || target == max)
+      return true;
+    if (target < min)
+      return false;
+    else if (target > max)
+      continue;
+    else
+    {
+
+      int v = array[row][col];
+      if (v == target)
+        return true;
+      if (target < v)
+      {
+        //start from col to end of this row
+      }
+      else
+      {
+        //start from begain of this row to cols
+        if (col != 0)
+        {
+          cols = col + 1;
+          col = 0;
+        }
+      }
+
+      for (; col < cols; col++)
+      {
+        int v = array[row][col];
+        if (v == target)
+          return true;
+        if (target > v)
+          continue;
+        if (target < v)
+        {
+          col--;
+          break;
+        }
+      }
+    }
+  }
+  return false;
+}
+TEST_F(mpath,test_alg0)
+{
+  int a[][2] = {{1,2},{3,4}};
+  //int** pp = a; //cannot compile
+  //int* p = a; //cannot compile
+  //int (*ptr)[2]=a -> addr of [first array -> addr of first ele (int)] => int**
+  //so int (*ptr)[2] should equvient to int** ptr
+  //but int** pp = a will not cannot compile as they are different types
+  // but you can dereference int** ptr to get any ele value as array is  memory block
+  int* first_array_ptr = a[0];
+  int (*ptr)[2] = a;
+  int** a_ptr = (int**)a; // **a_ptr is crshing
+  // ptr val = 4, sizeof = 8
+  printf("ptr val = %d, val = %d,,sizeof = %zu\n", (*ptr)[3], first_array_ptr[2],sizeof(ptr));
+  std::vector<std::vector<int>> arrary =
+    {
+      { 0, 1, 3, 4, 5, 7, 8, 11, 13, 15, 18, 21, 24, 27, 30, 32, 35, 36, 39, 41,
+          42, 43, 46, 49, 52, 55, 58, 60, 63, 66, 67, 69, 72, 75, 78, 80, 81,
+          82, 85, 86 },
+      { 1, 4, 6, 8, 11, 12, 15, 17, 18, 20, 23, 24, 27, 30, 33, 34, 38, 39, 42,
+          44, 47, 48, 51, 52, 55, 57, 59, 62, 64, 67, 70, 72, 75, 77, 81, 83,
+          84, 87, 90, 91 },
+      { 4, 7, 8, 11, 14, 16, 18, 20, 21, 24, 27, 29, 32, 35, 36, 39, 40, 42, 44,
+          46, 49, 52, 54, 56, 58, 60, 61, 64, 67, 70, 73, 76, 78, 81, 84, 87,
+          89, 91, 93, 96 },
+      { 5, 8, 10, 13, 15, 19, 21, 23, 24, 27, 29, 31, 34, 37, 38, 41, 43, 45,
+          46, 49, 52, 55, 58, 59, 61, 64, 67, 69, 71, 72, 76, 78, 79, 83, 87,
+          90, 91, 94, 96, 97 },
+      { 6, 11, 14, 16, 18, 22, 24, 27, 29, 32, 33, 35, 36, 40, 42, 44, 47, 50,
+          51, 52, 54, 58, 60, 62, 64, 67, 70, 73, 76, 79, 82, 84, 87, 88, 91,
+          94, 97, 99, 101, 102 },
+      { 9, 13, 16, 19, 21, 23, 25, 29, 31, 35, 38, 39, 42, 45, 48, 51, 54, 56,
+          57, 60, 63, 64, 67, 69, 72, 73, 74, 76, 79, 81, 85, 88, 90, 92, 95,
+          98, 100, 101, 104, 106 },
+      { 10, 16, 19, 22, 24, 26, 29, 31, 34, 36, 40, 41, 45, 46, 50, 54, 56, 59,
+          60, 63, 66, 69, 70, 72, 75, 77, 79, 81, 83, 85, 88, 91, 93, 96, 98,
+          99, 102, 105, 107, 109 },
+      { 12, 18, 22, 25, 26, 29, 32, 33, 37, 39, 42, 44, 47, 50, 52, 57, 59, 61,
+          62, 66, 68, 71, 72, 74, 76, 80, 82, 84, 87, 90, 92, 94, 95, 98, 101,
+          102, 105, 107, 109, 112 }, };
+
+  bool find = alg0_find (22, arrary);
+  ASSERT_TRUE(find);
+}
