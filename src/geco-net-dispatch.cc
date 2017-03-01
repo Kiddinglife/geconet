@@ -8999,15 +8999,11 @@ uint find_chunk_types(uchar* packet_value, uint packet_val_len,
 	uint result = 0;
 	uint chunk_len = 0;
 	uint read_len = 0;
-	uint padding_len;
 	chunk_fixed_t* chunk;
 	uchar* curr_pos = packet_value;
 
 	while (read_len < packet_val_len)
 	{
-		EVENTLOG2(VVERBOSE, "find_chunk_types()::packet_val_len=%d, read_len=%d",
-			packet_val_len, read_len);
-
 		if (packet_val_len - read_len < CHUNK_FIXED_SIZE)
 		{
 			ERRLOG(MINOR_ERROR,
@@ -9053,8 +9049,7 @@ uint find_chunk_types(uchar* packet_value, uint packet_val_len,
 		}
 
 		read_len += chunk_len;
-		padding_len = ((read_len & 3) == 0) ? 0 : (4 - (read_len & 3));
-		read_len += padding_len;
+		while (read_len & 3) read_len++;
 		curr_pos = packet_value + read_len;
 	}
 	return result;
@@ -9093,17 +9088,17 @@ bool cmp_geco_instance(const geco_instance_t& traget, const geco_instance_t& b)
 	//else //!curr_geco_instance_->is_inaddr_any && !curr_geco_instance_->is_in6addr_any
 	//{
 		// find if at least there is an ip addr thate quals
-		for (int i = 0; i < traget.local_addres_size; i++)
+	for (int i = 0; i < traget.local_addres_size; i++)
+	{
+		for (int j = 0; j < b.local_addres_size; j++)
 		{
-			for (int j = 0; j < b.local_addres_size; j++)
+			if (saddr_equals(&(traget.local_addres_list[i]),
+				&(b.local_addres_list[j]), true))
 			{
-				if (saddr_equals(&(traget.local_addres_list[i]),
-					&(b.local_addres_list[j]), true))
-				{
-					return true;
-				}
+				return true;
 			}
 		}
+	}
 	//}
 	return false;
 }

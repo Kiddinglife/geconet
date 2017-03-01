@@ -163,6 +163,7 @@ get_bundle_total_size(bundle_controller_t* buf);
 extern void
 mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 extern geco_channel_t* mdi_find_channel();
+extern void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6, bool with_dns);
 
 struct transportaddr_hash_functor
 {

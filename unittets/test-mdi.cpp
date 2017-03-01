@@ -177,7 +177,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance)
 		last_dest_addr = &inst.local_addres_list[i];
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.1.1) then should found this inst
-		EXPECT_EQ(ret, &inst);
+		ASSERT_EQ(ret, &inst);
 	}
 
 	// 1.2) and when last_dest_port NOT mathces
@@ -187,7 +187,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance)
 		last_dest_addr = &inst.local_addres_list[i];
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.2.1) then should NOT found this inst
-		EXPECT_EQ(ret, nullptr);
+		ASSERT_EQ(ret, nullptr);
 	}
 
 	// 1.3) and when last_dest_addr NOT matches
@@ -199,7 +199,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance)
 		last_dest_addr = &tmp;
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.3.1) then should NOT found this inst
-		EXPECT_EQ(ret, nullptr);
+		ASSERT_EQ(ret, nullptr);
 	}
 
 	// 1.4) and when addr family NOT matches
@@ -213,7 +213,7 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance)
 		last_dest_addr = &tmp;
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  1.4.1) then should NOT found this inst
-		EXPECT_EQ(ret, nullptr);
+		ASSERT_EQ(ret, nullptr);
 	}
 
 	// 2) when  is_in6addr_any true, is_in4addr_any false 
@@ -228,20 +228,20 @@ TEST(DISPATCHER_MODULE, test_find_geco_instance)
 		last_dest_addr = &tmp;
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  2.1.1) should still found this inst
-		EXPECT_EQ(ret, &inst);
+		ASSERT_EQ(ret, &inst);
 		//  2.2) and when af matches (ip4)
 		saddr_family(&tmp) = AF_INET;
 		last_dest_addr = &tmp;
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  2.2.1) should still found this inst
-		EXPECT_EQ(ret, &inst);
+		ASSERT_EQ(ret, &inst);
 		//  2.2.1) and when dest addr NOT matches 
 		s4addr(&tmp) -= 1;  // just minus to make it not to be found in local_addres_
 		saddr_family(&tmp) = AF_INET;
 		last_dest_addr = &tmp;
 		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
 		//  2.2.1) should NOT found this inst
-		EXPECT_EQ(ret, nullptr);
+		ASSERT_EQ(ret, nullptr);
 	}
 }
 
@@ -306,7 +306,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, curr_channel_);
+			ASSERT_EQ(found, curr_channel_);
 		}
 	}
 
@@ -322,7 +322,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -338,7 +338,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -355,7 +355,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -372,7 +372,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -389,7 +389,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -409,7 +409,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -428,7 +428,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 	//8) when src addr family not equal
@@ -447,7 +447,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 
@@ -472,12 +472,12 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 			curr_trans_addr_.local_saddr = last_dest_addr;
 			curr_trans_addr_.peer_saddr = last_src_addr;
 			found = mdi_find_channel();
-			EXPECT_EQ(found, (geco_channel_t*)NULL);
+			ASSERT_EQ(found, (geco_channel_t*)NULL);
 		}
 	}
 }
 
-//// last run and passed on 22 Agu 2016
+// last run and passed on 22 Agu 2016
 //TEST(DISPATCHER_MODULE, test_validate_dest_addr)
 //{
 //	/*8)
@@ -533,14 +533,14 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	curr_geco_instance_ = NULL;
 //	last_dest_addr = local_addres + 2;
 //	ret = validate_dest_addr(last_dest_addr);
-//	EXPECT_EQ(ret, true);
+//	ASSERT_EQ(ret, true);
 //
 //	//2) test return true when curr_channel_ NOT NULL
 //	curr_channel_ = &channel;
 //	curr_geco_instance_ = &inst;
 //	last_dest_addr = local_addres + 2;
 //	ret = validate_dest_addr(last_dest_addr);
-//	EXPECT_EQ(ret, true);
+//	ASSERT_EQ(ret, true);
 //
 //	//2) test return true when curr_channel_  NULL,
 //	// inst NOT NULL, is_inaddr_any false, is_in6addr_any false;
@@ -550,7 +550,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	inst.is_in6addr_any = false;
 //	last_dest_addr = local_addres + 2;
 //	ret = validate_dest_addr(last_dest_addr);
-//	EXPECT_EQ(ret, true);
+//	ASSERT_EQ(ret, true);
 //
 //	//3) test return true when curr_channel_  NULL inst NOT NULL, is_inaddr_any true, is_in6addr_any false;
 //	curr_channel_ = NULL;
@@ -559,7 +559,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	inst.is_in6addr_any = false;
 //	last_dest_addr = local_addres + 2;
 //	ret = validate_dest_addr(last_dest_addr);
-//	EXPECT_EQ(ret, true);
+//	ASSERT_EQ(ret, true);
 //
 //	//3) test return true when curr_channel_  NULL inst NOT NULL, is_inaddr_any false, is_in6addr_any true;
 //	curr_channel_ = NULL;
@@ -568,7 +568,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	inst.is_in6addr_any = true;
 //	last_dest_addr = local_addres + 2;
 //	ret = validate_dest_addr(last_dest_addr);
-//	EXPECT_EQ(ret, false);
+//	ASSERT_EQ(ret, false);
 //
 //	//3) test return false when curr_channel_  NULL inst NOT NULL, is_inaddr_any false, is_in6addr_any false;
 //	curr_channel_ = NULL;
@@ -577,7 +577,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	inst.is_in6addr_any = false;
 //	last_dest_addr = remote_addres + 2; // we use remote addr as local addr that will not be found
 //	ret = validate_dest_addr(last_dest_addr);
-//	EXPECT_EQ(ret, true);
+//	ASSERT_EQ(ret, true);
 //
 //	//3) test return false when curr_channel_  NOT NULL,  is_inaddr_any false, is_in6addr_any false;
 //	curr_channel_ = &channel;
@@ -587,318 +587,288 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	last_dest_addr = remote_addres + 2; // we use remote addr as local addr that will not be found
 //	ret = validate_dest_addr(last_dest_addr);
 //	//should return true
-//	EXPECT_EQ(ret, true);
+//	ASSERT_EQ(ret, true);
 //
 //}
-//// last run and passed on 22 Agu 2016
-//TEST(DISPATCHER_MODULE, test_find_chunk_types)
-//{
-//	/*9)
-//	 *fetch all chunk types contained in this packet value field
-//	 *fetch for use in the folowing curr_geco_packet_value_len_
-//	 *fetch = dctp_packet_len - GECO_PACKET_FIXED_SIZE;
-//	 *fetch chunk_types_arr_ = find_chunk_types(curr_geco_packet_->chunk,
-//	 *fetch curr_geco_packet_value_len_, &total_chunks_count_);
-//	 */
-//	geco_packet_t geco_packet;
-//	geco_packet.pk_comm_hdr.checksum = 0;
-//	geco_packet.pk_comm_hdr.dest_port = htons(
-//		(generate_random_uint32() % USHRT_MAX));
-//	geco_packet.pk_comm_hdr.src_port = htons(
-//		(generate_random_uint32() % USHRT_MAX));
-//	geco_packet.pk_comm_hdr.verification_tag = htons(
-//		(generate_random_uint32()));
-//
-//	// one data chunk
-//	uint offset = 0;
-//	uint chunklen = 0;
-//	uchar* wt = geco_packet.chunk;
-//	uint datalen = 101;
-//	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 116);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
-//	wt += chunklen;
-//
-//	//one sack chunk
-//	datalen = 31;
-//	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	//116+4+12+31 = 132+31 = 163
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	EXPECT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-//		CHUNK_SACK);
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 164);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
-//	wt += chunklen;
-//
-//	//one init chunk
-//	datalen = 21;
-//	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;  //21+20=41
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	EXPECT_EQ(geco_packet.chunk + offset, wt);
-//	EXPECT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-//		CHUNK_INIT);
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 208);  // 164+4+16+21= 205
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT);
-//	wt += chunklen;
-//
-//	//one init ack chunk
-//	datalen = 21;
-//	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT_ACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	EXPECT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-//		CHUNK_INIT_ACK);
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 252);  // 208+20+21 = 228+21=249
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
-//	wt += chunklen;
-//
-//	//CHUNK_SHUTDOWN
-//	chunklen = 4 + CHUNK_FIXED_SIZE;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 260);  // 252+8 = 260
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN);
-//	wt += chunklen;
-//
-//	//CHUNK_SHUTDOWN_ACK
-//	chunklen = CHUNK_FIXED_SIZE;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 264);  // 260+4 = 264
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-//	wt += chunklen;
-//
-//	//1) test good chunks
-//	uint total_chunks_count;
-//	uint chunk_types = find_chunk_types(geco_packet.chunk, offset,
-//		&total_chunks_count);
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
-//	EXPECT_EQ(total_chunks_count, 6);
-//
-//	//2) test bad chunks whose chun len < CHUNK_FIXED_SIZE
-//	// this will give us all legal chunks
-//	//CHUNK_SHUTDOWN_COMPLETE
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_COMPLETE;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(3);
-//	offset += 4;
-//	EXPECT_EQ(offset, 268);  // 264+4 = 268
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_COMPLETE);
-//	wt += 4;
-//	chunk_types = find_chunk_types(geco_packet.chunk, offset,
-//		&total_chunks_count);
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-//	EXPECT_EQ(total_chunks_count, 6);
-//
-//	//3) test branch chunk_len + read_len > packet_val_len line 3395
-//	chunk_types = find_chunk_types(geco_packet.chunk, offset - 4,
-//		&total_chunks_count);
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-//	EXPECT_EQ(total_chunks_count, 6);
-//
-//	//4) one CHUNK_SHUTDOWN_ACK
-//	chunk_types = find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-//	EXPECT_EQ(total_chunks_count, 1);
-//
-//	//5) two repeated CHUNK_SHUTDOWN_ACK contains_chunk returns 1
-//	// but total_chunks_count is 2
-//	chunklen = CHUNK_FIXED_SIZE;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 272);  // 260+4 = 264
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-//	wt += chunklen;
-//
-//	chunklen = CHUNK_FIXED_SIZE;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 276);  // 260+4 = 264
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-//	wt += chunklen;
-//	chunk_types = find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
-//	EXPECT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-//	EXPECT_EQ(total_chunks_count, 2);
-//}
-//// last run and passed on 22 Agu 2016
-//TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
-//{
-//	geco_packet_t geco_packet;
-//	geco_packet.pk_comm_hdr.checksum = 0;
-//	geco_packet.pk_comm_hdr.dest_port = htons(
-//		(generate_random_uint32() % USHRT_MAX));
-//	geco_packet.pk_comm_hdr.src_port = htons(
-//		(generate_random_uint32() % USHRT_MAX));
-//	geco_packet.pk_comm_hdr.verification_tag = htonl((generate_random_uint32()));
-//
-//	// put one data chunk
-//	uint offset = 0;
-//	uint chunklen = 0;
-//	uchar* wt = geco_packet.chunk;
-//	uint datalen = 101;
-//	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 116);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
-//	wt += chunklen;
-//
-//	//put another data chunk
-//	datalen = 35;
-//	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 164);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
-//	wt += chunklen;
-//
-//	//put one sack chunk
-//	datalen = 31;
-//	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	//116+4+12+31 = 132+31 = 163
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	EXPECT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-//		CHUNK_SACK);
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 212);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
-//	wt += chunklen;
-//
-//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
-//		geco_packet.chunk);
-//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
-//		wt - chunklen);
-//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
-//		(uchar*)NULL);
-//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
-//		(uchar*)NULL);
-//
-//	//　branchtest:  chunk_len < CHUNK_FIXED_SIZE
-//	chunklen = 3;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 216);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-//	wt += chunklen;
-//	EXPECT_EQ(
-//		mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK),
-//		(uchar*)NULL);
-//
-//	// branchtest: chunk_len + read_len > packet_val_len
-//	offset -= chunklen;
-//	wt -= chunklen;
-//
-//	chunklen = 4;
-//	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT_ACK;
-//	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen + 1);
-//	while (chunklen % 4)
-//	{
-//		chunklen++;
-//	}
-//	offset += chunklen;
-//	EXPECT_EQ(offset, 216);
-//	EXPECT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
-//	wt += chunklen;
-//	EXPECT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK),
-//		(uchar*)NULL);
-//}
-//// last run and passed on 22 Agu 2016
+
+// passed on 28/02/2017
+TEST(DISPATCHER_MODULE, test_find_chunk_types)
+{
+	geco_packet_t geco_packet;
+	geco_packet.pk_comm_hdr.checksum = 0;
+	geco_packet.pk_comm_hdr.dest_port = htons(
+		(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.src_port = htons(
+		(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.verification_tag = htons(
+		(generate_random_uint32()));
+
+	// given one data chunk
+	uint offset = 0;
+	uint chunklen = 0;
+	uchar* wt = geco_packet.chunk;
+	uint datalen = 101;
+	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 116);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
+	wt += chunklen;
+
+	//given one sack chunk
+	datalen = 31;
+	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	//116+4+12+31 = 132+31 = 163
+	while (chunklen % 4)
+		chunklen++;
+	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
+		CHUNK_SACK);
+	offset += chunklen;
+	ASSERT_EQ(offset, 164);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
+	wt += chunklen;
+
+	//given one init chunk
+	datalen = 21;
+	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;  //21+20=41
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	ASSERT_EQ(geco_packet.chunk + offset, wt);
+	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
+		CHUNK_INIT);
+	offset += chunklen;
+	ASSERT_EQ(offset, 208);  // 164+4+16+21= 205
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT);
+	wt += chunklen;
+
+	//given one init ack chunk
+	datalen = 21;
+	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT_ACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
+		CHUNK_INIT_ACK);
+	offset += chunklen;
+	ASSERT_EQ(offset, 252);  // 208+20+21 = 228+21=249
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
+	wt += chunklen;
+
+	//given CHUNK_SHUTDOWN
+	chunklen = 4 + CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 260);  // 252+8 = 260
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN);
+	wt += chunklen;
+
+	//given CHUNK_SHUTDOWN_ACK
+	chunklen = CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 264);  // 260+4 = 264
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+
+	//1) when  given good chunks
+	uint total_chunks_count;
+	uint chunk_types = find_chunk_types(geco_packet.chunk, offset,
+		&total_chunks_count);
+	//then should find all chunks
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+	ASSERT_EQ(total_chunks_count, 6);
+
+	//2) when there are bad chunks whose chun len < CHUNK_FIXED_SIZE
+	//CHUNK_SHUTDOWN_COMPLETE
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_COMPLETE;
+	((chunk_fixed_t*)wt)->chunk_length = htons(3);
+	offset += 4;
+	ASSERT_EQ(offset, 268);  // 264+4 = 268
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_COMPLETE);
+	wt += 4;
+	chunk_types = find_chunk_types(geco_packet.chunk, offset,
+		&total_chunks_count);
+	//then should find all good chunks skipping bad one
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	ASSERT_EQ(total_chunks_count, 6);
+
+	//3) when chunk_len + read_len > packet_val_len
+	chunk_types = find_chunk_types(geco_packet.chunk, offset - 4,
+		&total_chunks_count);
+	//then should find all good chunks skipping bad one
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	ASSERT_EQ(total_chunks_count, 6);
+
+	//4) when ther is CHUNK_SHUTDOWN_ACK
+	chunk_types = find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	ASSERT_EQ(total_chunks_count, 1);
+
+	//5) when there are two repeated shutdown ack chunk 
+	chunklen = CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 272);  // 260+4 = 264
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+	chunklen = CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 276);  // 260+4 = 264
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+	chunk_types = find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
+	//then contains_chunk() should find 1 shutdown ack chunk but total_chunks_count should be 2 and not find other chunk types
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
+	ASSERT_EQ(total_chunks_count, 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
+}
+
+// passed on 28/02/2017
+TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
+{
+	geco_packet_t geco_packet;
+	geco_packet.pk_comm_hdr.checksum = 0;
+	geco_packet.pk_comm_hdr.dest_port = htons(
+		(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.src_port = htons(
+		(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.verification_tag = htonl((generate_random_uint32()));
+
+	// given one data chunk
+	uint offset = 0;
+	uint chunklen = 0;
+	uchar* wt = geco_packet.chunk;
+	uint datalen = 101;
+	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 116);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
+	wt += chunklen;
+
+	//given another data chunk
+	datalen = 35;
+	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 164);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
+	wt += chunklen;
+
+	//given one sack chunk
+	datalen = 31;
+	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	//116+4+12+31 = 132+31 = 163
+	while (chunklen % 4)
+		chunklen++;
+	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
+		CHUNK_SACK);
+	offset += chunklen;
+	ASSERT_EQ(offset, 212);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
+	wt += chunklen;
+
+	// then should find them
+	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
+		geco_packet.chunk);
+	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
+		wt - chunklen);
+	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
+		nullptr);
+	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
+		nullptr);
+
+	//1) when chunk_len < CHUNK_FIXED_SIZE
+	chunklen = 3;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 216);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+	wt += chunklen;
+	//then should not find this chunk
+	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK), nullptr);
+
+	//2) when chunk_len + read_len > packet_val_len
+	offset -= chunklen;
+	wt -= chunklen;
+	chunklen = 4;
+	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT_ACK;
+	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen + 1);
+	while (chunklen % 4)
+		chunklen++;
+	offset += chunklen;
+	ASSERT_EQ(offset, 216);
+	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
+	wt += chunklen;
+	//then should not find this chunk
+	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK), nullptr);
+}
+
+// last run and passed on 22 Agu 2016
 //TEST(DISPATCHER_MODULE, test_read_peer_addreslist)
 //{
-//	EXPECT_EQ(sizeof(in_addr), 4);
-//	EXPECT_EQ(sizeof(in6_addr), 16);
+//	ASSERT_EQ(sizeof(in_addr), 4);
+//	ASSERT_EQ(sizeof(in6_addr), 16);
 //	//////////////////////////////////////////////////////////////////////////////
 //	geco_packet_t geco_packet;
 //	geco_packet.pk_comm_hdr.checksum = 0;
@@ -931,7 +901,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //		3);
 //	offset += mch_write_vlp_addrlist(init_chunk->variableParams + offset, local_addres6, 2);
 //	//////////////////////////////////////////////////////////////////////////////
-//	EXPECT_EQ(offset, 72);
+//	ASSERT_EQ(offset, 72);
 //	init_chunk->chunk_header.chunk_length = htons(
 //		INIT_CHUNK_FIXED_SIZES + offset);
 //	//////////////////////////////////////////////////////////////////////////////
@@ -951,9 +921,9 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //		offset + INIT_CHUNK_FIXED_SIZES,
 //		SUPPORT_ADDRESS_TYPE_IPV4,
 //		&peersupportedtypes, true, false);
-//	EXPECT_EQ(ret, 3); //3 ip4 addrs  but last src addr ths is ip6 not supported by us
+//	ASSERT_EQ(ret, 3); //3 ip4 addrs  but last src addr ths is ip6 not supported by us
 //	//ip4 addrs  plus last src addr is ip6
-//	EXPECT_EQ(peersupportedtypes,
+//	ASSERT_EQ(peersupportedtypes,
 //		SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6);
 //	//////////////////////////////////////////////////////////////////////////////
 //	for (i = 0; i < 3; ++i)
@@ -969,7 +939,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	ret = mdi_read_peer_addreslist(
 //		peer_addreslist, geco_packet.chunk, offset + INIT_CHUNK_FIXED_SIZES,
 //		SUPPORT_ADDRESS_TYPE_IPV4 | SUPPORT_ADDRESS_TYPE_IPV6, NULL, true, false);
-//	EXPECT_EQ(ret, 6);
+//	ASSERT_EQ(ret, 6);
 //	for (i = 0; i < 3; ++i)
 //	{
 //		EXPECT_TRUE(saddr_equals(&peer_addreslist[i], &local_addres[i], true));
@@ -984,7 +954,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	ret = mdi_read_peer_addreslist(peer_addreslist, geco_packet.chunk,
 //		offset + INIT_CHUNK_FIXED_SIZES,
 //		SUPPORT_ADDRESS_TYPE_IPV6, NULL, true, false);
-//	EXPECT_EQ(ret, 3);  //2 + last_source_addr_ = 3
+//	ASSERT_EQ(ret, 3);  //2 + last_source_addr_ = 3
 //	for (i = 0; i < 2; ++i)
 //	{
 //		saddr2str(&peer_addreslist[i], buf, MAX_IPADDR_STR_LEN, &port);
@@ -995,100 +965,104 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	}
 //	EXPECT_TRUE(saddr_equals(&peer_addreslist[2], &last_source_addr, true));
 //}
-//// last run and passed on 22 Agu 2016
-//TEST(DISPATCHER_MODULE, test_contain_local_addr)
-//{
-//	/**
-//	 * check if local addr is found
-//	 * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
-//	 * containslocaladdr(sockaddrunion* addr_list,uint addr_list_num);*/
-//	int i;
-//	const char* addres[] =
-//	{ "192.168.1.121", "192.168.1.132", "192.168.34.2" };
-//	const char* addres6[] =
-//	{ "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
-//		"2607:f0d0:1002:0051:0000:0000:0000:0004" };
-//	sockaddrunion local_addres[3];
-//	sockaddrunion local_addres6[2];
-//	for (i = 0; i < 3; i++)
-//	{
-//		str2saddr(&local_addres[i], addres[i], 0);
-//	}
-//	for (i = 0; i < 2; i++)
-//	{
-//		str2saddr(&local_addres6[i], addres6[i], 0);
-//	}
-//	geco_instance_t inst;
-//	inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4;
-//	inst.local_addres_size = 3;
-//	inst.local_addres_list = local_addres;
-//	//////////////////////////////////////////////////////////////////////////////
-//	geco_instances_.push_back(&inst);
-//	sockaddrunion tmpaddr;
-//	//////////////////////////////////////////////////////////////////////////////
-//	//1) test branch 1 curr geco_inst and curr channel both NULL
-//	//1.1) test no local addr presents
-//	EXPECT_FALSE(mdi_contains_localhost(local_addres, 3));
-//	EXPECT_FALSE(mdi_contains_localhost(local_addres6, 2));
-//	//1.2) test  local addr presents
-//	tmpaddr = local_addres[1];
-//	str2saddr(&local_addres[1], "127.0.0.1", 0);
-//	EXPECT_TRUE(mdi_contains_localhost(local_addres, 3));
-//	local_addres[1] = tmpaddr;
-//	tmpaddr = local_addres6[1];
-//	str2saddr(&local_addres6[1], "::1", 0);
-//	EXPECT_TRUE(mdi_contains_localhost(local_addres6, 2));
-//	local_addres6[1] = tmpaddr;
-//	//////////////////////////////////////////////////////////////////////////////
-//	//2) test branch 2 curr_geco_instance_ NOT NULL
-//	curr_geco_instance_ = &inst;
-//	//2.1) test local addr in curr gecio inst local addres list
-//	tmpaddr = local_addres[1];
-//	EXPECT_TRUE(mdi_contains_localhost(&tmpaddr, 1));
-//	//2.1) test no local addr in curr gecio inst local addres list
-//	str2saddr(&tmpaddr, "221.123.45.12", 0);
-//	EXPECT_FALSE(mdi_contains_localhost(&tmpaddr, 1));
-//}
-//// last run and passed on 22 Agu 2016
-//TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
-//{
-//	geco_packet_t geco_packet;
-//	geco_packet.pk_comm_hdr.checksum = 0;
-//	geco_packet.pk_comm_hdr.dest_port = htons(
-//		(generate_random_uint32() % USHRT_MAX));
-//	geco_packet.pk_comm_hdr.src_port = htons(
-//		(generate_random_uint32() % USHRT_MAX));
-//	geco_packet.pk_comm_hdr.verification_tag = htons(
-//		(generate_random_uint32()));
-//	//////////////////////////////////////////////////////////////////////////////
-//	init_chunk_t* init_chunk = (init_chunk_t*)(geco_packet.chunk);
-//	init_chunk->chunk_header.chunk_id = CHUNK_INIT;
-//	init_chunk->chunk_header.chunk_flags = 0;
-//	//////////////////////////////////////////////////////////////////////////////
-//	const char* hn = "www.baidu.com";
-//	((vlparam_fixed_t*)init_chunk->variableParams)->param_type = htons(
-//		VLPARAM_HOST_NAME_ADDR);
-//	((vlparam_fixed_t*)init_chunk->variableParams)->param_length = htons(
-//		4 + strlen(hn));
-//	strcpy((char*)(init_chunk->variableParams + 4), hn);
-//	//////////////////////////////////////////////////////////////////////////////
-//	uint len = 4 + strlen(hn) + INIT_CHUNK_FIXED_SIZES;
-//	init_chunk->chunk_header.chunk_length = htons(len);
-//	while (len % 4)
-//		++len;
-//	uchar* ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
-//		VLPARAM_HOST_NAME_ADDR);
-//	EXPECT_EQ(ret, init_chunk->variableParams);
-//	//////////////////////////////////////////////////////////////////////////////
-//	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
-//		VLPARAM_COOKIE);
-//	EXPECT_EQ(ret, (uchar*)NULL);
-//	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
-//		VLPARAM_SUPPORTED_ADDR_TYPES);
-//	EXPECT_EQ(ret, (uchar*)NULL);
-//
-//}
-//// last run and passed on 29 Agu 2016
+
+// last run and passed on 22 Agu 2016
+TEST(DISPATCHER_MODULE, test_contain_local_addr)
+{
+	/**
+	 * check if local addr is found
+	 * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
+	 * containslocaladdr(sockaddrunion* addr_list,uint addr_list_num);
+	 */
+	int i;
+	const char* addres[] =
+	{ "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+	const char* addres6[] =
+	{ "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
+		"2607:f0d0:1002:0051:0000:0000:0000:0004" };
+	sockaddrunion local_addres[3];
+	sockaddrunion local_addres6[2];
+	for (i = 0; i < 3; i++)
+	{
+		str2saddr(&local_addres[i], addres[i], 0);
+	}
+	for (i = 0; i < 2; i++)
+	{
+		str2saddr(&local_addres6[i], addres6[i], 0);
+	}
+	geco_instance_t inst;
+	inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4;
+	inst.local_addres_size = 3;
+	inst.local_addres_list = local_addres;
+	//////////////////////////////////////////////////////////////////////////////
+	geco_instances_.push_back(&inst);
+	sockaddrunion tmpaddr;
+	//////////////////////////////////////////////////////////////////////////////
+	//1) test branch 1 curr geco_inst and curr channel both NULL
+	//1.1) test no local addr presents
+	EXPECT_FALSE(mdi_contains_localhost(local_addres, 3));
+	EXPECT_FALSE(mdi_contains_localhost(local_addres6, 2));
+	//1.2) test  local addr presents
+	tmpaddr = local_addres[1];
+	str2saddr(&local_addres[1], "127.0.0.1", 0);
+	EXPECT_TRUE(mdi_contains_localhost(local_addres, 3));
+	local_addres[1] = tmpaddr;
+	tmpaddr = local_addres6[1];
+	str2saddr(&local_addres6[1], "::1", 0);
+	EXPECT_TRUE(mdi_contains_localhost(local_addres6, 2));
+	local_addres6[1] = tmpaddr;
+	//////////////////////////////////////////////////////////////////////////////
+	//2) test branch 2 curr_geco_instance_ NOT NULL
+	curr_geco_instance_ = &inst;
+	//2.1) test local addr in curr gecio inst local addres list
+	tmpaddr = local_addres[1];
+	EXPECT_TRUE(mdi_contains_localhost(&tmpaddr, 1));
+	//2.1) test no local addr in curr gecio inst local addres list
+	str2saddr(&tmpaddr, "221.123.45.12", 0);
+	EXPECT_FALSE(mdi_contains_localhost(&tmpaddr, 1));
+}
+
+// last run and passed on 22 Agu 2016
+TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
+{
+	geco_packet_t geco_packet;
+	geco_packet.pk_comm_hdr.checksum = 0;
+	geco_packet.pk_comm_hdr.dest_port = htons(
+		(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.src_port = htons(
+		(generate_random_uint32() % USHRT_MAX));
+	geco_packet.pk_comm_hdr.verification_tag = htons(
+		(generate_random_uint32()));
+	//////////////////////////////////////////////////////////////////////////////
+	init_chunk_t* init_chunk = (init_chunk_t*)(geco_packet.chunk);
+	init_chunk->chunk_header.chunk_id = CHUNK_INIT;
+	init_chunk->chunk_header.chunk_flags = 0;
+	//////////////////////////////////////////////////////////////////////////////
+	const char* hn = "www.baidu.com";
+	((vlparam_fixed_t*)init_chunk->variableParams)->param_type = htons(
+		VLPARAM_HOST_NAME_ADDR);
+	((vlparam_fixed_t*)init_chunk->variableParams)->param_length = htons(
+		4 + strlen(hn));
+	strcpy((char*)(init_chunk->variableParams + 4), hn);
+	//////////////////////////////////////////////////////////////////////////////
+	uint len = 4 + strlen(hn) + INIT_CHUNK_FIXED_SIZES;
+	init_chunk->chunk_header.chunk_length = htons(len);
+	while (len % 4)
+		++len;
+	uchar* ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
+		VLPARAM_HOST_NAME_ADDR);
+	ASSERT_EQ(ret, init_chunk->variableParams);
+	//////////////////////////////////////////////////////////////////////////////
+	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
+		VLPARAM_COOKIE);
+	ASSERT_EQ(ret, nullptr);
+	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
+		VLPARAM_SUPPORTED_ADDR_TYPES);
+	ASSERT_EQ(ret, nullptr);
+
+}
+
+// last run and passed on 29 Agu 2016
 //TEST(DISPATCHER_MODULE, test_bundle_ctrl_chunk)
 //{
 //	sockaddrunion last_drc_addr;
@@ -1100,20 +1074,20 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	//////////////////////////////////////////////////////////////////////////////
 //	uint cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 //		FLAG_TBIT_SET);
-//	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_flags, 0x01);
+//	ASSERT_EQ(simple_chunks_[cid]->chunk_header.chunk_flags, 0x01);
 //	curr_write_pos_[cid] += 24;
 //	simple_chunk_t* simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
-//	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_length, htons(28));
-//	EXPECT_EQ(completed_chunks_[cid], true);
+//	ASSERT_EQ(simple_chunks_[cid]->chunk_header.chunk_length, htons(28));
+//	ASSERT_EQ(completed_chunks_[cid], true);
 //	mch_free_simple_chunk(cid);
 //	default_bundle_ctrl_.reset();
 //
 //	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 //		FLAG_TBIT_UNSET);
-//	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_flags, 0);
+//	ASSERT_EQ(simple_chunks_[cid]->chunk_header.chunk_flags, 0);
 //	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
-//	EXPECT_EQ(simple_chunks_[cid]->chunk_header.chunk_length, htons(4));
-//	EXPECT_EQ(completed_chunks_[cid], true);
+//	ASSERT_EQ(simple_chunks_[cid]->chunk_header.chunk_length, htons(4));
+//	ASSERT_EQ(completed_chunks_[cid], true);
 //	mch_free_simple_chunk(cid);
 //	default_bundle_ctrl_.reset();
 //	//////////////////////////////////////////////////////////////////////////////
@@ -1125,7 +1099,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, NULL);
 //	//      1.1.1) got_send_address shoul be false && requested_destination should be zero
 //	EXPECT_FALSE(default_bundle_ctrl_.got_send_address);
-//	EXPECT_EQ(default_bundle_ctrl_.requested_destination, 0);
+//	ASSERT_EQ(default_bundle_ctrl_.requested_destination, 0);
 //	mch_free_simple_chunk(cid);
 //	default_bundle_ctrl_.reset();
 //	//  1.2)if dest_index != NULL
@@ -1136,7 +1110,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
 //	//      1.2.1) got_send_address shoul be true && requested_destination should be 6
 //	EXPECT_TRUE(default_bundle_ctrl_.got_send_address);
-//	EXPECT_EQ(default_bundle_ctrl_.requested_destination, path);
+//	ASSERT_EQ(default_bundle_ctrl_.requested_destination, path);
 //	mch_free_simple_chunk(cid);
 //	default_bundle_ctrl_.reset();
 //	//////////////////////////////////////////////////////////////////////////////
@@ -1145,29 +1119,29 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //		FLAG_TBIT_SET);
 //	curr_write_pos_[cid] += MAX_NETWORK_PACKET_VALUE_SIZE - 4;
 //	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
-//	EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length),
+//	ASSERT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length),
 //		MAX_NETWORK_PACKET_VALUE_SIZE);
-//	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
+//	ASSERT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 //		UDP_GECO_PACKET_FIXED_SIZES);
 //	//  2.1 should not force send
 //	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-//	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
+//	ASSERT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 //		MAX_GECO_PACKET_SIZE);
 //	mch_free_simple_chunk(cid);
 //	//3) if packet length > max_geco_packet_length
 //	cid = mch_make_simple_chunk(CHUNK_SHUTDOWN_COMPLETE,
 //		FLAG_TBIT_SET);
 //	simple_chunk_t_ptr_ = mch_complete_simple_chunk(cid);
-//	EXPECT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 8);
-//	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_), 1480);
+//	ASSERT_EQ(ntohs(simple_chunk_t_ptr_->chunk_header.chunk_length), 8);
+//	ASSERT_EQ(get_bundle_total_size(&default_bundle_ctrl_), 1480);
 //	//  3.1 should force send && get_bundle_total_size == UDP_GECO_PACKET_FIXED_SIZES+8
 //	mdi_bundle_ctrl_chunk(simple_chunk_t_ptr_, &path);
-//	EXPECT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
+//	ASSERT_EQ(get_bundle_total_size(&default_bundle_ctrl_),
 //		UDP_GECO_PACKET_FIXED_SIZES + 8);
 //	mch_free_simple_chunk(cid);
 //}
-//
-//// last run and passed on 26 Agu 2016
+
+// last run and passed on 26 Agu 2016
 //TEST(DISPATCHER_MODULE, test_recv_geco_packet)
 //{
 //	bool enable_0_if_recv_invalidate_packet_addr_port_length_integritycheck_and_so_on =
@@ -1179,8 +1153,8 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	bool enable_5_if_recv_SHUTDOWN_COMPLETE = false;  //passed
 //	bool enable_6_processinit_chunk = true; //passed
 //	/////////////////////////////////////////////////////////////////////////////////////
-//	EXPECT_EQ(sizeof(in_addr), 4);
-//	EXPECT_EQ(sizeof(in6_addr), 16);
+//	ASSERT_EQ(sizeof(in_addr), 4);
+//	ASSERT_EQ(sizeof(in6_addr), 16);
 //	/////////////////////////////////////////////////////////////////////////////////////
 //	init();
 //	//disenable branch call  to test branch call this can reused all sample inputs to make life easier
@@ -1276,7 +1250,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //				memcpy(geco_packet.chunk, init_chunk,
 //					dctp_packet_len - GECO_PACKET_FIXED_SIZE);
 //				gset_checksum((char*)&geco_packet, dctp_packet_len);
-//				EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + written, 92);
+//				ASSERT_EQ(INIT_CHUNK_FIXED_SIZES + written, 92);
 //				ret = mdis_recv_geco_packet(0, (char*)dctp_packet, dctp_packet_len,
 //					last_src_addr, last_dest_addr);
 //				//1.2.2) should find an existed channel
@@ -1296,7 +1270,7 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //				memcpy(geco_packet.chunk, init_chunk,
 //					dctp_packet_len - GECO_PACKET_FIXED_SIZE);
 //				gset_checksum((char*)&geco_packet, dctp_packet_len);
-//				EXPECT_EQ(INIT_CHUNK_FIXED_SIZES + written, 28);
+//				ASSERT_EQ(INIT_CHUNK_FIXED_SIZES + written, 28);
 //				ret = mdis_recv_geco_packet(0, (char*)dctp_packet, dctp_packet_len,
 //					last_src_addr, last_dest_addr);
 //				//1.3.2) should NOT find an existed channel
@@ -1510,36 +1484,37 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 //	}
 //
 //}
-//// last run and passed on 21 Agu 2016
-//TEST(DISPATCHER_MODULE, test_contains_chunk)
-//{
-//	/**
-//	 * contains_chunk: looks for chunk_type in a newly received geco packet
-//	 * Should be called after find_chunk_types().
-//	 * The chunkArray parameter is inspected. This only really checks for chunks
-//	 * with an ID <= 30. For all other chunks, it just guesses...
-//	 * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
-//	 * @pre: need call find_chunk_types() first
-//	 */
-//	uint chunk_types;
-//	//////////////////////////////////////////////////////////////////////////////
-//	chunk_types = 0;
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
-//	EXPECT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 0);
-//	//////////////////////////////////////////////////////////////////////////////
-//	// INIT must be the only chunk in the packet
-//	chunk_types = 0;
-//	chunk_types |= 1 << CHUNK_INIT;
-//	EXPECT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 1);
-//	//////////////////////////////////////////////////////////////////////////////
-//	chunk_types = 0;
-//	chunk_types |= 1 << CHUNK_DATA;
-//	chunk_types |= 1 << CHUNK_SACK;
-//	chunk_types |= 1 << CHUNK_HBREQ;
-//	EXPECT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-//	EXPECT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 2);
-//	//////////////////////////////////////////////////////////////////////////////
-//}
+
+// passed on 28/02/2017
+TEST(DISPATCHER_MODULE, test_contains_chunk)
+{
+	/**
+	 * contains_chunk: looks for chunk_type in a newly received geco packet
+	 * Should be called after find_chunk_types().
+	 * The chunkArray parameter is inspected. This only really checks for chunks
+	 * with an ID <= 30. For all other chunks, it just guesses...
+	 * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
+	 * @pre: need call find_chunk_types() first
+	 */
+	uint chunk_types;
+	//////////////////////////////////////////////////////////////////////////////
+	chunk_types = 0;
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
+	ASSERT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 0);
+	//////////////////////////////////////////////////////////////////////////////
+	// INIT must be the only chunk in the packet
+	chunk_types = 0;
+	chunk_types |= 1 << CHUNK_INIT;
+	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 1);
+	//////////////////////////////////////////////////////////////////////////////
+	chunk_types = 0;
+	chunk_types |= 1 << CHUNK_DATA;
+	chunk_types |= 1 << CHUNK_SACK;
+	chunk_types |= 1 << CHUNK_HBREQ;
+	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+	ASSERT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 2);
+	//////////////////////////////////////////////////////////////////////////////
+}
 

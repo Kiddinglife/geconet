@@ -71,16 +71,16 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_instance";
     //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
-    //::testing::GTEST_FLAG(filter) = "mpath.*";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_alg0";
-    ::testing::GTEST_FLAG(filter) = "mpath.test_replace_empty_space";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_set_paths";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_heartbeat_timer_expired";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_update_rtt";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_data_chunk_acked";
-    //::testing::GTEST_FLAG(filter) = "mpath.test_hb_ack_received";
+    //::testing::GTEST_FLAG(filter) = "mpath.*";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_alg0";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_replace_empty_space";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_set_paths";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_heartbeat_timer_expired";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_update_rtt";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_data_chunk_acked";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_hb_ack_received";  // passed on 28/02/2017
 
     // last pass on 31 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MULP.*";
@@ -106,12 +106,12 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_bundle_ctrl_chunk";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_read_peer_addreslist";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_first_chunk_of";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_chunk_types";
+    ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr"; // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_first_chunk_of";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_chunk_types";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_validate_dest_addr";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_vlparam_from_setup_chunk";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contains_chunk";
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contains_chunk";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_geco_instance";
 
     // Release and close all loggers
