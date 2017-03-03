@@ -456,7 +456,9 @@ TEST_F(mpath, test_hb_ack_received)
 }
 
 #include <vector>
-static bool find_number_from_two_decimen_array (int target,std::vector<std::vector<int>>& array)
+static bool
+find_number_from_two_decimen_array (int target,
+                                    std::vector<std::vector<int>>& array)
 {
   /**
    * 在一个数组中，每一行都按照从左到右递增的顺序排序，
@@ -562,7 +564,8 @@ TEST_F(mpath, test_alg0)
   ASSERT_TRUE(find);
 }
 
-static void replace_empty_space_in_string (char *str, int length)
+static void
+replace_empty_space_in_string (char *str, int length)
 {
   /**
    * Given a string and please repalce all empty char of " " with "%20"
@@ -608,7 +611,7 @@ TEST_F(mpath,test_replace_empty_space)
   const char* msg = "hello world";
   strcpy (str, msg);
   replace_empty_space_in_string (str, 1024);
-  ASSERT_STREQ(str,"hello%20world");
+  ASSERT_STREQ(str, "hello%20world");
 }
 
 struct ListNode
@@ -620,7 +623,8 @@ struct ListNode
     {
     }
 };
-static ListNode* reverse_list (ListNode* pHead)
+static ListNode*
+reverse_list (ListNode* pHead)
 {
   /**
    * 输入一个链表，反转链表后，输出链表的所有元素。
@@ -666,7 +670,8 @@ TEST_F(mpath,test_reverse_list)
 
 #include <stack>
 #include <vector>
-static bool is_pop_order (std::vector<int>& pushV, std::vector<int>& popV)
+static bool
+is_pop_order (std::vector<int>& pushV, std::vector<int>& popV)
 {
   /**
    * 输入两个整数序列，第一个序列表示栈的压入顺序，请判断第二个序列是否为该栈的弹出顺序。
