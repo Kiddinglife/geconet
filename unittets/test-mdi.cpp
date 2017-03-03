@@ -103,378 +103,380 @@
            uint dctp_packet_len = 0; int ret = good
 
 static void
-init_inst(geco_instance_t& inst, ushort destport, const char** src_ips,
-	uint src_ips_len, sockaddrunion* dest)
+init_inst (geco_instance_t& inst, ushort destport, const char** src_ips,
+           uint src_ips_len, sockaddrunion* dest)
 {
-	for (uint i = 0; i < src_ips_len; i++)
-	{
-		str2saddr(&dest[i], src_ips[i], destport);
-	}
-	inst.local_addres_size = src_ips_len;
-	inst.local_addres_list = dest;
-	inst.local_port = destport;
-	geco_instances_.push_back(&inst);
+  for (uint i = 0; i < src_ips_len; i++)
+  {
+    str2saddr (&dest[i], src_ips[i], destport);
+  }
+  inst.local_addres_size = src_ips_len;
+  inst.local_addres_list = dest;
+  inst.local_port = destport;
+  geco_instances_.push_back (&inst);
 }
 static void
-init_channel(geco_channel_t& channel, ushort srcport, ushort destport,
-	const char** src_ips, uint src_ips_len, const char** dest_ips,
-	uint dest_ips_len, sockaddrunion* srclist,
-	sockaddrunion* destlist)
+init_channel (geco_channel_t& channel, ushort srcport, ushort destport,
+              const char** src_ips, uint src_ips_len, const char** dest_ips,
+              uint dest_ips_len, sockaddrunion* srclist,
+              sockaddrunion* destlist)
 {
-	for (uint i = 0; i < src_ips_len; i++)
-	{
-		str2saddr(&srclist[i], src_ips[i], srcport);
-	}
-	for (uint i = 0; i < dest_ips_len; i++)
-	{
-		str2saddr(&destlist[i], dest_ips[i], destport);
-	}
-	channel.remote_addres = srclist;
-	channel.local_addres = destlist;
-	channel.remote_port = srcport;
-	channel.local_port = destport;
-	channel.remote_addres_size = src_ips_len;
-	channel.local_addres_size = dest_ips_len;
-	channel.deleted = false;
-	channel.is_IN6ADDR_ANY = false;
-	channel.is_INADDR_ANY = false;
+  for (uint i = 0; i < src_ips_len; i++)
+  {
+    str2saddr (&srclist[i], src_ips[i], srcport);
+  }
+  for (uint i = 0; i < dest_ips_len; i++)
+  {
+    str2saddr (&destlist[i], dest_ips[i], destport);
+  }
+  channel.remote_addres = srclist;
+  channel.local_addres = destlist;
+  channel.remote_port = srcport;
+  channel.local_port = destport;
+  channel.remote_addres_size = src_ips_len;
+  channel.local_addres_size = dest_ips_len;
+  channel.deleted = false;
+  channel.is_IN6ADDR_ANY = false;
+  channel.is_INADDR_ANY = false;
 }
 static void
-init_addrlist(bool isip4, ushort port, const char** ipstrs, uint len,
-	sockaddrunion* addrlist)
+init_addrlist (bool isip4, ushort port, const char** ipstrs, uint len,
+               sockaddrunion* addrlist)
 {
-	for (uint i = 0; i < len; i++)
-	{
-		str2saddr(&addrlist[i], ipstrs[i], port);
-	}
+  for (uint i = 0; i < len; i++)
+  {
+    str2saddr (&addrlist[i], ipstrs[i], port);
+  }
 }
 
 // passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_find_geco_instance)
 {
-	// given
-	const int destaddrsize = 6;
-	const char* destipstrs[destaddrsize] =
-	{ "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
-		"192.168.1.5" };
-	const ushort destport = 9989;
+  // given
+  const int destaddrsize = 6;
+  const char* destipstrs[destaddrsize] =
+    { "192.168.1.0", "192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4",
+        "192.168.1.5" };
+  const ushort destport = 9989;
 
-	geco_instance_t inst;
-	sockaddrunion dest_addrs[destaddrsize];
-	init_inst(inst, destport, destipstrs, destaddrsize, dest_addrs);
+  geco_instance_t inst;
+  sockaddrunion dest_addrs[destaddrsize];
+  init_inst (inst, destport, destipstrs, destaddrsize, dest_addrs);
 
-	sockaddrunion* last_dest_addr;
-	ushort last_dest_port;
-	geco_instance_t* ret = 0;
+  sockaddrunion* last_dest_addr;
+  ushort last_dest_port;
+  geco_instance_t* ret = 0;
 
-	// 1)  when is_in6addr_any and is_inaddr_any are both false
-	inst.is_in6addr_any = inst.is_inaddr_any = false;
+  // 1)  when is_in6addr_any and is_inaddr_any are both false
+  inst.is_in6addr_any = inst.is_inaddr_any = false;
 
-	// 1.1) and when last_dest_port, last_dest_addr and addr family both matches
-	last_dest_port = inst.local_port;
-	for (uint i = 0; i < inst.local_addres_size; i++)
-	{
-		last_dest_addr = &inst.local_addres_list[i];
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  1.1.1) then should found this inst
-		ASSERT_EQ(ret, &inst);
-	}
+  // 1.1) and when last_dest_port, last_dest_addr and addr family both matches
+  last_dest_port = inst.local_port;
+  for (uint i = 0; i < inst.local_addres_size; i++)
+  {
+    last_dest_addr = &inst.local_addres_list[i];
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  1.1.1) then should found this inst
+    ASSERT_EQ(ret, &inst);
+  }
 
-	// 1.2) and when last_dest_port NOT mathces
-	last_dest_port = inst.local_port - 1;
-	for (uint i = 0; i < inst.local_addres_size; i++)
-	{
-		last_dest_addr = &inst.local_addres_list[i];
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  1.2.1) then should NOT found this inst
-		ASSERT_EQ(ret, nullptr);
-	}
+  // 1.2) and when last_dest_port NOT mathces
+  last_dest_port = inst.local_port - 1;
+  for (uint i = 0; i < inst.local_addres_size; i++)
+  {
+    last_dest_addr = &inst.local_addres_list[i];
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  1.2.1) then should NOT found this inst
+    ASSERT_EQ(ret, nullptr);
+  }
 
-	// 1.3) and when last_dest_addr NOT matches
-	last_dest_port = inst.local_port;
-	for (uint i = 0; i < inst.local_addres_size; i++)
-	{
-		sockaddrunion tmp = inst.local_addres_list[i];
-		s4addr(&tmp) -= 1;  // just minus to make it different
-		last_dest_addr = &tmp;
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  1.3.1) then should NOT found this inst
-		ASSERT_EQ(ret, nullptr);
-	}
+  // 1.3) and when last_dest_addr NOT matches
+  last_dest_port = inst.local_port;
+  for (uint i = 0; i < inst.local_addres_size; i++)
+  {
+    sockaddrunion tmp = inst.local_addres_list[i];
+    s4addr(&tmp) -= 1;  // just minus to make it different
+    last_dest_addr = &tmp;
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  1.3.1) then should NOT found this inst
+    ASSERT_EQ(ret, nullptr);
+  }
 
-	// 1.4) and when addr family NOT matches
-	last_dest_port = inst.local_port;
-	for (uint i = 0; i < inst.local_addres_size; i++)
-	{
-		sockaddrunion tmp = inst.local_addres_list[i];
-		saddr_family(&tmp) == AF_INET ?
-			saddr_family(&tmp) = AF_INET6 :
-			saddr_family(&tmp) = AF_INET;
-		last_dest_addr = &tmp;
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  1.4.1) then should NOT found this inst
-		ASSERT_EQ(ret, nullptr);
-	}
+  // 1.4) and when addr family NOT matches
+  last_dest_port = inst.local_port;
+  for (uint i = 0; i < inst.local_addres_size; i++)
+  {
+    sockaddrunion tmp = inst.local_addres_list[i];
+    saddr_family(&tmp) == AF_INET ?
+    saddr_family(&tmp) = AF_INET6 :
+                                    saddr_family(&tmp) = AF_INET;
+    last_dest_addr = &tmp;
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  1.4.1) then should NOT found this inst
+    ASSERT_EQ(ret, nullptr);
+  }
 
-	// 2) when  is_in6addr_any true, is_in4addr_any false 
-	// assume receive this packet and so addr family must  match
-	// HERE local_addres_size IS ALL IP4 ADDR
-	inst.is_in6addr_any = true;
-	for (uint i = 0; i < inst.local_addres_size; i++)
-	{
-		sockaddrunion tmp = inst.local_addres_list[i];
-		//  2.1) and when af(make it ip6) NOT matches (original ip4)
-		saddr_family(&tmp) = AF_INET6;
-		last_dest_addr = &tmp;
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  2.1.1) should still found this inst
-		ASSERT_EQ(ret, &inst);
-		//  2.2) and when af matches (ip4)
-		saddr_family(&tmp) = AF_INET;
-		last_dest_addr = &tmp;
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  2.2.1) should still found this inst
-		ASSERT_EQ(ret, &inst);
-		//  2.2.1) and when dest addr NOT matches 
-		s4addr(&tmp) -= 1;  // just minus to make it not to be found in local_addres_
-		saddr_family(&tmp) = AF_INET;
-		last_dest_addr = &tmp;
-		ret = mdi_find_geco_instance(last_dest_addr, last_dest_port);
-		//  2.2.1) should NOT found this inst
-		ASSERT_EQ(ret, nullptr);
-	}
+  // 2) when  is_in6addr_any true, is_in4addr_any false
+  // assume receive this packet and so addr family must  match
+  // HERE local_addres_size IS ALL IP4 ADDR
+  inst.is_in6addr_any = true;
+  for (uint i = 0; i < inst.local_addres_size; i++)
+  {
+    sockaddrunion tmp = inst.local_addres_list[i];
+    //  2.1) and when af(make it ip6) NOT matches (original ip4)
+    saddr_family(&tmp) = AF_INET6;
+    last_dest_addr = &tmp;
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  2.1.1) should still found this inst
+    ASSERT_EQ(ret, &inst);
+    //  2.2) and when af matches (ip4)
+    saddr_family(&tmp) = AF_INET;
+    last_dest_addr = &tmp;
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  2.2.1) should still found this inst
+    ASSERT_EQ(ret, &inst);
+    //  2.2.1) and when dest addr NOT matches
+    s4addr(&tmp) -= 1; // just minus to make it not to be found in local_addres_
+    saddr_family(&tmp) = AF_INET;
+    last_dest_addr = &tmp;
+    ret = mdi_find_geco_instance (last_dest_addr, last_dest_port);
+    //  2.2.1) should NOT found this inst
+    ASSERT_EQ(ret, nullptr);
+  }
 }
 
 // passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_find_channel)
 {
-	// given
-	const int src_ips_len = 3;
-	const char* src_ips[src_ips_len] =
-	{ "192.168.1.0", "192.168.1.1", "192.168.1.2" };
-	const int dest_ips_len = 3;
-	const char* dest_ips[dest_ips_len] =
-	{ "192.168.1.3", "192.168.1.4", "192.168.1.5" };
-	const ushort ports[] =
-	{ 100, 101 };  // src-dest
-	sockaddrunion remote_addres[src_ips_len];
-	sockaddrunion local_addres[dest_ips_len];
-	geco_channel_t channel;
-	for (uint i = 0; i < src_ips_len; i++)
-	{
-		str2saddr(&remote_addres[i], src_ips[i], ports[0]);
-	}
-	for (uint i = 0; i < dest_ips_len; i++)
-	{
-		str2saddr(&local_addres[i], dest_ips[i], ports[1]);
-	}
-	channel.channel_id = 5;
-	channel.remote_addres = 0;
-	channel.local_addres = local_addres;
-	channel.remote_port = ports[0];
-	channel.local_port = ports[1];
-	channel.remote_addres_size = 0;
-	channel.local_addres_size = dest_ips_len;
-	channel.deleted = false;
-	channel.is_IN6ADDR_ANY = false;
-	channel.is_INADDR_ANY = false;
+  // given
+  const int src_ips_len = 3;
+  const char* src_ips[src_ips_len] =
+    { "192.168.1.0", "192.168.1.1", "192.168.1.2" };
+  const int dest_ips_len = 3;
+  const char* dest_ips[dest_ips_len] =
+    { "192.168.1.3", "192.168.1.4", "192.168.1.5" };
+  const ushort ports[] =
+    { 100, 101 };  // src-dest
+  sockaddrunion remote_addres[src_ips_len];
+  sockaddrunion local_addres[dest_ips_len];
+  geco_channel_t channel;
+  for (uint i = 0; i < src_ips_len; i++)
+  {
+    str2saddr (&remote_addres[i], src_ips[i], ports[0]);
+  }
+  for (uint i = 0; i < dest_ips_len; i++)
+  {
+    str2saddr (&local_addres[i], dest_ips[i], ports[1]);
+  }
+  channel.channel_id = 5;
+  channel.remote_addres = 0;
+  channel.local_addres = local_addres;
+  channel.remote_port = ports[0];
+  channel.local_port = ports[1];
+  channel.remote_addres_size = 0;
+  channel.local_addres_size = dest_ips_len;
+  channel.deleted = false;
+  channel.is_IN6ADDR_ANY = false;
+  channel.is_INADDR_ANY = false;
 
-	// stub the related variables
-	geco_channel_t* chanids[8] =
-	{ 0 };
-	channels_ = chanids;
-	curr_channel_ = &channel;
-	channels_[5] = curr_channel_;
-	mdi_set_channel_remoteaddrlist(remote_addres, src_ips_len);
+  // stub the related variables
+  geco_channel_t* chanids[8] =
+    { 0 };
+  channels_ = chanids;
+  curr_channel_ = &channel;
+  channels_[5] = curr_channel_;
+  mdi_set_channel_remoteaddrlist (remote_addres, src_ips_len);
+  print_addrlist (channel.local_addres, channel.local_addres_size);
+  print_addrlist (channel.remote_addres, channel.remote_addres_size);
 
-	//temps
-	geco_channel_t* found;
-	sockaddrunion* last_src_addr;
-	sockaddrunion* last_dest_addr;
-	ushort last_src_port = channel.remote_port;
-	ushort last_dest_port = channel.local_port;
-	sockaddrunion tmp_addr;
+  //temps
+  geco_channel_t* found;
+  sockaddrunion* last_src_addr;
+  sockaddrunion* last_dest_addr;
+  ushort last_src_port = channel.remote_port;
+  ushort last_dest_port = channel.local_port;
+  sockaddrunion tmp_addr;
 
-	// 0) when all matching
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		last_dest_addr = &channel.local_addres[i];
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			last_src_addr = &channel.remote_addres[j];
-			//then should find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, curr_channel_);
-		}
-	}
+  // 0) when all matching
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    last_dest_addr = &channel.local_addres[i];
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      last_src_addr = &channel.remote_addres[j];
+      //then should find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, curr_channel_);
+    }
+  }
 
-	// 1) when src port not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		last_dest_addr = &channel.local_addres[i];
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			last_src_addr = &channel.remote_addres[j];
-			last_src_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-			// then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  // 1) when only src port not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    last_dest_addr = &channel.local_addres[i];
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      tmp_addr = channel.remote_addres[j];
+      tmp_addr.sin.sin_port -= 1; //just make it not equal to the one stored in channel
+      // then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = &tmp_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//2) when dest port not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		last_dest_addr = &channel.local_addres[i];
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			last_src_addr = &channel.remote_addres[j];
-			last_dest_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //2) when dest port not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    tmp_addr = channel.local_addres[i];
+    tmp_addr.sin.sin_port -= 1; //just make it not equal to the one stored in channel
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      last_src_addr = &channel.remote_addres[j];
+      //then should not find channel
+      curr_trans_addr_.local_saddr = &tmp_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//3) when dest and src port not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		last_dest_addr = &channel.local_addres[i];
-		last_dest_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			last_src_addr = &channel.remote_addres[j];
-			last_src_addr->sin.sin_port -= 1; //just make it not equal to the one stored in channel
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //3) when dest and src port not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    sockaddrunion tmp_local_addr = channel.local_addres[i];
+    tmp_local_addr.sin.sin_port -= 1; //just make it not equal to the one stored in channel
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      sockaddrunion tmp_src_addr = channel.remote_addres[j];
+      tmp_local_addr.sin.sin_port -= 1; //just make it not equal to the one stored in channel
+      //then should not find channel
+      curr_trans_addr_.local_saddr = &tmp_local_addr;
+      curr_trans_addr_.peer_saddr = &tmp_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//4) when dest addr not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		tmp_addr = channel.local_addres[i];
-		s4addr(&tmp_addr) -= 1;  // just minus to make it different
-		last_dest_addr = &tmp_addr;
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			last_src_addr = &channel.remote_addres[j];
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //4) when dest addr not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    tmp_addr = channel.local_addres[i];
+    s4addr(&tmp_addr) -= 1;  // just minus to make it different
+    last_dest_addr = &tmp_addr;
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      last_src_addr = &channel.remote_addres[j];
+      //then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//5) when src addr not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		last_dest_addr = &channel.local_addres[i];
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			tmp_addr = channel.remote_addres[i];
-			s4addr(&tmp_addr) -= 1;  // just minus to make it different
-			last_src_addr = &tmp_addr;
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //5) when src addr not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    last_dest_addr = &channel.local_addres[i];
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      tmp_addr = channel.remote_addres[i];
+      s4addr(&tmp_addr) -= 1;  // just minus to make it different
+      last_src_addr = &tmp_addr;
+      //then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//6) when  dest and addr not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		tmp_addr = channel.local_addres[i];
-		s4addr(&tmp_addr) -= 1;  // just minus to make it different
-		last_dest_addr = &tmp_addr;
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			sockaddrunion tmp_addr2;
-			tmp_addr2 = channel.remote_addres[i];
-			s4addr(&tmp_addr2) -= 1;  // just minus to make it different
-			last_src_addr = &tmp_addr2;
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //6) when  dest and addr not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    tmp_addr = channel.local_addres[i];
+    s4addr(&tmp_addr) -= 1;  // just minus to make it different
+    last_dest_addr = &tmp_addr;
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      sockaddrunion tmp_addr2;
+      tmp_addr2 = channel.remote_addres[i];
+      s4addr(&tmp_addr2) -= 1;  // just minus to make it different
+      last_src_addr = &tmp_addr2;
+      //then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//7) when dest addr family not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		tmp_addr = channel.local_addres[i];
-		saddr_family(&tmp_addr) == AF_INET ?
-			saddr_family(&tmp_addr) = AF_INET6 :
-			saddr_family(&tmp_addr) = AF_INET;
-		last_dest_addr = &tmp_addr;
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			last_src_addr = &channel.remote_addres[j];
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
-	//8) when src addr family not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		last_dest_addr = &channel.local_addres[i];
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			tmp_addr = channel.remote_addres[i];
-			saddr_family(&tmp_addr) == AF_INET ?
-				saddr_family(&tmp_addr) = AF_INET6 :
-				saddr_family(&tmp_addr) =
-				AF_INET;
-			last_src_addr = &tmp_addr;
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //7) when dest addr family not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    tmp_addr = channel.local_addres[i];
+    saddr_family(&tmp_addr) == AF_INET ?
+    saddr_family(&tmp_addr) = AF_INET6 :
+                                         saddr_family(&tmp_addr) = AF_INET;
+    last_dest_addr = &tmp_addr;
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      last_src_addr = &channel.remote_addres[j];
+      //then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
+  //8) when src addr family not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    last_dest_addr = &channel.local_addres[i];
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      tmp_addr = channel.remote_addres[i];
+      saddr_family(&tmp_addr) == AF_INET ?
+      saddr_family(&tmp_addr) = AF_INET6 :
+                                           saddr_family(&tmp_addr) =
+                                           AF_INET;
+      last_src_addr = &tmp_addr;
+      //then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 
-	//9) when dest and src af both not equal
-	for (uint i = 0; i < channel.local_addres_size; i++)
-	{
-		tmp_addr = channel.local_addres[i];
-		saddr_family(&tmp_addr) == AF_INET ?
-			saddr_family(&tmp_addr) = AF_INET6 :
-			saddr_family(&tmp_addr) = AF_INET;
-		last_dest_addr = &tmp_addr;
-		for (uint j = 0; j < channel.remote_addres_size; j++)
-		{
-			sockaddrunion tmp_addr2;
-			tmp_addr2 = channel.remote_addres[i];
-			saddr_family(&tmp_addr2) == AF_INET ?
-				saddr_family(&tmp_addr2) = AF_INET6 :
-				saddr_family(&tmp_addr2) =
-				AF_INET;
-			last_src_addr = &tmp_addr2;
-			//then should not find channel
-			curr_trans_addr_.local_saddr = last_dest_addr;
-			curr_trans_addr_.peer_saddr = last_src_addr;
-			found = mdi_find_channel();
-			ASSERT_EQ(found, (geco_channel_t*)NULL);
-		}
-	}
+  //9) when dest and src af both not equal
+  for (uint i = 0; i < channel.local_addres_size; i++)
+  {
+    tmp_addr = channel.local_addres[i];
+    saddr_family(&tmp_addr) == AF_INET ?
+    saddr_family(&tmp_addr) = AF_INET6 :
+                                         saddr_family(&tmp_addr) = AF_INET;
+    last_dest_addr = &tmp_addr;
+    for (uint j = 0; j < channel.remote_addres_size; j++)
+    {
+      sockaddrunion tmp_addr2;
+      tmp_addr2 = channel.remote_addres[i];
+      saddr_family(&tmp_addr2) == AF_INET ?
+      saddr_family(&tmp_addr2) = AF_INET6 :
+                                            saddr_family(&tmp_addr2) =
+                                            AF_INET;
+      last_src_addr = &tmp_addr2;
+      //then should not find channel
+      curr_trans_addr_.local_saddr = last_dest_addr;
+      curr_trans_addr_.peer_saddr = last_src_addr;
+      found = mdi_find_channel ();
+      ASSERT_EQ(found, nullptr);
+    }
+  }
 }
 
 // last run and passed on 22 Agu 2016
@@ -594,274 +596,278 @@ TEST(DISPATCHER_MODULE, test_find_channel)
 // passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_find_chunk_types)
 {
-	geco_packet_t geco_packet;
-	geco_packet.pk_comm_hdr.checksum = 0;
-	geco_packet.pk_comm_hdr.dest_port = htons(
-		(generate_random_uint32() % USHRT_MAX));
-	geco_packet.pk_comm_hdr.src_port = htons(
-		(generate_random_uint32() % USHRT_MAX));
-	geco_packet.pk_comm_hdr.verification_tag = htons(
-		(generate_random_uint32()));
+  geco_packet_t geco_packet;
+  geco_packet.pk_comm_hdr.checksum = 0;
+  geco_packet.pk_comm_hdr.dest_port = htons (
+      (generate_random_uint32 () % USHRT_MAX));
+  geco_packet.pk_comm_hdr.src_port = htons (
+      (generate_random_uint32 () % USHRT_MAX));
+  geco_packet.pk_comm_hdr.verification_tag = htons (
+      (generate_random_uint32 ()));
 
-	// given one data chunk
-	uint offset = 0;
-	uint chunklen = 0;
-	uchar* wt = geco_packet.chunk;
-	uint datalen = 101;
-	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 116);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
-	wt += chunklen;
+  // given one data chunk
+  uint offset = 0;
+  uint chunklen = 0;
+  uchar* wt = geco_packet.chunk;
+  uint datalen = 101;
+  chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 116);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_DATA);
+  wt += chunklen;
 
-	//given one sack chunk
-	datalen = 31;
-	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	//116+4+12+31 = 132+31 = 163
-	while (chunklen % 4)
-		chunklen++;
-	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-		CHUNK_SACK);
-	offset += chunklen;
-	ASSERT_EQ(offset, 164);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
-	wt += chunklen;
+  //given one sack chunk
+  datalen = 31;
+  chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  //116+4+12+31 = 132+31 = 163
+  while (chunklen % 4)
+    chunklen++;
+  ASSERT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+            CHUNK_SACK);
+  offset += chunklen;
+  ASSERT_EQ(offset, 164);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SACK);
+  wt += chunklen;
 
-	//given one init chunk
-	datalen = 21;
-	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;  //21+20=41
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	ASSERT_EQ(geco_packet.chunk + offset, wt);
-	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-		CHUNK_INIT);
-	offset += chunklen;
-	ASSERT_EQ(offset, 208);  // 164+4+16+21= 205
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT);
-	wt += chunklen;
+  //given one init chunk
+  datalen = 21;
+  chunklen = datalen + INIT_CHUNK_FIXED_SIZES;  //21+20=41
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_INIT;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  ASSERT_EQ(geco_packet.chunk + offset, wt);
+  ASSERT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+            CHUNK_INIT);
+  offset += chunklen;
+  ASSERT_EQ(offset, 208);  // 164+4+16+21= 205
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT);
+  wt += chunklen;
 
-	//given one init ack chunk
-	datalen = 21;
-	chunklen = datalen + INIT_CHUNK_FIXED_SIZES;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT_ACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-		CHUNK_INIT_ACK);
-	offset += chunklen;
-	ASSERT_EQ(offset, 252);  // 208+20+21 = 228+21=249
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
-	wt += chunklen;
+  //given one init ack chunk
+  datalen = 21;
+  chunklen = datalen + INIT_CHUNK_FIXED_SIZES;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_INIT_ACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  ASSERT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+            CHUNK_INIT_ACK);
+  offset += chunklen;
+  ASSERT_EQ(offset, 252);  // 208+20+21 = 228+21=249
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT_ACK);
+  wt += chunklen;
 
-	//given CHUNK_SHUTDOWN
-	chunklen = 4 + CHUNK_FIXED_SIZE;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 260);  // 252+8 = 260
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN);
-	wt += chunklen;
+  //given CHUNK_SHUTDOWN
+  chunklen = 4 + CHUNK_FIXED_SIZE;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 260);  // 252+8 = 260
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN);
+  wt += chunklen;
 
-	//given CHUNK_SHUTDOWN_ACK
-	chunklen = CHUNK_FIXED_SIZE;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 264);  // 260+4 = 264
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-	wt += chunklen;
+  //given CHUNK_SHUTDOWN_ACK
+  chunklen = CHUNK_FIXED_SIZE;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 264);  // 260+4 = 264
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+  wt += chunklen;
 
-	//1) when  given good chunks
-	uint total_chunks_count;
-	uint chunk_types = find_chunk_types(geco_packet.chunk, offset,
-		&total_chunks_count);
-	//then should find all chunks
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
-	ASSERT_EQ(total_chunks_count, 6);
+  //1) when  given good chunks
+  uint total_chunks_count;
+  uint chunk_types = find_chunk_types (geco_packet.chunk, offset,
+                                       &total_chunks_count);
+  //then should find all chunks
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+  ASSERT_EQ(total_chunks_count, 6);
 
-	//2) when there are bad chunks whose chun len < CHUNK_FIXED_SIZE
-	//CHUNK_SHUTDOWN_COMPLETE
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_COMPLETE;
-	((chunk_fixed_t*)wt)->chunk_length = htons(3);
-	offset += 4;
-	ASSERT_EQ(offset, 268);  // 264+4 = 268
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_COMPLETE);
-	wt += 4;
-	chunk_types = find_chunk_types(geco_packet.chunk, offset,
-		&total_chunks_count);
-	//then should find all good chunks skipping bad one
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-	ASSERT_EQ(total_chunks_count, 6);
+  //2) when there are bad chunks whose chun len < CHUNK_FIXED_SIZE
+  //CHUNK_SHUTDOWN_COMPLETE
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_COMPLETE;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (3);
+  offset += 4;
+  ASSERT_EQ(offset, 268);  // 264+4 = 268
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_COMPLETE);
+  wt += 4;
+  chunk_types = find_chunk_types (geco_packet.chunk, offset,
+                                  &total_chunks_count);
+  //then should find all good chunks skipping bad one
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+  ASSERT_EQ(total_chunks_count, 6);
 
-	//3) when chunk_len + read_len > packet_val_len
-	chunk_types = find_chunk_types(geco_packet.chunk, offset - 4,
-		&total_chunks_count);
-	//then should find all good chunks skipping bad one
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-	ASSERT_EQ(total_chunks_count, 6);
+  //3) when chunk_len + read_len > packet_val_len
+  chunk_types = find_chunk_types (geco_packet.chunk, offset - 4,
+                                  &total_chunks_count);
+  //then should find all good chunks skipping bad one
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+  ASSERT_EQ(total_chunks_count, 6);
 
-	//4) when ther is CHUNK_SHUTDOWN_ACK
-	chunk_types = find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-	ASSERT_EQ(total_chunks_count, 1);
+  //4) when ther is CHUNK_SHUTDOWN_ACK
+  chunk_types = find_chunk_types (wt - 8, offset - 8, &total_chunks_count);
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+  ASSERT_EQ(total_chunks_count, 1);
 
-	//5) when there are two repeated shutdown ack chunk 
-	chunklen = CHUNK_FIXED_SIZE;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 272);  // 260+4 = 264
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-	wt += chunklen;
-	chunklen = CHUNK_FIXED_SIZE;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 276);  // 260+4 = 264
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-	wt += chunklen;
-	chunk_types = find_chunk_types(wt - 8, offset - 8, &total_chunks_count);
-	//then contains_chunk() should find 1 shutdown ack chunk but total_chunks_count should be 2 and not find other chunk types
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
-	ASSERT_EQ(total_chunks_count, 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
+  //5) when there are two repeated shutdown ack chunk
+  chunklen = CHUNK_FIXED_SIZE;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 272);  // 260+4 = 264
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+  wt += chunklen;
+  chunklen = CHUNK_FIXED_SIZE;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 276);  // 260+4 = 264
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+  wt += chunklen;
+  chunk_types = find_chunk_types (wt - 8, offset - 8, &total_chunks_count);
+  //then contains_chunk() should find 1 shutdown ack chunk but total_chunks_count should be 2 and not find other chunk types
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_ACK, chunk_types), 1);
+  ASSERT_EQ(total_chunks_count, 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN_COMPLETE, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_INIT_ACK, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_SHUTDOWN, chunk_types), 0);
 }
 
 // passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
 {
-	geco_packet_t geco_packet;
-	geco_packet.pk_comm_hdr.checksum = 0;
-	geco_packet.pk_comm_hdr.dest_port = htons(
-		(generate_random_uint32() % USHRT_MAX));
-	geco_packet.pk_comm_hdr.src_port = htons(
-		(generate_random_uint32() % USHRT_MAX));
-	geco_packet.pk_comm_hdr.verification_tag = htonl((generate_random_uint32()));
+  geco_packet_t geco_packet;
+  geco_packet.pk_comm_hdr.checksum = 0;
+  geco_packet.pk_comm_hdr.dest_port = htons (
+      (generate_random_uint32 () % USHRT_MAX));
+  geco_packet.pk_comm_hdr.src_port = htons (
+      (generate_random_uint32 () % USHRT_MAX));
+  geco_packet.pk_comm_hdr.verification_tag = htonl (
+      (generate_random_uint32 ()));
 
-	// given one data chunk
-	uint offset = 0;
-	uint chunklen = 0;
-	uchar* wt = geco_packet.chunk;
-	uint datalen = 101;
-	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 116);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
-	wt += chunklen;
+  // given one data chunk
+  uint offset = 0;
+  uint chunklen = 0;
+  uchar* wt = geco_packet.chunk;
+  uint datalen = 101;
+  chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 116);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_DATA);
+  wt += chunklen;
 
-	//given another data chunk
-	datalen = 35;
-	chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_DATA;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 164);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_DATA);
-	wt += chunklen;
+  //given another data chunk
+  datalen = 35;
+  chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 164);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_DATA);
+  wt += chunklen;
 
-	//given one sack chunk
-	datalen = 31;
-	chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	//116+4+12+31 = 132+31 = 163
-	while (chunklen % 4)
-		chunklen++;
-	ASSERT_EQ(((chunk_fixed_t*)(geco_packet.chunk + offset))->chunk_id,
-		CHUNK_SACK);
-	offset += chunklen;
-	ASSERT_EQ(offset, 212);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SACK);
-	wt += chunklen;
+  //given one sack chunk
+  datalen = 31;
+  chunklen = datalen + SACK_CHUNK_FIXED_SIZE + CHUNK_FIXED_SIZE;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  //116+4+12+31 = 132+31 = 163
+  while (chunklen % 4)
+    chunklen++;
+  ASSERT_EQ(((chunk_fixed_t* )(geco_packet.chunk + offset))->chunk_id,
+            CHUNK_SACK);
+  offset += chunklen;
+  ASSERT_EQ(offset, 212);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SACK);
+  wt += chunklen;
 
-	// then should find them
-	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
-		geco_packet.chunk);
-	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
-		wt - chunklen);
-	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
-		nullptr);
-	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
-		nullptr);
+  // then should find them
+  ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_DATA),
+            geco_packet.chunk);
+  ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SACK),
+            wt - chunklen);
+  ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT),
+            nullptr);
+  ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset - 45, CHUNK_SACK),
+            nullptr);
 
-	//1) when chunk_len < CHUNK_FIXED_SIZE
-	chunklen = 3;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 216);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
-	wt += chunklen;
-	//then should not find this chunk
-	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK), nullptr);
+  //1) when chunk_len < CHUNK_FIXED_SIZE
+  chunklen = 3;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_SHUTDOWN_ACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 216);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_SHUTDOWN_ACK);
+  wt += chunklen;
+  //then should not find this chunk
+  ASSERT_EQ(
+      mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_SHUTDOWN_ACK),
+      nullptr);
 
-	//2) when chunk_len + read_len > packet_val_len
-	offset -= chunklen;
-	wt -= chunklen;
-	chunklen = 4;
-	((chunk_fixed_t*)wt)->chunk_id = CHUNK_INIT_ACK;
-	((chunk_fixed_t*)wt)->chunk_length = htons(chunklen + 1);
-	while (chunklen % 4)
-		chunklen++;
-	offset += chunklen;
-	ASSERT_EQ(offset, 216);
-	ASSERT_EQ(((chunk_fixed_t*)wt)->chunk_id, CHUNK_INIT_ACK);
-	wt += chunklen;
-	//then should not find this chunk
-	ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK), nullptr);
+  //2) when chunk_len + read_len > packet_val_len
+  offset -= chunklen;
+  wt -= chunklen;
+  chunklen = 4;
+  ((chunk_fixed_t*) wt)->chunk_id = CHUNK_INIT_ACK;
+  ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen + 1);
+  while (chunklen % 4)
+    chunklen++;
+  offset += chunklen;
+  ASSERT_EQ(offset, 216);
+  ASSERT_EQ(((chunk_fixed_t* )wt)->chunk_id, CHUNK_INIT_ACK);
+  wt += chunklen;
+  //then should not find this chunk
+  ASSERT_EQ(mch_find_first_chunk_of(geco_packet.chunk, offset, CHUNK_INIT_ACK),
+            nullptr);
 }
 
 // last run and passed on 22 Agu 2016
@@ -966,99 +972,99 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
 //	EXPECT_TRUE(saddr_equals(&peer_addreslist[2], &last_source_addr, true));
 //}
 
-// last run and passed on 22 Agu 2016
+// passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_contain_local_addr)
 {
-	/**
-	 * check if local addr is found
-	 * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
-	 * containslocaladdr(sockaddrunion* addr_list,uint addr_list_num);
-	 */
-	int i;
-	const char* addres[] =
-	{ "192.168.1.121", "192.168.1.132", "192.168.34.2" };
-	const char* addres6[] =
-	{ "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
-		"2607:f0d0:1002:0051:0000:0000:0000:0004" };
-	sockaddrunion local_addres[3];
-	sockaddrunion local_addres6[2];
-	for (i = 0; i < 3; i++)
-	{
-		str2saddr(&local_addres[i], addres[i], 0);
-	}
-	for (i = 0; i < 2; i++)
-	{
-		str2saddr(&local_addres6[i], addres6[i], 0);
-	}
-	geco_instance_t inst;
-	inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4;
-	inst.local_addres_size = 3;
-	inst.local_addres_list = local_addres;
-	//////////////////////////////////////////////////////////////////////////////
-	geco_instances_.push_back(&inst);
-	sockaddrunion tmpaddr;
-	//////////////////////////////////////////////////////////////////////////////
-	//1) test branch 1 curr geco_inst and curr channel both NULL
-	//1.1) test no local addr presents
-	EXPECT_FALSE(mdi_contains_localhost(local_addres, 3));
-	EXPECT_FALSE(mdi_contains_localhost(local_addres6, 2));
-	//1.2) test  local addr presents
-	tmpaddr = local_addres[1];
-	str2saddr(&local_addres[1], "127.0.0.1", 0);
-	EXPECT_TRUE(mdi_contains_localhost(local_addres, 3));
-	local_addres[1] = tmpaddr;
-	tmpaddr = local_addres6[1];
-	str2saddr(&local_addres6[1], "::1", 0);
-	EXPECT_TRUE(mdi_contains_localhost(local_addres6, 2));
-	local_addres6[1] = tmpaddr;
-	//////////////////////////////////////////////////////////////////////////////
-	//2) test branch 2 curr_geco_instance_ NOT NULL
-	curr_geco_instance_ = &inst;
-	//2.1) test local addr in curr gecio inst local addres list
-	tmpaddr = local_addres[1];
-	EXPECT_TRUE(mdi_contains_localhost(&tmpaddr, 1));
-	//2.1) test no local addr in curr gecio inst local addres list
-	str2saddr(&tmpaddr, "221.123.45.12", 0);
-	EXPECT_FALSE(mdi_contains_localhost(&tmpaddr, 1));
+  /**
+   * check if local addr is found
+   * eg. ip4 loopback 127.0.0.1 or ip4  ethernet local addr 192.168.1.107 or public ip4 addr
+   * containslocaladdr(sockaddrunion* addr_list,uint addr_list_num);
+   */
+  int i;
+  const char* addres[] =
+    { "192.168.1.121", "192.168.1.132", "192.168.34.2" };
+  const char* addres6[] =
+    { "2001:0db8:0a0b:12f0:0000:0000:0000:0001",
+        "2607:f0d0:1002:0051:0000:0000:0000:0004" };
+  sockaddrunion local_addres[3];
+  sockaddrunion local_addres6[2];
+  for (i = 0; i < 3; i++)
+  {
+    str2saddr (&local_addres[i], addres[i], 0);
+  }
+  for (i = 0; i < 2; i++)
+  {
+    str2saddr (&local_addres6[i], addres6[i], 0);
+  }
+  geco_instance_t inst;
+  inst.supportedAddressTypes = SUPPORT_ADDRESS_TYPE_IPV4;
+  inst.local_addres_size = 3;
+  inst.local_addres_list = local_addres;
+  //////////////////////////////////////////////////////////////////////////////
+  geco_instances_.push_back (&inst);
+  sockaddrunion tmpaddr;
+  //////////////////////////////////////////////////////////////////////////////
+  //1) test branch 1 curr geco_inst and curr channel both NULL
+  //1.1) test no local addr presents
+  EXPECT_FALSE(mdi_contains_localaddr (local_addres, 3));
+  EXPECT_FALSE(mdi_contains_localaddr (local_addres6, 2));
+  //1.2) test  local addr presents
+  tmpaddr = local_addres[1];
+  str2saddr (&local_addres[1], "127.0.0.1", 0);
+  EXPECT_TRUE(mdi_contains_localaddr (local_addres, 3));
+  local_addres[1] = tmpaddr;
+  tmpaddr = local_addres6[1];
+  str2saddr (&local_addres6[1], "::1", 0);
+  EXPECT_TRUE(mdi_contains_localaddr (local_addres6, 2));
+  local_addres6[1] = tmpaddr;
+  //////////////////////////////////////////////////////////////////////////////
+  //2) test branch 2 curr_geco_instance_ NOT NULL
+  curr_geco_instance_ = &inst;
+  //2.1) test local addr in curr gecio inst local addres list
+  tmpaddr = local_addres[1];
+  EXPECT_TRUE(mdi_contains_localaddr (&tmpaddr, 1));
+  //2.1) test no local addr in curr gecio inst local addres list
+  str2saddr (&tmpaddr, "221.123.45.12", 0);
+  EXPECT_FALSE(mdi_contains_localaddr (&tmpaddr, 1));
 }
 
-// last run and passed on 22 Agu 2016
+// passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 {
-	geco_packet_t geco_packet;
-	geco_packet.pk_comm_hdr.checksum = 0;
-	geco_packet.pk_comm_hdr.dest_port = htons(
-		(generate_random_uint32() % USHRT_MAX));
-	geco_packet.pk_comm_hdr.src_port = htons(
-		(generate_random_uint32() % USHRT_MAX));
-	geco_packet.pk_comm_hdr.verification_tag = htons(
-		(generate_random_uint32()));
-	//////////////////////////////////////////////////////////////////////////////
-	init_chunk_t* init_chunk = (init_chunk_t*)(geco_packet.chunk);
-	init_chunk->chunk_header.chunk_id = CHUNK_INIT;
-	init_chunk->chunk_header.chunk_flags = 0;
-	//////////////////////////////////////////////////////////////////////////////
-	const char* hn = "www.baidu.com";
-	((vlparam_fixed_t*)init_chunk->variableParams)->param_type = htons(
-		VLPARAM_HOST_NAME_ADDR);
-	((vlparam_fixed_t*)init_chunk->variableParams)->param_length = htons(
-		4 + strlen(hn));
-	strcpy((char*)(init_chunk->variableParams + 4), hn);
-	//////////////////////////////////////////////////////////////////////////////
-	uint len = 4 + strlen(hn) + INIT_CHUNK_FIXED_SIZES;
-	init_chunk->chunk_header.chunk_length = htons(len);
-	while (len % 4)
-		++len;
-	uchar* ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
-		VLPARAM_HOST_NAME_ADDR);
-	ASSERT_EQ(ret, init_chunk->variableParams);
-	//////////////////////////////////////////////////////////////////////////////
-	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
-		VLPARAM_COOKIE);
-	ASSERT_EQ(ret, nullptr);
-	ret = mch_read_vlparam_init_chunk(geco_packet.chunk, len,
-		VLPARAM_SUPPORTED_ADDR_TYPES);
-	ASSERT_EQ(ret, nullptr);
+  geco_packet_t geco_packet;
+  geco_packet.pk_comm_hdr.checksum = 0;
+  geco_packet.pk_comm_hdr.dest_port = htons (
+      (generate_random_uint32 () % USHRT_MAX));
+  geco_packet.pk_comm_hdr.src_port = htons (
+      (generate_random_uint32 () % USHRT_MAX));
+  geco_packet.pk_comm_hdr.verification_tag = htons (
+      (generate_random_uint32 ()));
+  //////////////////////////////////////////////////////////////////////////////
+  init_chunk_t* init_chunk = (init_chunk_t*) (geco_packet.chunk);
+  init_chunk->chunk_header.chunk_id = CHUNK_INIT;
+  init_chunk->chunk_header.chunk_flags = 0;
+  //////////////////////////////////////////////////////////////////////////////
+  const char* hn = "www.baidu.com";
+  ((vlparam_fixed_t*) init_chunk->variableParams)->param_type = htons (
+  VLPARAM_HOST_NAME_ADDR);
+  ((vlparam_fixed_t*) init_chunk->variableParams)->param_length = htons (
+      4 + strlen (hn));
+  strcpy ((char*) (init_chunk->variableParams + 4), hn);
+  //////////////////////////////////////////////////////////////////////////////
+  uint len = 4 + strlen (hn) + INIT_CHUNK_FIXED_SIZES;
+  init_chunk->chunk_header.chunk_length = htons (len);
+  while (len % 4)
+    ++len;
+  uchar* ret = mch_read_vlparam_init_chunk (geco_packet.chunk, len,
+  VLPARAM_HOST_NAME_ADDR);
+  ASSERT_EQ(ret, init_chunk->variableParams);
+  //////////////////////////////////////////////////////////////////////////////
+  ret = mch_read_vlparam_init_chunk (geco_packet.chunk, len,
+  VLPARAM_COOKIE);
+  ASSERT_EQ(ret, nullptr);
+  ret = mch_read_vlparam_init_chunk (geco_packet.chunk, len,
+  VLPARAM_SUPPORTED_ADDR_TYPES);
+  ASSERT_EQ(ret, nullptr);
 
 }
 
@@ -1275,7 +1281,7 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 //					last_src_addr, last_dest_addr);
 //				//1.3.2) should NOT find an existed channel
 //				ASSERT_EQ(ret, geco_return_enum::good);
-//				ASSERT_EQ(curr_channel_, (geco_channel_t*)NULL);
+//				ASSERT_EQ(curr_channel_, nullptr);
 //			}
 //		}
 //	}
@@ -1488,33 +1494,33 @@ TEST(DISPATCHER_MODULE, test_find_vlparam_from_setup_chunk)
 // passed on 28/02/2017
 TEST(DISPATCHER_MODULE, test_contains_chunk)
 {
-	/**
-	 * contains_chunk: looks for chunk_type in a newly received geco packet
-	 * Should be called after find_chunk_types().
-	 * The chunkArray parameter is inspected. This only really checks for chunks
-	 * with an ID <= 30. For all other chunks, it just guesses...
-	 * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
-	 * @pre: need call find_chunk_types() first
-	 */
-	uint chunk_types;
-	//////////////////////////////////////////////////////////////////////////////
-	chunk_types = 0;
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
-	ASSERT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 0);
-	//////////////////////////////////////////////////////////////////////////////
-	// INIT must be the only chunk in the packet
-	chunk_types = 0;
-	chunk_types |= 1 << CHUNK_INIT;
-	ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 1);
-	//////////////////////////////////////////////////////////////////////////////
-	chunk_types = 0;
-	chunk_types |= 1 << CHUNK_DATA;
-	chunk_types |= 1 << CHUNK_SACK;
-	chunk_types |= 1 << CHUNK_HBREQ;
-	ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
-	ASSERT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 2);
-	//////////////////////////////////////////////////////////////////////////////
+  /**
+   * contains_chunk: looks for chunk_type in a newly received geco packet
+   * Should be called after find_chunk_types().
+   * The chunkArray parameter is inspected. This only really checks for chunks
+   * with an ID <= 30. For all other chunks, it just guesses...
+   * @return 0 NOT contains, 1 contains and only one, 2 contains and NOT only one
+   * @pre: need call find_chunk_types() first
+   */
+  uint chunk_types;
+  //////////////////////////////////////////////////////////////////////////////
+  chunk_types = 0;
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 0);
+  ASSERT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 0);
+  //////////////////////////////////////////////////////////////////////////////
+  // INIT must be the only chunk in the packet
+  chunk_types = 0;
+  chunk_types |= 1 << CHUNK_INIT;
+  ASSERT_EQ(contains_chunk(CHUNK_INIT, chunk_types), 1);
+  //////////////////////////////////////////////////////////////////////////////
+  chunk_types = 0;
+  chunk_types |= 1 << CHUNK_DATA;
+  chunk_types |= 1 << CHUNK_SACK;
+  chunk_types |= 1 << CHUNK_HBREQ;
+  ASSERT_EQ(contains_chunk(CHUNK_DATA, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_SACK, chunk_types), 2);
+  ASSERT_EQ(contains_chunk(CHUNK_HBREQ, chunk_types), 2);
+  //////////////////////////////////////////////////////////////////////////////
 }
 

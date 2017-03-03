@@ -72,8 +72,12 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
     //::testing::GTEST_FLAG(filter) = "mpath.*";  // passed on 28/02/2017
+
     //::testing::GTEST_FLAG(filter) = "mpath.test_alg0";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_replace_empty_space";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_reverse_list";  // passed on 28/02/2017
+    ::testing::GTEST_FLAG(filter) = "mpath.test_is_pop_order";  // passed on 28/02/2017
+
     //::testing::GTEST_FLAG(filter) = "mpath.test_set_paths";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";  // passed on 28/02/2017
@@ -106,11 +110,11 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_bundle_ctrl_chunk";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_recv_geco_packet";
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_read_peer_addreslist";
-    ::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr"; // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contain_local_addr"; // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_first_chunk_of";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_chunk_types";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_validate_dest_addr";
-    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_vlparam_from_setup_chunk";
+    //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_vlparam_from_setup_chunk"; // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_contains_chunk";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) ="DISPATCHER_MODULE.test_mdis_find_geco_instance";
 

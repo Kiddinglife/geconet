@@ -455,15 +455,37 @@ TEST_F(mpath, test_hb_ack_received)
   reset ();
 }
 
-//在一个二维数组中，每一行都按照从左到右递增的顺序排序，
-//每一列都按照从上到下递增的顺序排序。
-//请完成一个函数，输入这样的一个二维数组和一个整数，
-//判断数组中是否含有该整数
 #include <vector>
-static bool
-find_number_from_two_decimen_array (int target,
-                                    std::vector<std::vector<int>>& array)
+static bool find_number_from_two_decimen_array (int target,std::vector<std::vector<int>>& array)
 {
+  /**
+   * 在一个数组中，每一行都按照从左到右递增的顺序排序，
+   * 每一列都按照从上到下递增的顺序排序。
+   * 请完成一个函数，输入这样的一个二维数组和一个整数，
+   * 判断数组中是否含有该整数
+   * ----------------------
+   * Given a multi dimension array with elements
+   * in each row increasing from left to right and
+   * in each column increasing from top to bottom
+   * Please complete a function with parameters of
+   * a two-dimension-array and an integer and justify
+   * if the integer is contained in the array.
+   * eg. input ({ 0, 1, 3, 4, 5},{ 1, 4, 6, 8, 11},23)
+   * should output 23 is not in the given array
+   *
+   * train of thought:
+   * for next row in all rows:
+   *    for val in this row:
+   *       if val == target:
+   *          return found
+   *       if target > val:
+   *          continue
+   *       if target < val:
+   *          go back to the left column besides current one
+   *          break
+   * loop done, must not found
+   */
+
   if (array.empty ())
     return false;
   int row = 0, col = 0, rows = array.size ();
@@ -540,16 +562,20 @@ TEST_F(mpath, test_alg0)
   ASSERT_TRUE(find);
 }
 
-static void
-replace_empty_space_in_string (char *str, int length)
+static void replace_empty_space_in_string (char *str, int length)
 {
-  //replace all empty space with %20
-  // we are happy now
-  // steps
-  // while
-  // 1. get each char for right to left
-  // 2. if '' write %20 else write poriginal char
-  // 4. if it is first char break loop else go to step1
+  /**
+   * Given a string and please repalce all empty char of " " with "%20"
+   * eg. input "hello world", should output "hello%20world"
+   *
+   * train of thought:
+   * for char in str from right to left:
+   *    if char is ' ':
+   *       replace char with %20
+   *       decrment index by 2 as we copy two more chars
+   *    else:
+   *       copy char
+   */
   if (str == NULL || length < 0)
     return;
   int newlen = 0;
@@ -582,5 +608,129 @@ TEST_F(mpath,test_replace_empty_space)
   const char* msg = "hello world";
   strcpy (str, msg);
   replace_empty_space_in_string (str, 1024);
-  printf ("result: %s\n", str);
+  ASSERT_STREQ(str,"hello%20world");
+}
+
+struct ListNode
+{
+    int val;
+    ListNode* next;
+    ListNode (int x) :
+        val (x), next (NULL)
+    {
+    }
+};
+static ListNode* reverse_list (ListNode* pHead)
+{
+  /**
+   * 输入一个链表，反转链表后，输出链表的所有元素。
+   * ------------------------------
+   * Given a list. Please reverse it and then print all elements in it.
+   *
+   * train of thought:
+   * order sublist and put the first unorder ele in the front of ordered sublist
+   * 1 234  1 is init ordered sublist, 234 is unordered sublist
+   * we put the first ele 2 in unordered sublist to the front of ordered sublist 1, we have
+   * 21 34 21 is ordered sublist, 34 is unordered sublist
+   * we put the first ele 3 in unordered sublist to the front of ordered sublist 21, we have
+   * 321 4  321 is init ordered sublist, 4 is unordered sublist
+   * we put the first ele 4 in unordered sublist to the front of ordered sublist 321, we have
+   * 4321
+   * done!
+   */
+  if (pHead == NULL)
+    return NULL;
+  ListNode *tail = pHead, *nxt = pHead->next;
+  while (nxt != NULL)
+  {
+    // insert nxt to front of head
+    tail->next = nxt->next;
+    nxt->next = pHead;
+    pHead = nxt;
+    nxt = tail->next;
+  }
+  return pHead;
+}
+TEST_F(mpath,test_reverse_list)
+{
+  ListNode one = ListNode (1);
+  ListNode two = ListNode (2);
+  ListNode three = ListNode (3);
+  one.next = &two;
+  two.next = &three;
+  ListNode* head = reverse_list (&one);
+  ASSERT_EQ(3, head->val);
+  ASSERT_EQ(2, head->next->val);
+  ASSERT_EQ(1, head->next->next->val);
+}
+
+#include <stack>
+#include <vector>
+static bool is_pop_order (std::vector<int>& pushV, std::vector<int>& popV)
+{
+  /**
+   * 输入两个整数序列，第一个序列表示栈的压入顺序，请判断第二个序列是否为该栈的弹出顺序。
+   * 假设压入栈的所有数字均不相等。例如序列1,2,3,4,5是某栈的压入顺序，
+   * 序列4，5,3,2,1是该压栈序列对应的一个弹出序列，但4,3,5,1,2就不可能是该压栈序列的弹出序列。
+   * （注意：这两个序列的长度是相等的）
+   * ------------------------------
+   * Given two integer sequences, one is push sequence of stack.
+   * Please justify if the other one is a possible popup sequence of stack.
+   * Assume all pushed numbers are different. eg. 1,2,3,4 is stack's push sequence,
+   * 4,5,3,2,1 is a possible popup sequence while 4,3,5,1,2 is not a possible popup sequence
+   *
+   * Given pushV 1234, popV  4321
+   * train of thought:
+   * Use another stack to simulate pushs and pops
+   * for ele0 in popV:
+   *    for ele1 in pushV:
+   *       if ele1 is not ele0:
+   *          push to stack tmp  # tmp stack can be 123 when visiting all eles in pushV()
+   *       if ele1 is last ele in popV:
+   *          compare each ele in tmep stak with ele0:
+   *            if not equal:
+   *               then return false
+   *            else:
+   *               pop tmp stack
+   */
+  if (pushV.empty ())
+    return false;
+  std::stack<int> tmp;
+  int pushsize = pushV.size ();
+  int popsize = popV.size ();
+  int j = 0;
+  for (int i = 0; i < popsize; i++)
+  {
+    if (j < pushsize)
+    {
+      while (popV[i] != pushV[j])
+      {
+        tmp.push (pushV[j]);
+        j++;
+      }
+      j++;
+    }
+    else
+    {
+      if (popV[i] != tmp.top ())
+        return false;
+      tmp.pop ();
+    }
+  }
+  return tmp.empty ();
+}
+TEST_F(mpath,test_is_pop_order)
+{
+  std::vector<int> pushV =
+    { 1, 2, 3, 4, 5 };
+  std::vector<int> popV =
+    { 4, 5, 3, 2, 1 };
+  bool ret = is_pop_order (pushV, popV);
+  ASSERT_TRUE(ret);
+
+  popV.clear ();
+  popV =
+  { 4,3,5,2,1};
+  ret = is_pop_order (pushV, popV);
+  ASSERT_FALSE(ret);
 }

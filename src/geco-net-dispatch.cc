@@ -10,7 +10,7 @@
 
 #define EXIT_CHECK_LIBRARY           if(library_initiaized == false) {ERRLOG(FALTAL_ERROR_EXIT, "library not initialized!!!");}
 
-static void print_addrlist(sockaddrunion* list, uint nAddresses)
+void print_addrlist(sockaddrunion* list, uint nAddresses)
 {
 	static char addrstr[MAX_IPADDR_STR_LEN];
 	static ushort port;
@@ -401,8 +401,9 @@ inline uint mdi_generate_itag(void);
 int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	sockaddrunion *peerAddress, uint numPeerAddresses, uint supported_types,
 	bool receivedFromPeer);
-/// check if local addr is found, return  ip4or6 loopback if found, otherwise return  the ones same to stored in inst localaddrlist
-bool mdi_contains_localhost(sockaddrunion* addr_list, uint addr_list_num);
+/// check if local addr is found, return  ip4or6 loopback if found,
+/// otherwise return  the ones same to stored in inst localaddrlist
+bool mdi_contains_localaddr(sockaddrunion* addr_list, uint addr_list_num);
 uint mdi_read_local_tag();
 uint mdi_read_remote_tag();
 unsigned int mdi_read_supported_addr_types(void);
@@ -2085,7 +2086,7 @@ int mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 		if (paratype == VLPARAM_IPV4_ADDRESS || paratype == VLPARAM_IPV6_ADDRESS)
 		{
 			bool b1 = false, b2 = false, b3 = false;
-			if (!(b1 = mdi_contains_localhost(last_source_addr_, 1)))
+			if (!(b1 = mdi_contains_localaddr(last_source_addr_, 1)))
 			{
 				/* this is from a normal address,
 				 * furtherly filter out except loopbacks */
@@ -2359,7 +2360,7 @@ inline uint mdi_generate_itag(void)
 	} while (tag == 0);
 	return tag;
 }
-bool mdi_contains_localhost(sockaddrunion * addr_list, uint addr_list_num)
+bool mdi_contains_localaddr(sockaddrunion * addr_list, uint addr_list_num)
 {
 	bool ret = false;
 	uint ii;
@@ -2482,7 +2483,7 @@ int mdi_validate_localaddrs_before_write_to_init(sockaddrunion* local_addrlist,
 	bool localHostFound = false, linkLocalFound = false, siteLocalFound = false;
 	for (count = 0; count < numPeerAddresses; count++)
 	{
-		localHostFound = mdi_contains_localhost(peerAddress + count, 1);
+		localHostFound = mdi_contains_localaddr(peerAddress + count, 1);
 		linkLocalFound = ::typeofaddr(peerAddress + count, LinkLocalAddrType);
 		siteLocalFound = ::typeofaddr(peerAddress + count, SiteLocalAddrType);
 	}

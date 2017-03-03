@@ -149,7 +149,7 @@ mdi_read_peer_addreslist(sockaddrunion peer_addreslist[MAX_NUM_ADDRESSES],
 	uint* peer_supported_addr_types, bool ignore_dups,
 	bool ignore_last_src_addr);
 extern bool
-mdi_contains_localhost(sockaddrunion* addr_list, uint addr_list_num);
+mdi_contains_localaddr(sockaddrunion* addr_list, uint addr_list_num);
 extern inline uint
 mch_make_simple_chunk(uint chunk_type, uchar flag);
 extern inline simple_chunk_t *
@@ -164,6 +164,7 @@ extern void
 mdi_set_channel_remoteaddrlist(sockaddrunion addresses[MAX_NUM_ADDRESSES], int noOfAddresses);
 extern geco_channel_t* mdi_find_channel();
 extern void mch_write_vlp_supportedaddrtypes(chunk_id_t chunkID, bool with_ipv4, bool with_ipv6, bool with_dns);
+void print_addrlist(sockaddrunion* list, uint nAddresses);
 
 struct transportaddr_hash_functor
 {
