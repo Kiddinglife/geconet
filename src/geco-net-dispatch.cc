@@ -1468,7 +1468,6 @@ void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk)
 			== &mpath_heartbeat_timer_expired);
 		assert(
 			pmData->path_params[pathID].hb_timer_id->callback.type == TIMER_TYPE_HEARTBEAT);
-		assert(pmData->path_params[pathID].hb_timer_id->flags == 0);
 		// this means pmtu&hb probe suceeds, switch to pure hb probe interval
 		mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id,
 			pmData->path_params[pathID].hb_interval

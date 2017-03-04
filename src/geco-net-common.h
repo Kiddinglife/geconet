@@ -808,7 +808,7 @@ extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int e
 #define  PM_ADDED                            2
 #define  PM_REMOVED                       3
 #define  PM_PATH_UNCONFIRMED    5
-#define  PM_INITIAL_HB_INTERVAL    3000 //30000
+#define  PM_INITIAL_HB_INTERVAL    30000 //3000
 #define  RTO_ALPHA            0.125f
 #define  RTO_BETA              0.25f
 #define ASSOCIATION_MAX_RETRANS_ATTEMPTS 10

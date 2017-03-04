@@ -5,6 +5,10 @@
 //#include "geco-ds-malloc.h"
 #include "geco-net.h"
 //#include "timeout-debug.h"
+#include <ctime>
+#include <chrono>
+#include <iostream>
+#include <iomanip>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,6 +89,30 @@ check (uint64_t vv)
     return 0;
   }
   return 1;
+}
+
+TEST(TIMER_MODULE, test_chrno_gettimestamp)
+{
+  std::chrono::steady_clock::time_point start =
+      std::chrono::steady_clock::now ();
+  for (int i = 0; i < 100000; i++)
+    gettimestamp ();
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now ();
+  std::cout << "gettimestamp took "
+      << std::chrono::duration_cast<std::chrono::microseconds> (end - start).count ()
+      << "us.\n";
+
+  start = std::chrono::steady_clock::now ();
+  for (int i = 0; i < 100000; i++)
+  {
+    std::chrono::duration_cast<std::chrono::microseconds> (
+        std::chrono::steady_clock::now ().time_since_epoch ());
+  }
+  end = std::chrono::steady_clock::now ();
+  std::cout << "chrono::steady_clock::now () took "
+      << std::chrono::duration_cast<std::chrono::microseconds> (end - start).count ()
+      << "us.\n";
+  // gettimestamp is 4 timwes faster than chrono
 }
 
 TEST(TIMER_MODULE, test_bitops)

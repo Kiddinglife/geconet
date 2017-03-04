@@ -59,6 +59,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     // ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_timer_mgr";
     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_wheel_timer";
     //::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_bitops";
+    ::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_chrno_gettimestamp";
 
     // ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.*";
     // ::testing::GTEST_FLAG(filter) = "MALLOC_MODULE.test_alloc_dealloc";
@@ -76,7 +77,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "mpath.test_alg0";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_replace_empty_space";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_reverse_list";  // passed on 28/02/2017
-    ::testing::GTEST_FLAG(filter) = "mpath.test_is_pop_order";  // passed on 28/02/2017
+    //::testing::GTEST_FLAG(filter) = "mpath.test_is_pop_order";  // passed on 28/02/2017
 
     //::testing::GTEST_FLAG(filter) = "mpath.test_set_paths";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";  // passed on 28/02/2017
@@ -97,7 +98,7 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "MULP.test_mdi_new_and_delete_channel";
     //::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
     // current unit test summary locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168.... cross-machina connection NOT ok
-    // ::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
+    //::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
     //::testing::GTEST_FLAG(filter) = "MBU.*";
     //::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
