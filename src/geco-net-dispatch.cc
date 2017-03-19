@@ -185,10 +185,10 @@ bool enable_mock_dispatch_send_geco_packet_;
 bool enable_mock_dispatcher_process_init_chunk_;
 #endif
 
-static recv_controller_t* mrecv;
-static deliverman_controller_t* mdlm;
+static recv_controller_t* mrecv_;
+static deliverman_controller_t* mdlm_;
 static reltransfer_controller_t* mreltx;
-static smctrl_t* msm;
+static smctrl_t* msm_;
 static path_controller_t* mpath;
 static flow_controller_t* mfc;
 static bundle_controller_t* mbu;
@@ -4434,35 +4434,30 @@ int mdlm_notify_data_arrive()
     return retval;
 }
 /////////////////////////////////////////////// mdeliverman Moudle (mdlm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
-
+static uint chunk_tsn;
+static uint chunk_len;
+static uint assoc_state;
+static bool bubbleup_ctsna;
+static uint bytes_queued;
+static uchar chunk_flag;
 int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 {
-    static uint chunk_tsn;
-    static uint chunk_len;
-    static uint assoc_state;
-    static bool bubbleup_ctsna;
-    static uint bytes_queued;
-    static recv_controller_t* mrecv;
-    static smctrl_t* msm;
-    static uchar chunk_flag;
-    static deliverman_controller_t* mdlm;
-
-    mdlm = mdi_read_mdlm();
-    assert(mdlm != NULL);
+    mdlm_ = mdi_read_mdlm();
+    assert(mdlm_ != NULL);
 
     //resettings
     bubbleup_ctsna = false;
-    msm = mdi_read_msm();
-    assert(msm != NULL);
-    assoc_state = msm->channel_state;
-    mrecv = mdi_read_mrecv();
-    assert(mrecv != NULL);
-    mrecv->new_chunk_received = false;
-    mrecv->last_address = ad_idx;
+    msm_ = mdi_read_msm();
+    assert(msm_ != NULL);
+    assoc_state = msm_->channel_state;
+    mrecv_ = mdi_read_mrecv();
+    assert(mrecv_ != NULL);
+    mrecv_->new_chunk_received = false;
+    mrecv_->last_address = ad_idx;
 
     // update curr rwnd
     bytes_queued = mdlm_read_queued_bytes();
-    current_rwnd = bytes_queued >= mrecv->my_rwnd ? 0 : mrecv->my_rwnd - bytes_queued;
+    current_rwnd = bytes_queued >= mrecv_->my_rwnd ? 0 : mrecv_->my_rwnd - bytes_queued;
 
     // MAX_PACKET_PDU is constant no matter it is udp-tunneled or not
     // advertising rwnd to sender for avoiding silly window syndrome (SWS),
@@ -4470,7 +4465,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
         current_rwnd = 1;
 
     // if any received data chunks have not been acked, create a SACK and bundle it with the outbound data
-    mrecv->sack_updated = false;
+    mrecv_->sack_updated = false;
 
     chunk_flag = ((chunk_fixed_t*) data_chunk)->chunk_flags;
     chunk_len = ntohs(data_chunk->comm_chunk_hdr.chunk_length);
@@ -4478,49 +4473,53 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
     if (chunk_flag & DCHUNK_FLAG_RELIABLE)
     {
         chunk_tsn = ntohl(data_chunk->data_chunk_hdr.trans_seq_num);
-        if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv->highest_tsn)) || assoc_state == ChannelState::ShutdownReceived
-                || assoc_state == ChannelState::ShutdownAckSent)
+        if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv_->highest_tsn)) ||
+			assoc_state == ChannelState::ShutdownReceived || 
+			assoc_state == ChannelState::ShutdownAckSent)
         {
-            // drop data chunk when:
-            // 1.our rwnd is 0 and chunk_tsn is higher than current highest_duplicated_tsn
-            // if chunk_tsn is lower, we should drop the buffered highest and buffer this chunk_tsn
-            // 2.we are ShutdownAckSent state: we have acked all queued data chunks that peer has sent to us.
-            // should have no chunks in flight and in peer's queue
-            // 3.we are in ShutdownReceived state: we have received and processed all peer's queued chunks, shoul nt receive any more chunks
-            mrecv->new_chunk_received = false;
+            //  drop data chunk when:
+            //  1. our rwnd is 0 and chunk_tsn is higher than current highest_duplicated_tsn
+            //  if chunk_tsn is lower, we should drop the buffered highest and buffer this chunk_tsn
+			//  if chunk tsn == current highest_duplicated_tsn, it is dup chunk that should be reported.
+            //  2. ShutdownAckSent state: 
+			//  we have acked all queued data chunks that peer has sent to us.
+            //  should have no chunks in flight and in peer's queue
+            //  3. ShutdownReceived state: 
+			//  we have received and processed all peer's queued chunks, shoul nt receive any more chunks
+            mrecv_->new_chunk_received = false;
             return 1;
         }
 
         EVENTLOG2(VERBOSE, "mrecv_process_data_chunk()::chunk_tsn %u, chunk_len %u", chunk_tsn, chunk_len);
-        if (mrecv_before_lowest_duptsn(mrecv, chunk_tsn))
+        if (mrecv_before_lowest_duptsn(mrecv_, chunk_tsn))
             // lower than the lowest_duplicated_tsn one received so far,it must be dup
-            mrecv_update_duplicates(mrecv, chunk_tsn);
-        else if (mrecv_after_highest_tsn(mrecv, chunk_tsn))
+            mrecv_update_duplicates(mrecv_, chunk_tsn);
+        else if (mrecv_after_highest_tsn(mrecv_, chunk_tsn))
         {
             // higher than the highest_tsn received so far,it must be new chunk
-            bubbleup_ctsna = mrecv_update_fragments(mrecv, chunk_tsn);
-            assert(mrecv->new_chunk_received == true);
+            bubbleup_ctsna = mrecv_update_fragments(mrecv_, chunk_tsn);
+            assert(mrecv_->new_chunk_received == true);
             assert(bubbleup_ctsna == true);
         }
-        else if (mrecv_chunk_is_duplicate(mrecv, chunk_tsn))
-            mrecv_update_duplicates(mrecv, chunk_tsn);
+        else if (mrecv_chunk_is_duplicate(mrecv_, chunk_tsn))
+            mrecv_update_duplicates(mrecv_, chunk_tsn);
         else
-            bubbleup_ctsna = mrecv_update_fragments(mrecv, chunk_tsn);
+            bubbleup_ctsna = mrecv_update_fragments(mrecv_, chunk_tsn);
 
         if (bubbleup_ctsna)
-            mrecv_bubbleup_ctsna(mrecv);
+            mrecv_bubbleup_ctsna(mrecv_);
 
-        if (mrecv->new_chunk_received)
+        if (mrecv_->new_chunk_received)
         {
             if ((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
             {
-                if (mdlm_process_data_chunk(mdlm, (dchunk_r_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv->new_chunk_received = false;
+                if (mdlm_process_data_chunk(mdlm_, (dchunk_r_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+                    mrecv_->new_chunk_received = false;
             }
             else
             {
-                if (mdlm_process_data_chunk(mdlm, (data_chunk_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv->new_chunk_received = false;
+                if (mdlm_process_data_chunk(mdlm_, (data_chunk_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+                    mrecv_->new_chunk_received = false;
             }
         }
         else
@@ -4536,7 +4535,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
     else
     {
         // there is no retx for unreliable chunk, so any chunks received are treated as "new chunk"
-        mrecv->new_chunk_received = true;
+        mrecv_->new_chunk_received = true;
 
         // deliver to reordering function for further processing
         if (current_rwnd == 0 || assoc_state == ChannelState::ShutdownReceived || assoc_state == ChannelState::ShutdownAckSent)
@@ -4548,24 +4547,24 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
             // should have no chunks in flight and in peer's queue
             // 3.we are in ShutdownReceived state: we have received and processed all peer's queued chunks,
             // shoul nt receive any more chunks
-            mrecv->new_chunk_received = false;
+            mrecv_->new_chunk_received = false;
             return 1;
         }
 
         // if unreliable mesg  is framented in sender, the fragmented chunks are sent as reliable
         // and (ordered or unordered same to original msg).
         // so right here, we can safely bypass assembling and reliabling function
-        if (mrecv->new_chunk_received)
+        if (mrecv_->new_chunk_received)
         {
             if (chunk_flag & DCHUNK_FLAG_UNSEQ)
             { // unsequenced & unreliable chunk
-                if (mdlm_process_data_chunk(mdlm, (dchunk_ur_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv->new_chunk_received = false;
+                if (mdlm_process_data_chunk(mdlm_, (dchunk_ur_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+                    mrecv_->new_chunk_received = false;
             }
             else
             { // sequenced & unreliable chunk
-                if (mdlm_process_data_chunk(mdlm, (dchunk_urs_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv->new_chunk_received = false;
+                if (mdlm_process_data_chunk(mdlm_, (dchunk_urs_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+                    mrecv_->new_chunk_received = false;
             }
         }
     }

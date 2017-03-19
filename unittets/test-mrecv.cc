@@ -11,7 +11,7 @@
 #include "geco-test.h"
 #include "geco-net-chunk.h"
 
-struct mrecv : public testing::Test
+struct mrecv: public testing::Test
 {
     recv_controller_t* mrecv_;
     geco_channel_t* old_channel;
