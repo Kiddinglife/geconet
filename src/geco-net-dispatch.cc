@@ -3299,10 +3299,10 @@ uint mdlm_read_queued_bytes()
 /////////////////////////////////////////////// receiver Moudle (mrecv) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 bool mrecv_after_highest_tsn(recv_controller_t* mrecv, uint chunk_tsn)
 {
-    // every time we received a reliable chunk, it first goes here to update highest tsn if possible
-    if (uafter(chunk_tsn, mrecv->highest_tsn))
+	//  every time we received a reliable chunk, it first goes here to update highest tsn if possible
+	if (uafter(chunk_tsn, mrecv->highest_duplicate_tsn))
     {
-        mrecv->highest_tsn = chunk_tsn;
+        mrecv->highest_duplicate_tsn = chunk_tsn;
         return true;
     }
     // it is possibly dup chunk or new chunk
@@ -3524,7 +3524,7 @@ bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 
     // Given cstna=2, chunk_tsn=6, current received sequence 0 1 2 45 7...,  dups sequence lowest 2, highest 7 =>
     // !ubetween(2, 6, 7)  =>return false => it is new chunk frag passing to mrecv_update_framents() for further processing
-    if (!ubetween(mrecv->cumulative_tsn, chunk_tsn, mrecv->highest_tsn))
+    if (!ubetween(mrecv->cumulative_tsn, chunk_tsn, mrecv->highest_duplicate_tsn))
         return false;
 
     // frag list is empty which means this is first time received new chunk
@@ -4473,7 +4473,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
     if (chunk_flag & DCHUNK_FLAG_RELIABLE)
     {
         chunk_tsn = ntohl(data_chunk->data_chunk_hdr.trans_seq_num);
-        if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv_->highest_tsn)) ||
+        if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv_->highest_duplicate_tsn)) ||
 			assoc_state == ChannelState::ShutdownReceived || 
 			assoc_state == ChannelState::ShutdownAckSent)
         {
@@ -5563,7 +5563,7 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN, unsigned int numbe
     tmp->sack_chunk->chunk_header.chunk_flags = 0;
     tmp->cumulative_tsn = remote_initial_TSN - 1; /* as per section 4.1 */
     tmp->lowest_duplicated_tsn = remote_initial_TSN - 1;
-    tmp->highest_tsn = remote_initial_TSN - 1;
+    tmp->highest_duplicate_tsn = remote_initial_TSN - 1;
     tmp->sack_updated = false;
     tmp->timer_running = false;
     tmp->packet_contain_dchunk_received = -1;
@@ -5775,7 +5775,7 @@ void mrecv_restart(int my_rwnd, uint new_remote_TSN)
 
     rxc->cumulative_tsn = new_remote_TSN - 1;
     rxc->lowest_duplicated_tsn = new_remote_TSN - 1;
-    rxc->highest_tsn = new_remote_TSN - 1;
+    rxc->highest_duplicate_tsn = new_remote_TSN - 1;
 
     rxc->sack_updated = false;
     rxc->timer_running = false;
