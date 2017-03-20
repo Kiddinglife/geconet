@@ -54,13 +54,6 @@ TEST_F(mrecv, test_mrecv_after_highest_tsn)
 {
 }
 
-/// insert chunk_tsn in the list of duplicates from small to big if it is not in list
-/// @param chunk_tsn	tsn we just received
-extern void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn);
-TEST_F(mrecv, test_mrecv_update_duplicates)
-{
-}
-
 extern bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn);
 TEST_F(mrecv, test_mrecv_chunk_is_duplicate)
 {
