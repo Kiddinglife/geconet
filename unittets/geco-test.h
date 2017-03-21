@@ -8,6 +8,8 @@
 #ifndef UNITTETS_GECO_TEST_H_
 #define UNITTETS_GECO_TEST_H_
 
+#include "spdlog/spdlog.h"
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 

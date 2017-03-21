@@ -65,7 +65,10 @@
 #include <synch.h>
 #elif defined(GECO_WIN32THREADS)
 #define WIN32_LEAN_AND_MEAN 
+#pragma warning( push )
+#pragma warning( disable: ThatWarning )
 #include <windows.h>
+#pragma warning( pop )
 #endif
 
 GECO_BEGIN_NAMESPACE

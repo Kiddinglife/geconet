@@ -7,9 +7,8 @@
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
-
-#include "geco-test.h"
 #include "geco-net-chunk.h"
+#include "geco-test.h"
 
 struct mrecv : public testing::Test
 {
@@ -197,9 +196,10 @@ TEST_F(mrecv, test_mrecv_update_duplicates)
       count++;
   }
   ASSERT_EQ(count, 1);
-  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),123);
-  mrecv_->duplicated_data_chunks_list.pop_front();
-  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),125);
+  auto itr = mrecv_->duplicated_data_chunks_list.begin();
+  ASSERT_EQ(*(itr),123);
+  std::advance(itr, 1);
+  ASSERT_EQ(*(itr), 125);
 
   //when duplicate_tsn not in list
   duplicate_tsn = 100;
@@ -207,9 +207,52 @@ TEST_F(mrecv, test_mrecv_update_duplicates)
   //then insert it to list
   auto ret = std::find(mrecv_->duplicated_data_chunks_list.begin(), mrecv_->duplicated_data_chunks_list.end(),duplicate_tsn);
   ASSERT_TRUE(*ret == duplicate_tsn);
-  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),100);
-  mrecv_->duplicated_data_chunks_list.pop_front();
-  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),123);
-  mrecv_->duplicated_data_chunks_list.pop_front();
-  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),125);
+  itr = mrecv_->duplicated_data_chunks_list.begin();
+  ASSERT_EQ(*(itr), 100);
+  std::advance(itr, 1);
+  ASSERT_EQ(*(itr), 123);
+  std::advance(itr, 1);
+  ASSERT_EQ(*(itr), 125);
+
+  reset();
+}
+
+extern void
+mrecv_bubbleup_ctsna(recv_controller_t* mrecv);
+TEST_F(mrecv, test_mrecv_bubbleup_ctsna)
+{
+	//when mrecv_->cumulative_tsn = 150
+	mrecv_->cumulative_tsn = 3;
+	//and when empty fragmented_data_chunks_list
+	mrecv_->fragmented_data_chunks_list.clear();
+	//then should NOT bubble up ctsn
+	uint old_ctsn = mrecv_->cumulative_tsn;
+	mrecv_bubbleup_ctsna(mrecv_);
+	ASSERT_EQ(old_ctsn, mrecv_->cumulative_tsn);
+
+	//and when fragmented_data_chunks_list 567 89 
+	// sequence is  ...3...567...89
+	mrecv_->fragmented_data_chunks_list.push_back({ 5, 7 });
+	mrecv_->fragmented_data_chunks_list.push_back({ 8, 9 });
+	//then should NOT bubble up ctsn
+	old_ctsn = mrecv_->cumulative_tsn;
+	mrecv_bubbleup_ctsna(mrecv_);
+	ASSERT_EQ(old_ctsn, mrecv_->cumulative_tsn);
+
+	//and when fragmented_data_chunks_list 456 89 
+	// sequence is  ...3...456...89
+	mrecv_->fragmented_data_chunks_list.begin()->start_tsn = 4;
+	mrecv_->fragmented_data_chunks_list.begin()->stop_tsn = 6;
+	//then should  bubble up ctsn and remove this frag
+	mrecv_bubbleup_ctsna(mrecv_);
+	ASSERT_EQ(6, mrecv_->cumulative_tsn);
+	bool find = false;
+	for (auto seg : mrecv_->fragmented_data_chunks_list)
+	{
+		if (seg.start_tsn == 4 && seg.stop_tsn == 6)
+			find = true;
+	}
+	ASSERT_FALSE(find);
+
+	reset();
 }

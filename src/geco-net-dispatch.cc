@@ -3637,7 +3637,7 @@ bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 }
 void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
 {
-    if (mrecv->fragmented_data_chunks_list.size() == 0)
+    if (mrecv->fragmented_data_chunks_list.empty())
         return;
 
     for (auto itr = mrecv->fragmented_data_chunks_list.begin(); itr != mrecv->fragmented_data_chunks_list.end();)
@@ -3646,17 +3646,20 @@ void mrecv_bubbleup_ctsna(recv_controller_t* mrecv)
         {
             // if the first frag not cotimus, no need to test other frags as frag tsn is ordered small to big
             // say frag567 and frag89, sequence 23-567-89 => 3+1=4!=5 => return
-            EVENTLOG(VVERBOSE, "mrecv_bubbleup_ctsna():: NOT update rxc->cumulative_tsn");
             return;
         }
+
         // say frag567,newly received data chunks sequence is 234-67
         // assume after calling mrecv_update_fragments(),
         // frag567 is completed and store into mrecv->fragmented_data_chunks_list
         // => current stsna is bubbleup from 4 to 7
         mrecv->cumulative_tsn = itr->stop_tsn;
         mrecv->fragmented_data_chunks_list.erase(itr++);
+
+		//next frag must not cotinuoues so just return 
+		assert(mrecv->cumulative_tsn + 1 != itr->start_tsn);
+		return;
     }
-    EVENTLOG1(VVERBOSE, "mrecv_bubbleup_ctsna()::after update,rxc->cumulative_tsn is now %u", mrecv->cumulative_tsn);
 }
 /////////////////////////////////////////////// receiver Moudle (mrecv) Ends \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 

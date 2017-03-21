@@ -699,7 +699,10 @@
 #   if _MSC_VER > 1000
 //! c standard library header 
 //!@see http://!blog.csdn.net/acmicpc123/article/details/50205729 for details
+#pragma warning( push )
+#pragma warning( disable: ThatWarning )
 # include <windows.h>
+#pragma warning( pop )
 #     include <yvals.h>
 #     define GECO_DONT_USE_BOOL_TYPEDEF
 #   endif
