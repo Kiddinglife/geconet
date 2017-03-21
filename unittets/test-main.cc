@@ -73,12 +73,6 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "UT_HELPER.test_make_geco_channel";
 
     //::testing::GTEST_FLAG(filter) = "mpath.*";  // passed on 28/02/2017
-
-    //::testing::GTEST_FLAG(filter) = "mpath.test_alg0";  // passed on 28/02/2017
-    //::testing::GTEST_FLAG(filter) = "mpath.test_replace_empty_space";  // passed on 28/02/2017
-    //::testing::GTEST_FLAG(filter) = "mpath.test_reverse_list";  // passed on 28/02/2017
-    //::testing::GTEST_FLAG(filter) = "mpath.test_is_pop_order";  // passed on 28/02/2017
-
     //::testing::GTEST_FLAG(filter) = "mpath.test_set_paths";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_handle_chunks_retx";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_new_and_free";  // passed on 28/02/2017
@@ -86,6 +80,12 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "mpath.test_update_rtt";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_data_chunk_acked";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_hb_ack_received";  // passed on 28/02/2017
+
+    //::testing::GTEST_FLAG(filter) = "mrecv.*";  // passed on 21/03/2017
+    //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_after_highest_tsn"; // passed on 21/03/2017
+    //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_before_lowest_duptsn"; // passed on 21/03/2017
+    //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_chunk_is_duplicate"; // passed on 21/03/2017
+    ::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_update_duplicates"; // passed on 21/03/2017
 
     // last pass on 31 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MULP.*";
