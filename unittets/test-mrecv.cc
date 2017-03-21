@@ -186,8 +186,23 @@ TEST_F(mrecv, test_mrecv_update_duplicates)
   mrecv_->duplicated_data_chunks_list.push_back(123);
   mrecv_->duplicated_data_chunks_list.push_back(125);
 
+  //when duplicate_tsn in list
+  duplicate_tsn_t duplicate_tsn = 123;
+  mrecv_update_duplicates(mrecv_, duplicate_tsn);
+  //then not insert it to list
+  int count = 0;
+  for(auto tsn : mrecv_->duplicated_data_chunks_list)
+  {
+    if(tsn == duplicate_tsn)
+      count++;
+  }
+  ASSERT_EQ(count, 1);
+  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),123);
+  mrecv_->duplicated_data_chunks_list.pop_front();
+  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),125);
+
   //when duplicate_tsn not in list
-  duplicate_tsn_t duplicate_tsn = 100;
+  duplicate_tsn = 100;
   mrecv_update_duplicates(mrecv_, duplicate_tsn);
   //then insert it to list
   auto ret = std::find(mrecv_->duplicated_data_chunks_list.begin(), mrecv_->duplicated_data_chunks_list.end(),duplicate_tsn);
@@ -197,10 +212,4 @@ TEST_F(mrecv, test_mrecv_update_duplicates)
   ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),123);
   mrecv_->duplicated_data_chunks_list.pop_front();
   ASSERT_EQ(mrecv_->duplicated_data_chunks_list.front(),125);
-
-  //when duplicate_tsn in list
-  duplicate_tsn = 123;
-  mrecv_update_duplicates(mrecv_, duplicate_tsn);
-  //then insert it to list
-  //@TODO
 }
