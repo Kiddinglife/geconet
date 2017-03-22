@@ -41,6 +41,7 @@ struct mrecv : public testing::Test
     }
 };
 
+//@TODO MOVE ME TO test_mrecv_chunk_is_duplicate
 extern bool
 mrecv_before_lowest_duptsn (recv_controller_t* mrecv, uint chunk_tsn);
 TEST_F(mrecv, test_mrecv_before_lowest_duptsn)
@@ -72,6 +73,7 @@ TEST_F(mrecv, test_mrecv_before_lowest_duptsn)
   reset();
 }
 
+//@TODO MOVE ME TO test_mrecv_chunk_is_duplicate
 extern bool
 mrecv_after_highest_tsn (recv_controller_t* mrecv, uint chunk_tsn);
 TEST_F(mrecv, test_mrecv_after_highest_tsn)
@@ -256,3 +258,5 @@ TEST_F(mrecv, test_mrecv_bubbleup_ctsna)
 
 	reset();
 }
+
+

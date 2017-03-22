@@ -293,7 +293,7 @@ static bool mrecv_sort_duplicates_cmp(duplicate_tsn_t one, duplicate_tsn_t two)
 }
 /// 1.called by bundling, after new data has been processed (so we may start building a sack chunk)
 /// 2.by streamengine, when ULP has read some data, and we want to update the RWND.
-void mrecv_on_packet_processed(bool new_data_received);
+void mrecv_update_sack(bool new_data_received);
 
 /// mpath_new creates a new instance of path management. There is one path management instance per association.
 /// WATCH IT : this needs to be fixed ! path_params is NULL, but may accidentally be referenced !
@@ -3438,7 +3438,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                      * now sequence sre 1-3.4.5...
                      */
                     itr->start_tsn = chunk_tsn;
-                    mrecv->new_chunk_received = true;
+                    mrecv->new_dchunk_received = true;
                     return true;
                 }
                 else if (chunk_tsn == lo)
@@ -3458,7 +3458,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                          * now sequence sre 12-4.5...
                          */
                         mrecv->cumulative_tsn++;
-                        mrecv->new_chunk_received = true;
+                        mrecv->new_dchunk_received = true;
                         return true;
                     }
 
@@ -3483,7 +3483,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                     --itr;
                     assert(itr != mrecv->fragmented_data_chunks_list.end());
                     itr->stop_tsn = chunk_tsn;
-                    mrecv->new_chunk_received = true;
+                    mrecv->new_dchunk_received = true;
                     return true;
                 }
                 else
@@ -3509,7 +3509,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                     //@TODO g_list_insert_sorted but I think we do not need loop again
                     newseg.start_tsn = newseg.stop_tsn = chunk_tsn;
                     mrecv->fragmented_data_chunks_list.insert(itr, newseg);
-                    mrecv->new_chunk_received = true;
+                    mrecv->new_dchunk_received = true;
                 }
             }
             else //gapsize == 1
@@ -3530,7 +3530,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                      */
                     mrecv->cumulative_tsn = itr->stop_tsn;
                     mrecv->fragmented_data_chunks_list.erase(itr);
-                    mrecv->new_chunk_received = true;
+                    mrecv->new_dchunk_received = true;
                     return true;
                 }
                 else
@@ -3552,7 +3552,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                      *
                      * now sequence are 0-4.5.6.7...
                      */
-                    mrecv->new_chunk_received = true;
+                    mrecv->new_dchunk_received = true;
                     tmp = itr;
                     --itr;
                     assert(itr != mrecv->fragmented_data_chunks_list.end());
@@ -3574,7 +3574,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 
 /// Assume lowest_duplicated_tsn and highest_duplicated_tsn have already been updated if they should be
 /// init value is remote_initial_TSN assigned in mrecv_new()
-/// lowest tsn is updated with value of ctsn in mrecv_create_sack()
+/// lowest tsn is updated with value of ctsn in mrecv_can_send_sack()
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
     // tsn >= highest_duplicate_tsn must be dup chunk we already teste > case in mrecv_after_highest_tsn()
@@ -3587,7 +3587,7 @@ bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
     if (uafter(chunk_tsn, mrecv->highest_duplicate_tsn))
     {
         mrecv->highest_duplicate_tsn = chunk_tsn;
-        return true;
+		return false;
     }
 
     // ubefore and ubetween make sure all chunks <= cumulative_tsn] must be dup
@@ -4022,7 +4022,7 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
     // advertising rwnd to sender for avoiding silly window syndrome (SWS),
     if (current_rwnd > 0 && current_rwnd <= 2 * MAX_PACKET_PDU)
         current_rwnd = 1;
-    // update arwnd tp prepare for creation of sack chunk in mrecv_create_sack()
+    // update arwnd tp prepare for creation of sack chunk in mrecv_can_send_sack()
     mrecv->sack_chunk->sack_fixed.a_rwnd = htonl(current_rwnd);
 }
 
@@ -4059,22 +4059,21 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
  *
  * 	@note ur and urs chunk are processed in mdlm_process_data_chunk() by delivering to ulp directly
  */
+static delivery_pdu_t* d_pdu;
+static delivery_data_t* d_chunk;
+static uint firstTSN;
+static ushort currentSID;
+static ushort currentSSN;
+static ushort currentTSN;
+static ushort nrOfChunks;
+static bool unordered;
+static bool complete;
+static uint i;
+static uint itemPosition;
+static std::list<delivery_data_t*>::iterator firstItemItr;
+static recv_stream_t* recv_streams;
 int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 {
-    static delivery_pdu_t* d_pdu;
-    static delivery_data_t* d_chunk;
-    static uint firstTSN;
-    static ushort currentSID;
-    static ushort currentSSN;
-    static ushort currentTSN;
-    static ushort nrOfChunks;
-    static bool unordered;
-    static bool complete;
-    static uint i;
-    static uint itemPosition;
-    static std::list<delivery_data_t*>::iterator firstItemItr;
-    static recv_stream_t* recv_streams;
-
     i = firstTSN = itemPosition = 0;
     complete = false;
     currentSID = currentSSN = nrOfChunks = 0;
@@ -4558,7 +4557,7 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
     assoc_state = msm_->channel_state;
     mrecv_ = mdi_read_mrecv();
     assert(mrecv_ != NULL);
-    mrecv_->new_chunk_received = false;
+    mrecv_->new_dchunk_received = false;
     mrecv_->last_address = ad_idx;
 
     // update curr rwnd
@@ -4578,7 +4577,8 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
     if (chunk_flag & DCHUNK_FLAG_RELIABLE)
     {
-        chunk_tsn = ntohl(data_chunk->data_chunk_hdr.trans_seq_num);
+		mrecv_->datagram_has_reliable_dchunk = true;
+		chunk_tsn = ntohl(data_chunk->data_chunk_hdr.trans_seq_num);
         if ((current_rwnd == 0 && uafter(chunk_tsn, mrecv_->highest_duplicate_tsn))
                 || assoc_state == ChannelState::ShutdownReceived || assoc_state == ChannelState::ShutdownAckSent)
         {
@@ -4593,57 +4593,43 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
             //should have no chunks in flight and in peer's queue
             //3. ShutdownReceived state:
             //we have received and processed all peer's queued chunks, shoul nt receive any more chunks
-            mrecv_->new_chunk_received = false;
+            mrecv_->new_dchunk_received = false;
             return 1;
         }
 
-        if (mrecv_after_highest_tsn(mrecv_, chunk_tsn))
-        {
-            // after the highest_tsn,must be new chunk
-            can_bubbleup_ctsna = mrecv_update_fragments(mrecv_, chunk_tsn);
-            assert(mrecv_->new_chunk_received == true);
-        }
-        else if (mrecv_chunk_is_duplicate(mrecv_, chunk_tsn))
+         if (mrecv_chunk_is_duplicate(mrecv_, chunk_tsn))
         {
             mrecv_update_duplicates(mrecv_, chunk_tsn);
         }
         else
         {
+			//must be new chunk received, update frags list
             can_bubbleup_ctsna = mrecv_update_fragments(mrecv_, chunk_tsn);
-        }
+			assert(mrecv_->new_dchunk_received == true);
+			mrecv_->datagram_has_new_dchunk = true;
 
-        if (can_bubbleup_ctsna)
-        {
-            mrecv_bubbleup_ctsna(mrecv_);
-        }
+			if (can_bubbleup_ctsna)
+			{
+				mrecv_bubbleup_ctsna(mrecv_);
+			}
 
-        if (mrecv_->new_chunk_received)
-        {
-            if ((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
-            {
-                if (mdlm_process_data_chunk(mdlm_, (dchunk_r_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv_->new_chunk_received = false;
-            }
-            else
-            {
-                if (mdlm_process_data_chunk(mdlm_, (data_chunk_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv_->new_chunk_received = false;
-            }
-        }
-        else
-        {
-            /* TODO :  Duplicates : see Note in section 6.2 :
-             Note: When a datagram arrives with duplicate DATA chunk(s) and no new
-             DATA chunk(s), the receiver MUST immediately send a SACK with no
-             delay. Normally this will occur when the original SACK was lost, and
-             the peers RTO has expired. The duplicate TSN number(s) SHOULD be
-             reported in the SACK as duplicate. */
+			if ((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
+			{
+				if (mdlm_process_data_chunk(mdlm_, (dchunk_r_t*)data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+					mrecv_->new_dchunk_received = false;
+			}
+			else
+			{
+				if (mdlm_process_data_chunk(mdlm_, (data_chunk_t*)data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+					mrecv_->new_dchunk_received = false;
+			}
         }
     }
     else
     {
         // there is no retx for unreliable chunk, so any chunks received are treated as "new chunk"
-        mrecv_->new_chunk_received = true;
+        mrecv_->new_dchunk_received = true;
+		mrecv_->datagram_has_new_dchunk = true;
 
         // deliver to reordering function for further processing
         if (current_rwnd == 0 || assoc_state == ChannelState::ShutdownReceived
@@ -4656,24 +4642,24 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
             // should have no chunks in flight and in peer's queue
             // 3.we are in ShutdownReceived state: we have received and processed all peer's queued chunks,
             // shoul nt receive any more chunks
-            mrecv_->new_chunk_received = false;
+            mrecv_->new_dchunk_received = false;
             return 1;
         }
 
         // if unreliable mesg  is framented in sender, the fragmented chunks are sent as reliable
         // and (ordered or unordered same to original msg).
         // so right here, we can safely bypass assembling and reliabling function
-        if (mrecv_->new_chunk_received)
+        if (mrecv_->new_dchunk_received)
         {
             if (chunk_flag & DCHUNK_FLAG_UNSEQ)
             { // unsequenced & unreliable chunk
                 if (mdlm_process_data_chunk(mdlm_, (dchunk_ur_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv_->new_chunk_received = false;
+                    mrecv_->new_dchunk_received = false;
             }
             else
             { // sequenced & unreliable chunk
                 if (mdlm_process_data_chunk(mdlm_, (dchunk_urs_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
-                    mrecv_->new_chunk_received = false;
+                    mrecv_->new_dchunk_received = false;
             }
         }
     }
@@ -5695,7 +5681,7 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN, unsigned int numbe
     tmp->highest_duplicate_tsn = remote_initial_TSN - 1;
     tmp->sack_updated = false;
     tmp->timer_running = false;
-    tmp->packet_contain_dchunk_received = -1;
+    tmp->dchunk_datagram_counter = -1;
     tmp->sack_flag = 2;
     tmp->last_address = 0;
     tmp->my_rwnd = mdi_read_rwnd();
@@ -5914,7 +5900,7 @@ void mrecv_restart(int my_rwnd, uint new_remote_TSN)
 
     rxc->sack_updated = false;
     rxc->timer_running = false;
-    rxc->packet_contain_dchunk_received = -1;
+    rxc->dchunk_datagram_counter = -1;
     rxc->sack_flag = 2;
     rxc->last_address = 0;
     rxc->my_rwnd = my_rwnd;
@@ -7497,15 +7483,15 @@ int mdi_bundle_sack_chunk(sack_chunk_t* chunk, int* dest_index)
 /// triggered by flow ctrl module, tells mrecv to send SACK to bundling
 /// using bu_put_SACK_Chunk() function.
 /// @return boolean to indicate, whether a SACK was generated, and should be sent !
-bool mrecv_create_sack(int* last_src_path_, bool force_sack)
+bool mrecv_can_send_sack(int* last_src_path_, bool force_sack)
 {
-    EVENTLOG2(VVERBOSE, "Enter mrecv_create_sack(address==%u, force_sack==%s",
+    EVENTLOG2(VVERBOSE, "Enter mrecv_can_send_sack(address==%u, force_sack==%s",
             ((last_src_path_ != NULL) ? *last_src_path_ : 0), (force_sack ? "TRUE" : "FALSE"));
     bool retval;
     recv_controller_t* mrecv = mdi_read_mrecv();
     assert(mrecv != NULL);
     if (mrecv->sack_updated == false)
-        mrecv_on_packet_processed(false);
+        mrecv_update_sack(false);
 
     // send sacks along every second time, generally
     // some timers may want to send a SACK anyway
@@ -7517,12 +7503,10 @@ bool mrecv_create_sack(int* last_src_path_, bool force_sack)
     }
     else
     {
-        if (mrecv->packet_contain_dchunk_received < 0
-        /*send sack when receiving first data chunk*/
-        || mrecv->packet_contain_dchunk_received % mrecv->sack_flag != 0
-        /*otherwise, send sack every second packet containing dchunk*/)
+        if (mrecv->dchunk_datagram_counter < 0 /*send sack when receiving first data chunk*/
+        || (mrecv->dchunk_datagram_counter % mrecv->sack_flag) != 0 /*otherwise, send sack every second packet containing dchunk*/)
         {
-            EVENTLOG(VVERBOSE, "mrecv_create_sack():: not send SACK here - return");
+            EVENTLOG(VVERBOSE, "mrecv_can_send_sack():: not send SACK here - return");
             return false;
         }
 
@@ -7548,11 +7532,11 @@ int mrecv_sack_timer_cb(timeout* tid)
     recv_controller_t* mrecv = channel->receive_control;
     int* last_address = (int*) (tid->callback.arg2);
     mrecv->timer_running = false;
-    mrecv_create_sack(last_address, true);
+    mrecv_can_send_sack(last_address, true);
     return mdi_send_bundled_chunks(last_address);
 }
 
-void mrecv_on_packet_processed(bool new_data_received)
+void mrecv_update_sack(bool datagram_contains_reliable_dchunk)
 {
     static uint pos;
     static ushort count, len16;
@@ -7569,13 +7553,13 @@ void mrecv_on_packet_processed(bool new_data_received)
     if (curr_channel_->path_control->path_params == NULL)
         return;
 
-    if (new_data_received)
-        mrecv->packet_contain_dchunk_received++;
+    if (datagram_contains_reliable_dchunk)
+        mrecv->dchunk_datagram_counter++;
 
     pos = 0;
     num_of_frags = mrecv->fragmented_data_chunks_list.size();
     num_of_dups = mrecv->duplicated_data_chunks_list.size();
-    EVENTLOG2(VVERBOSE, "mrecv_on_packet_processed()::len of frag_list==%u, len of dup_list==%u", num_of_frags,
+    EVENTLOG2(VVERBOSE, "mrecv_update_sack()::len of frag_list==%u, len of dup_list==%u", num_of_frags,
             num_of_dups);
     // limit number of Fragments/Duplicates according to PATH MTU
     assert(curr_channel_ != NULL);
@@ -7590,7 +7574,7 @@ void mrecv_on_packet_processed(bool new_data_received)
         num_of_frags--;
     max_size -= num_of_frags * sizeof(uint);
     assert(max_size >= 0);
-    EVENTLOG3(VERBOSE, "mrecv_on_packet_processed()::num_of_dups %d, num_of_frags %d, remianing pmtu %d", num_of_dups,
+    EVENTLOG3(VERBOSE, "mrecv_update_sack()::num_of_dups %d, num_of_frags %d, remianing pmtu %d", num_of_dups,
             num_of_frags, max_size);
 
     sack_chunk_t* sack = mrecv->sack_chunk;
@@ -7601,46 +7585,51 @@ void mrecv_on_packet_processed(bool new_data_received)
     sack->sack_fixed.cumulative_tsn_ack = htonl(mrecv->cumulative_tsn);
     sack->sack_fixed.num_of_fragments = htons(num_of_frags);
     sack->sack_fixed.num_of_duplicates = htons(num_of_dups);
-    // default send sack for every received packet containing dchunk
-    // but this can be ignored if force_sack is true
+    // sack_flag=1: send sack for every 1 received packet containing dchunk if there are frags (holes)
+	// sack_flag=2: send sack for every 2 received packet containing dchunk if there are no frags (no holes)
     num_of_frags > 0 ? mrecv->sack_flag = 1 : mrecv->sack_flag = 2;
 
     // write gaps blocks
-    for (auto& f32 : mrecv->fragmented_data_chunks_list)
-    {
-        if (count >= num_of_frags)
-            break;
-        EVENTLOG3(VVERBOSE, "cumulative_tsn==%u, fragment.start==%u, fragment.stop==%u", mrecv->cumulative_tsn,
-                f32.start_tsn, f32.stop_tsn);
-        frag_start32 = (f32.start_tsn - mrecv->cumulative_tsn);
-        frag_stop32 = (f32.stop_tsn - mrecv->cumulative_tsn);
-        EVENTLOG2(VVERBOSE, "frag_start16==%d, frag_stop16==%d", frag_start32, frag_stop32);
-        if (frag_start32 > UINT16_MAX || frag_stop32 > UINT16_MAX) // UINT16_MAX = 65535
-        {
-            EVENTLOG(NOTICE, "mrecv_on_packet_processed()::Fragment offset becomes too big->BREAK LOOP");
-            break;
-        }
-        seg16.start = (ushort) frag_start32;
-        seg16.stop = (ushort) frag_stop32;
-        memcpy_fast(&sack->fragments_and_dups[pos], &seg16, sizeof(segment16_t));
-        pos += sizeof(segment16_t);
-        count++;
-    }
-
+	if (mrecv->fragmented_data_chunks_list.empty() == false)
+	{
+		for (auto& f32 : mrecv->fragmented_data_chunks_list)
+		{
+			if (count >= num_of_frags)
+				break;
+			EVENTLOG3(VVERBOSE, "cumulative_tsn==%u, fragment.start==%u, fragment.stop==%u", mrecv->cumulative_tsn,
+				f32.start_tsn, f32.stop_tsn);
+			frag_start32 = (f32.start_tsn - mrecv->cumulative_tsn);
+			frag_stop32 = (f32.stop_tsn - mrecv->cumulative_tsn);
+			EVENTLOG2(VVERBOSE, "frag_start16==%d, frag_stop16==%d", frag_start32, frag_stop32);
+			if (frag_start32 > UINT16_MAX || frag_stop32 > UINT16_MAX) // UINT16_MAX = 65535
+			{
+				EVENTLOG(NOTICE, "mrecv_update_sack()::Fragment offset becomes too big->BREAK LOOP");
+				break;
+			}
+			seg16.start = (ushort)frag_start32;
+			seg16.stop = (ushort)frag_stop32;
+			memcpy_fast(&sack->fragments_and_dups[pos], &seg16, sizeof(segment16_t));
+			pos += sizeof(segment16_t);
+			count++;
+		}
+	}
     count = 0;
 
     //write dups
-    for (auto& dptr : mrecv->duplicated_data_chunks_list)
-    {
-        if (count >= num_of_dups)
-            break;
-        memcpy_fast(&sack->fragments_and_dups[pos], &dptr, sizeof(duplicate_tsn_t));
-        pos += sizeof(duplicate_tsn_t);
-        count++;
-    }
+	if (mrecv->duplicated_data_chunks_list.empty() == false)
+	{
+		for (auto& dptr : mrecv->duplicated_data_chunks_list)
+		{
+			if (count >= num_of_dups)
+				break;
+			memcpy_fast(&sack->fragments_and_dups[pos], &dptr, sizeof(duplicate_tsn_t));
+			pos += sizeof(duplicate_tsn_t);
+			count++;
+		}
+	}
 
     // start delay ack timer
-    if (!mrecv->timer_running && new_data_received)
+    if (!mrecv->timer_running && datagram_contains_reliable_dchunk)
     {
         if (mrecv->sack_timer != NULL)
             mtra_timeouts_readd(mrecv->sack_timer, mrecv->delay);
@@ -8137,8 +8126,12 @@ int mdi_disassemle_packet()
     uchar* curr_pos = chunk; /* points to the first chunk in this pdu */
     uint read_len = 0, chunk_len;
     simple_chunk_t* simple_chunk;
-    bool data_chunk_received = false;
     int handle_ret = ChunkProcessResult::Good;
+
+	mrecv_ = mdi_read_mrecv();
+	assert(mrecv_ != NULL);
+	mrecv_->datagram_has_new_dchunk = false;
+	mrecv_->datagram_has_reliable_dchunk = false;
 
     while (read_len < curr_geco_packet_value_len_)
     {
@@ -8192,7 +8185,6 @@ int mdi_disassemle_packet()
             case CHUNK_DATA:
                 EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
                 handle_ret = mrecv_process_data_chunk((data_chunk_t*) chunk, path_map[*last_source_addr_]);
-                data_chunk_received = true;
                 break;
 
             case CHUNK_SACK:
@@ -8307,16 +8299,24 @@ int mdi_disassemle_packet()
 
     if (handle_ret != ChunkProcessResult::StopProcessAndDeleteChannel)
     {
-        // fill SACK chunk, update datagram counter and start delayed-sack timer
-        mrecv_on_packet_processed(data_chunk_received);
-
-        // optionally also add a SACK chunk, at least for every second packet
-        if (data_chunk_received)
+		// fill SACK chunk, update datagram counter and start delayed-sack timer
+		//@? why this function still unpdate sack when data_chunk_received is false
+        mrecv_update_sack(mrecv_->datagram_has_reliable_dchunk);
+        if (mrecv_->datagram_has_reliable_dchunk)
         {
-            mdlm_do_notifications();
-            if (mrecv_create_sack(&last_src_path_, false))
+			/* TODO :  Duplicates : see Note in section 6.2 :
+			Note: When a datagram arrives with duplicate DATA chunk(s) and no new
+			DATA chunk(s), the receiver MUST immediately send a SACK with no
+			delay. Normally this will occur when the original SACK was lost, and
+			the peers RTO has expired. The duplicate TSN number(s) SHOULD be
+			reported in the SACK as duplicate. */
+            if (mrecv_can_send_sack(&last_src_path_,/*bool force_sack=*/ !mrecv_->datagram_has_new_dchunk) == true)
                 mdi_send_bundled_chunks(&last_src_path_);
         }
+		if (mrecv_->datagram_has_new_dchunk)
+		{
+			mdlm_do_notifications();
+		}
     }
 
     return 0;

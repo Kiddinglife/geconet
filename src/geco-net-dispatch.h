@@ -153,9 +153,11 @@ struct recv_controller_t
 	uint highest_duplicate_tsn;
 	bool sack_updated;
 	bool timer_running;
-	bool new_chunk_received; /*indicates whether a received chunk is truly new */
+	bool new_dchunk_received; /*indicates whether a received dchunk is truly new */
+	bool datagram_has_new_dchunk; /*indicates whether a received datagram contains  new dchunk(s)*/
+	bool datagram_has_reliable_dchunk; /*indicates whether a received datagram contains  new reliable dchunk(s)*/
 	timeout* sack_timer; /* timer for delayed sacks */
-	int packet_contain_dchunk_received;
+	int dchunk_datagram_counter;
 	uint sack_flag; /* 1 (sack each data chunk) or 2 (sack every second chunk)*/
 	uint last_address;
 	uint channel_id;
