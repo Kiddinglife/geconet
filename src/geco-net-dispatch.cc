@@ -3372,17 +3372,7 @@ bool mrecv_after_highest_tsn(recv_controller_t* mrecv, uint chunk_tsn)
     }
     return false; // dup chunk or new chunk
 }
-/// init value is remote_initial_TSN assigned in mrecv_new()
-/// lowest tsn is updated with value of ctsn in mrecv_create_sack()
-bool mrecv_before_lowest_duptsn(recv_controller_t* mrecv, uint chunk_tsn)
-{
-    if (ubefore(chunk_tsn, mrecv->lowest_duplicated_tsn))
-    { // this chunk must be dup
-        mrecv->lowest_duplicated_tsn = chunk_tsn;
-        return true;
-    }
-    return false; // dup chunk or new chunk
-}
+
 /// insert chunk_tsn in the list of duplicates from small to big if it is not in list
 /// @param chunk_tsn	tsn we just received
 void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
@@ -3404,6 +3394,7 @@ void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
     if ((*insert_pos) != chunk_tsn) // insert only when it not in list
         mrecv->duplicated_data_chunks_list.insert(insert_pos, chunk_tsn);
 }
+
 bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 {
     static uint lo, hi, gapsize;
@@ -3581,17 +3572,32 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
     return false;
 }
 
+/// Assume lowest_duplicated_tsn and highest_duplicated_tsn have already been updated if they should be
+/// init value is remote_initial_TSN assigned in mrecv_new()
+/// lowest tsn is updated with value of ctsn in mrecv_create_sack()
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
-    // Assume lowest_duplicated_tsn and highest_duplicated_tsn have already been updated if they should be
-
     // tsn >= highest_duplicate_tsn must be dup chunk we already teste > case in mrecv_after_highest_tsn()
     // here only test == case
     if (mrecv->highest_duplicate_tsn == chunk_tsn)
         return true;
 
+    // every time we received a reliable chunk, it first goes here to update highest tsn if possible
+    // so chunk with highest_duplicate_tsn must have already been received
+    if (uafter(chunk_tsn, mrecv->highest_duplicate_tsn))
+    {
+        mrecv->highest_duplicate_tsn = chunk_tsn;
+        return true;
+    }
+
+    // ubefore and ubetween make sure all chunks <= cumulative_tsn] must be dup
     // Given cstna=2, chunk_tsn=2, received sequence 2 45 7...,  dups sequence 0,2 =>
     // ubetween(0, 2, 2)  =>return true
+    if (ubefore(chunk_tsn, mrecv->lowest_duplicated_tsn))
+    { // this chunk must be dup but we need update lowest_duplicated_tsn so test it seprately
+        mrecv->lowest_duplicated_tsn = chunk_tsn;
+        return true;
+    }
     if (ubetween(mrecv->lowest_duplicated_tsn, chunk_tsn, mrecv->cumulative_tsn))
         return true;
 
@@ -3730,6 +3736,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
     }
     return MULP_SUCCESS;
 }
+
 /// called from mrecv to forward received rchunks (no sid and ssn) to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk, uint dchunk_len, ushort address_index)
@@ -3762,6 +3769,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
 
     return MULP_SUCCESS;
 }
+
 /// called from mrecv to forward received uro and urs chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChunk, uint dchunk_len,
@@ -3873,6 +3881,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
 
     return MULP_SUCCESS;
 }
+
 /// called from mrecv to forward received urchunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChunk, uint dchunk_len,
@@ -3926,6 +3935,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChun
     }
     return MULP_SUCCESS;
 }
+
 /**
  *  indicates new data has arrived from peer (chapter 10.2.) destined for the ULP
  *
@@ -3947,6 +3957,7 @@ void mdi_on_peer_data_arrive(int64 tsn, int streamID, int streamSN, uint length)
         }
     }
 }
+
 void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 {
     // deliver ordered chunks
@@ -4014,6 +4025,7 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
     // update arwnd tp prepare for creation of sack chunk in mrecv_create_sack()
     mrecv->sack_chunk->sack_fixed.a_rwnd = htonl(current_rwnd);
 }
+
 /*
  * All packets of the same ordering type are ordered relative to each other.
  * stream-id is used for relative ordering of packets in relation to other packets on the same stream
@@ -4512,6 +4524,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 
     return 1;
 }
+
 /*
  * function that gets chunks from the Lists, transforms them to PDUs, puts them
  * to the pduList, and calls DataArrive-Notification
@@ -4525,6 +4538,7 @@ int mdlm_notify_data_arrive()
         mdlm_deliver_ready_pdu(mdlm);
     return retval;
 }
+
 /////////////////////////////////////////////// mdeliverman Moudle (mdlm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 static uint chunk_tsn;
 static uint chunk_len;
@@ -4583,18 +4597,11 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
             return 1;
         }
 
-        EVENTLOG2(VERBOSE, "mrecv_process_data_chunk()::chunk_tsn %u, chunk_len %u", chunk_tsn, chunk_len);
-        if (mrecv_before_lowest_duptsn(mrecv_, chunk_tsn))
-        {
-            // lowest_duplicated_tsn received,must be dup
-            mrecv_update_duplicates(mrecv_, chunk_tsn);
-        }
-        else if (mrecv_after_highest_tsn(mrecv_, chunk_tsn))
+        if (mrecv_after_highest_tsn(mrecv_, chunk_tsn))
         {
             // after the highest_tsn,must be new chunk
             can_bubbleup_ctsna = mrecv_update_fragments(mrecv_, chunk_tsn);
             assert(mrecv_->new_chunk_received == true);
-            assert(can_bubbleup_ctsna == true);
         }
         else if (mrecv_chunk_is_duplicate(mrecv_, chunk_tsn))
         {
