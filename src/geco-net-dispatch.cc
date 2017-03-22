@@ -4635,13 +4635,9 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
         if (current_rwnd == 0 || assoc_state == ChannelState::ShutdownReceived
                 || assoc_state == ChannelState::ShutdownAckSent)
         {
-            // drop data chunk when:
-            // 1.our rwnd is 0 and chunk_tsn is higher than current highest_duplicated_tsn
-            // if chunk_tsn is lower, we should drop the buffered highest and buffer this chunk_tsn
-            // 2.we are ShutdownAckSent state: we have acked all queued data chunks that peer has sent to us.
-            // should have no chunks in flight and in peer's queue
-            // 3.we are in ShutdownReceived state: we have received and processed all peer's queued chunks,
-            // shoul nt receive any more chunks
+			//1. our rwnd is 0: just  drop this unreliable chunk 
+			//2. ShutdownAckSent state or ShutdownReceived state: we are in shutdown pharse, 
+			// should not receive any more chunks from peer
             mrecv_->new_dchunk_received = false;
             return 1;
         }
@@ -4652,12 +4648,14 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
         if (mrecv_->new_dchunk_received)
         {
             if (chunk_flag & DCHUNK_FLAG_UNSEQ)
-            { // unsequenced & unreliable chunk
+            { 
+				// unsequenced & unreliable chunk
                 if (mdlm_process_data_chunk(mdlm_, (dchunk_ur_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
                     mrecv_->new_dchunk_received = false;
             }
             else
-            { // sequenced & unreliable chunk
+            { 
+				// sequenced & unreliable chunk
                 if (mdlm_process_data_chunk(mdlm_, (dchunk_urs_t*) data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
                     mrecv_->new_dchunk_received = false;
             }
