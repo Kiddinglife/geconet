@@ -3395,11 +3395,12 @@ void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
         mrecv->duplicated_data_chunks_list.insert(insert_pos, chunk_tsn);
 }
 
-static uint lo, hi, gapsize;
+static uint gaplo, gaphi, gapsize;
 static segment32_t newseg;
 static std::list<segment32_t>::iterator tmp;
 bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 {
+    // this function will go through each gap between left frag and right frag to update frag and/or ctsna
     // printf("test %u\n", (unsigned int)(UINT32_MAX + 1)); => test 0
     // if cumulative_tsn == UINT32_MAX, UINT32_MAX + 1 will wrap round to 0 agin
     // why use 4 bytes tsn is that sender must NOT send chunks with tsn wrapper at one time sending.
@@ -3412,19 +3413,19 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
     // also sender will stop sending chunks when congestion ocurres.
     // key point: receiver is always catching up with sender's tsn, and most of time receiver is as fast as sender,
     // so there is no chance for sender to run fast enough to wrap around (tsn wrapping).
-    lo = (uint) (mrecv->cumulative_tsn + 1);
+    gaplo = (uint) (mrecv->cumulative_tsn + 1);
 
     auto end = mrecv->fragmented_data_chunks_list.end();
     auto itr = mrecv->fragmented_data_chunks_list.begin();
     for (;itr != end; ++itr)
     {
-        hi = itr->start_tsn - 1;
-        if (ubetween(lo, chunk_tsn, hi))
+        gaphi = itr->start_tsn - 1;
+        if (ubetween(gaplo, chunk_tsn, gaphi))
         {
-            gapsize = hi - lo + 1; //the number of missing tsn in current gap
+            gapsize = gaphi - gaplo + 1; //the number of missing tsn in current gap
             if (gapsize > 1)
             {
-                if (chunk_tsn == hi)
+                if (chunk_tsn == gaphi)
                 {
                     /* Given 1-45..., cstna=1
                      * Assume ctsn=3
@@ -3442,7 +3443,7 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                     mrecv->new_dchunk_received = true;
                     return true;
                 }
-                else if (chunk_tsn == lo)
+                else if (chunk_tsn == gaplo)
                 {
                     if (chunk_tsn == mrecv->cumulative_tsn + 1)
                     {
@@ -3515,19 +3516,21 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
             }
             else //gapsize == 1
             {
-                if (lo == mrecv->cumulative_tsn + 1)
+                if (gaplo == (uint)(mrecv->cumulative_tsn + 1))
                 {
-                    /* Given 1-3.4..., cstna=1
-                     * Assume chunk_tsn=2
-                     *
-                     * loop1:
-                     * lo=cstna+1=1+1=2, hi=3-1=2 =>
-                     * (ubetween(2,2,2)) =>
-                     * gapsize=hi-lo+1=2-2+1=1 =>
-                     * (2=lo==cstna+1=1+1=2) =>
-                     * update cstna=4,remove frag, makr as new chunk
-                     *
-                     * now sequence sre 1.2.3.4...
+                    /*
+                     * Given current cstna=1,received chunk_tsn=2,current frags=34: 1 (2) 3-4
+                     * When Loop1:
+                     *    gaplo=cstna+1=2, gaphi=itr->start_tsn-1=2;
+                     *    if [ubetween(gaplo2,chunk_tsn2,gaphi2)]:
+                     *       gapsize=gaphi-gaplo+1=1;
+                     *       if gapsize==1:
+                     *          if [gaplo2 == (uint)(mrecv->cumulative_tsn1+1)2]:
+                     *             update ctsn with value of this frag's stop_tsn;
+                     *             erase this frag;
+                     *             new dchunk received;
+                     *             return can bubbleup ctsn;
+                     * Then now sequence should be 1234
                      */
                     mrecv->cumulative_tsn = itr->stop_tsn;
                     mrecv->fragmented_data_chunks_list.erase(itr);
@@ -3553,20 +3556,38 @@ bool mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
                      *
                      * now sequence are 0-4.5.6.7...
                      */
-                    mrecv->new_dchunk_received = true;
+                    /*
+                     * Given current cstna=1,received chunk_tsn=6,current frags=45,77: 1 4-5 7-7
+                     * When Loop1 (itr=45):
+                     *    gaplo=cstna+1=2, gaphi=itr->start_tsn-1=3;
+                     *    if [ubetween(gaplo1,chunk_tsn6,gaphi3)] == false:
+                     *       gaplo = itr->stop_tsn+1=6;
+                     *
+                     * When Loop2 (itr=77,gaplo=6):
+                     *   gaphi=itr->start_tsn-1=6;
+                     *      if [ubetween(gaplo6,chunk_tsn6,gaphi6)] == true:
+                     *         if gapsize==1:
+                     *            if [gaplo6 != (uint)(mrecv->cumulative_tsn1+1)2]:
+                     *               update current frag's start_tsnwith value of pre frag's start_tsn;
+                     *               erase pre frag;
+                     *               new dchunk received;
+                     *               return can bubbleup ctsn;
+                     * Then now sequence should be 1 4-7
+                     */
                     tmp = itr;
                     --itr;
                     assert(itr != mrecv->fragmented_data_chunks_list.end());
                     tmp->start_tsn = itr->start_tsn;
-                    mrecv->fragmented_data_chunks_list.erase(itr++);
+                    mrecv->fragmented_data_chunks_list.erase(itr);
+                    mrecv->new_dchunk_received = true;
                     return true;
                 }
             }
         }
         else
         {
-            // ch_tsn is not in the gap between these two fragments
-            lo = itr->stop_tsn + 1;
+            // ch_tsn is not between this gap, try next gap
+            gaplo = itr->stop_tsn + 1;
         }
     }
     return false;

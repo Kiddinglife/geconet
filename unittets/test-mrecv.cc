@@ -224,5 +224,64 @@ extern bool
 mrecv_update_fragments (recv_controller_t* mrecv, uint chunk_tsn);
 TEST_F(mrecv, test_mrecv_update_fragments)
 {
-  //given frag sequence 1...45..., cstna = 1
+  // Given cstna=2, frags = {4-5,7-7,13-15}
+  // 2 (3) 4-5 (6) 7-7 (89) 13-15
+  mrecv_->cumulative_tsn = 2;
+  mrecv_->fragmented_data_chunks_list.push_back (
+    { 4, 5 });
+  mrecv_->fragmented_data_chunks_list.push_back (
+    { 7, 7 });
+  mrecv_->fragmented_data_chunks_list.push_back (
+    { 13, 15 });
+  auto init_list = mrecv_->fragmented_data_chunks_list;
+  auto init_ctsn = mrecv_->cumulative_tsn;
+  bool can_update_ctsn = false;
+  bool found = false;
+  uint chunktsn;
+
+  //when chunk_tsn=3
+  chunktsn = 3;
+  can_update_ctsn = mrecv_update_fragments (mrecv_, chunktsn);
+  //then cstna should be 5
+  ASSERT_EQ(mrecv_->cumulative_tsn, 5);
+  ASSERT_TRUE(can_update_ctsn);
+  //then frag 4-5 shoul be removed from list
+  ASSERT_EQ(
+      mrecv_->fragmented_data_chunks_list.end (),
+      std::find_if (mrecv_->fragmented_data_chunks_list.begin (),
+                    mrecv_->fragmented_data_chunks_list.end (),
+                    [](const segment32_t& obj)
+                    {
+                      return obj.start_tsn == 4 && obj.stop_tsn == 5;
+                    }));
+
+  //set back for next test
+  mrecv_->cumulative_tsn = init_ctsn;
+  mrecv_->fragmented_data_chunks_list = init_list;
+
+  //when chunk_tsn=6
+  chunktsn = 6;
+  can_update_ctsn = mrecv_update_fragments (mrecv_, chunktsn);
+  //then cstna should remain unchanged
+  ASSERT_EQ(mrecv_->cumulative_tsn, init_ctsn);
+  ASSERT_FALSE(can_update_ctsn);
+  //then frag 4-5 shoul be removed from list
+  ASSERT_EQ(
+      mrecv_->fragmented_data_chunks_list.end (),
+      std::find_if (mrecv_->fragmented_data_chunks_list.begin (),
+                    mrecv_->fragmented_data_chunks_list.end (),
+                    [](const segment32_t& obj)
+                    {
+                      return obj.start_tsn == 4 && obj.stop_tsn == 5;
+                    }));
+  //then frag 4-7 shoul be added to list
+  ASSERT_NE(
+      mrecv_->fragmented_data_chunks_list.end (),
+      std::find_if (mrecv_->fragmented_data_chunks_list.begin (),
+                    mrecv_->fragmented_data_chunks_list.end (),
+                    [](const segment32_t& obj)
+                    {
+                      return obj.start_tsn == 4 && obj.stop_tsn == 7;
+                    }));
+
 }
