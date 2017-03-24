@@ -6,6 +6,7 @@
  */
 
 #include "geco-test.h"
+extern 	std::shared_ptr<spdlog::logger> g_ut_console = spdlog::stdout_color_mt("g_ut_console");
 
 /**
  * ut specific implementations

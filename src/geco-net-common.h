@@ -577,8 +577,10 @@ struct internal_data_chunk_t
 //extern bool safe_between(uint seq1, uint seq2, uint seq3);
 // @pre make sure seq1 <= seq3
 //extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
-#define ubetween(seq1,seq2,seq3) (ubefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
-#define sbetween(seq1,seq2,seq3) (sbefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
+//#define ubetween(seq1,seq2,seq3) ((!ubefore(seq2,seq1)) && (!uafter(seq2,seq3)))
+#define ubetween(seq1,seq2,seq3) (seq3-seq1>= seq2-seq1)
+//#define sbetween(seq1,seq2,seq3) ((seq1==seq3)?(seq2==seq1):(sbefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1)))
+#define sbetween(seq1,seq2,seq3) (seq3-seq1>= seq2-seq1)
 
 /**
  * compute IP checksum yourself. If packet does not have even packet boundaries,

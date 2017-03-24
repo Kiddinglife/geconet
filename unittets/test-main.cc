@@ -89,7 +89,6 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "mrecv.*";  // passed on 21/03/2017
     //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_chunk_is_duplicate"; // passed on 21/03/2017
     //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_update_duplicates"; // passed on 21/03/2017
-    //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_bubbleup_ctsna"; // passed on 21/03/2017
     ::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_update_fragments"; // passed on 21/03/2017
 
     // last pass on 31 Oct 2016
