@@ -610,7 +610,7 @@ TEST(DISPATCHER_MODULE, test_find_chunk_types)
   uint chunklen = 0;
   uchar* wt = geco_packet.chunk;
   uint datalen = 101;
-  chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+  chunklen = DCHUNK_R_O_S_FIXED_SIZES + datalen;
   ((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
   ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
   while (chunklen % 4)
@@ -791,7 +791,7 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
   uint chunklen = 0;
   uchar* wt = geco_packet.chunk;
   uint datalen = 101;
-  chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+  chunklen = DCHUNK_R_O_S_FIXED_SIZES + datalen;
   ((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
   ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
   while (chunklen % 4)
@@ -803,7 +803,7 @@ TEST(DISPATCHER_MODULE, test_find_first_chunk_of)
 
   //given another data chunk
   datalen = 35;
-  chunklen = DATA_CHUNK_FIXED_SIZES + datalen;
+  chunklen = DCHUNK_R_O_S_FIXED_SIZES + datalen;
   ((chunk_fixed_t*) wt)->chunk_id = CHUNK_DATA;
   ((chunk_fixed_t*) wt)->chunk_length = htons (chunklen);
   while (chunklen % 4)

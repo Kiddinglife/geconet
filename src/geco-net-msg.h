@@ -134,66 +134,66 @@ struct chunk_fixed_t
 #define DCHUNK_FLAG_UNRELIABLE  0 //unreliable data chunk    10base: 8    2base : 00000
 
 /* when chunk_id == CHUNK_DATA */
-#define DATA_CHUNK_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
+#define DCHUNK_R_O_S_FIXED_SIZE (sizeof(uint)+2*sizeof(ushort))
 //4+8 = 12 bytes
-#define DATA_CHUNK_FIXED_SIZES \
-(CHUNK_FIXED_SIZE+DATA_CHUNK_FIXED_SIZE)
-#define MAX_DATA_CHUNK_VALUE_SIZE  \
-(MAX_NETWORK_PACKET_VALUE_SIZE-DATA_CHUNK_FIXED_SIZES)
-struct data_chunk_fixed_t
+#define DCHUNK_R_O_S_FIXED_SIZES \
+(CHUNK_FIXED_SIZE+DCHUNK_R_O_S_FIXED_SIZE)
+#define MAX_DCHUNK_ROS_VALUE_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_R_O_S_FIXED_SIZES)
+struct dchunk_r_o_s_fixed_t
 {
 	ushort stream_identity;
 	ushort stream_seq_num;  // unordered msg has NO this field
 	uint trans_seq_num;  // unrealiable msg has NO this field
 };
 
-struct data_chunk_t
+struct dchunk_r_o_s_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	data_chunk_fixed_t data_chunk_hdr;
-	uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
+	dchunk_r_o_s_fixed_t data_chunk_hdr;
+	uchar chunk_value[MAX_DCHUNK_ROS_VALUE_SIZE];
 };
 
-#define DCHUNK_URS_FIXED_SIZE (sizeof(uint)+sizeof(ushort))
-#define DCHUNK_URS_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_URS_FIXED_SIZE)
+#define DCHUNK_UR_SEQ_FIXED_SIZE (sizeof(uint)+sizeof(ushort))
+#define DCHUNK_URS_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_UR_SEQ_FIXED_SIZE)
 #define MAX_DCHUNK_URS_VALUE_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_URS_FIXED_SIZES)
-struct dchunk_urs_fixed_t
+struct dchunk_ur_s_fixed_t
 {
 	ushort stream_identity;
 	ushort stream_seq_num;
 };
-struct dchunk_urs_t
+struct dchunk_ur_s_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	dchunk_urs_fixed_t data_chunk_hdr;
+	dchunk_ur_s_fixed_t data_chunk_hdr;
 	uchar chunk_value[MAX_DCHUNK_URS_VALUE_SIZE];
 };
 
 #define DCHUNK_R_FIXED_SIZE (sizeof(uint))
-#define DCHUNK_R_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_R_FIXED_SIZE)
-#define MAX_DATA_CHUNK_VALUE_NOSSN_SIZE  \
-(MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_R_FIXED_SIZE)
-struct dchunk_r_fixed_t
+#define DCHUNK_R_UO_US_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_R_FIXED_SIZE)
+#define MAX_DCHUNK_RUOUS_VALUE_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_R_UO_US_FIXED_SIZES)
+struct dchunk_r_uo_us_fixed_t
 {
 	uint trans_seq_num;  // unrealiable msg has NO this field
 	// ushort stream_identity;
 	//ushort stream_seq_num; // unordered msg has NO this field
 };
-struct dchunk_r_t
+struct dchunk_r_uo_us_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	dchunk_r_fixed_t data_chunk_hdr;
-	uchar chunk_value[MAX_DATA_CHUNK_VALUE_NOSSN_SIZE];
+	dchunk_r_uo_us_fixed_t data_chunk_hdr;
+	uchar chunk_value[MAX_DCHUNK_RUOUS_VALUE_SIZE];
 };
 
-#define DCHUNK_UR_FIXED_SIZES CHUNK_FIXED_SIZE
-#define MAX_DCHUNK_UR_VALUE_SIZE  \
-MAX_NETWORK_PACKET_VALUE_SIZE
-struct dchunk_ur_t
+#define DCHUNK_UR_US_FIXED_SIZES CHUNK_FIXED_SIZE
+#define MAX_DCHUNK_URUS_VALUE_SIZE  \
+(MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_UR_US_FIXED_SIZES)
+struct dchunk_ur_us_t
 {
 	chunk_fixed_t comm_chunk_hdr;
-	uchar chunk_value[MAX_DCHUNK_UR_VALUE_SIZE];
+	uchar chunk_value[MAX_DCHUNK_URUS_VALUE_SIZE];
 };
 
 /*************************** variable length parameter definitions ***************************/
@@ -478,11 +478,11 @@ struct cookie_param_t
  * only varible length params.
  */
 #define ERROR_CHUNK_TOTAL_SIZE \
-(CHUNK_FIXED_SIZE+MAX_DATA_CHUNK_VALUE_SIZE)
+(CHUNK_FIXED_SIZE+MAX_DCHUNK_ROS_VALUE_SIZE)
 struct error_chunk_t
 {
 	chunk_fixed_t chunk_header;
-	uchar chunk_value[MAX_DATA_CHUNK_VALUE_SIZE];
+	uchar chunk_value[MAX_DCHUNK_ROS_VALUE_SIZE];
 };
 #define ERR_CAUSE_FIXED_SIZE (2*sizeof(ushort))
 struct error_cause_t

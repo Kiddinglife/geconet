@@ -221,7 +221,7 @@ uint msm_read_max_assoc_retrans_count();
 ChunkProcessResult msm_process_init_ack_chunk(init_chunk_t * initAck);
 /// For now this function treats only one incoming data chunk' tsn
 /// @param chunk the data chunk that was received by the bundling
-int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx);
+int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint ad_idx);
 /// This function is called to initiate the setup an association.
 /// The local tag and the initial TSN are randomly generated.
 /// Together with the parameters of the function, they are used to create the init-message.
@@ -3675,9 +3675,9 @@ bool mdlm_sort_ssn_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
 {
 	return ubefore(one->stream_sn, two->stream_sn);
 }
-/// called from mrecv to forward received ro and rs chunks to mdlm.
+/// called from mrecv to forward received reliable ordered or reliable sequenced chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChunk, uint dchunk_pdu_len,
+int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_o_s_t* dataChunk,
 	ushort address_index)
 {
 	static delivery_data_t* dchunk;
@@ -3702,7 +3702,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
 
 	// return error, when no user data
 	dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
-	dchunk_pdu_len -= DATA_CHUNK_FIXED_SIZES;
+	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length)- DCHUNK_R_O_S_FIXED_SIZES;
 	if (dchunk_pdu_len == 0)
 	{
 		geco_free_ext(dchunk, __FILE__, __LINE__);
@@ -3710,13 +3710,11 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
 		return MULP_NO_USER_DATA;
 	}
 
-	//dchunk->data = dataChunk->chunk_value;
 	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
 	dchunk->fromAddressIndex = address_index;
-	//dchunk->packet_params_t = g_packet_params;
 
 	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recv_order_streams_actived[dchunk->stream_id] = true;
@@ -3734,9 +3732,9 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, data_chunk_t* dataChu
 	return MULP_SUCCESS;
 }
 
-/// called from mrecv to forward received rchunks (no sid and ssn) to mdlm.
+/// called from mrecv to forward received reliable unorded chunks (no sid and ssn) to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk, uint dchunk_len, ushort address_index)
+int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_uo_us_t* dataChunk, ushort address_index)
 {
 	static delivery_data_t* dchunk;
 	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t),
@@ -3744,8 +3742,8 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
 		return MULP_OUT_OF_RESOURCES;
 
 	// return error, when no user data
-	dchunk_len -= DCHUNK_R_FIXED_SIZES;
-	if (dchunk_len == 0)
+	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_R_UO_US_FIXED_SIZES;
+	if (dchunk_pdu_len == 0)
 	{
 		geco_free_ext(dchunk, __FILE__, __LINE__);
 		msm_abort_channel(ECC_NO_USER_DATA);
@@ -3753,13 +3751,11 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
 	}
 
 	dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
-	//dchunk->data = dataChunk->chunk_value;
-	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_len);
-	dchunk->data_length = dchunk_len;
+	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
+	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->fromAddressIndex = address_index;
-	//dchunk->packet_params_t = g_packet_params;
-	mdlm->queuedBytes += dchunk_len;
+	mdlm->queuedBytes += dchunk_pdu_len;
 
 	const auto& upper = std::upper_bound(mdlm->r.begin(), mdlm->r.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
 	mdlm->r.insert(upper, dchunk);
@@ -3767,9 +3763,9 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_r_t* dataChunk
 	return MULP_SUCCESS;
 }
 
-/// called from mrecv to forward received uro and urs chunks to mdlm.
+/// called from mrecv to forward received unreliable ordered or unreliable sequenced chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChunk, uint dchunk_len,
+int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	ushort address_index)
 {
 	static delivery_data_t* dchunk;
@@ -3794,7 +3790,6 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
 
 	if (sbefore(ssn, recvsm->nextSSN))
 	{
-		free_packet_params(dchunk_len);
 		return MULP_SUCCESS;
 	}
 
@@ -3820,8 +3815,8 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
 	}
 
 	// return error, when no user data
-	dchunk_len -= DCHUNK_URS_FIXED_SIZE;
-	if (dchunk_len == 0)
+	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_UR_SEQ_FIXED_SIZE;
+	if (dchunk_pdu_len == 0)
 	{
 		geco_free_ext(dchunk, __FILE__, __LINE__);
 		msm_abort_channel(ECC_NO_USER_DATA);
@@ -3829,14 +3824,13 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
 	}
 
 	//dchunk->data = dataChunk->chunk_value;
-	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_len);
-	dchunk->data_length = dchunk_len;
+	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
+	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->stream_sn = ssn;
 	dchunk->fromAddressIndex = address_index;
-	//dchunk->packet_params_t = g_packet_params;
 
-	mdlm->queuedBytes += dchunk_len;
+	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recv_seq_streams_activated[dchunk->stream_id] = true;
 
 	if ((dchunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (dchunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
@@ -3879,9 +3873,9 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_urs_t* dataChu
 	return MULP_SUCCESS;
 }
 
-/// called from mrecv to forward received urchunks to mdlm.
+/// called from mrecv to forward received unreliable unordered or unsequenced (this is same to normal udp )chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
-int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChunk, uint dchunk_len,
+int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_us_t* dataChunk,
 	ushort address_index)
 {
 	static delivery_data_t* dchunk;
@@ -3890,21 +3884,19 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChun
 		return MULP_OUT_OF_RESOURCES;
 
 	// return error, when no user data
-	dchunk_len -= DCHUNK_UR_FIXED_SIZES;
-	if (dchunk_len == 0)
+	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_UR_US_FIXED_SIZES;
+	if (dchunk_pdu_len == 0)
 	{
 		geco_free_ext(dchunk, __FILE__, __LINE__);
 		msm_abort_channel(ECC_NO_USER_DATA);
 		return MULP_NO_USER_DATA;
 	}
 
-	//dchunk->data = dataChunk->chunk_value;
-	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_len);
-	dchunk->data_length = dchunk_len;
+	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
+	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->fromAddressIndex = address_index;
-	//dchunk->packet_params_t = g_packet_params;
-	mdlm->queuedBytes += dchunk_len;
+	mdlm->queuedBytes += dchunk_pdu_len;
 
 	delivery_pdu_t* d_pdu;
 	if ((dchunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (dchunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
@@ -3924,7 +3916,7 @@ int mdlm_process_data_chunk(deliverman_controller_t* mdlm, dchunk_ur_t* dataChun
 	}
 	else
 	{
-		EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::found segmented unreliable chunk");
+		EVENTLOG(INFO, "mdlm_receive_dchunk()::peer sends us a segmented unreliable chunk -> abort connection");
 		geco_free_ext(dchunk, __FILE__, __LINE__);
 		geco_free_ext(d_pdu, __FILE__, __LINE__);
 		msm_abort_channel(ECC_PROTOCOL_VIOLATION);
@@ -4054,7 +4046,7 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
  * there are two more streams for ur and r chunks in default
  * so total number of streams = sequenced_streams+order_streams+2
  *
- * 	@note ur and urs chunk are processed in mdlm_process_data_chunk() by delivering to ulp directly
+ * 	@note ur and urs chunk are processed in mdlm_receive_dchunk() by delivering to ulp directly
  */
 static delivery_pdu_t* d_pdu;
 static delivery_data_t* d_chunk;
@@ -4535,14 +4527,15 @@ int mdlm_notify_data_arrive()
 	return retval;
 }
 
-/////////////////////////////////////////////// mdeliverman Moudle (mdlm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
 static uint chunk_tsn;
 static uint chunk_len;
 static uint assoc_state;
 static bool can_bubbleup_ctsna;
 static uint bytes_queued;
 static uchar chunk_flag;
-int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
+
+/////////////////////////////////////////////// mdeliverman Moudle (mdlm) Starts \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/
+int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 {
 	mdlm_ = mdi_read_mdlm();
 	assert(mdlm_ != NULL);
@@ -4555,13 +4548,13 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 	mrecv_ = mdi_read_mrecv();
 	assert(mrecv_ != NULL);
 	mrecv_->new_dchunk_received = false;
-	mrecv_->last_address = ad_idx;
+	mrecv_->remote_addr_idx = remote_addr_idx;
 
 	// update curr rwnd
 	bytes_queued = mdlm_read_queued_bytes();
 	current_rwnd = bytes_queued >= mrecv_->my_rwnd ? 0 : mrecv_->my_rwnd - bytes_queued;
 
-	// MAX_PACKET_PDU is constant no matter it is udp-tunneled or not
+	// MAX_PACKET_PDU is constant no matter it is udp-tunneled or not.
 	// advertising rwnd to sender for avoiding silly window syndrome (SWS),
 	if (current_rwnd > 0 && current_rwnd <= 2 * MAX_PACKET_PDU)
 		current_rwnd = 1;
@@ -4607,12 +4600,12 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 
 			if ((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
 			{
-				if (mdlm_process_data_chunk(mdlm_, (dchunk_r_t*)data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+				if (mdlm_receive_dchunk(mdlm_, (dchunk_r_uo_us_t*)data_chunk, remote_addr_idx) == MULP_SUCCESS)
 					mrecv_->new_dchunk_received = false;
 			}
 			else
 			{
-				if (mdlm_process_data_chunk(mdlm_, (data_chunk_t*)data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+				if (mdlm_receive_dchunk(mdlm_, (dchunk_r_o_s_t*)data_chunk, remote_addr_idx) == MULP_SUCCESS)
 					mrecv_->new_dchunk_received = false;
 			}
 		}
@@ -4637,18 +4630,19 @@ int mrecv_process_data_chunk(data_chunk_t * data_chunk, uint ad_idx)
 		// if unreliable mesg  is framented in sender, the fragmented chunks are sent as reliable
 		// and (ordered or unordered same to original msg).
 		// so right here, we can safely bypass assembling and reliabling function
+		//	btw. there is no ordered unreliable chunk but only sequenced unreliable chunk
 		if (mrecv_->new_dchunk_received)
 		{
 			if (chunk_flag & DCHUNK_FLAG_UNSEQ)
 			{
-				// unsequenced & unreliable chunk
-				if (mdlm_process_data_chunk(mdlm_, (dchunk_ur_t*)data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+				// unreliable unsequenced chunk same to udp datagram
+				if (mdlm_receive_dchunk(mdlm_, (dchunk_ur_us_t*)data_chunk, remote_addr_idx) == MULP_SUCCESS)
 					mrecv_->new_dchunk_received = false;
 			}
 			else
 			{
-				// sequenced & unreliable chunk
-				if (mdlm_process_data_chunk(mdlm_, (dchunk_urs_t*)data_chunk, chunk_len, ad_idx) == MULP_SUCCESS)
+				// unreliable sequenced chunk
+				if (mdlm_receive_dchunk(mdlm_, (dchunk_ur_s_t*)data_chunk, remote_addr_idx) == MULP_SUCCESS)
 					mrecv_->new_dchunk_received = false;
 			}
 		}
@@ -5673,7 +5667,7 @@ recv_controller_t* mrecv_new(unsigned int remote_initial_TSN, unsigned int numbe
 	tmp->timer_running = false;
 	tmp->dchunk_datagram_counter = -1;
 	tmp->sack_flag = 2;
-	tmp->last_address = 0;
+	tmp->remote_addr_idx = 0;
 	tmp->my_rwnd = mdi_read_rwnd();
 	tmp->delay = mdi_read_default_delay(geco_instance);
 	EVENTLOG2(DEBUG, "channel id %d, local tag %d", curr_channel_->channel_id, curr_channel_->local_tag);
@@ -5892,7 +5886,7 @@ void mrecv_restart(int my_rwnd, uint new_remote_TSN)
 	rxc->timer_running = false;
 	rxc->dchunk_datagram_counter = -1;
 	rxc->sack_flag = 2;
-	rxc->last_address = 0;
+	rxc->remote_addr_idx = 0;
 	rxc->my_rwnd = my_rwnd;
 	rxc->channel_id = mdi_read_curr_channel_id();
 }
@@ -8171,7 +8165,7 @@ int mdi_disassemle_packet()
 
 		case CHUNK_DATA:
 			EVENTLOG(DEBUG, "***** Diassemble received CHUNK_DATA");
-			handle_ret = mrecv_process_data_chunk((data_chunk_t*)chunk, path_map[*last_source_addr_]);
+			handle_ret = mrecv_receive_dchunk((dchunk_r_o_s_t*)chunk, path_map[*last_source_addr_]);
 			break;
 
 		case CHUNK_SACK:

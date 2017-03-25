@@ -148,9 +148,8 @@ struct recv_controller_t
 {
 	sack_chunk_t* sack_chunk;
 	uint cumulative_tsn;
-	// stores highest tsn received so far, taking care of wraps i.e. highest < lowest indicates a wrap
 	uint lowest_duplicated_tsn;
-	uint highest_duplicate_tsn;
+	uint highest_duplicate_tsn;/*stores highest tsn received so far, taking care of wraps i.e. highest < lowest indicates a wrap*/
 	bool sack_updated;
 	bool timer_running;
 	bool new_dchunk_received; /*indicates whether a received dchunk is truly new */
@@ -159,14 +158,13 @@ struct recv_controller_t
 	timeout* sack_timer; /* timer for delayed sacks */
 	int dchunk_datagram_counter;
 	uint sack_flag; /* 1 (sack each data chunk) or 2 (sack every second chunk)*/
-	uint last_address;
+	uint remote_addr_idx;
 	uint channel_id;
 	uint my_rwnd;
 	uint delay; /* delay for delayed ACK in msecs */
 	uint numofdestaddrlist; /* number of dest addresses */
-	// store completed msg's segment
-	std::list<segment32_t> fragmented_data_chunks_list;
-	std::list<duplicate_tsn_t> duplicated_data_chunks_list;
+	std::list<segment32_t> fragmented_data_chunks_list; /*store segmented tsns for bubbleup of ctsn and building of sack*/
+	std::list<duplicate_tsn_t> duplicated_data_chunks_list; /*store completed msg's segment*/
 };
 
 /// this struct contains the necessary data per (destination or) path.
@@ -415,8 +413,8 @@ struct deliverman_controller_t
 	uint queuedBytes;
 	bool unreliable;
 	bool unordered;
-	// reliable, reliable&ordered, reliable&sequenced,
-	// unreliable, unreliable&ordered or unreliable&sequenced
+	// reliable unordered(r), reliable&ordered(ro), reliable&sequenced(rs),
+	// unreliable unordered(u), unreliable&ordered(uro) or unreliable&sequenced(urs)
 	// parse packet and put dchunk to againest list, they must be ordered
 	std::list<delivery_data_t*> ro, rs, r, urs;
 	std::list<delivery_pdu_t*> ur_pduList;
