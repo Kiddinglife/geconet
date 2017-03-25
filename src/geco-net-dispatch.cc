@@ -3397,21 +3397,30 @@ void mrecv_update_duplicates(recv_controller_t* mrecv, uint chunk_tsn)
 static uint gaplo, gaphi, gapsize;
 static segment32_t newseg;
 static std::list<segment32_t>::iterator tmp;
-///this function will go through each gap between left frag and right frag to update frag and/or ctsn
+
+///this function will go through each gap between left frag and right frag to update frag list and/or ctsn
 void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 {
-	// printf("test %u\n", (unsigned int)(UINT32_MAX + 1)); => test 0
-	// if cumulative_tsn == UINT32_MAX, UINT32_MAX + 1 will wrap round to 0 agin
-	// why use 4 bytes tsn is that sender must NOT send chunks with tsn wrapper at one time sending.
-	// otherwise, the tsn will not be working correctly for retrans, reordering and acking functions.
-	// eg. assume tsn is beteen [0,2], sender  sents chunk 0,1,2,0,1,2,
-	// 1.when sender send all chunks in one packet,  this will confuses receiver's reliableing function.
-	// 2.when send send all chunks one after another, it is likely that receiver will buffer all or some of received chunks,
-	// which also confuses receiver's reliableing function.
-	// the tricky using uint is it is so big that receiver will never receive wrapped tsn.
-	// also sender will stop sending chunks when congestion ocurres.
-	// key point: receiver is always catching up with sender's tsn, and most of time receiver is as fast as sender,
-	// so there is no chance for sender to run fast enough to wrap around (tsn wrapping).
+	/*
+	* why use 4 bytes tsn ?
+	*
+	* if cumulative_tsn == UINT32_MAX, UINT32_MAX + 1 will wrap round to 0 agin
+	* eg. printf("test %u\n", (unsigned int)(UINT32_MAX + 1)); => test 0
+	* 
+	* However, 	a sender MUST NOT or CANNOT send a huge number of chunks at one time send call that causes tsn wrapping.
+	* otherwise, the tsn will not be working correctly for retrans, reordering and acking functions.
+	* eg. assume tsn is beteen [0,2], sender  sents chunk 0,1,2,0,1,2,
+	*
+	* 1.when sender send all chunks in one packet,  this will confuses receiver's reliableing function.
+	* 2.when send send all chunks one after another, it is likely that receiver will buffer all or some of received chunks,
+	* which also confuses receiver's reliableing function.
+	*
+	* the tricky using uint is it is so big that receiver will never receive wrapped tsn.
+	* also sender will stop sending chunks when congestion ocurres.
+	*
+	* key point: receiver is always catching up with sender's tsn, and most of time receiver is as fast as sender,
+	* so there is no chance for sender to run fast enough to wrap around (tsn wrapping).
+	*/
 	gaplo = (uint)(mrecv->cumulative_tsn + 1);
 
 	auto end = mrecv->fragmented_data_chunks_list.end();
@@ -3496,25 +3505,29 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 				}
 				else
 				{
-					/* Given 1-4.5-9.10..., cstna=1
-					 * Assume ctsn=7
+					 /*
+					 * chunk tsn is located between (gaplo,gaphi)
 					 *
-					 * loop1:
-					 * lo=cstna+1=1+1=2, hi=4-1=3 =>
-					 * (ubetween(2,6,3) = false) =>
-					 * update lo = stoptsn+1 = 5+1 = 6 =>
+					 * Given current cstna=1,received chunk_tsn=7,current frags=45,89: 1 4-5 9-10
+					 * When loop1(itr=4-5):
+					 * 	gaplo=cstna+1=2, gaphi=itr->start_tsn-1=3;
+					 *    if [ubetween(gaplo2,chunk_tsn7,gaphi3)] == false:
+					 *       gaplo = itr->stop_tsn+1=6;
 					 *
-					 * loop2:
-					 * hi=9-1=8 =>
-					 * (ubetween(2,6,8) = true) =>
-					 * gapsize=hi-lo+1=8-2+1=7 >1 =>
-					 * (7= ctsn!=hi =8 ) =>
-					 * (7= ctsn!=lo =6 ) =>
-					 * allocate and init new frag with ctsn7 ,insert to list, makr as new chunk
+					 * When loop2((itr=9-10,gaplo=6)):
+					 *   gaphi=itr->start_tsn-1=8;
+					 *      if [ubetween(gaplo6,chunk_tsn7,gaphi8)] == true:
+					 *         gapsize=gaphi8-gaplo6+1=3;
+					 *         if [gapsize3 > 1] == true:
+					 *            if (chunk_tsn7 == gaphi8) == false:
+					 *            else if (chunk_tsn7 == gaplo6) == false:
+					 *            else:
+					 *              insert new frag before current frag whose start and stop tsns same to chunk_tsn
+					 *              not bubbleup cstna;
+					 *              new dchunk received;
 					 *
-					 * now sequence sre 1-4.5-7-8.9...
+					 * Then now sequence: 1 4-5 7-7 9-10
 					 */
-					 //@TODO g_list_insert_sorted but I think we do not need loop again
 					newseg.start_tsn = newseg.stop_tsn = chunk_tsn;
 					mrecv->fragmented_data_chunks_list.insert(itr, newseg);
 					mrecv->new_dchunk_received = true;

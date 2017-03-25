@@ -5,10 +5,9 @@
  *      Author: jakez
  */
 
-#include "spdlog/spdlog.h"
-
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
+
 #include "geco-net-chunk.h"
 #include "geco-test.h"
 
@@ -22,6 +21,7 @@ struct mrecv : public testing::Test
 	virtual void
 		SetUp()
 	{
+		GLOBAL_CURR_EVENT_LOG_LEVEL = INFO;
 		alloc_geco_channel();
 		init_channel_ = curr_channel_;
 		mrecv_ = init_channel_->receive_control;
@@ -184,35 +184,30 @@ extern void
 mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn);
 TEST_F(mrecv, test_mrecv_update_fragments)
 {
-	// Given cstna=2, frags = {4-5,7-7,13-15}
-	// 2 (3) 4-5 (6) 7-7 (89) 13-15
+	// Given cstna=2, frags = {4-5,7-7,13-15}, 2 (3) 4-5 (6) 7-7 (89) 13-15
 	mrecv_->cumulative_tsn = 2;
-	mrecv_->fragmented_data_chunks_list.push_back(
-	{ 4, 5 });
-	mrecv_->fragmented_data_chunks_list.push_back(
-	{ 7, 7 });
-	mrecv_->fragmented_data_chunks_list.push_back(
-	{ 13, 15 });
+	mrecv_->fragmented_data_chunks_list.push_back({ 4, 5 });
+	mrecv_->fragmented_data_chunks_list.push_back({ 7, 7 });
+	mrecv_->fragmented_data_chunks_list.push_back({ 13, 15 });
 	auto init_list = mrecv_->fragmented_data_chunks_list;
 	auto init_ctsn = mrecv_->cumulative_tsn;
-	bool can_bubbleup_ctsn = false;
-	bool found = false;
 	uint chunktsn;
 
 	//when chunk_tsn=3
 	chunktsn = 3;
 	mrecv_update_fragments(mrecv_, chunktsn);
-	//then cstna should be 5
+	//then sequence should change from 2 (3) 4-5 (6) 7-7 (89) 13-15 to 5 (6) 7-7 (89) 13-15
 	ASSERT_EQ(mrecv_->cumulative_tsn, 5);
-	//then frag 4-5 shoul be removed from list
-	ASSERT_EQ(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return obj.start_tsn == 4 && obj.stop_tsn == 5;
-	}));
+	segment32_t& seg77_ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg77_.start_tsn, 7);
+	ASSERT_EQ(seg77_.stop_tsn, 7);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg13_15_ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg13_15_.start_tsn, 13);
+	ASSERT_EQ(seg13_15_.stop_tsn, 15);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	ASSERT_TRUE(mrecv_->fragmented_data_chunks_list.empty());
+
 	//set back for next test
 	mrecv_->cumulative_tsn = init_ctsn;
 	mrecv_->fragmented_data_chunks_list = init_list;
@@ -220,26 +215,18 @@ TEST_F(mrecv, test_mrecv_update_fragments)
 	//when chunk_tsn=6
 	chunktsn = 6;
 	mrecv_update_fragments(mrecv_, chunktsn);
-	//then cstna should remain unchanged
-	ASSERT_EQ(mrecv_->cumulative_tsn, init_ctsn);
-	//then frag 4-5 shoul be removed from list
-	ASSERT_EQ(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return obj.start_tsn == 4 && obj.stop_tsn == 5;
-	}));
-	//then frag 4-7 shoul be added to list
-	ASSERT_NE(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return obj.start_tsn == 4 && obj.stop_tsn == 7;
-	}));
+	//then sequence should change from 2 (3) 4-5 (6) 7-7 (89) 13-15 to 2 (3) 4-7 (89) 13-15
+	ASSERT_EQ(mrecv_->cumulative_tsn, 2);
+	segment32_t& seg47 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg47.start_tsn, 4);
+	ASSERT_EQ(seg47.stop_tsn, 7);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg13_15__ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg13_15__.start_tsn, 13);
+	ASSERT_EQ(seg13_15__.stop_tsn, 15);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	ASSERT_TRUE(mrecv_->fragmented_data_chunks_list.empty());
+
 	//set back for next test
 	mrecv_->cumulative_tsn = init_ctsn;
 	mrecv_->fragmented_data_chunks_list = init_list;
@@ -247,58 +234,72 @@ TEST_F(mrecv, test_mrecv_update_fragments)
 	//when chunk_tsn=8
 	chunktsn = 8;
 	mrecv_update_fragments(mrecv_, chunktsn);
-	//then cstna should remain unchanged
-	ASSERT_EQ(mrecv_->cumulative_tsn, init_ctsn);
-	//then frag 7-7 shoul be updated to 7-8 that should be added to list too
-	ASSERT_NE(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return obj.start_tsn == 7 && obj.stop_tsn == 8;
-	}));
-	ASSERT_EQ(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return obj.start_tsn == 7 && obj.stop_tsn == 7;
-	}));
+	//then sequence should change from 2 (3) 4-5 (6) 7-7 (89) 13-15 to 2 (3) 7-8 (9) 13-15
+	ASSERT_EQ(mrecv_->cumulative_tsn, 2);
+	segment32_t& seg45___ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg45___.start_tsn, 4);
+	ASSERT_EQ(seg45___.stop_tsn, 5);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg78 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg78.start_tsn, 7);
+	ASSERT_EQ(seg78.stop_tsn, 8);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg13_15___ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg13_15___.start_tsn, 13);
+	ASSERT_EQ(seg13_15___.stop_tsn, 15);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	ASSERT_TRUE(mrecv_->fragmented_data_chunks_list.empty());
+
 	//set back for next test
 	mrecv_->cumulative_tsn = init_ctsn;
 	mrecv_->fragmented_data_chunks_list = init_list;
 
-	// Given cstna=1, frags = {4-5,8-9}
-	// 1 4-5 8-9
+	//when chunk_tsn=10
+	chunktsn = 10;
+	mrecv_update_fragments(mrecv_, chunktsn);
+	//then sequence should change from 
+	//2 (3) 4-5 (6) 7-7 (89) to 2 (3) 4-5 7-7 10-10 (11-12) 13-15
+	ASSERT_EQ(mrecv_->cumulative_tsn, init_ctsn);
+	segment32_t& seg45 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg45.start_tsn, 4);
+	ASSERT_EQ(seg45.stop_tsn, 5);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg77 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg77.start_tsn, 7);
+	ASSERT_EQ(seg77.stop_tsn, 7);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg10_10 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg10_10.start_tsn, 10);
+	ASSERT_EQ(seg10_10.stop_tsn, 10);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg13_15 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg13_15.start_tsn, 13);
+	ASSERT_EQ(seg13_15.stop_tsn, 15);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	ASSERT_TRUE(mrecv_->fragmented_data_chunks_list.empty());
+
+	// Given cstna=1, frags = {4-5,8-9}, 1 (2-3) 4-5 (6-7) 8-9
 	mrecv_->cumulative_tsn = init_ctsn = 1;
 	mrecv_->fragmented_data_chunks_list.clear();
 	mrecv_->fragmented_data_chunks_list.push_back({ 4,5 });
 	mrecv_->fragmented_data_chunks_list.push_back({ 8,9 });
+	init_list = mrecv_->fragmented_data_chunks_list;
 
 	//when chunk_tsn=2
 	chunktsn = 2;
 	mrecv_update_fragments(mrecv_, chunktsn);
-	//then cstna should changed
+	//then sequence should change from 
+	// 1 (2-3) 4-5 (6-7) 8-9 to 2 (3) 4-5 (6-7) 8-9
 	ASSERT_EQ(mrecv_->cumulative_tsn, 2);
-	//then frag45 and 89 should not change
-	ASSERT_NE(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return (obj.start_tsn == 4 && obj.stop_tsn == 5);
-	}));
-	ASSERT_NE(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return  (obj.start_tsn == 8 && obj.stop_tsn == 9);
-	}));
+	segment32_t& seg45____ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg45____.start_tsn, 4);
+	ASSERT_EQ(seg45____.stop_tsn, 5);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg89 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg89.start_tsn, 8);
+	ASSERT_EQ(seg89.stop_tsn, 9);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	ASSERT_TRUE(mrecv_->fragmented_data_chunks_list.empty());
 	//set back for next test
 	mrecv_->cumulative_tsn = init_ctsn;
 	mrecv_->fragmented_data_chunks_list = init_list;
@@ -306,25 +307,18 @@ TEST_F(mrecv, test_mrecv_update_fragments)
 	//when chunk_tsn=3
 	chunktsn = 3;
 	mrecv_update_fragments(mrecv_, chunktsn);
-	//then cstna should changed
+	//then sequence should change from 
+	//1 (2-3) 4-5 (6-7) 8-9 to 1 (2) 3-5 (6-7) 8-9
 	ASSERT_EQ(mrecv_->cumulative_tsn, 1);
-	//then frag45 should be updated to frag35
-	ASSERT_NE(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return (obj.start_tsn == 3 && obj.stop_tsn == 5);
-	}));
-	ASSERT_EQ(
-		mrecv_->fragmented_data_chunks_list.end(),
-		std::find_if(mrecv_->fragmented_data_chunks_list.begin(),
-			mrecv_->fragmented_data_chunks_list.end(),
-			[](const segment32_t& obj)
-	{
-		return (obj.start_tsn == 4 && obj.stop_tsn == 5);
-	}));
+	segment32_t& seg35 = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg35.start_tsn, 3);
+	ASSERT_EQ(seg35.stop_tsn, 5);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	segment32_t& seg89_____ = mrecv_->fragmented_data_chunks_list.front();
+	ASSERT_EQ(seg89_____.start_tsn, 8);
+	ASSERT_EQ(seg89_____.stop_tsn, 9);
+	mrecv_->fragmented_data_chunks_list.pop_front();
+	ASSERT_TRUE(mrecv_->fragmented_data_chunks_list.empty());
 
 	reset();
 }

@@ -6,6 +6,8 @@
 #include "spdlog/spdlog.h"
 namespace spd = spdlog;
 
+extern int GLOBAL_CURR_EVENT_LOG_LEVEL;
+
 #if GTEST_OS_WINDOWS_MOBILE
 # include <tchar.h>  // NOLINT
 GTEST_API_ int _tmain(int argc, TCHAR** argv)
@@ -15,7 +17,6 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
   main (int argc, char** argv)
   {
 #endif  // GTEST_OS_WINDOWS_MOBILE
-
     // Console logger with color
     auto console = spd::stdout_color_mt ("console");
 //    console->info ("Welcome to spdlog!");
