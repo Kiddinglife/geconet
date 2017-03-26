@@ -391,9 +391,9 @@ struct recv_stream_t  //ReceiveStream
 	/* list of PDUs waiting for transfer to pduList and doing mdi arrive notification */
 	std::list<delivery_pdu_t*> prePduList;
 	/* used to detect Protocol violations in se_searchReadyPdu */
-	ushort highestSSN;
-	ushort nextSSN;
-	bool highestSSNused;
+	ushort last_ssn;
+	ushort next_expected_ssn;
+	bool last_ssn_used;
 	ushort newestSSN; // for uro chunks
 	int index;
 };

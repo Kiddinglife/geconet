@@ -1756,7 +1756,7 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 	mdi_unlock_bundle_ctrl();
 	mdi_send_bundled_chunks();
 	if (smctrl->init_timer_id != NULL)
-	{ 
+	{
 		//delete init timer
 		mtra_timeouts_del(smctrl->init_timer_id);
 		smctrl->init_timer_id = NULL;
@@ -3768,45 +3768,10 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_uo_us_t* dataChu
 int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	ushort address_index)
 {
-	static delivery_data_t* dchunk;
-	static delivery_pdu_t* d_pdu;
-	static ushort sid;
-	static ushort ssn;
-	static recv_stream_t* recvsm;
-
-	ssn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
-	recvsm = &mdlm->recv_seq_streams[sid];
-
-	//  increment tsn by one for each data chunk in the packet  and use it to fill tsn field
-	// also increment some stream's ssn by one for each data chunk in packet and ure it to fill ssn field
-	// thus, all tsns and ssns in this packet MUST be in ascend order. if not, peer's stack impl is not compatiable with with us
-	// recvsm->highestSSN == ssn because ur chunk is always segmented as r chunk with ordering type and same sid and ssn
-	if (recvsm->highestSSNused && (safter(recvsm->highestSSN, ssn) || recvsm->highestSSN == ssn))
-	{
-		EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
-		msm_abort_channel(ECC_PROTOCOL_VIOLATION);
-		return MULP_PROTOCOL_VIOLATION;
-	}
-
-	if (sbefore(ssn, recvsm->nextSSN))
-	{
-		return MULP_SUCCESS;
-	}
-
-	recvsm->nextSSN = ssn + 1;
-	recvsm->highestSSN = ssn;
-	recvsm->highestSSNused = true;
-
-	sid = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t),
-		__FILE__, __LINE__)))
-		return MULP_OUT_OF_RESOURCES;
-
 	// return error, when numReceiveStreams is exceeded
-	dchunk->stream_id = sid;
-	if (dchunk->stream_id > mdlm->numSequencedStreams)
+	ushort sid = ntohs(dataChunk->data_chunk_hdr.stream_identity);
+	if (sid > mdlm->numSequencedStreams)
 	{
-		geco_free_ext(dchunk, __FILE__, __LINE__);
 		invalid_stream_id_err_t error_info;
 		error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
 		error_info.reserved = 0;
@@ -3814,7 +3779,37 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 		return MULP_INVALID_STREAM_ID;
 	}
 
-	// return error, when no user data
+	recv_stream_t* recv_stream = &mdlm->recv_seq_streams[sid];
+	ushort ssn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
+
+	// all ur_s_chunks' ssns in this packet MUST be in ascend order increment by one.
+	// if not, peer's stack impl is not compatiable with with us. just abort connection.
+	if (recv_stream->last_ssn_used && (ssn != recv_stream->last_ssn + 1))
+	{
+		EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
+		msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+		return MULP_PROTOCOL_VIOLATION;
+	}
+
+	// prefer to recently received chunks, ignoring the ones received later.
+	// so chunks with ssn < next expected ssn are discarded
+	if (sbefore(ssn, recv_stream->next_expected_ssn))
+	{
+		return MULP_SUCCESS;
+	}
+
+	recv_stream->next_expected_ssn = ssn + 1; // incremental by one
+	recv_stream->last_ssn = ssn;
+	// assign  the first chunk's ssn in a newly receive packet to last_ssn and set last_ssn_used to true
+	// there is no way to avoid asigning it only one time
+	recv_stream->last_ssn_used = true;
+
+	delivery_data_t* dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__);
+	if (dchunk == NULL)
+		return MULP_OUT_OF_RESOURCES;
+	dchunk->stream_id = sid;
+
+	// when no user data, abort connection.
 	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_UR_SEQ_FIXED_SIZE;
 	if (dchunk_pdu_len == 0)
 	{
@@ -3823,7 +3818,6 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 		return MULP_NO_USER_DATA;
 	}
 
-	//dchunk->data = dataChunk->chunk_value;
 	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
@@ -3831,14 +3825,15 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	dchunk->from_addr_index = address_index;
 
 	mdlm->queuedBytes += dchunk_pdu_len;
-	mdlm->recv_seq_streams_activated[dchunk->stream_id] = true;
+	mdlm->recv_seq_streams_activated[sid] = true;
 
 	if ((dchunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (dchunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
 	{
 		EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment");
-		if ((d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t),
-			__FILE__, __LINE__)) == NULL)
+		delivery_pdu_t* d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__);
+		if (d_pdu == NULL)
 		{
+			geco_free_ext(dchunk, __FILE__, __LINE__);
 			return MULP_OUT_OF_RESOURCES;
 		}
 		d_pdu->number_of_chunks = 1;
@@ -3846,31 +3841,16 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 		d_pdu->read_chunk = 0;
 		d_pdu->chunk_position = 0;
 		d_pdu->total_length = dchunk->data_length;
-		// ur chunk must not be segmented and so we can force cast it to delivery_data_t**
-		d_pdu->ddata = (delivery_data_t**)dchunk;
-	}
-	else
-	{
-		EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::found segmented unreliable chunk");
-		geco_free_ext(dchunk, __FILE__, __LINE__);
-		geco_free_ext(d_pdu, __FILE__, __LINE__);
-		msm_abort_channel(ECC_PROTOCOL_VIOLATION);
-		return MULP_PROTOCOL_VIOLATION;
+		d_pdu->data = dchunk;
+		// thish chunk' ssn must be greater than nexssn by one, already ordered just push back to list
+		mdlm->recv_seq_streams[dchunk->stream_id].prePduList.push_back(d_pdu);
+		return MULP_SUCCESS;
 	}
 
-	//auto& prelist = mdlm->recv_seq_streams[dchunk->stream_id].prePduList;
-	//const auto& upper = std::upper_bound(prelist.begin(), prelist.end(), d_pdu,
-	//	[](delivery_pdu_t* l, delivery_pdu_t* r)->bool
-	//{
-	//	return sbefore(((delivery_data_t*)l->ddata)->stream_sn, ((delivery_data_t*)r->ddata)->stream_sn);
-	//});
-	//prelist.insert(upper, d_pdu);
-
-	// thish chunk has ssn >= nexssn, it is already ordered with sequence
-	auto& prelist = mdlm->recv_seq_streams[dchunk->stream_id].prePduList;
-	prelist.push_back(d_pdu);
-
-	return MULP_SUCCESS;
+	EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::found segmented unreliable chunk");
+	geco_free_ext(dchunk, __FILE__, __LINE__);
+	msm_abort_channel(ECC_PROTOCOL_VIOLATION);
+	return MULP_PROTOCOL_VIOLATION;
 }
 
 /// called from mrecv to forward received unreliable unordered or unsequenced (this is same to normal udp )chunks to mdlm.
@@ -3957,8 +3937,8 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 	// deliver ordered chunks
 	for (uint i = 0; i < mdlm->numOrderedStreams; i++)
 	{
-		mdlm->recv_seq_streams[i].highestSSN = 0;
-		mdlm->recv_seq_streams[i].highestSSNused = false;
+		mdlm->recv_seq_streams[i].last_ssn = 0;
+		mdlm->recv_seq_streams[i].last_ssn_used = false;
 
 		auto& prePduList = mdlm->recv_order_streams[i].prePduList;
 		if (!prePduList.empty())
@@ -3978,8 +3958,8 @@ void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
 	// deliver sequenced chunks
 	for (uint i = 0; i < mdlm->numSequencedStreams; i++)
 	{
-		mdlm->recv_order_streams[i].highestSSN = 0;
-		mdlm->recv_order_streams[i].highestSSNused = false;
+		mdlm->recv_order_streams[i].last_ssn = 0;
+		mdlm->recv_order_streams[i].last_ssn_used = false;
 
 		auto& prePduList = mdlm->recv_seq_streams[i].prePduList;
 		if (!prePduList.empty())
@@ -4083,14 +4063,14 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 		//  increment tsn by one for each data chunk in the packet  and use it to fill tsn field
 		// also increment some stream's ssn by one for each data chunk in packet and ure it to fill ssn field
 		// thus, all tsns and ssns in this packet MUST be in ascend order. if not, peer's stack impl is not compatiable with with us
-		if (recv_streams->highestSSNused && safter(recv_streams->highestSSN, currentSSN))
+		if (recv_streams->last_ssn_used && safter(recv_streams->last_ssn, currentSSN))
 		{
 			EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
 			msm_abort_channel(ECC_PROTOCOL_VIOLATION);
 			return MULP_PROTOCOL_VIOLATION;
 		}
-		recv_streams->highestSSN = currentSSN;
-		recv_streams->highestSSNused = true;
+		recv_streams->last_ssn = currentSSN;
+		recv_streams->last_ssn_used = true;
 
 		currentTSN = d_chunk->tsn;
 		currentSSN = d_chunk->stream_sn;
@@ -4104,7 +4084,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 			firstItemItr = itr;
 			firstTSN = d_chunk->tsn;
 
-			if ((sbefore(currentSSN, recv_streams->nextSSN) || currentSSN == recv_streams->nextSSN))
+			if ((sbefore(currentSSN, recv_streams->next_expected_ssn) || currentSSN == recv_streams->next_expected_ssn))
 			{
 				if (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
 				{
@@ -4113,7 +4093,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 					// tsn 1 2 457
 					// ssn 0 1 666 2 0
 					// sid  0 0 000
-					// nextSSN is initially set to 0, currentSSN = 0
+					// next_expected_ssn is initially set to 0, currentSSN = 0
 					// sbefore(0,0) false || 0==0 true =>true
 					// DCHUNK_FLAG_LAST_FRG true =>
 					EVENTLOG(VVERBOSE, "Complete PDU found");
@@ -4136,7 +4116,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 						// tsn 1 2 34
 						// ssn 2 1 00
 						// sid  0 1 00
-						// nextSSN is initially set to 0, currentSSN = 0
+						// next_expected_ssn is initially set to 0, currentSSN = 0
 						// loop1: sbefore(2,0) false || 2==0 false =>false
 						// loop2: sbefore(1,0) false || 1==0 false =>false
 						// loop3: sbefore(0,0) false || 0==0 true =>true
@@ -4217,9 +4197,9 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 					// all pdus in prePduList are continueous and ordered by ssn
 					recv_streams->prePduList.push_back(d_pdu);
 
-					// nextSSN++ is the value of expected ordered dchunks's ssn
-					if (recv_streams->nextSSN == currentSSN)
-						recv_streams->nextSSN++;
+					// next_expected_ssn++ is the value of expected ordered dchunks's ssn
+					if (recv_streams->next_expected_ssn == currentSSN)
+						recv_streams->next_expected_ssn++;
 					complete = false;
 				}
 
@@ -4243,14 +4223,14 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 		recv_streams = &mdlm->recv_order_streams[currentSID];
 		EVENTLOG3(VERBOSE, "Handling rs chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
-		if (recv_streams->highestSSNused && safter(recv_streams->highestSSN, currentSSN))
+		if (recv_streams->last_ssn_used && safter(recv_streams->last_ssn, currentSSN))
 		{
 			EVENTLOG(NOTICE, "mdlm_assemble_ulp_data()::wrong ssn");
 			msm_abort_channel(ECC_PROTOCOL_VIOLATION);
 			return MULP_PROTOCOL_VIOLATION;
 		}
-		recv_streams->highestSSN = currentSSN;
-		recv_streams->highestSSNused = true;
+		recv_streams->last_ssn = currentSSN;
+		recv_streams->last_ssn_used = true;
 
 		currentTSN = d_chunk->tsn;
 		currentSSN = d_chunk->stream_sn;
@@ -4264,7 +4244,7 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 			firstItemItr = itr;
 			firstTSN = d_chunk->tsn;
 
-			if (safter(currentSSN, recv_streams->nextSSN) || currentSSN == recv_streams->nextSSN)
+			if (safter(currentSSN, recv_streams->next_expected_ssn) || currentSSN == recv_streams->next_expected_ssn)
 			{
 				if (d_chunk->chunk_flags & DCHUNK_FLAG_LAST_FRG)
 				{
@@ -4352,8 +4332,8 @@ int mdlm_search_ready_pdu(deliverman_controller_t* mdlm)
 					assert(std::distance(firstItemItr, itr) == nrOfChunks - 1);
 
 					recv_streams->prePduList.push_back(d_pdu);
-					// nextSSN+1 is the value of expected ordered dchunks's ssn
-					recv_streams->nextSSN = currentSSN + 1;
+					// next_expected_ssn+1 is the value of expected ordered dchunks's ssn
+					recv_streams->next_expected_ssn = currentSSN + 1;
 					complete = false;
 				}
 			}
@@ -5701,7 +5681,7 @@ deliverman_controller_t* mdlm_new(unsigned int numberOrderStreams, unsigned int 
 		new recv_stream_t[numberOrderStreams]) == NULL)
 	{
 		delete tmp;
-		ERRLOG(FALTAL_ERROR_EXIT, "recv_streams Malloc failed");
+		ERRLOG(FALTAL_ERROR_EXIT, "recv_stream Malloc failed");
 	}
 
 	if ((tmp->recv_seq_streams_activated = new bool[numberSeqStreams]) == NULL || (tmp->recv_order_streams_actived =
@@ -5738,20 +5718,20 @@ deliverman_controller_t* mdlm_new(unsigned int numberOrderStreams, unsigned int 
 
 	for (i = 0; i < numberSeqStreams; i++)
 	{
-		(tmp->recv_seq_streams)[i].nextSSN = 0;
+		(tmp->recv_seq_streams)[i].next_expected_ssn = 0;
 		(tmp->recv_seq_streams)[i].index = 0; /* for ordered chunks, next ssn */
-		(tmp->recv_seq_streams)[i].highestSSN = 0;
-		(tmp->recv_seq_streams)[i].highestSSNused = false;
+		(tmp->recv_seq_streams)[i].last_ssn = 0;
+		(tmp->recv_seq_streams)[i].last_ssn_used = false;
 		(tmp->send_seq_streams)[i].nextSSN = 0;
 	}
 
 	for (i = 0; i < numberOrderStreams; i++)
 	{
-		(tmp->recv_order_streams)[i].nextSSN = 0;
+		(tmp->recv_order_streams)[i].next_expected_ssn = 0;
 		(tmp->recv_order_streams)[i].index = 0; /* for ordered chunks, next ssn */
-		(tmp->recv_order_streams)[i].highestSSN = 0;
-		(tmp->recv_order_streams)[i].highestSSNused = false;
-		(tmp->recv_order_streams)[i].nextSSN = 0;
+		(tmp->recv_order_streams)[i].last_ssn = 0;
+		(tmp->recv_order_streams)[i].last_ssn_used = false;
+		(tmp->send_seq_streams)[i].nextSSN = 0;
 	}
 
 	return (tmp);
@@ -9810,7 +9790,7 @@ int initialize_library(void)
 
 	library_initiaized = true;
 	return MULP_SUCCESS;
-}
+	}
 void free_library(void)
 {
 	mtra_destroy();
