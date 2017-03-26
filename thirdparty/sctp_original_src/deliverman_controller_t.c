@@ -97,7 +97,7 @@ typedef struct _delivery_data
 	guint16 stream_id;
 	guint16 stream_sn;
 	guint32 protocolId;
-	guint32 fromAddressIndex;
+	guint32 from_addr_index;
 	guchar data[MAX_DATACHUNK_PDU_LENGTH];
 } delivery_data_t;
 
@@ -582,7 +582,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 
 			*streamSN = d_pdu->ddata[d_pdu->read_chunk]->stream_sn;
 			*tsn = d_pdu->ddata[d_pdu->read_chunk]->tsn;
-			*addressIndex = d_pdu->ddata[d_pdu->read_chunk]->fromAddressIndex;
+			*addressIndex = d_pdu->ddata[d_pdu->read_chunk]->from_addr_index;
 
 			event_logiiii(
 				VVERBOSE,
@@ -764,7 +764,7 @@ se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount,
 	d_chunk->chunk_flags = dataChunk->chunk_flags;
 	d_chunk->stream_sn = ntohs(dataChunk->stream_sn);
 	d_chunk->protocolId = dataChunk->protocolId;
-	d_chunk->fromAddressIndex = address_index;
+	d_chunk->from_addr_index = address_index;
 
 	se->List = g_list_insert_sorted(se->List, d_chunk,
 		(GCompareFunc)sort_tsn_se);

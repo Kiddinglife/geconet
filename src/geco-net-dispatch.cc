@@ -1756,15 +1756,15 @@ void msm_abort_channel(short error_type, uchar* errordata, ushort errordattalen)
 	mdi_unlock_bundle_ctrl();
 	mdi_send_bundled_chunks();
 	if (smctrl->init_timer_id != NULL)
-	{ //stop init timer
+	{ 
+		//delete init timer
 		mtra_timeouts_del(smctrl->init_timer_id);
-		//mtra_timer_mgr_.delete_timer(smctrl->init_timer_id);
 		smctrl->init_timer_id = NULL;
 	}
 
 	mdi_on_disconnected(ConnectionLostReason::PeerAbortConnection);
 
-	// delete all data of channel
+	// delete all data of the channel
 	mdi_delete_curr_channel();
 	mdi_clear_current_channel();
 }
@@ -3406,7 +3406,7 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 	*
 	* if cumulative_tsn == UINT32_MAX, UINT32_MAX + 1 will wrap round to 0 agin
 	* eg. printf("test %u\n", (unsigned int)(UINT32_MAX + 1)); => test 0
-	* 
+	*
 	* However, 	a sender MUST NOT or CANNOT send a huge number of chunks at one time send call that causes tsn wrapping.
 	* otherwise, the tsn will not be working correctly for retrans, reordering and acking functions.
 	* eg. assume tsn is beteen [0,2], sender  sents chunk 0,1,2,0,1,2,
@@ -3505,29 +3505,29 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 				}
 				else
 				{
-					 /*
-					 * chunk tsn is located between (gaplo,gaphi)
-					 *
-					 * Given current cstna=1,received chunk_tsn=7,current frags=45,89: 1 4-5 9-10
-					 * When loop1(itr=4-5):
-					 * 	gaplo=cstna+1=2, gaphi=itr->start_tsn-1=3;
-					 *    if [ubetween(gaplo2,chunk_tsn7,gaphi3)] == false:
-					 *       gaplo = itr->stop_tsn+1=6;
-					 *
-					 * When loop2((itr=9-10,gaplo=6)):
-					 *   gaphi=itr->start_tsn-1=8;
-					 *      if [ubetween(gaplo6,chunk_tsn7,gaphi8)] == true:
-					 *         gapsize=gaphi8-gaplo6+1=3;
-					 *         if [gapsize3 > 1] == true:
-					 *            if (chunk_tsn7 == gaphi8) == false:
-					 *            else if (chunk_tsn7 == gaplo6) == false:
-					 *            else:
-					 *              insert new frag before current frag whose start and stop tsns same to chunk_tsn
-					 *              not bubbleup cstna;
-					 *              new dchunk received;
-					 *
-					 * Then now sequence: 1 4-5 7-7 9-10
-					 */
+					/*
+					* chunk tsn is located between (gaplo,gaphi)
+					*
+					* Given current cstna=1,received chunk_tsn=7,current frags=45,89: 1 4-5 9-10
+					* When loop1(itr=4-5):
+					* 	gaplo=cstna+1=2, gaphi=itr->start_tsn-1=3;
+					*    if [ubetween(gaplo2,chunk_tsn7,gaphi3)] == false:
+					*       gaplo = itr->stop_tsn+1=6;
+					*
+					* When loop2((itr=9-10,gaplo=6)):
+					*   gaphi=itr->start_tsn-1=8;
+					*      if [ubetween(gaplo6,chunk_tsn7,gaphi8)] == true:
+					*         gapsize=gaphi8-gaplo6+1=3;
+					*         if [gapsize3 > 1] == true:
+					*            if (chunk_tsn7 == gaphi8) == false:
+					*            else if (chunk_tsn7 == gaplo6) == false:
+					*            else:
+					*              insert new frag before current frag whose start and stop tsns same to chunk_tsn
+					*              not bubbleup cstna;
+					*              new dchunk received;
+					*
+					* Then now sequence: 1 4-5 7-7 9-10
+					*/
 					newseg.start_tsn = newseg.stop_tsn = chunk_tsn;
 					mrecv->fragmented_data_chunks_list.insert(itr, newseg);
 					mrecv->new_dchunk_received = true;
@@ -3702,7 +3702,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_o_s_t* dataChunk
 
 	// return error, when no user data
 	dchunk->tsn = ntohl(dataChunk->data_chunk_hdr.trans_seq_num);
-	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length)- DCHUNK_R_O_S_FIXED_SIZES;
+	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_R_O_S_FIXED_SIZES;
 	if (dchunk_pdu_len == 0)
 	{
 		geco_free_ext(dchunk, __FILE__, __LINE__);
@@ -3714,7 +3714,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_o_s_t* dataChunk
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->stream_sn = ntohs(dataChunk->data_chunk_hdr.stream_seq_num);
-	dchunk->fromAddressIndex = address_index;
+	dchunk->from_addr_index = address_index;
 
 	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recv_order_streams_actived[dchunk->stream_id] = true;
@@ -3754,7 +3754,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_uo_us_t* dataChu
 	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
-	dchunk->fromAddressIndex = address_index;
+	dchunk->from_addr_index = address_index;
 	mdlm->queuedBytes += dchunk_pdu_len;
 
 	const auto& upper = std::upper_bound(mdlm->r.begin(), mdlm->r.end(), dchunk, mdlm_sort_tsn_delivery_data_cmp);
@@ -3828,7 +3828,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
 	dchunk->stream_sn = ssn;
-	dchunk->fromAddressIndex = address_index;
+	dchunk->from_addr_index = address_index;
 
 	mdlm->queuedBytes += dchunk_pdu_len;
 	mdlm->recv_seq_streams_activated[dchunk->stream_id] = true;
@@ -3876,12 +3876,15 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 /// called from mrecv to forward received unreliable unordered or unsequenced (this is same to normal udp )chunks to mdlm.
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_us_t* dataChunk,
-	ushort address_index)
+	ushort from_addr_index)
 {
-	static delivery_data_t* dchunk;
-	if ((dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t),
-		__FILE__, __LINE__)))
+	delivery_data_t* dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__);
+	if (dchunk == NULL)
+	{
+		// when memory out, we do not abort connection
+		// but  expect memory released  late
 		return MULP_OUT_OF_RESOURCES;
+	}
 
 	// return error, when no user data
 	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_UR_US_FIXED_SIZES;
@@ -3895,30 +3898,32 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_us_t* dataChunk
 	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
 	dchunk->data_length = dchunk_pdu_len;
 	dchunk->chunk_flags = dataChunk->comm_chunk_hdr.chunk_flags;
-	dchunk->fromAddressIndex = address_index;
+	dchunk->from_addr_index = from_addr_index;
 	mdlm->queuedBytes += dchunk_pdu_len;
 
-	delivery_pdu_t* d_pdu;
 	if ((dchunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (dchunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
 	{
 		EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment");
-		if ((d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t),
-			__FILE__, __LINE__)) == NULL)
+		delivery_pdu_t* d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__);
+		if (d_pdu == NULL)
+		{
+			// when memory out, we do not abort connection
+			// but  expect memory released  later
+			geco_free_ext(dchunk, __FILE__, __LINE__);
 			return MULP_OUT_OF_RESOURCES;
+		}
 		d_pdu->number_of_chunks = 1;
 		d_pdu->read_position = 0;
 		d_pdu->read_chunk = 0;
 		d_pdu->chunk_position = 0;
 		d_pdu->total_length = dchunk->data_length;
-		// ur chunk must not be segmented and so we can force cast it to delivery_data_t**
-		d_pdu->ddata = (delivery_data_t**)dchunk;
+		d_pdu->data = dchunk;
 		mdlm->ur_pduList.push_back(d_pdu);
 	}
 	else
 	{
 		EVENTLOG(INFO, "mdlm_receive_dchunk()::peer sends us a segmented unreliable chunk -> abort connection");
 		geco_free_ext(dchunk, __FILE__, __LINE__);
-		geco_free_ext(d_pdu, __FILE__, __LINE__);
 		msm_abort_channel(ECC_PROTOCOL_VIOLATION);
 		return MULP_PROTOCOL_VIOLATION;
 	}

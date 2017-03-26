@@ -363,7 +363,7 @@ struct delivery_data_t
 	uint tsn;
 	ushort stream_id;
 	ushort stream_sn;
-	uint fromAddressIndex;
+	uint from_addr_index;
 	uchar data[MAX_NETWORK_PACKET_VALUE_SIZE]; // usr data this is assigned from data chunk value
 	//bool can_free_at_once; //this is aseembled chunk we can delete for efficiency
    // void* packet_params_t; // where this chunk is located
@@ -377,8 +377,11 @@ struct delivery_pdu_t
 	uint read_chunk;
 	uint chunk_position;
 	uint total_length;
-	/* one chunk pointer or an array of these */
-	delivery_data_t** ddata;
+	union
+	{
+		delivery_data_t** ddata; // array of delivery_data
+		delivery_data_t* data; // single delivery_data
+	};
 };
 
 struct recv_stream_t  //ReceiveStream

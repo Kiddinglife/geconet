@@ -87,10 +87,13 @@ GTEST_API_ int _tmain(int argc, TCHAR** argv)
     //::testing::GTEST_FLAG(filter) = "mpath.test_data_chunk_acked";  // passed on 28/02/2017
     //::testing::GTEST_FLAG(filter) = "mpath.test_hb_ack_received";  // passed on 28/02/2017
 
-    //::testing::GTEST_FLAG(filter) = "mrecv.*";  // passed on 21/03/2017
+	//::testing::GTEST_FLAG(filter) = "mdlm.*";  // passed on 26/03/2017
+	::testing::GTEST_FLAG(filter) = "mdlm.test_mdlm_process_dchunk_ur_us_t";	//passed on 21/03/2017 reuqired by mrecv.test_mrecv_receive_dchunk()
+
+    //::testing::GTEST_FLAG(filter) = "mrecv.*";  // passed on 21/03/2017 
     //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_chunk_is_duplicate"; // passed on 21/03/2017
     //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_update_duplicates"; // passed on 21/03/2017
-    ::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_update_fragments"; // passed on 21/03/2017
+    //::testing::GTEST_FLAG(filter) = "mrecv.test_mrecv_update_fragments"; // passed on 21/03/2017
 
     // last pass on 31 Oct 2016
     //::testing::GTEST_FLAG(filter) = "MULP.*";
