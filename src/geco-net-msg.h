@@ -154,7 +154,7 @@ struct dchunk_r_o_s_t
 	uchar chunk_value[MAX_DCHUNK_ROS_VALUE_SIZE];
 };
 
-#define DCHUNK_UR_SEQ_FIXED_SIZE (sizeof(uint)+sizeof(ushort))
+#define DCHUNK_UR_SEQ_FIXED_SIZE (sizeof(ushort)+sizeof(ushort))
 #define DCHUNK_URS_FIXED_SIZES (CHUNK_FIXED_SIZE+DCHUNK_UR_SEQ_FIXED_SIZE)
 #define MAX_DCHUNK_URS_VALUE_SIZE  \
 (MAX_NETWORK_PACKET_VALUE_SIZE-DCHUNK_URS_FIXED_SIZES)

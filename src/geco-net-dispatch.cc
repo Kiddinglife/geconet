@@ -3768,9 +3768,17 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_uo_us_t* dataChu
 int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	ushort address_index)
 {
-	// return error, when numReceiveStreams is exceeded
+    // when no user data, abort connection.
+    ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_URS_FIXED_SIZES;
+    if (dchunk_pdu_len == 0)
+    {
+        msm_abort_channel(ECC_NO_USER_DATA);
+        return MULP_NO_USER_DATA;
+    }
+
+    // return error, when numReceiveStreams is exceeded
 	ushort sid = ntohs(dataChunk->data_chunk_hdr.stream_identity);
-	if (sid > mdlm->numSequencedStreams)
+	if (sid >= mdlm->numSequencedStreams)
 	{
 		invalid_stream_id_err_t error_info;
 		error_info.stream_id = dataChunk->data_chunk_hdr.stream_identity;
@@ -3792,7 +3800,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	}
 
 	// prefer to recently received chunks, ignoring the ones received later.
-	// so chunks with ssn < next expected ssn are discarded
+	// only chunks with ssn >= next expected ssn are discarded
 	if (sbefore(ssn, recv_stream->next_expected_ssn))
 	{
 		return MULP_SUCCESS;
@@ -3808,15 +3816,6 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	if (dchunk == NULL)
 		return MULP_OUT_OF_RESOURCES;
 	dchunk->stream_id = sid;
-
-	// when no user data, abort connection.
-	ushort dchunk_pdu_len = ntohs(dataChunk->comm_chunk_hdr.chunk_length) - DCHUNK_UR_SEQ_FIXED_SIZE;
-	if (dchunk_pdu_len == 0)
-	{
-		geco_free_ext(dchunk, __FILE__, __LINE__);
-		msm_abort_channel(ECC_NO_USER_DATA);
-		return MULP_NO_USER_DATA;
-	}
 
 	memcpy_fast(dchunk->data, dataChunk->chunk_value, dchunk_pdu_len);
 	dchunk->data_length = dchunk_pdu_len;
@@ -3843,7 +3842,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 		d_pdu->total_length = dchunk->data_length;
 		d_pdu->data = dchunk;
 		// thish chunk' ssn must be greater than nexssn by one, already ordered just push back to list
-		mdlm->recv_seq_streams[dchunk->stream_id].prePduList.push_back(d_pdu);
+		recv_stream->prePduList.push_back(d_pdu);
 		return MULP_SUCCESS;
 	}
 
@@ -5720,7 +5719,7 @@ deliverman_controller_t* mdlm_new(unsigned int numberOrderStreams, unsigned int 
 	{
 		(tmp->recv_seq_streams)[i].next_expected_ssn = 0;
 		(tmp->recv_seq_streams)[i].index = 0; /* for ordered chunks, next ssn */
-		(tmp->recv_seq_streams)[i].last_ssn = 0;
+		(tmp->recv_seq_streams)[i].last_ssn = UINT16_MAX;
 		(tmp->recv_seq_streams)[i].last_ssn_used = false;
 		(tmp->send_seq_streams)[i].nextSSN = 0;
 	}
@@ -5729,7 +5728,7 @@ deliverman_controller_t* mdlm_new(unsigned int numberOrderStreams, unsigned int 
 	{
 		(tmp->recv_order_streams)[i].next_expected_ssn = 0;
 		(tmp->recv_order_streams)[i].index = 0; /* for ordered chunks, next ssn */
-		(tmp->recv_order_streams)[i].last_ssn = 0;
+		(tmp->recv_order_streams)[i].last_ssn = UINT16_MAX;
 		(tmp->recv_order_streams)[i].last_ssn_used = false;
 		(tmp->send_seq_streams)[i].nextSSN = 0;
 	}
