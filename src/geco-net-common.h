@@ -846,7 +846,7 @@ else if (d_pdu->ddata != NULL)\
     {\
         geco_free_ext(d_pdu->ddata[i], __FILE__, __LINE__);\
     }\
-    delete [] d_pdu->ddata;\
+    geco_free_ext(d_pdu->ddata, __FILE__, __LINE__);\
 }\
 geco_free_ext(d_pdu,__FILE__, __LINE__);
 
