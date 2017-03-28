@@ -836,18 +836,18 @@ if( (list_element) == NULL ) return; if( (list_element)->num_of_transmissions > 
 #define free_data_chunk(list_element) if( (list_element) == NULL ) return; geco_free_ext((list_element), __FILE__, __LINE__)
 
 #define free_delivery_pdu(d_pdu)\
-if (d_pdu->ddata != NULL)\
+if (d_pdu->number_of_chunks == 1 && d_pdu->data != NULL)\
 {\
-	for (int i = 0; i < (int)d_pdu->number_of_chunks; i++) \
-	{geco_free_ext(d_pdu->ddata[i], __FILE__, __LINE__); d_pdu->ddata[i] = NULL;}\
-	delete d_pdu->ddata;\
-    delete d_pdu;\
-}
-
-#define free_packet_params(len) \
-if((int)(len) <= 0 && g_packet_params!=NULL) {geco_free_ext(g_packet_params, __FILE__, __LINE__);g_packet_params = NULL;}\
-else if(g_packet_params!=NULL) {while ((len) & 3) (len)++; g_packet_params->released_bytes += (len);\
-if (g_packet_params->released_bytes == g_packet_params->total_packet_bytes)\
-{geco_free_ext(g_packet_params, __FILE__, __LINE__);g_packet_params = NULL;}}
+    geco_free_ext(d_pdu->data, __FILE__, __LINE__);\
+}\
+else if (d_pdu->ddata != NULL)\
+{\
+    for (int i = 0; i < (int) d_pdu->number_of_chunks; i++)\
+    {\
+        geco_free_ext(d_pdu->ddata[i], __FILE__, __LINE__);\
+    }\
+    delete [] d_pdu->ddata;\
+}\
+geco_free_ext(d_pdu,__FILE__, __LINE__);
 
 #endif /* MY_GLOBALS_H_ */

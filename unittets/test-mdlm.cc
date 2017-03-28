@@ -130,10 +130,10 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_s_t)
   pdu_len = 32;
   curr_write_pos_[id] = pdu_len;
   chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
-  chunk->data_chunk_hdr.stream_identity = htons(mdlm_->numSequencedStreams);
+  chunk->data_chunk_hdr.stream_identity = htons (mdlm_->numSequencedStreams);
   int ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
   //then should create a delivery_pdu and add it to mdlm->ur_pduList
-  ASSERT_EQ(ret, -17);//MULP_INVALID_STREAM_ID=-17
+  ASSERT_EQ(ret, -17); //MULP_INVALID_STREAM_ID=-17
   ASSERT_EQ(mdlm_->queuedBytes, 0);
   ASSERT_EQ(curr_channel_, nullptr);
 
@@ -143,8 +143,9 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_s_t)
   //when pdu_len = 0 and stream_identity<numSequencedStreams
   pdu_len = 0;
   id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  chunk->data_chunk_hdr.stream_identity = htons(mdlm_->numSequencedStreams-1);
-  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE;// write dchunk_ur fixed size
+  chunk->data_chunk_hdr.stream_identity = htons (
+      mdlm_->numSequencedStreams - 1);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[id] += pdu_len;
   chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
   ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
@@ -159,8 +160,9 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_s_t)
       | DCHUNK_FLAG_FIRST_FRAG;
   pdu_len = 32;
   id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  chunk->data_chunk_hdr.stream_identity = htons(mdlm_->numSequencedStreams-1);
-  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE;// write dchunk_ur fixed size
+  chunk->data_chunk_hdr.stream_identity = htons (
+      mdlm_->numSequencedStreams - 1);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[id] += pdu_len;
   chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
   ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
@@ -170,21 +172,24 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_s_t)
   mch_free_simple_chunk (id);
   this->SetUp ();
 
+  ushort ssn;
+
   //when dchunk_ur_s is completed, pdu not zero, sid < mdlm_->numSequencedStreams
-  recv_stream_t* recv_stream = &mdlm_->recv_seq_streams[mdlm_->numSequencedStreams-1];
+  ushort sid = 0;
+  recv_stream_t* recv_stream = &mdlm_->recv_seq_streams[sid];
   chunkflag = FLAG_TBIT_UNSET | DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_SEQ
       | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
   pdu_len = 32;
   id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  chunk->data_chunk_hdr.stream_identity = htons(mdlm_->numSequencedStreams-1);
-  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE;// write dchunk_ur fixed size
+  chunk->data_chunk_hdr.stream_identity = htons (sid);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[id] += pdu_len;
   chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
 
   //and when last_ssn_used=true,recv_stream->last_ssn=0,ssn=2 != 0+1
   recv_stream->last_ssn_used = true;
   recv_stream->last_ssn = 0;
-  chunk->data_chunk_hdr.stream_seq_num = htons(2);
+  chunk->data_chunk_hdr.stream_seq_num = htons (2);
   ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
   //then should discard the chunk
   ASSERT_EQ(ret, -19); // MULP_PROTOCOL_VIOLATION=-19
@@ -193,39 +198,76 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_s_t)
   this->SetUp ();
 
   //and when last_ssn_used=false,sbefore(ssn=2,next_expected_ssn=3)
-  recv_stream = &mdlm_->recv_seq_streams[mdlm_->numSequencedStreams-1];
-  recv_stream->last_ssn_used = false;
-  recv_stream->next_expected_ssn =  3;
-  pdu_len = 32;
-  id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  chunk->data_chunk_hdr.stream_identity = htons(mdlm_->numSequencedStreams-1);
-  chunk->data_chunk_hdr.stream_seq_num = htons(2);
-  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE;// write dchunk_ur fixed size
-  curr_write_pos_[id] += pdu_len;
-  chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
-  ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
-  //then should discard the chunk
-  ASSERT_EQ(ret, 0); // MULP_SUCCESS=0
-  mch_free_simple_chunk (id);
-  reset();
-
-  //and when last_ssn_used=false,sbefore(ssn=3,next_expected_ssn=3)
-  recv_stream = &mdlm_->recv_seq_streams[mdlm_->numSequencedStreams-1];
+  recv_stream = &mdlm_->recv_seq_streams[sid];
   recv_stream->last_ssn_used = false;
   recv_stream->next_expected_ssn = 3;
   pdu_len = 32;
   id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  chunk->data_chunk_hdr.stream_identity = htons(mdlm_->numSequencedStreams-1);
-  chunk->data_chunk_hdr.stream_seq_num = htons(3);
-  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE;// write dchunk_ur fixed size
+  chunk->data_chunk_hdr.stream_identity = htons (sid);
+  chunk->data_chunk_hdr.stream_seq_num = htons (2);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[id] += pdu_len;
   chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
   ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
   //then should discard the chunk
   ASSERT_EQ(ret, 0); // MULP_SUCCESS=0
-  ASSERT_EQ(recv_stream->next_expected_ssn,3+1);
-  ASSERT_EQ(recv_stream->last_ssn,3);
-  ASSERT_EQ(recv_stream->last_ssn_used,true);
   mch_free_simple_chunk (id);
-  reset();
+  reset ();
+
+  //and when last_ssn_used=false,ssn=0,next_expected_ssn=0,sid=0
+  ssn = 0;
+  recv_stream = &mdlm_->recv_seq_streams[sid];
+  recv_stream->next_expected_ssn = 0;
+  pdu_len = 32;
+  id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
+  chunk->data_chunk_hdr.stream_identity = sid;
+  chunk->data_chunk_hdr.stream_seq_num = htons (ssn);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
+  curr_write_pos_[id] += pdu_len;
+  chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
+  ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
+  //then should add the chunk
+  ASSERT_EQ(ret, 0); // MULP_SUCCESS=0
+  ASSERT_EQ(recv_stream->next_expected_ssn, ssn + 1);
+  ASSERT_EQ(recv_stream->last_ssn, ssn);
+  ASSERT_EQ(recv_stream->last_ssn_used, true);
+  mch_free_simple_chunk (id);
+  //g_ut_console->debug("hello man");
+
+  //and and when ssn(1) == recv_stream->last_ssn(0)+1
+  ssn = 1;
+  id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
+  chunk->data_chunk_hdr.stream_identity = sid;
+  chunk->data_chunk_hdr.stream_seq_num = htons (ssn);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
+  curr_write_pos_[id] += pdu_len;
+  chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
+  ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
+  //then should add the chunk
+  ASSERT_EQ(ret, 0); // MULP_SUCCESS=0
+  ASSERT_EQ(recv_stream->next_expected_ssn, ssn + 1);
+  ASSERT_EQ(recv_stream->last_ssn, ssn);
+  ASSERT_EQ(recv_stream->last_ssn_used, true);
+  mch_free_simple_chunk (id);
+
+  ASSERT_EQ(recv_stream->prePduList.front ()->data->stream_sn, 0);
+  recv_stream->prePduList.pop_front ();
+  ASSERT_EQ(recv_stream->prePduList.front ()->data->stream_sn, 1);
+  recv_stream->prePduList.pop_front ();
+  ASSERT_TRUE(recv_stream->prePduList.empty ());
+
+  //and and when ssn(3) != recv_stream->last_ssn(1)+1=2
+  ssn = 3;
+  id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
+  chunk->data_chunk_hdr.stream_identity = sid;
+  chunk->data_chunk_hdr.stream_seq_num = htons (ssn);
+  curr_write_pos_[id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
+  curr_write_pos_[id] += pdu_len;
+  chunk = (dchunk_ur_s_t*) mch_complete_simple_chunk (id);
+  ret = mdlm_receive_dchunk (mdlm_, chunk, addr_idx);
+  //then should abort connection
+  ASSERT_EQ(ret, -19); // MULP_PROTOCOL_VIOLATION=-19
+  ASSERT_EQ(curr_channel_, nullptr);
+  mch_free_simple_chunk (id);
+  this->SetUp ();
 }

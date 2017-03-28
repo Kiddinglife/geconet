@@ -52,6 +52,7 @@ static void* _DefaultMalloc_Ex(size_t size, const char *file, unsigned int line)
 static void* _DefaultRealloc_Ex(void *p, size_t newsize, const char *file,
     unsigned int line)
 {
+    if(p == NULL) abort();
     int oldsize = ((int*)((char*)p - sizeof(int)))[0];
     char* buf = (char*)galloc.reallocate(p, oldsize, newsize + sizeof(int));
     ((int*)buf)[0] = newsize;
@@ -59,6 +60,7 @@ static void* _DefaultRealloc_Ex(void *p, size_t newsize, const char *file,
 }
 static void _DefaultFree_Ex(void *p, const char *file,unsigned int line)
 {
+    if(p == NULL) abort();
     char* ptr = (char*)p - sizeof(int);
     int size = *(int*)ptr;
     galloc.deallocate(ptr, size);
