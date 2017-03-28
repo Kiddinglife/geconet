@@ -80,7 +80,7 @@ typedef struct
 	recv_stream_t* RecvStreams;
 	send_stream_t* SendStreams;
 	gboolean* recvStreamActivated;
-	unsigned int queuedBytes;
+	unsigned int queued_bytes;
 	gboolean unreliable;
 
 	GList *List; /* list for all packets */
@@ -230,7 +230,7 @@ mdlm_new(unsigned int numberReceiveStreams, /* max of streams to receive */
 		(se->SendStreams[i]).nextSSN = 0;
 	}
 
-	se->queuedBytes = 0;
+	se->queued_bytes = 0;
 	se->List = NULL;
 	return (se);
 }
@@ -570,7 +570,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 		}
 		else
 		{
-			oldQueueLen = se->queuedBytes;
+			oldQueueLen = se->queued_bytes;
 			copiedBytes = 0;
 
 			d_pdu = (delivery_pdu_t*)g_list_nth_data(
@@ -652,7 +652,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 				if (d_pdu->read_position >= d_pdu->total_length)
 				{
 
-					se->queuedBytes -= d_pdu->total_length;
+					se->queued_bytes -= d_pdu->total_length;
 
 					se->RecvStreams[streamId].pduList = g_list_remove(
 						se->RecvStreams[streamId].pduList,
@@ -768,7 +768,7 @@ se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount,
 
 	se->List = g_list_insert_sorted(se->List, d_chunk,
 		(GCompareFunc)sort_tsn_se);
-	se->queuedBytes += datalength;
+	se->queued_bytes += datalength;
 
 	se->recvStreamActivated[d_chunk->stream_id] = TRUE;
 	return SCTP_SUCCESS;
@@ -1116,7 +1116,7 @@ se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk)
 			d_chunk = (delivery_data_t*)(tmp->data);
 
 			se->List = g_list_remove(se->List, d_chunk);
-			se->queuedBytes -= d_chunk->data_length;
+			se->queued_bytes -= d_chunk->data_length;
 			free(d_chunk);
 			tmp = g_list_first(se->List);
 		}
@@ -1134,6 +1134,6 @@ se_getQueuedBytes(void)
 		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return -1;
 	}
-	return (int)se->queuedBytes;
+	return (int)se->queued_bytes;
 }
 

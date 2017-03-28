@@ -66,7 +66,7 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_us_t)
 	int ret = mdlm_receive_dchunk(mdlm_, chunk, addr_idx);
 	//then should create a delivery_pdu and add it to mdlm->ur_pduList
 	ASSERT_EQ(ret, 0);
-	ASSERT_EQ(mdlm_->queuedBytes, 32);
+	ASSERT_EQ(mdlm_->queued_bytes, 32);
 	const auto& found = std::find_if(
 		mdlm_->ur_pduList.begin(), mdlm_->ur_pduList.end(),
 		[](const delivery_pdu_t* const val)

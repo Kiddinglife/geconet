@@ -413,7 +413,7 @@ struct deliverman_controller_t
 	bool* recv_order_streams_actived;
 	send_stream_t* send_seq_streams;
 	send_stream_t* send_order_streams;
-	uint queuedBytes;
+	uint queued_bytes;
 	bool unreliable;
 	bool unordered;
 	// reliable unordered(r), reliable&ordered(ro), reliable&sequenced(rs),
