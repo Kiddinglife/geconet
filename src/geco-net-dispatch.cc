@@ -3600,13 +3600,11 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 /// lowest tsn is updated with value of ctsn in mrecv_can_send_sack()
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
-	// tsn >= highest_duplicate_tsn must be dup chunk we already teste > case in mrecv_after_highest_tsn()
-	// here only test == case
+    // every time we received a reliable chunk, it first goes here to update highest tsn if possible
+    // so chunk with highest_duplicate_tsn must have already been received
 	if (mrecv->highest_duplicate_tsn == chunk_tsn)
 		return true;
-
-	// every time we received a reliable chunk, it first goes here to update highest tsn if possible
-	// so chunk with highest_duplicate_tsn must have already been received
+	// so chunk with tsn > highest_duplicate_tsn must be new chunk
 	if (uafter(chunk_tsn, mrecv->highest_duplicate_tsn))
 	{
 		mrecv->highest_duplicate_tsn = chunk_tsn;
@@ -3925,7 +3923,7 @@ void mdi_on_peer_data_arrive(int64 tsn, int streamID, int streamSN, uint length)
 	}
 }
 
-void mdlm_deliver_ready_pdu(deliverman_controller_t* mdlm)
+void mdlm_deliver_completed_pdu_frags(deliverman_controller_t* mdlm)
 {
 	// deliver ordered chunks
 	for (uint i = 0; i < mdlm->numOrderedStreams; i++)
@@ -4504,7 +4502,7 @@ int mdlm_notify_data_arrive()
 	assert(mdlm != NULL);
 	int retval = mdlm_reassemble_pdu_frags(mdlm);
 	if (retval == MULP_SUCCESS)
-		mdlm_deliver_ready_pdu(mdlm);
+		mdlm_deliver_completed_pdu_frags(mdlm);
 	return retval;
 }
 
@@ -4523,18 +4521,12 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 	assert(mrecv_ != NULL);
 	mrecv_->new_dchunk_received = false;
 	mrecv_->remote_addr_idx = remote_addr_idx;
+    // if any received data chunks have not been acked,
+	// create a SACK and bundle it with the outbound data
+    mrecv_->sack_updated = false;
 
-	// update curr rwnd
 	bytes_queued = mdlm_read_queued_bytes();
-	current_rwnd = bytes_queued >= mrecv_->my_rwnd ? 0 : mrecv_->my_rwnd - bytes_queued;
-
-	// MAX_PACKET_PDU is constant no matter it is udp-tunneled or not.
-	// advertising rwnd to sender for avoiding silly window syndrome (SWS),
-	if (current_rwnd > 0 && current_rwnd <= 2 * MAX_PACKET_PDU)
-		current_rwnd = 1;
-
-	// if any received data chunks have not been acked, create a SACK and bundle it with the outbound data
-	mrecv_->sack_updated = false;
+	current_rwnd = bytes_queued >= mrecv_->my_rwnd ? 0 : 1; //1 here is just means non-zero rwnd
 
 	chunk_flag = data_chunk->comm_chunk_hdr.chunk_flags;
 	if (chunk_flag & DCHUNK_FLAG_RELIABLE)
@@ -7372,7 +7364,7 @@ int mdlm_do_notifications()
 	assert(mdlm != NULL);
 	int retval = mdlm_reassemble_pdu_frags(mdlm);
 	if (retval == MULP_SUCCESS)
-		mdlm_deliver_ready_pdu(mdlm);
+		mdlm_deliver_completed_pdu_frags(mdlm);
 	return retval;
 }
 
