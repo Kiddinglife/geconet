@@ -8614,7 +8614,7 @@ void clear()
 	curr_ecc_code_ = 0;
 	chunkflag2use_ = -1;
 }
-
+#include <netinet/in.h>
 int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len, sockaddrunion * source_addr,
 	sockaddrunion * dest_addr)
 {
