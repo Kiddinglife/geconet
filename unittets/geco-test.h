@@ -27,6 +27,8 @@
 #include "geco-malloc.h"
 using namespace geco::ds;
 
+extern 	std::shared_ptr<spdlog::logger> g_ut_console;
+
 /**
  * ut specific defines, global variables and functions
  */

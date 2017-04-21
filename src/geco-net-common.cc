@@ -20,6 +20,7 @@
 #endif
 
 geco_return_enum global_ret_val = geco_return_enum::good;
+int GLOBAL_CURR_EVENT_LOG_LEVEL = VERBOSE;
 
 //++++++++++++++++++ logging ++++++++++++++++++++
 static bool globalTrace = true;
@@ -243,7 +244,7 @@ void event_log1(short event_log_level, const char *module_name, int line, const 
 
 	va_list va;
 	va_start(va, log_info);
-	bool f1 = globalTrace == true && event_log_level <= CURR_EVENT_LOG_LEVEL;
+	bool f1 = globalTrace == true && event_log_level <= GLOBAL_CURR_EVENT_LOG_LEVEL;
 	int moduleindex = is_module_traced(module_name);
 	bool f2 = globalTrace == false && moduleindex > 0
 		&& event_log_level <= event_trace_levels[moduleindex];
@@ -286,7 +287,7 @@ void error_log1(short error_loglvl, const char *module_name, int line_no, const 
 	va_list va;
 
 	va_start(va, log_info);
-	bool f1 = globalTrace == true && error_loglvl <= CURR_EVENT_LOG_LEVEL;
+	bool f1 = globalTrace == true && error_loglvl <= GLOBAL_CURR_EVENT_LOG_LEVEL;
 	int moduleindex = is_module_traced(module_name);
 	bool f2 = globalTrace == false && moduleindex > 0
 		&& error_loglvl <= event_trace_levels[moduleindex];

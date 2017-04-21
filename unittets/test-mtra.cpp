@@ -375,9 +375,9 @@ TEST(AUTH_MODULE, test_crc32_checksum)
 			uchar* wt = geco_packet.chunk + CHUNK_FIXED_SIZE;
 			wt[i] = generate_random_uint32() % UCHAR_MAX;
 		}
-		set_crc32_checksum((char*)&geco_packet, DATA_CHUNK_FIXED_SIZES + 100);
+		set_crc32_checksum((char*)&geco_packet, DCHUNK_R_O_S_FIXED_SIZES + 100);
 		bool ret = validate_crc32_checksum((char*)&geco_packet,
-			DATA_CHUNK_FIXED_SIZES + 100);
+			DCHUNK_R_O_S_FIXED_SIZES + 100);
 		EXPECT_TRUE(ret);
 	}
 }

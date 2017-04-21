@@ -6,6 +6,7 @@
  */
 
 #include "geco-test.h"
+extern 	std::shared_ptr<spdlog::logger> g_ut_console = spdlog::stdout_color_mt("g_ut_console");
 
 /**
  * ut specific implementations
@@ -86,6 +87,10 @@ alloc_geco_channel ()
 
   //fills channel_map
   set_channel_remote_addrlist (dest_su, UT_REMOTE_ADDR_LIST_SIZE);
+
+  curr_channel_->state_machine_control->ordered_streams = UT_ORDER_STREAM;
+  curr_channel_->state_machine_control->sequenced_streams = UT_SEQ_STREAM;
+  curr_channel_->state_machine_control->channel_state = ChannelState::Connected;
 
   //make use of UDP socketto ease test
   mdi_connect_udp_sfd_ = true;

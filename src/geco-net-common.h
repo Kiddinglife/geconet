@@ -304,9 +304,9 @@ enum SENDING_DEST_ADDR_TYPE
 /* Defines the level up to which the events are prInt32ed.
  VVERBOSE (6) means all events are prInt32ed.
  This parameter could also come from a command line option */
-#ifndef CURR_EVENT_LOG_LEVEL
-#define CURR_EVENT_LOG_LEVEL VERBOSE
-#endif
+//#ifndef GLOBAL_CURR_EVENT_LOG_LEVEL
+//#define GLOBAL_CURR_EVENT_LOG_LEVEL VERBOSE
+//#endif
 
  /* Definition of levels for the logging of errors */
  /* warning, recovery not necessary. */
@@ -324,27 +324,27 @@ enum SENDING_DEST_ADDR_TYPE
 #define CURR_ERROR_LOG_LEVEL 4
 
 #define EVENTLOG(x,y)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y))
 #define EVENTLOG1(x,y,z)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z))
 #define EVENTLOG2(x,y,z,i)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i))
 #define EVENTLOG3(x,y,z,i,j)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j))
 #define EVENTLOG4(x,y,z,i,j,k)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k))
 #define EVENTLOG5(x,y,z,i,j,k,l)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l))
 #define EVENTLOG6(x,y,z,i,j,k,l,m)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m))
 #define EVENTLOG7(x,y,z,i,j,k,l,m,n)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n))
 #define EVENTLOG8(x,y,z,i,j,k,l,m,n,o)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o))
 #define EVENTLOG9(x,y,z,i,j,k,l,m,n,o,p)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o),(p))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o),(p))
 #define EVENTLOG10(x,y,z,i,j,k,l,m,n,o,p,q)\
-if (CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o),(p),(q))
+if (GLOBAL_CURR_EVENT_LOG_LEVEL >= x) event_log1((x), __FILE__, __LINE__,(y), (z), (i), (j),(k),(l),(m),(n),(o),(p),(q))
 
 #define ERRLOG(x,y)  \
 if (CURR_ERROR_LOG_LEVEL >= x) error_log1((x), __FILE__, __LINE__, (y))
@@ -577,8 +577,10 @@ struct internal_data_chunk_t
 //extern bool safe_between(uint seq1, uint seq2, uint seq3);
 // @pre make sure seq1 <= seq3
 //extern bool unsafe_between(uint seq1, uint seq2, uint seq3);
-#define ubetween(seq1,seq2,seq3) (ubefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
-#define sbetween(seq1,seq2,seq3) (sbefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1))
+//#define ubetween(seq1,seq2,seq3) ((!ubefore(seq2,seq1)) && (!uafter(seq2,seq3)))
+#define ubetween(seq1,seq2,seq3) (seq3-seq1>= seq2-seq1)
+//#define sbetween(seq1,seq2,seq3) ((seq1==seq3)?(seq2==seq1):(sbefore(seq1, seq3)?(seq3-seq1>= seq2-seq1):(seq3-seq1<=seq2-seq1)))
+#define sbetween(seq1,seq2,seq3) (seq3-seq1>= seq2-seq1)
 
 /**
  * compute IP checksum yourself. If packet does not have even packet boundaries,
@@ -834,18 +836,18 @@ if( (list_element) == NULL ) return; if( (list_element)->num_of_transmissions > 
 #define free_data_chunk(list_element) if( (list_element) == NULL ) return; geco_free_ext((list_element), __FILE__, __LINE__)
 
 #define free_delivery_pdu(d_pdu)\
-if (d_pdu->ddata != NULL)\
+if (d_pdu->number_of_chunks == 1)\
 {\
-	for (int i = 0; i < (int)d_pdu->number_of_chunks; i++) \
-	{geco_free_ext(d_pdu->ddata[i], __FILE__, __LINE__); d_pdu->ddata[i] = NULL;}\
-	delete d_pdu->ddata;\
-    delete d_pdu;\
-}
-
-#define free_packet_params(len) \
-if((int)(len) <= 0 && g_packet_params!=NULL) {geco_free_ext(g_packet_params, __FILE__, __LINE__);g_packet_params = NULL;}\
-else if(g_packet_params!=NULL) {while ((len) & 3) (len)++; g_packet_params->released_bytes += (len);\
-if (g_packet_params->released_bytes == g_packet_params->total_packet_bytes)\
-{geco_free_ext(g_packet_params, __FILE__, __LINE__);g_packet_params = NULL;}}
+    geco_free_ext(d_pdu->data, __FILE__, __LINE__);\
+}\
+else if (d_pdu->ddata != NULL)\
+{\
+    for (int i = 0; i < (int) d_pdu->number_of_chunks; i++)\
+    {\
+        geco_free_ext(d_pdu->ddata[i], __FILE__, __LINE__);\
+    }\
+    geco_free_ext(d_pdu->ddata, __FILE__, __LINE__);\
+}\
+geco_free_ext(d_pdu,__FILE__, __LINE__);
 
 #endif /* MY_GLOBALS_H_ */

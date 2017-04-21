@@ -148,23 +148,23 @@ struct recv_controller_t
 {
 	sack_chunk_t* sack_chunk;
 	uint cumulative_tsn;
-	// stores highest tsn received so far, taking care of wraps i.e. highest < lowest indicates a wrap
 	uint lowest_duplicated_tsn;
-	uint highest_duplicate_tsn;
+	uint highest_duplicate_tsn;/*stores highest tsn received so far, taking care of wraps i.e. highest < lowest indicates a wrap*/
 	bool sack_updated;
 	bool timer_running;
-	bool new_chunk_received; /*indicates whether a received chunk is truly new */
+	bool new_dchunk_received; /*indicates whether a received dchunk is truly new */
+	bool datagram_has_new_dchunk; /*indicates whether a received datagram contains  new dchunk(s)*/
+	bool datagram_has_reliable_dchunk; /*indicates whether a received datagram contains  new reliable dchunk(s)*/
 	timeout* sack_timer; /* timer for delayed sacks */
-	int packet_contain_dchunk_received;
+	int dchunk_datagram_counter;
 	uint sack_flag; /* 1 (sack each data chunk) or 2 (sack every second chunk)*/
-	uint last_address;
+	uint remote_addr_idx;
 	uint channel_id;
 	uint my_rwnd;
 	uint delay; /* delay for delayed ACK in msecs */
 	uint numofdestaddrlist; /* number of dest addresses */
-	// store completed msg's segment
-	std::list<segment32_t> fragmented_data_chunks_list;
-	std::list<duplicate_tsn_t> duplicated_data_chunks_list;
+	std::list<segment32_t> fragmented_data_chunks_list; /*store segmented tsns for bubbleup of ctsn and building of sack*/
+	std::list<duplicate_tsn_t> duplicated_data_chunks_list; /*store completed msg's segment*/
 };
 
 /// this struct contains the necessary data per (destination or) path.
@@ -363,7 +363,7 @@ struct delivery_data_t
 	uint tsn;
 	ushort stream_id;
 	ushort stream_sn;
-	uint fromAddressIndex;
+	uint from_addr_index;
 	uchar data[MAX_NETWORK_PACKET_VALUE_SIZE]; // usr data this is assigned from data chunk value
 	//bool can_free_at_once; //this is aseembled chunk we can delete for efficiency
    // void* packet_params_t; // where this chunk is located
@@ -377,8 +377,11 @@ struct delivery_pdu_t
 	uint read_chunk;
 	uint chunk_position;
 	uint total_length;
-	/* one chunk pointer or an array of these */
-	delivery_data_t** ddata;
+	union
+	{
+		delivery_data_t** ddata; // array of delivery_data
+		delivery_data_t* data; // single delivery_data
+	};
 };
 
 struct recv_stream_t  //ReceiveStream
@@ -388,9 +391,9 @@ struct recv_stream_t  //ReceiveStream
 	/* list of PDUs waiting for transfer to pduList and doing mdi arrive notification */
 	std::list<delivery_pdu_t*> prePduList;
 	/* used to detect Protocol violations in se_searchReadyPdu */
-	ushort highestSSN;
-	ushort nextSSN;
-	bool highestSSNused;
+	ushort last_ssn;
+	ushort next_expected_ssn;
+	bool last_ssn_used;
 	ushort newestSSN; // for uro chunks
 	int index;
 };
@@ -410,11 +413,11 @@ struct deliverman_controller_t
 	bool* recv_order_streams_actived;
 	send_stream_t* send_seq_streams;
 	send_stream_t* send_order_streams;
-	uint queuedBytes;
+	uint queued_bytes;
 	bool unreliable;
 	bool unordered;
-	// reliable, reliable&ordered, reliable&sequenced,
-	// unreliable, unreliable&ordered or unreliable&sequenced
+	// reliable unordered(r), reliable&ordered(ro), reliable&sequenced(rs),
+	// unreliable unordered(u), unreliable&ordered(uro) or unreliable&sequenced(urs)
 	// parse packet and put dchunk to againest list, they must be ordered
 	std::list<delivery_data_t*> ro, rs, r, urs;
 	std::list<delivery_pdu_t*> ur_pduList;

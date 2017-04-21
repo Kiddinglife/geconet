@@ -62,9 +62,9 @@ typedef struct
 {
 	GList *pduList; /* list of PDUs waiting for pickup (after notification has been called) */
 	GList *prePduList; /* list of PDUs waiting for transfer to pduList and doing mdi arrive notification */
-	guint16 nextSSN;
-	guint16 highestSSN; /* used to detect Protocol violations in se_searchReadyPdu */
-	gboolean highestSSNused;
+	guint16 next_expected_ssn;
+	guint16 last_ssn; /* used to detect Protocol violations in se_searchReadyPdu */
+	gboolean last_ssn_used;
 	int index;
 } recv_stream_t;
 
@@ -80,7 +80,7 @@ typedef struct
 	recv_stream_t* RecvStreams;
 	send_stream_t* SendStreams;
 	gboolean* recvStreamActivated;
-	unsigned int queuedBytes;
+	unsigned int queued_bytes;
 	gboolean unreliable;
 
 	GList *List; /* list for all packets */
@@ -97,7 +97,7 @@ typedef struct _delivery_data
 	guint16 stream_id;
 	guint16 stream_sn;
 	guint32 protocolId;
-	guint32 fromAddressIndex;
+	guint32 from_addr_index;
 	guchar data[MAX_DATACHUNK_PDU_LENGTH];
 } delivery_data_t;
 
@@ -220,7 +220,7 @@ mdlm_new(unsigned int numberReceiveStreams, /* max of streams to receive */
 
 	for (i = 0; i < numberReceiveStreams; i++)
 	{
-		(se->RecvStreams)[i].nextSSN = 0;
+		(se->RecvStreams)[i].next_expected_ssn = 0;
 		(se->RecvStreams)[i].pduList = NULL;
 		(se->RecvStreams)[i].prePduList = NULL;
 		(se->RecvStreams)[i].index = 0; /* for ordered chunks, next ssn */
@@ -230,7 +230,7 @@ mdlm_new(unsigned int numberReceiveStreams, /* max of streams to receive */
 		(se->SendStreams[i]).nextSSN = 0;
 	}
 
-	se->queuedBytes = 0;
+	se->queued_bytes = 0;
 	se->List = NULL;
 	return (se);
 }
@@ -570,7 +570,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 		}
 		else
 		{
-			oldQueueLen = se->queuedBytes;
+			oldQueueLen = se->queued_bytes;
 			copiedBytes = 0;
 
 			d_pdu = (delivery_pdu_t*)g_list_nth_data(
@@ -582,7 +582,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 
 			*streamSN = d_pdu->ddata[d_pdu->read_chunk]->stream_sn;
 			*tsn = d_pdu->ddata[d_pdu->read_chunk]->tsn;
-			*addressIndex = d_pdu->ddata[d_pdu->read_chunk]->fromAddressIndex;
+			*addressIndex = d_pdu->ddata[d_pdu->read_chunk]->from_addr_index;
 
 			event_logiiii(
 				VVERBOSE,
@@ -652,7 +652,7 @@ se_ulpreceivefrom(unsigned char *buffer, unsigned int *byteCount,
 				if (d_pdu->read_position >= d_pdu->total_length)
 				{
 
-					se->queuedBytes -= d_pdu->total_length;
+					se->queued_bytes -= d_pdu->total_length;
 
 					se->RecvStreams[streamId].pduList = g_list_remove(
 						se->RecvStreams[streamId].pduList,
@@ -764,11 +764,11 @@ se_recvDataChunk(SCTP_data_chunk * dataChunk, unsigned int byteCount,
 	d_chunk->chunk_flags = dataChunk->chunk_flags;
 	d_chunk->stream_sn = ntohs(dataChunk->stream_sn);
 	d_chunk->protocolId = dataChunk->protocolId;
-	d_chunk->fromAddressIndex = address_index;
+	d_chunk->from_addr_index = address_index;
 
 	se->List = g_list_insert_sorted(se->List, d_chunk,
 		(GCompareFunc)sort_tsn_se);
-	se->queuedBytes += datalength;
+	se->queued_bytes += datalength;
 
 	se->recvStreamActivated[d_chunk->stream_id] = TRUE;
 	return SCTP_SUCCESS;
@@ -794,8 +794,8 @@ se_searchReadyPdu(deliverman_controller_t* se)
 	event_logi(VVERBOSE, "List has %u elements", g_list_length(se->List));
 	for (i = 0; i < (int)se->numReceiveStreams; i++)
 	{
-		se->RecvStreams[i].highestSSN = 0;
-		se->RecvStreams[i].highestSSNused = FALSE;
+		se->RecvStreams[i].last_ssn = 0;
+		se->RecvStreams[i].last_ssn_used = FALSE;
 	}
 
 	while (tmp != NULL)
@@ -808,17 +808,17 @@ se_searchReadyPdu(deliverman_controller_t* se)
 		currentSSN = d_chunk->stream_sn;
 		unordered = (d_chunk->chunk_flags & SCTP_DATA_UNORDERED);
 
-		if ((se->RecvStreams[currentSID].highestSSNused)
-			&& (sAfter(se->RecvStreams[currentSID].highestSSN, currentSSN)))
+		if ((se->RecvStreams[currentSID].last_ssn_used) && (sAfter(se->RecvStreams[currentSID].last_ssn, currentSSN)))
 		{
 			error_logi(VERBOSE, "Wrong ssn and tsn order", d_chunk->stream_sn);
 			scu_abort(ECC_PROTOCOL_VIOLATION, 0, NULL);
 			return SCTP_UNSPECIFIED_ERROR;
 		}
+
 		if (!unordered)
 		{
-			se->RecvStreams[currentSID].highestSSN = currentSSN;
-			se->RecvStreams[currentSID].highestSSNused = TRUE;
+			se->RecvStreams[currentSID].last_ssn = currentSSN;
+			se->RecvStreams[currentSID].last_ssn_used = TRUE;
 		}
 
 		if (d_chunk->chunk_flags & SCTP_DATA_BEGIN_SEGMENT)
@@ -829,8 +829,8 @@ se_searchReadyPdu(deliverman_controller_t* se)
 			firstItem = tmp;
 			firstTSN = d_chunk->tsn;
 
-			if ((sBefore(currentSSN, se->RecvStreams[currentSID].nextSSN))
-				|| (currentSSN == se->RecvStreams[currentSID].nextSSN)
+			if ((sBefore(currentSSN, se->RecvStreams[currentSID].next_expected_ssn))
+				|| (currentSSN == se->RecvStreams[currentSID].next_expected_ssn)
 				|| (d_chunk->chunk_flags & SCTP_DATA_UNORDERED))
 			{
 
@@ -929,9 +929,9 @@ se_searchReadyPdu(deliverman_controller_t* se)
 						tmp = g_list_next(tmp);
 					}
 					if (!unordered
-						&& (se->RecvStreams[d_pdu[0].ddata[0]->stream_id].nextSSN
+						&& (se->RecvStreams[d_pdu[0].ddata[0]->stream_id].next_expected_ssn
 							== currentSSN))
-						se->RecvStreams[d_pdu[0].ddata[0]->stream_id].nextSSN++;
+						se->RecvStreams[d_pdu[0].ddata[0]->stream_id].next_expected_ssn++;
 
 					se->RecvStreams[d_pdu[0].ddata[0]->stream_id].prePduList =
 						g_list_append(
@@ -1106,7 +1106,7 @@ se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk)
 				"delivering dangling messages in stream %d for forward_tsn=%u, SSN=%u",
 				skippedStream, up_to_tsn, skippedSSN);
 			/* if unreliable, check if messages can be  delivered */
-			se->RecvStreams[skippedStream].nextSSN = skippedSSN + 1;
+			se->RecvStreams[skippedStream].next_expected_ssn = skippedSSN + 1;
 		}
 		se_doNotifications();
 
@@ -1116,7 +1116,7 @@ se_deliver_unreliably(unsigned int up_to_tsn, SCTP_forward_tsn_chunk* chk)
 			d_chunk = (delivery_data_t*)(tmp->data);
 
 			se->List = g_list_remove(se->List, d_chunk);
-			se->queuedBytes -= d_chunk->data_length;
+			se->queued_bytes -= d_chunk->data_length;
 			free(d_chunk);
 			tmp = g_list_first(se->List);
 		}
@@ -1134,6 +1134,6 @@ se_getQueuedBytes(void)
 		error_log(ERROR_MAJOR, "Could not read deliverman_controller_t Instance !");
 		return -1;
 	}
-	return (int)se->queuedBytes;
+	return (int)se->queued_bytes;
 }
 
