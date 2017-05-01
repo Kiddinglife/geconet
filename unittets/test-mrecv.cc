@@ -335,56 +335,62 @@ TEST_F(mrecv, test_mrecv_receive_dchunk)
   // given remote addr index 0, sid 0,  pdu = 32
   ushort addr_idx = 0;
   ushort sid = 0;
+  ushort ssn = 0;
+  uint tsn = UT_ITSN;
   uint pdulen = 32;
+  mrecv_->duplicated_data_chunks_list.size()
 
   // and given an unfragmented dchunk_ur_uo_us
   uchar chunkflag =
   FLAG_TBIT_UNSET | DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_UNSEQ
       | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
   chunk_id_t dchunk_ur_uo_us_id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  dchunk_ur_us_t* dchunk_ur_us = (dchunk_ur_us_t*) mch_complete_simple_chunk (
-      dchunk_ur_uo_us_id);
   curr_write_pos_[dchunk_ur_uo_us_id] = DCHUNK_UR_US_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[dchunk_ur_uo_us_id] += pdulen;
+  dchunk_ur_us_t* dchunk_ur_us = (dchunk_ur_us_t*) mch_complete_simple_chunk (
+      dchunk_ur_uo_us_id);
 
   // and given an unfragmented dchunk_ur_s
   chunkflag =
   FLAG_TBIT_UNSET | DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_SEQ
       | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
   chunk_id_t dchunk_ur_s_id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  dchunk_ur_s_t* dchunk_ur_s = (dchunk_ur_s_t*) mch_complete_simple_chunk (
-      dchunk_ur_s_id);
   curr_write_pos_[dchunk_ur_s_id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[dchunk_ur_s_id] += pdulen;
+  dchunk_ur_s_t* dchunk_ur_s = (dchunk_ur_s_t*) mch_complete_simple_chunk (
+      dchunk_ur_s_id);
+  dchunk_ur_s->data_chunk_hdr.stream_identity = htons (sid);
+  dchunk_ur_s->data_chunk_hdr.stream_seq_num = htons (ssn);
+  ssn++;
 
   // and given an unfragmented dchunk_r_uo_us
   chunkflag =
-  FLAG_TBIT_UNSET | DCHUNK_FLAG_RELIABLE | DCHUNK_FLAG_UNSEQ | DCHUNK_FLAG_UNORDER
-      | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
+  FLAG_TBIT_UNSET | DCHUNK_FLAG_RELIABLE | DCHUNK_FLAG_UNSEQ
+      | DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
   chunk_id_t dchunk_r_uo_us_id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  dchunk_r_uo_us_t* dchunk_r_uo_us = (dchunk_r_uo_us_t*) mch_complete_simple_chunk (
-      dchunk_r_uo_us_id);
   curr_write_pos_[dchunk_r_uo_us_id] = DCHUNK_R_UO_US_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[dchunk_r_uo_us_id] += pdulen;
+  dchunk_r_uo_us_t* dchunk_r_uo_us =
+      (dchunk_r_uo_us_t*) mch_complete_simple_chunk (dchunk_r_uo_us_id);
+  dchunk_r_uo_us->data_chunk_hdr.trans_seq_num = htonl (tsn);
+  tsn++;
 
   // and given an unfragmented dchunk_r_o
   chunkflag =
   FLAG_TBIT_UNSET | DCHUNK_FLAG_RELIABLE | DCHUNK_FLAG_ORDER
       | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
   chunk_id_t dchunk_r_o_s_id = mch_make_simple_chunk (CHUNK_DATA, chunkflag);
-  dchunk_r_o_s_t* dchunk_r_o_s = (dchunk_r_o_s_t*) mch_complete_simple_chunk (
-      dchunk_r_o_s_id);
-  dchunk_r_o_s->data_chunk_hdr.stream_identity = htons(sid);
-  dchunk_r_o_s->data_chunk_hdr.stream_seq_num = htons(0);
-  dchunk_r_o_s->data_chunk_hdr.trans_seq_num = htonl(0);
   curr_write_pos_[dchunk_r_o_s_id] = DCHUNK_R_O_S_FIXED_SIZE; // write dchunk_ur fixed size
   curr_write_pos_[dchunk_r_o_s_id] += pdulen;
+  dchunk_r_o_s_t* dchunk_r_o_s = (dchunk_r_o_s_t*) mch_complete_simple_chunk (dchunk_r_o_s_id);
+  dchunk_r_o_s->data_chunk_hdr.stream_identity = htons (sid);
+  dchunk_r_o_s->data_chunk_hdr.stream_seq_num = htons (ssn);
+  dchunk_r_o_s->data_chunk_hdr.trans_seq_num = htonl (tsn);
 
-  //queued buyes >= my_rwnd
-  mrecv_receive_dchunk(dchunk_r_o_s, addr_idx);
+  // when receiving a ro-dchunk
+  mrecv_receive_dchunk (dchunk_r_o_s, addr_idx);
   ASSERT_TRUE(mrecv_->datagram_has_reliable_dchunk);
-  auto itr = mrecv_->duplicated_data_chunks_list.begin ();
-  ASSERT_EQ(*(itr), 0);
+  ASSERT_EQ(mrecv_->duplicated_data_chunks_list.size(), 0);
   ASSERT_EQ(mrecv_->highest_duplicate_tsn, 0);
 
 }
