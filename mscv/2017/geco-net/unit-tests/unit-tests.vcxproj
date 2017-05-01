@@ -23,7 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>unittests</RootNamespace>
     <ProjectName>unittests</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -77,6 +77,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <EnableManagedIncrementalBuild>false</EnableManagedIncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,6 +88,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -119,6 +121,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../../src;../../../../thirdparty/;../../../../thirdparty/cat/include/;../../../../thirdparty/spdlog/include/;../../../../thirdparty/openssl-1.0.0d/include;../../../../thirdparty/googletest/include/;../../../../thirdparty/googlemock/include/;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <CallingConvention>FastCall</CallingConvention>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -198,7 +201,9 @@
     <ClCompile Include="..\..\..\..\unittets\test-mdi.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mbu.cc" />
+    <ClCompile Include="..\..\..\..\unittets\test-mdlm.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mpath.cc" />
+    <ClCompile Include="..\..\..\..\unittets\test-mrecv.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mulp.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mtra.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-wheel-timer.cc" />
@@ -235,7 +240,6 @@
     <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt" />
     <Text Include="..\..\..\..\docx\SCTP NAT Traversal Considerations.txt" />
     <Text Include="..\..\..\..\docx\Security Attacks Found Against.txt" />
-    <Text Include="..\..\..\..\unittets\main.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\unittets\catch.hpp" />

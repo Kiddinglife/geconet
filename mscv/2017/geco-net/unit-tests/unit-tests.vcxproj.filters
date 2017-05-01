@@ -42,6 +42,12 @@
     <ClCompile Include="..\..\..\..\unittets\test-mpath.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-mrecv.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\unittets\test-mdlm.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\unittets\readme.md">
@@ -145,7 +151,6 @@
     <Text Include="..\..\..\..\docx\Security Attacks Found Against.txt">
       <Filter>docs</Filter>
     </Text>
-    <Text Include="..\..\..\..\unittets\main.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\unittets\catch.hpp">
