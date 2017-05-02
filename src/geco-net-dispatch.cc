@@ -4516,7 +4516,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 {
     mdlm_ = mdi_read_mdlm();
     assert(mdlm_ != NULL);
-
     //resettings
     can_bubbleup_ctsna = false;
     msm_ = mdi_read_msm();
@@ -4529,10 +4528,8 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
     // if any received data chunks have not been acked,
     // create a SACK and bundle it with the outbound data
     mrecv_->sack_updated = false;
-
     bytes_queued = mdlm_read_queued_bytes();
     current_rwnd = bytes_queued >= mrecv_->my_rwnd ? 0 : 1; //1 here is just means non-zero rwnd
-
     chunk_flag = data_chunk->comm_chunk_hdr.chunk_flags;
     if (chunk_flag & DCHUNK_FLAG_RELIABLE)
     {
@@ -4555,7 +4552,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
             mrecv_->new_dchunk_received = false;
             return 1;
         }
-
         if (mrecv_chunk_is_duplicate(mrecv_, chunk_tsn))
         {
             mrecv_update_duplicates(mrecv_, chunk_tsn);
@@ -4566,7 +4562,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
             mrecv_update_fragments(mrecv_, chunk_tsn);
             assert(mrecv_->new_dchunk_received == true);
             mrecv_->datagram_has_new_dchunk = true;
-
             if ((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
             {
                 if (mdlm_receive_dchunk(mdlm_, (dchunk_r_uo_us_t*) data_chunk, remote_addr_idx) == MULP_SUCCESS)
@@ -4583,7 +4578,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
     {
         // there is no retx for unreliable chunk, so any chunks received are treated as "new chunk"
         mrecv_->new_dchunk_received = mrecv_->datagram_has_new_dchunk = true;
-
         // deliver to reordering function for further processing
         if (current_rwnd == 0 || assoc_state == ChannelState::ShutdownReceived
                 || assoc_state == ChannelState::ShutdownAckSent)
@@ -4594,7 +4588,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
             mrecv_->new_dchunk_received = false;
             return 1;
         }
-
         // if unreliable mesg  is framented in sender, the fragmented chunks are sent as reliable
         // and (ordered or unordered same to original msg).
         // so right here, we can safely bypass assembling and reliabling function
@@ -4615,7 +4608,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
             }
         }
     }
-
     return 1;
 }
 
