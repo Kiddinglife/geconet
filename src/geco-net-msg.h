@@ -123,9 +123,11 @@ struct chunk_fixed_t
 #define DCHUNK_FLAG_O_MASK       4 //                        10base: 12   2base : 0100
 #define DCHUNK_FLAG_S_MASK       8 //                        10base: 12   2base : 1000
 
+#define DCHUNK_FLAG_ORDER_MASK       4 //   10base: 4    2base : 0100
 #define DCHUNK_FLAG_ORDER       4 //ordered data chunk       10base: 4    2base : 0100
 #define DCHUNK_FLAG_UNORDER     0 //unordered data chunk     10base: 0    2base : 0000
 
+#define DCHUNK_FLAG_SEQ_MASK       8 //       10base: 4    2base : 1000
 #define DCHUNK_FLAG_SEQ       8 //sequence data chunk        10base: 4    2base : 1000
 #define DCHUNK_FLAG_UNSEQ     0 //unsequence data chunk      10base: 0    2base : 0000
 

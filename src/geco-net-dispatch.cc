@@ -4594,7 +4594,7 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
         //	btw. there is no ordered unreliable chunk but only sequenced unreliable chunk
         if (mrecv_->new_dchunk_received)
         {
-            if (chunk_flag & DCHUNK_FLAG_UNSEQ)
+            if ((chunk_flag & DCHUNK_FLAG_SEQ_MASK) == DCHUNK_FLAG_UNSEQ)
             {
                 // unreliable unsequenced chunk same to udp datagram
                 if (mdlm_receive_dchunk(mdlm_, (dchunk_ur_us_t*) data_chunk, remote_addr_idx) == MULP_SUCCESS)
