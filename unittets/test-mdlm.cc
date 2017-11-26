@@ -17,8 +17,10 @@
 struct mdlm : public testing::Test
 {
 	deliverman_controller_t* mdlm_;
-	deliverman_controller_t init_mrecv_;
+	deliverman_controller_t init_mdlm_;
 	geco_channel_t* init_channel_;
+	recv_controller_t* mrecv_;
+	recv_controller_t init_mrecv_;
 
 	virtual void
 		SetUp()
@@ -27,7 +29,9 @@ struct mdlm : public testing::Test
 		alloc_geco_channel();
 		init_channel_ = curr_channel_;
 		mdlm_ = init_channel_->deliverman_control;
-		init_mrecv_ = *mdlm_;
+		init_mdlm_ = *mdlm_;
+		mrecv_ = init_channel_->receive_control;
+		init_mrecv_ = *mrecv_;
 	}
 	virtual void
 		TearDown()
@@ -41,7 +45,9 @@ struct mdlm : public testing::Test
 		curr_channel_ = init_channel_;
 		curr_geco_instance_ = curr_channel_->geco_inst;
 		mdlm_ = init_channel_->deliverman_control;
-		*mdlm_ = init_mrecv_;
+		*mdlm_ = init_mdlm_;
+		mrecv_ = init_channel_->receive_control;
+		*mrecv_ = init_mrecv_;
 	}
 };
 
@@ -270,4 +276,87 @@ TEST_F(mdlm, test_mdlm_process_dchunk_ur_s_t)
 	ASSERT_EQ(curr_channel_, nullptr);
 	mch_free_simple_chunk(id);
 	this->SetUp();
+}
+
+extern int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm);
+extern int mrecv_receive_dchunk(dchunk_r_o_s_t* data_chunk, uint remote_addr_idx);
+TEST_F(mdlm, test_mdlm_reassemble_pdu_frags)
+{
+	// test search complete pdu from reliable-ordered chunklist
+	// given remote addr index 0, sid 0,  pdu = 32
+	ushort addr_idx = 0;
+	ushort sid = 0;
+	ushort ssn = 0;
+	uint tsn = UT_ITSN;
+	uint pdulen = 32;
+
+	// and given an unfragmented dchunk_ur_uo_us
+	uchar chunkflag = FLAG_TBIT_UNSET | DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_UNSEQ
+		| DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
+	chunk_id_t dchunk_ur_uo_us_id = mch_make_simple_chunk(CHUNK_DATA, chunkflag);
+	curr_write_pos_[dchunk_ur_uo_us_id] = DCHUNK_UR_US_FIXED_SIZE; // write dchunk_ur fixed size
+	curr_write_pos_[dchunk_ur_uo_us_id] += pdulen;
+	dchunk_r_o_s_t* dchunk_ur_us = (dchunk_r_o_s_t*)mch_complete_simple_chunk(
+		dchunk_ur_uo_us_id);
+
+	// and given an unfragmented dchunk_ur_s
+	chunkflag = FLAG_TBIT_UNSET | DCHUNK_FLAG_UNRELIABLE | DCHUNK_FLAG_SEQ |
+		DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
+	chunk_id_t dchunk_ur_s_id = mch_make_simple_chunk(CHUNK_DATA, chunkflag);
+	curr_write_pos_[dchunk_ur_s_id] = DCHUNK_UR_SEQ_FIXED_SIZE; // write dchunk_ur fixed size
+	curr_write_pos_[dchunk_ur_s_id] += pdulen;
+	dchunk_r_o_s_t* dchunk_ur_s = (dchunk_r_o_s_t*)mch_complete_simple_chunk(
+		dchunk_ur_s_id);
+	dchunk_ur_s->data_chunk_hdr.stream_identity = htons(sid);
+	dchunk_ur_s->data_chunk_hdr.stream_seq_num = htons(ssn);
+	ssn++;
+
+	// and given an unfragmented dchunk_r_uo_us
+	chunkflag =
+		FLAG_TBIT_UNSET | DCHUNK_FLAG_RELIABLE | DCHUNK_FLAG_UNSEQ
+		| DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
+	chunk_id_t dchunk_r_uo_us_id = mch_make_simple_chunk(CHUNK_DATA, chunkflag);
+	curr_write_pos_[dchunk_r_uo_us_id] = DCHUNK_R_UO_US_FIXED_SIZE; // write dchunk_ur fixed size
+	curr_write_pos_[dchunk_r_uo_us_id] += pdulen;
+	dchunk_r_o_s_t* dchunk_r_uo_us = (dchunk_r_o_s_t*)mch_complete_simple_chunk(
+		dchunk_r_uo_us_id);
+	dchunk_r_uo_us->data_chunk_hdr.trans_seq_num = htonl(tsn);
+	tsn++;
+
+	// and given an unfragmented dchunk_r_o
+	chunkflag =
+		FLAG_TBIT_UNSET | DCHUNK_FLAG_RELIABLE | DCHUNK_FLAG_ORDER
+		| DCHUNK_FLAG_FIRST_FRAG | DCHUNK_FLAG_LAST_FRG;
+	chunk_id_t dchunk_r_o_s_id = mch_make_simple_chunk(CHUNK_DATA, chunkflag);
+	curr_write_pos_[dchunk_r_o_s_id] = DCHUNK_R_O_S_FIXED_SIZE; // write dchunk_ur fixed size
+	curr_write_pos_[dchunk_r_o_s_id] += pdulen;
+	dchunk_r_o_s_t* dchunk_r_o_s = (dchunk_r_o_s_t*)mch_complete_simple_chunk(
+		dchunk_r_o_s_id);
+	dchunk_r_o_s->data_chunk_hdr.stream_identity = htons(sid);
+	dchunk_r_o_s->data_chunk_hdr.stream_seq_num = htons(ssn);
+	dchunk_r_o_s->data_chunk_hdr.trans_seq_num = htonl(tsn);
+
+	// when receiving a ro-dchunk
+	mrecv_receive_dchunk(dchunk_r_o_s, addr_idx);
+	ASSERT_TRUE(mrecv_->datagram_has_reliable_dchunk);
+	ASSERT_EQ(mrecv_->duplicated_data_chunks_list.size(), 0);
+	ASSERT_EQ(mrecv_->highest_duplicate_tsn, tsn);
+
+	// when receiving a r-uo-us-dchunk
+	mrecv_receive_dchunk(dchunk_r_uo_us, addr_idx);
+	ASSERT_TRUE(mrecv_->datagram_has_reliable_dchunk);
+	ASSERT_EQ(mrecv_->duplicated_data_chunks_list.size(), 0);
+	ASSERT_EQ(mrecv_->highest_duplicate_tsn, tsn);
+
+	// when receiving a dchunk_ur_s
+	mrecv_receive_dchunk(dchunk_ur_s, addr_idx);
+	ASSERT_TRUE(mrecv_->datagram_has_reliable_dchunk);
+	ASSERT_EQ(mrecv_->duplicated_data_chunks_list.size(), 0);
+	ASSERT_EQ(mrecv_->highest_duplicate_tsn, tsn);
+
+	// when receiving a dchunk_ur_s
+	mrecv_receive_dchunk(dchunk_ur_us, addr_idx);
+	ASSERT_TRUE(mrecv_->datagram_has_reliable_dchunk);
+	ASSERT_EQ(mrecv_->duplicated_data_chunks_list.size(), 0);
+	ASSERT_EQ(mrecv_->highest_duplicate_tsn, tsn);
 }

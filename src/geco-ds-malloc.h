@@ -1351,6 +1351,7 @@ struct alloc_adaptor_1<_Tp, alloc_adaptor_0<_Tp1, debug_alloc<_Alloc> > >
 #pragma reset woff 1174
 #endif
 
+#define  GECO_MALLOC_EXT(TYPE,SIZE)  (TYPE *) geco_malloc_ext(SIZE * sizeof(TYPE), __FILE__, __LINE__)
 GECO_END_NAMESPACE
 #undef __PRIVATE
 #endif /* INCLUDE_GECO_DS_MALLOC_H_ */

@@ -48,7 +48,7 @@
 #include "bundling.h"
 #include "pathmanagement.h"
 
-/*------------------------ defines -----------------------------------------------------------*/
+ /*------------------------ defines -----------------------------------------------------------*/
 #define RTO_ALPHA            0.125
 #define RTO_BETA              0.25
 
@@ -60,41 +60,41 @@
  */
 typedef struct PATHDATA
 {
-  /*@{ */
-  /** operational state of pathmanagement for one path */
-  short state;
-  /** true if heartbeat is enabled */
-  boolean heartbeatEnabled;
-  /** true as long as RTO-Calc. has been done */
-  boolean firstRTO;
-  /** Only once per HB-intervall */
-  boolean timerBackoff;
-  /** set to true when data chunks are acknowledged */
-  boolean data_chunk_acked;
-  /** TRUE, if chunks have been sent over that path within last RTO */
-  boolean data_chunks_sent_in_last_rto;
-  /** set to true when a heartbeat is sent. */
-  boolean heartbeatSent;
-  /** set to true when a hearbeat is acknowledged and to false when a
-   heartbeat is sent when the heartbeat timer expires. */
-  boolean heartbeatAcked;
-  /** Counter for retransmissions on a single path */
-  unsigned int pathRetranscount;
-  /** Retransmission time out used for all retrans. timers */
-  unsigned int rto;
-  /** smoothed round trip time */
-  unsigned int srtt;
-  /** round trip time variation */
-  unsigned int rttvar;
-  /** defines the rate at which heartbeats are sent */
-  unsigned int heartbeatIntervall;
-  /** ID of the heartbeat timer */
-  TimerID hearbeatTimer;
-  /** time of last rto update */
-  struct timeval rto_update;
-  /** ID of path */
-  unsigned int pathID;
-/*@} */
+	/*@{ */
+	/** operational state of pathmanagement for one path */
+	short state;
+	/** true if heartbeat is enabled */
+	boolean heartbeatEnabled;
+	/** true as long as RTO-Calc. has been done */
+	boolean firstRTO;
+	/** Only once per HB-intervall */
+	boolean timerBackoff;
+	/** set to true when data chunks are acknowledged */
+	boolean data_chunk_acked;
+	/** TRUE, if chunks have been sent over that path within last RTO */
+	boolean data_chunks_sent_in_last_rto;
+	/** set to true when a heartbeat is sent. */
+	boolean heartbeatSent;
+	/** set to true when a hearbeat is acknowledged and to false when a
+	 heartbeat is sent when the heartbeat timer expires. */
+	boolean heartbeatAcked;
+	/** Counter for retransmissions on a single path */
+	unsigned int pathRetranscount;
+	/** Retransmission time out used for all retrans. timers */
+	unsigned int rto;
+	/** smoothed round trip time */
+	unsigned int srtt;
+	/** round trip time variation */
+	unsigned int rttvar;
+	/** defines the rate at which heartbeats are sent */
+	unsigned int heartbeatIntervall;
+	/** ID of the heartbeat timer */
+	TimerID hearbeatTimer;
+	/** time of last rto update */
+	struct timeval rto_update;
+	/** ID of path */
+	unsigned int pathID;
+	/*@} */
 } path_params_t;
 
 /**
@@ -103,26 +103,26 @@ typedef struct PATHDATA
  */
 typedef struct PATHMANDATA
 {
-  /*@{ */
-  /** stores the current primary path */
-  short primaryPath;
-  /** the number of paths used by this assoc. */
-  short numberOfPaths;
-  /** Counter for all retransmissions over all paths */
-  unsigned int total_retrans_count;
-  /** pointer to path-specific data */
-  path_params_t *pathData;
-  /** association-ID */
-  unsigned int associationID;
-  /** maximum retransmissions per path parameter */
-  int max_retrans_per_path;
-  /** initial RTO, a configurable parameter */
-  int rto_initial;
-  /** minimum RTO, a configurable parameter */
-  int rto_min;
-  /** maximum RTO, a configurable parameter */
-  int rto_max;
-/*@} */
+	/*@{ */
+	/** stores the current primary path */
+	short primaryPath;
+	/** the number of paths used by this assoc. */
+	short numberOfPaths;
+	/** Counter for all retransmissions over all paths */
+	unsigned int total_retrans_count;
+	/** pointer to path-specific data */
+	path_params_t *pathData;
+	/** association-ID */
+	unsigned int associationID;
+	/** maximum retransmissions per path parameter */
+	int max_retrans_per_path;
+	/** initial RTO, a configurable parameter */
+	int rto_initial;
+	/** minimum RTO, a configurable parameter */
+	int rto_min;
+	/** maximum RTO, a configurable parameter */
+	int rto_max;
+	/*@} */
 } mpath_t;
 
 /*----------------------Declares ----------------------------------------------------------------*/
@@ -145,17 +145,17 @@ mpath_t *pmData;
  @return unsigned 32 bit value representing system time in milliseconds. Hmmmh.
  */
 unsigned int
-pm_getTime (void)
+pm_getTime(void)
 {
-  unsigned int curTimeMilli;
-  struct timeval curTime;
+	unsigned int curTimeMilli;
+	struct timeval curTime;
 
-  adl_gettime (&curTime);
+	adl_gettime(&curTime);
 
-  /* modulo operation overlfows every 20 days */
-  curTimeMilli = (curTime.tv_sec % 1728000) * 1000 + curTime.tv_usec / 1000;
+	/* modulo operation overlfows every 20 days */
+	curTimeMilli = (curTime.tv_sec % 1728000) * 1000 + curTime.tv_usec / 1000;
 
-  return curTimeMilli;
+	return curTimeMilli;
 } /* end: pm_ sctp_getTime */
 
 /** done
@@ -166,96 +166,96 @@ pm_getTime (void)
  *  @return TRUE if association was deleted, FALSE if not
  */
 static gboolean
-handleChunksRetransmitted (short pathID)
+handleChunksRetransmitted(short pathID)
 {
-  short pID;
-  boolean allPathsInactive;
-  mpath_t *old_pmData;
+	short pID;
+	boolean allPathsInactive;
+	mpath_t *old_pmData;
 
-  if (!pmData->pathData)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "handleChunksRetransmitted(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return FALSE;
-  }
+	if (!pmData->pathData)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"handleChunksRetransmitted(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return FALSE;
+	}
 
-  event_logiii(
-      INTERNAL_EVENT_0,
-      "handleChunksRetransmitted(%d) : path-rtx-count==%u, peer-rtx-count==%u",
-      pathID, pmData->pathData[pathID].pathRetranscount,
-      pmData->total_retrans_count);
+	event_logiii(
+		INTERNAL_EVENT_0,
+		"handleChunksRetransmitted(%d) : path-rtx-count==%u, peer-rtx-count==%u",
+		pathID, pmData->pathData[pathID].pathRetranscount,
+		pmData->total_retrans_count);
 
-  if (pmData->pathData[pathID].state == PM_PATH_UNCONFIRMED)
-  {
+	if (pmData->pathData[pathID].state == PM_PATH_UNCONFIRMED)
+	{
 
-    pmData->pathData[pathID].pathRetranscount++;
+		pmData->pathData[pathID].pathRetranscount++;
 
-  }
-  else if (pmData->pathData[pathID].state == PM_ACTIVE)
-  {
+	}
+	else if (pmData->pathData[pathID].state == PM_ACTIVE)
+	{
 
-    pmData->pathData[pathID].pathRetranscount++;
-    pmData->total_retrans_count++;
+		pmData->pathData[pathID].pathRetranscount++;
+		pmData->total_retrans_count++;
 
-  }
-  else
-  {
-    event_log(INTERNAL_EVENT_0,
-              "handleChunksRetransmitted: ignored, because already inactive");
-    return FALSE;
-  }
+	}
+	else
+	{
+		event_log(INTERNAL_EVENT_0,
+			"handleChunksRetransmitted: ignored, because already inactive");
+		return FALSE;
+	}
 
-  if (pmData->total_retrans_count
-      >= (unsigned int) sci_getMaxAssocRetransmissions ())
-  {
-    mdi_deleteCurrentAssociation ();
-    mdi_communicationLostNotif (SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
-    mdi_clearAssociationData ();
+	if (pmData->total_retrans_count
+		>= (unsigned int)sci_getMaxAssocRetransmissions())
+	{
+		mdi_deleteCurrentAssociation();
+		mdi_communicationLostNotif(SCTP_COMM_LOST_EXCEEDED_RETRANSMISSIONS);
+		mdi_clearAssociationData();
 
-    event_log(INTERNAL_EVENT_0,
-              "handleChunksRetransmitted: communication lost");
-    return TRUE;
-  }
+		event_log(INTERNAL_EVENT_0,
+			"handleChunksRetransmitted: communication lost");
+		return TRUE;
+	}
 
-  if (pmData->pathData[pathID].pathRetranscount
-      >= (unsigned int) pmData->max_retrans_per_path)
-  {
-    /* Set state of this path to inactive and notify change of state to ULP */
-    pmData->pathData[pathID].state = PM_INACTIVE;
-    event_logi(INTERNAL_EVENT_0,
-               "handleChunksRetransmitted: path %d to INACTIVE ", pathID);
-    /* check if an active path is left */
-    allPathsInactive = TRUE;
-    for (pID = 0; pID < pmData->numberOfPaths; pID++)
-    {
-      if (pmData->pathData[pID].state == PM_ACTIVE)
-      {
-        allPathsInactive = FALSE;
-      }
-    }
-    if (allPathsInactive)
-    {
-      /* No active parts are left, communication lost to ULP */
-      mdi_deleteCurrentAssociation ();
-      mdi_communicationLostNotif (SCTP_COMM_LOST_ENDPOINT_UNREACHABLE);
-      /* will be called later anyway !
-       mdi_clearAssociationData(); */
-      event_log(
-          INTERNAL_EVENT_0,
-          "handleChunksRetransmitted: communication lost (all paths are INACTIVE)");
-      return TRUE;
-    }
-    else
-    {
-      old_pmData = pmData;
-      mdi_networkStatusChangeNotif (pathID, PM_INACTIVE);
-      pmData = old_pmData;
-    }
-  }
+	if (pmData->pathData[pathID].pathRetranscount
+		>= (unsigned int)pmData->max_retrans_per_path)
+	{
+		/* Set state of this path to inactive and notify change of state to ULP */
+		pmData->pathData[pathID].state = PM_INACTIVE;
+		event_logi(INTERNAL_EVENT_0,
+			"handleChunksRetransmitted: path %d to INACTIVE ", pathID);
+		/* check if an active path is left */
+		allPathsInactive = TRUE;
+		for (pID = 0; pID < pmData->numberOfPaths; pID++)
+		{
+			if (pmData->pathData[pID].state == PM_ACTIVE)
+			{
+				allPathsInactive = FALSE;
+			}
+		}
+		if (allPathsInactive)
+		{
+			/* No active parts are left, communication lost to ULP */
+			mdi_deleteCurrentAssociation();
+			mdi_communicationLostNotif(SCTP_COMM_LOST_ENDPOINT_UNREACHABLE);
+			/* will be called later anyway !
+			 mdi_clearAssociationData(); */
+			event_log(
+				INTERNAL_EVENT_0,
+				"handleChunksRetransmitted: communication lost (all paths are INACTIVE)");
+			return TRUE;
+		}
+		else
+		{
+			old_pmData = pmData;
+			mdi_networkStatusChangeNotif(pathID, PM_INACTIVE);
+			pmData = old_pmData;
+		}
+	}
 
-  return FALSE;
+	return FALSE;
 } /* end: handleChunksRetransmitted */
 
 /** done
@@ -266,68 +266,68 @@ handleChunksRetransmitted (short pathID)
  * @param  newRTT new RTT measured, when data was acked, or zero if it was retransmitted
  */
 static void
-handleChunksAcked (short pathID, unsigned int newRTT)
+handleChunksAcked(short pathID, unsigned int newRTT)
 {
 
-  if (!pmData->pathData)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "handleChunksAcked(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return;
-  }
+	if (!pmData->pathData)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"handleChunksAcked(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return;
+	}
 
-  event_logii(INTERNAL_EVENT_0,
-              "handleChunksAcked: pathID: %u, new RTT: %u msecs", pathID,
-              newRTT);
+	event_logii(INTERNAL_EVENT_0,
+		"handleChunksAcked: pathID: %u, new RTT: %u msecs", pathID,
+		newRTT);
 
-  if (newRTT > 0)
-  {
-    /* RTO measurement done */
-    /* calculate new RTO, SRTT and RTTVAR */
-    if (pmData->pathData[pathID].firstRTO)
-    {
-      pmData->pathData[pathID].srtt = newRTT;
-      pmData->pathData[pathID].rttvar = max(newRTT / 2, GRANULARITY);
-      ;
-      pmData->pathData[pathID].rto = max(
-          min(newRTT * 3, (unsigned int)pmData->rto_max),
-          (unsigned int )pmData->rto_min);
-      pmData->pathData[pathID].firstRTO = FALSE;
-    }
-    else
-    {
-      pmData->pathData[pathID].rttvar = (unsigned int) ((1. - RTO_BETA)
-          * pmData->pathData[pathID].rttvar +
-      RTO_BETA * abs (pmData->pathData[pathID].srtt - newRTT));
-      pmData->pathData[pathID].rttvar = max(
-          (unsigned int )pmData->pathData[pathID].rttvar, GRANULARITY);
+	if (newRTT > 0)
+	{
+		/* RTO measurement done */
+		/* calculate new RTO, SRTT and RTTVAR */
+		if (pmData->pathData[pathID].firstRTO)
+		{
+			pmData->pathData[pathID].srtt = newRTT;
+			pmData->pathData[pathID].rttvar = max(newRTT / 2, GRANULARITY);
+			;
+			pmData->pathData[pathID].rto = max(
+				min(newRTT * 3, (unsigned int)pmData->rto_max),
+				(unsigned int)pmData->rto_min);
+			pmData->pathData[pathID].firstRTO = FALSE;
+		}
+		else
+		{
+			pmData->pathData[pathID].rttvar = (unsigned int)((1. - RTO_BETA)
+				* pmData->pathData[pathID].rttvar +
+				RTO_BETA * abs(pmData->pathData[pathID].srtt - newRTT));
+			pmData->pathData[pathID].rttvar = max(
+				(unsigned int)pmData->pathData[pathID].rttvar, GRANULARITY);
 
-      pmData->pathData[pathID].srtt = (unsigned int) ((1. - RTO_ALPHA)
-          * pmData->pathData[pathID].srtt + RTO_ALPHA * newRTT);
+			pmData->pathData[pathID].srtt = (unsigned int)((1. - RTO_ALPHA)
+				* pmData->pathData[pathID].srtt + RTO_ALPHA * newRTT);
 
-      pmData->pathData[pathID].rto = pmData->pathData[pathID].srtt
-          + 4 * pmData->pathData[pathID].rttvar;
-      pmData->pathData[pathID].rto =
-          max(min((unsigned int)pmData->pathData[pathID].rto, (unsigned int)pmData->rto_max),
-              (unsigned int )pmData->rto_min);
-    }
-    event_logiii(
-        INTERNAL_EVENT_0,
-        "handleChunksAcked: RTO update done: RTTVAR: %u msecs, SRTT: %u msecs, RTO: %u msecs",
-        pmData->pathData[pathID].rttvar, pmData->pathData[pathID].srtt,
-        pmData->pathData[pathID].rto);
-  }
-  else
-  {
-    event_log(INTERNAL_EVENT_0,
-              "handleChunksAcked: chunks acked without RTO-update");
-  }
+			pmData->pathData[pathID].rto = pmData->pathData[pathID].srtt
+				+ 4 * pmData->pathData[pathID].rttvar;
+			pmData->pathData[pathID].rto =
+				max(min((unsigned int)pmData->pathData[pathID].rto, (unsigned int)pmData->rto_max),
+				(unsigned int)pmData->rto_min);
+		}
+		event_logiii(
+			INTERNAL_EVENT_0,
+			"handleChunksAcked: RTO update done: RTTVAR: %u msecs, SRTT: %u msecs, RTO: %u msecs",
+			pmData->pathData[pathID].rttvar, pmData->pathData[pathID].srtt,
+			pmData->pathData[pathID].rto);
+	}
+	else
+	{
+		event_log(INTERNAL_EVENT_0,
+			"handleChunksAcked: chunks acked without RTO-update");
+	}
 
-  /* reset counters */
-  pmData->pathData[pathID].pathRetranscount = 0;
-  pmData->total_retrans_count = 0;
+	/* reset counters */
+	pmData->pathData[pathID].pathRetranscount = 0;
+	pmData->total_retrans_count = 0;
 } /* end: handleChunksAcked */
 
 /*----------------- Functions to answer peer HB requests -----------------------------------------*/
@@ -339,13 +339,13 @@ handleChunksAcked (short pathID, unsigned int newRTT)
  @param source_address address we received the HB chunk from (and where it is echoed)
  */
 void
-mpath_hb_received (SCTP_heartbeat * heartbeatChunk,
-                               unsigned int source_address)
+mpath_hb_received(SCTP_heartbeat * heartbeatChunk,
+	unsigned int source_address)
 {
-  heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
+	heartbeatChunk->chunk_header.chunk_id = CHUNK_HBACK;
 
-  bu_put_Ctrl_Chunk ((SCTP_simple_chunk *) heartbeatChunk, &source_address);
-  bu_sendAllChunks (&source_address);
+	bu_put_Ctrl_Chunk((SCTP_simple_chunk *)heartbeatChunk, &source_address);
+	bu_sendAllChunks(&source_address);
 } /* end: mpath_hb_received */
 
 /*------------------- Signals --------------------------------------------------------------------*/
@@ -361,130 +361,130 @@ mpath_hb_received (SCTP_heartbeat * heartbeatChunk,
  @param pathIDvoid         pointer to the path-ID
  */
 void
-mpath_heartbeat_timer_expired (TimerID timerID, void *associationIDvoid,
-                               void *pathIDvoid)
+mpath_heartbeat_timer_expired(TimerID timerID, void *associationIDvoid,
+	void *pathIDvoid)
 {
-  unsigned int associationID;
-  unsigned int pathID;
-  ChunkID heartbeatCID;
-  gboolean removed_association = FALSE;
+	unsigned int associationID;
+	unsigned int pathID;
+	ChunkID heartbeatCID;
+	gboolean removed_association = FALSE;
 
-  associationID = *((unsigned int *) associationIDvoid);
-  pathID = *((unsigned int *) pathIDvoid);
-  if (mdi_setAssociationData (associationID))
-  {
-    /* error log: expired timer refers to a non existent association. */
-    error_logi(ERROR_MAJOR,
-               "init timer expired association %08u does not exist",
-               associationID);
-    return;
-  }
-  pmData = (mpath_t *) mdi_readPathMan ();
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR,
-              "mpath_heartbeat_timer_expired: mdi_readPathMan failed");
-    mdi_clearAssociationData ();
-    return;
-  }
-  if (!(pathID >= 0 && pathID < (unsigned int) pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "mpath_heartbeat_timer_expired: invalid path ID %d",
-               pathID);
-    mdi_clearAssociationData ();
-    return;
-  }
-  event_logi(INTERNAL_EVENT_0, "Heartbeat timer expired for path %u", pathID);
+	associationID = *((unsigned int *)associationIDvoid);
+	pathID = *((unsigned int *)pathIDvoid);
+	if (mdi_setAssociationData(associationID))
+	{
+		/* error log: expired timer refers to a non existent association. */
+		error_logi(ERROR_MAJOR,
+			"init timer expired association %08u does not exist",
+			associationID);
+		return;
+	}
+	pmData = (mpath_t *)mdi_readPathMan();
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR,
+			"mpath_heartbeat_timer_expired: mdi_readPathMan failed");
+		mdi_clearAssociationData();
+		return;
+	}
+	if (!(pathID >= 0 && pathID < (unsigned int)pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "mpath_heartbeat_timer_expired: invalid path ID %d",
+			pathID);
+		mdi_clearAssociationData();
+		return;
+	}
+	event_logi(INTERNAL_EVENT_0, "Heartbeat timer expired for path %u", pathID);
 
-  if (pmData->pathData[pathID].heartbeatSent
-      && !pmData->pathData[pathID].heartbeatAcked)
-  {
-    /* Heartbeat has been sent and not acknowledged: handle as retransmission */
-    if (pmData->pathData[pathID].state == PM_ACTIVE)
-    {
-      /* Handling of unacked heartbeats is the same as that of unacked data chunks.
-       The state after calling pm_chunksRetransmitted may have changed to inactive. */
-      removed_association = handleChunksRetransmitted ((short) pathID);
-      if (removed_association)
-        event_logi(
-            INTERNAL_EVENT_0,
-            "Association was removed by handleChunksRetransmitted(%u)!!!!",
-            pathID);
-    }
-    else if (pmData->pathData[pathID].state == PM_INACTIVE)
-    {
-      /* path already inactive, dont increase counter etc. */
-    }
+	if (pmData->pathData[pathID].heartbeatSent
+		&& !pmData->pathData[pathID].heartbeatAcked)
+	{
+		/* Heartbeat has been sent and not acknowledged: handle as retransmission */
+		if (pmData->pathData[pathID].state == PM_ACTIVE)
+		{
+			/* Handling of unacked heartbeats is the same as that of unacked data chunks.
+			 The state after calling pm_chunksRetransmitted may have changed to inactive. */
+			removed_association = handleChunksRetransmitted((short)pathID);
+			if (removed_association)
+				event_logi(
+					INTERNAL_EVENT_0,
+					"Association was removed by handleChunksRetransmitted(%u)!!!!",
+					pathID);
+		}
+		else if (pmData->pathData[pathID].state == PM_INACTIVE)
+		{
+			/* path already inactive, dont increase counter etc. */
+		}
 
-    if (!removed_association)
-    {
-      if (!pmData->pathData[pathID].timerBackoff)
-      {
-        /* Timer backoff */
-        pmData->pathData[pathID].rto = min(2 * pmData->pathData[pathID].rto,
-                                           (unsigned int )pmData->rto_max);
-        event_logii(VERBOSE, "Backing off timer : Path %d, RTO= %u", pathID,
-                    pmData->pathData[pathID].rto);
-      }
-    }
+		if (!removed_association)
+		{
+			if (!pmData->pathData[pathID].timerBackoff)
+			{
+				/* Timer backoff */
+				pmData->pathData[pathID].rto = min(2 * pmData->pathData[pathID].rto,
+					(unsigned int)pmData->rto_max);
+				event_logii(VERBOSE, "Backing off timer : Path %d, RTO= %u", pathID,
+					pmData->pathData[pathID].rto);
+			}
+		}
 
-  }
+	}
 
-  if (!removed_association && !pmData->pathData[pathID].data_chunk_acked
-      && pmData->pathData[pathID].heartbeatEnabled
-      && !pmData->pathData[pathID].data_chunks_sent_in_last_rto)
-  {
-    /* Remark: If commLost is detected in handleChunksRetransmitted, the current association
-     is marked for deletetion. Doing so, all timers are stop. The HB-timers are
-     stopped by calling pm_disableHB in mdi_deleteCurrentAssociation. This is why
-     heartBeatEnabled is checked above.
-     */
-    /* send heartbeat if no chunks have been acked in the last HB-intervall (path is idle). */
-    event_log(VERBOSE, "--------------> Sending HB");
-    heartbeatCID = ch_makeHeartbeat (pm_getTime (), pathID);
-    bu_put_Ctrl_Chunk (ch_chunkString (heartbeatCID), &pathID);
-    bu_sendAllChunks (&pathID);
-    ch_deleteChunk (heartbeatCID);
-    pmData->pathData[pathID].heartbeatSent = TRUE;
-  }
-  else if (!removed_association)
-  {
-    pmData->pathData[pathID].heartbeatSent = FALSE;
-  }
+	if (!removed_association && !pmData->pathData[pathID].data_chunk_acked
+		&& pmData->pathData[pathID].heartbeatEnabled
+		&& !pmData->pathData[pathID].data_chunks_sent_in_last_rto)
+	{
+		/* Remark: If commLost is detected in handleChunksRetransmitted, the current association
+		 is marked for deletetion. Doing so, all timers are stop. The HB-timers are
+		 stopped by calling pm_disableHB in mdi_deleteCurrentAssociation. This is why
+		 heartBeatEnabled is checked above.
+		 */
+		 /* send heartbeat if no chunks have been acked in the last HB-intervall (path is idle). */
+		event_log(VERBOSE, "--------------> Sending HB");
+		heartbeatCID = ch_makeHeartbeat(pm_getTime(), pathID);
+		bu_put_Ctrl_Chunk(ch_chunkString(heartbeatCID), &pathID);
+		bu_sendAllChunks(&pathID);
+		ch_deleteChunk(heartbeatCID);
+		pmData->pathData[pathID].heartbeatSent = TRUE;
+	}
+	else if (!removed_association)
+	{
+		pmData->pathData[pathID].heartbeatSent = FALSE;
+	}
 
-  if (!removed_association)
-  {
-    if (pmData->pathData[pathID].heartbeatEnabled)
-    {
-      /* heartbeat could have been disabled when the association went down after commLost
-       detected in handleChunksRetransmitted */
-      pmData->pathData[pathID].hearbeatTimer = adl_startTimer (
-          pmData->pathData[pathID].heartbeatIntervall
-              + pmData->pathData[pathID].rto,
-          &mpath_heartbeat_timer_expired,
-          TIMER_TYPE_HEARTBEAT,
-          (void *) &pmData->associationID,
-          (void *) &pmData->pathData[pathID].pathID);
+	if (!removed_association)
+	{
+		if (pmData->pathData[pathID].heartbeatEnabled)
+		{
+			/* heartbeat could have been disabled when the association went down after commLost
+			 detected in handleChunksRetransmitted */
+			pmData->pathData[pathID].hearbeatTimer = adl_startTimer(
+				pmData->pathData[pathID].heartbeatIntervall
+				+ pmData->pathData[pathID].rto,
+				&mpath_heartbeat_timer_expired,
+				TIMER_TYPE_HEARTBEAT,
+				(void *)&pmData->associationID,
+				(void *)&pmData->pathData[pathID].pathID);
 
-      /* reset this flag, so we can check, whether the path was idle */
-      pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
+			/* reset this flag, so we can check, whether the path was idle */
+			pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
 
-      event_logiii(
-          INTERNAL_EVENT_0,
-          "Heartbeat timer started with %u msecs for path %u, RTO=%u msecs",
-          (pmData->pathData[pathID].heartbeatIntervall
-              + pmData->pathData[pathID].rto),
-          pathID, pmData->pathData[pathID].rto);
-    }
-  }
+			event_logiii(
+				INTERNAL_EVENT_0,
+				"Heartbeat timer started with %u msecs for path %u, RTO=%u msecs",
+				(pmData->pathData[pathID].heartbeatIntervall
+					+ pmData->pathData[pathID].rto),
+				pathID, pmData->pathData[pathID].rto);
+		}
+	}
 
-  if (!removed_association)
-  {
-    pmData->pathData[pathID].heartbeatAcked = FALSE;
-    pmData->pathData[pathID].timerBackoff = FALSE;
-    pmData->pathData[pathID].data_chunk_acked = FALSE;
-  }
-  mdi_clearAssociationData ();
+	if (!removed_association)
+	{
+		pmData->pathData[pathID].heartbeatAcked = FALSE;
+		pmData->pathData[pathID].timerBackoff = FALSE;
+		pmData->pathData[pathID].data_chunk_acked = FALSE;
+	}
+	mdi_clearAssociationData();
 } /* end: mpath_heartbeat_timer_expired */
 
 /** done
@@ -492,40 +492,40 @@ mpath_heartbeat_timer_expired (TimerID timerID, void *associationIDvoid,
  * @param  pathID index to the address, where HB is to be sent to
  */
 int
-pm_doHB (gshort pathID)
+pm_doHB(gshort pathID)
 {
-  ChunkID heartbeatCID;
-  guint32 pid;
+	ChunkID heartbeatCID;
+	guint32 pid;
 
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_doHB: mdi_readPathMan failed");
-    return SCTP_MODULE_NOT_FOUND;
-  }
-  if (!pmData->pathData)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "pm_doHB(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return SCTP_UNSPECIFIED_ERROR;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_doHB: mdi_readPathMan failed");
+		return SCTP_MODULE_NOT_FOUND;
+	}
+	if (!pmData->pathData)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"pm_doHB(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return SCTP_UNSPECIFIED_ERROR;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_doHB : invalid path ID: %d", pathID);
-    return SCTP_PARAMETER_PROBLEM;
-  }
-  pid = (guint32) pathID;
-  heartbeatCID = ch_makeHeartbeat (pm_getTime (), pathID);
-  bu_put_Ctrl_Chunk (ch_chunkString (heartbeatCID), &pid);
-  bu_sendAllChunks (&pid);
-  ch_deleteChunk (heartbeatCID);
-  pmData->pathData[pathID].heartbeatSent = TRUE;
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_doHB : invalid path ID: %d", pathID);
+		return SCTP_PARAMETER_PROBLEM;
+	}
+	pid = (guint32)pathID;
+	heartbeatCID = ch_makeHeartbeat(pm_getTime(), pathID);
+	bu_put_Ctrl_Chunk(ch_chunkString(heartbeatCID), &pid);
+	bu_sendAllChunks(&pid);
+	ch_deleteChunk(heartbeatCID);
+	pmData->pathData[pathID].heartbeatSent = TRUE;
 
-  return SCTP_SUCCESS;
+	return SCTP_SUCCESS;
 }
 
 /** done
@@ -534,81 +534,81 @@ pm_doHB (gshort pathID)
  * @param heartbeatChunk pointer to the received heartbeat ack chunk
  */
 void
-pm_heartbeatAck (SCTP_heartbeat * heartbeatChunk)
+pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk)
 {
-  unsigned int roundtripTime;
-  unsigned int sendingTime;
-  short pathID;
-  ChunkID heartbeatCID;
-  mpath_t *old_pmData = NULL;
-  gboolean hbSignatureOkay = FALSE;
+	unsigned int roundtripTime;
+	unsigned int sendingTime;
+	short pathID;
+	ChunkID heartbeatCID;
+	mpath_t *old_pmData = NULL;
+	gboolean hbSignatureOkay = FALSE;
 
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_heartbeatAck: mdi_readPathMan failed");
-    return;
-  }
-  if (!pmData->pathData)
-  {
-    error_log(
-        ERROR_MAJOR,
-        "pm_heartbeatAck: Path Data Structures not initialized yet, returning !");
-    return;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_heartbeatAck: mdi_readPathMan failed");
+		return;
+	}
+	if (!pmData->pathData)
+	{
+		error_log(
+			ERROR_MAJOR,
+			"pm_heartbeatAck: Path Data Structures not initialized yet, returning !");
+		return;
+	}
 
-  heartbeatCID = mch_make_simple_chunk ((SCTP_simple_chunk *) heartbeatChunk);
-  pathID = ch_HBpathID (heartbeatCID);
-  sendingTime = ch_HBsendingTime (heartbeatCID);
-  roundtripTime = pm_getTime () - sendingTime;
-  event_logii(INTERNAL_EVENT_0, "HBAck for path %u, RTT = %u msecs", pathID,
-              roundtripTime);
+	heartbeatCID = mch_make_simple_chunk((SCTP_simple_chunk *)heartbeatChunk);
+	pathID = ch_HBpathID(heartbeatCID);
+	sendingTime = ch_HBsendingTime(heartbeatCID);
+	roundtripTime = pm_getTime() - sendingTime;
+	event_logii(INTERNAL_EVENT_0, "HBAck for path %u, RTT = %u msecs", pathID,
+		roundtripTime);
 
-  hbSignatureOkay = ch_verifyHeartbeat (heartbeatCID);
-  event_logi(EXTERNAL_EVENT, "HB Signature is %s",
-             (hbSignatureOkay == TRUE) ? "correct" : "FALSE");
+	hbSignatureOkay = ch_verifyHeartbeat(heartbeatCID);
+	event_logi(EXTERNAL_EVENT, "HB Signature is %s",
+		(hbSignatureOkay == TRUE) ? "correct" : "FALSE");
 
-  if (hbSignatureOkay == FALSE)
-  {
-    error_log(ERROR_FATAL, "pm_heartbeatAck: FALSE SIGNATURE !!!!!!!!!!!!!!!");
-    return;
-  }
+	if (hbSignatureOkay == FALSE)
+	{
+		error_log(ERROR_FATAL, "pm_heartbeatAck: FALSE SIGNATURE !!!!!!!!!!!!!!!");
+		return;
+	}
 
-  mch_remove_simple_chunk (heartbeatCID);
+	mch_remove_simple_chunk(heartbeatCID);
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_heartbeatAck: invalid path ID %d", pathID);
-    return;
-  }
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_heartbeatAck: invalid path ID %d", pathID);
+		return;
+	}
 
-  /* this also resets error counters */
-  handleChunksAcked (pathID, roundtripTime);
+	/* this also resets error counters */
+	handleChunksAcked(pathID, roundtripTime);
 
-  if (pmData->pathData[pathID].state == PM_INACTIVE
-      || pmData->pathData[pathID].state == PM_PATH_UNCONFIRMED)
-  {
-    /* Handling of acked heartbeats is the simular that that of acked data chunks. */
-    /* change to the active state */
-    pmData->pathData[pathID].state = PM_ACTIVE;
-    event_logi(INTERNAL_EVENT_0, "pathID %d changed to ACTIVE", pathID);
-    old_pmData = pmData;
-    mdi_networkStatusChangeNotif (pathID, PM_ACTIVE);
-    pmData = old_pmData;
+	if (pmData->pathData[pathID].state == PM_INACTIVE
+		|| pmData->pathData[pathID].state == PM_PATH_UNCONFIRMED)
+	{
+		/* Handling of acked heartbeats is the simular that that of acked data chunks. */
+		/* change to the active state */
+		pmData->pathData[pathID].state = PM_ACTIVE;
+		event_logi(INTERNAL_EVENT_0, "pathID %d changed to ACTIVE", pathID);
+		old_pmData = pmData;
+		mdi_networkStatusChangeNotif(pathID, PM_ACTIVE);
+		pmData = old_pmData;
 
-    /* restart timer with new RTO */
-    sctp_stopTimer (pmData->pathData[pathID].hearbeatTimer);
-    pmData->pathData[pathID].hearbeatTimer = adl_startTimer (
-        (pmData->pathData[pathID].heartbeatIntervall
-            + pmData->pathData[pathID].rto),
-        &mpath_heartbeat_timer_expired,
-        TIMER_TYPE_HEARTBEAT,
-        (void *) &pmData->associationID,
-        (void *) &pmData->pathData[pathID].pathID);
-  }
-  pmData->pathData[pathID].heartbeatAcked = TRUE;
-  pmData->pathData[pathID].timerBackoff = FALSE;
+		/* restart timer with new RTO */
+		sctp_stopTimer(pmData->pathData[pathID].hearbeatTimer);
+		pmData->pathData[pathID].hearbeatTimer = adl_startTimer(
+			(pmData->pathData[pathID].heartbeatIntervall
+				+ pmData->pathData[pathID].rto),
+			&mpath_heartbeat_timer_expired,
+			TIMER_TYPE_HEARTBEAT,
+			(void *)&pmData->associationID,
+			(void *)&pmData->pathData[pathID].pathID);
+	}
+	pmData->pathData[pathID].heartbeatAcked = TRUE;
+	pmData->pathData[pathID].timerBackoff = FALSE;
 
 } /* end: pm_heartbeatAck */
 
@@ -620,75 +620,75 @@ pm_heartbeatAck (SCTP_heartbeat * heartbeatChunk)
  * @param newRTT   the newly determined RTT in milliseconds, and 0 if retransmitted chunks had been acked
  */
 void
-pm_chunksAcked (short pathID, unsigned int newRTT)
+pm_chunksAcked(short pathID, unsigned int newRTT)
 {
-  struct timeval now;
+	struct timeval now;
 
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_chunksAcked: mdi_readPathMan failed");
-    return;
-  }
-  if (!pmData->pathData)
-  {
-    error_logii(
-        ERROR_MAJOR,
-        "pm_chunksAcked(%d, %u): Path Data Structures not initialized yet, returning !",
-        pathID, newRTT);
-    return;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_chunksAcked: mdi_readPathMan failed");
+		return;
+	}
+	if (!pmData->pathData)
+	{
+		error_logii(
+			ERROR_MAJOR,
+			"pm_chunksAcked(%d, %u): Path Data Structures not initialized yet, returning !",
+			pathID, newRTT);
+		return;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_chunksAcked: invalid path ID: %d", pathID);
-    return;
-  }
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_chunksAcked: invalid path ID: %d", pathID);
+		return;
+	}
 
-  if (newRTT > (unsigned int) pmData->rto_max)
-    error_logi(ERROR_MINOR, "pm_chunksAcked: Warning: RTO > RTO_MAX: %d",
-               newRTT);
+	if (newRTT > (unsigned int) pmData->rto_max)
+		error_logi(ERROR_MINOR, "pm_chunksAcked: Warning: RTO > RTO_MAX: %d",
+			newRTT);
 
-  newRTT = min(newRTT, (unsigned int )pmData->rto_max);
+	newRTT = min(newRTT, (unsigned int)pmData->rto_max);
 
-  if (pmData->pathData[pathID].state == PM_ACTIVE)
-  {
-    /* Update RTO only if is the first data chunk acknowldged in this RTT intervall. */
-    adl_gettime (&now);
-    if (timercmp(&now, &(pmData->pathData[pathID].rto_update), < ))
-    {
-      event_logiiii(
-          VERBOSE,
-          "pm_chunksAcked: now %lu sec, %lu usec - no update before %lu sec, %lu usec",
-          now.tv_sec, now.tv_usec, pmData->pathData[pathID].rto_update.tv_sec,
-          pmData->pathData[pathID].rto_update.tv_usec);
-      newRTT = 0;
-    }
-    else
-    {
-      if (newRTT != 0)
-      {
-        /* only if actually new valid RTT measurement is taking place, do update the time */
-        pmData->pathData[pathID].rto_update = now;
-        adl_add_msecs_totime (&(pmData->pathData[pathID].rto_update),
-                              pmData->pathData[pathID].srtt);
-      }
-    }
-    handleChunksAcked (pathID, newRTT);
-    pmData->pathData[pathID].data_chunk_acked = TRUE;
-  }
-  else
-  {
-    /* FIX :::::::
-     we got an ACK possibly from on an inactive path */
-    /* immediately send out a Heartbeat on that path, then when we get */
-    /* a HB-ACK, we can set the path back to ACTIVE */
-    /* when original newRTT is 0 then we got a RTX-SACK, else if we are */
-    /* inactive, get ACTIVE */
-    /* Nay, nay nay !   stale acknowledgement, silently discard */
-    return;
-  }
+	if (pmData->pathData[pathID].state == PM_ACTIVE)
+	{
+		/* Update RTO only if is the first data chunk acknowldged in this RTT intervall. */
+		adl_gettime(&now);
+		if (timercmp(&now, &(pmData->pathData[pathID].rto_update), < ))
+		{
+			event_logiiii(
+				VERBOSE,
+				"pm_chunksAcked: now %lu sec, %lu usec - no update before %lu sec, %lu usec",
+				now.tv_sec, now.tv_usec, pmData->pathData[pathID].rto_update.tv_sec,
+				pmData->pathData[pathID].rto_update.tv_usec);
+			newRTT = 0;
+		}
+		else
+		{
+			if (newRTT != 0)
+			{
+				/* only if actually new valid RTT measurement is taking place, do update the time */
+				pmData->pathData[pathID].rto_update = now;
+				adl_add_msecs_totime(&(pmData->pathData[pathID].rto_update),
+					pmData->pathData[pathID].srtt);
+			}
+		}
+		handleChunksAcked(pathID, newRTT);
+		pmData->pathData[pathID].data_chunk_acked = TRUE;
+	}
+	else
+	{
+		/* FIX :::::::
+		 we got an ACK possibly from on an inactive path */
+		 /* immediately send out a Heartbeat on that path, then when we get */
+		 /* a HB-ACK, we can set the path back to ACTIVE */
+		 /* when original newRTT is 0 then we got a RTX-SACK, else if we are */
+		 /* inactive, get ACTIVE */
+		 /* Nay, nay nay !   stale acknowledgement, silently discard */
+		return;
+	}
 } /* end: pm_chunksAcked */
 
 /** done
@@ -696,32 +696,32 @@ pm_chunksAcked (short pathID, unsigned int newRTT)
  * @param pathID  index of the address, where flag is set
  */
 void
-mpath_data_chunk_sent (short pathID)
+mpath_data_chunk_sent(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "mpath_data_chunk_sent: mdi_readPathMan failed");
-    return;
-  }
-  if (pmData->pathData == NULL)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "mpath_data_chunk_sent(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "mpath_data_chunk_sent: mdi_readPathMan failed");
+		return;
+	}
+	if (pmData->pathData == NULL)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"mpath_data_chunk_sent(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "mpath_data_chunk_sent: invalid path ID: %d",
-               pathID);
-    return;
-  }
-  event_logi(VERBOSE, "Calling mpath_data_chunk_sent(%d)", pathID);
-  pmData->pathData[pathID].data_chunks_sent_in_last_rto = TRUE;
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "mpath_data_chunk_sent: invalid path ID: %d",
+			pathID);
+		return;
+	}
+	event_logi(VERBOSE, "Calling mpath_data_chunk_sent(%d)", pathID);
+	pmData->pathData[pathID].data_chunks_sent_in_last_rto = TRUE;
 }
 
 /** done
@@ -729,45 +729,45 @@ mpath_data_chunk_sent (short pathID)
  @param  pathID  address index, where timeout has occurred (i.e. which caused retransmission)
  */
 gboolean
-pm_chunksRetransmitted (short pathID)
+pm_chunksRetransmitted(short pathID)
 {
-  gboolean removed_association = FALSE;
-  pmData = (mpath_t *) mdi_readPathMan ();
+	gboolean removed_association = FALSE;
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_chunksRetransmitted: mdi_readPathMan failed");
-    return removed_association;
-  }
-  if (pmData->pathData == NULL)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "pm_chunksRetransmitted(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return removed_association;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_chunksRetransmitted: mdi_readPathMan failed");
+		return removed_association;
+	}
+	if (pmData->pathData == NULL)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"pm_chunksRetransmitted(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return removed_association;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_chunksRetransmitted: invalid path ID %d",
-               pathID);
-    return removed_association;
-  }
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_chunksRetransmitted: invalid path ID %d",
+			pathID);
+		return removed_association;
+	}
 
-  if (pmData->pathData[pathID].state == PM_INACTIVE)
-  {
-    /* stale acknowledgement, silently discard */
-    error_logi(ERROR_MINOR,
-               "pm_chunksRetransmitted: retransmissions over inactive path %d",
-               pathID);
-    return removed_association;
-  }
-  else
-  {
-    removed_association = handleChunksRetransmitted (pathID);
-  }
-  return removed_association;
+	if (pmData->pathData[pathID].state == PM_INACTIVE)
+	{
+		/* stale acknowledgement, silently discard */
+		error_logi(ERROR_MINOR,
+			"pm_chunksRetransmitted: retransmissions over inactive path %d",
+			pathID);
+		return removed_association;
+	}
+	else
+	{
+		removed_association = handleChunksRetransmitted(pathID);
+	}
+	return removed_association;
 } /* end: pm_chunksRetransmitted */
 
 /**
@@ -776,47 +776,47 @@ pm_chunksRetransmitted (short pathID)
  @param pathID  index of the address where the timeout occurred
  */
 void
-pm_rto_backoff (short pathID)
+pm_rto_backoff(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_rto_backoff: mdi_readPathMan failed");
-    return;
-  }
-  if (pmData->pathData == NULL)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "pm_rto_backoff(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_rto_backoff: mdi_readPathMan failed");
+		return;
+	}
+	if (pmData->pathData == NULL)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"pm_rto_backoff(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_rto_backoff: invalid path ID %d", pathID);
-    return;
-  }
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_rto_backoff: invalid path ID %d", pathID);
+		return;
+	}
 
-  if (pmData->pathData[pathID].state == PM_ACTIVE)
-  {
-    /* Backoff timer anyway ! */
-    pmData->pathData[pathID].rto = min(2 * pmData->pathData[pathID].rto,
-                                       (unsigned int )pmData->rto_max);
+	if (pmData->pathData[pathID].state == PM_ACTIVE)
+	{
+		/* Backoff timer anyway ! */
+		pmData->pathData[pathID].rto = min(2 * pmData->pathData[pathID].rto,
+			(unsigned int)pmData->rto_max);
 
-    event_logii(INTERNAL_EVENT_0,
-                "pm_rto_backoff called for path %u: new RTO =%d", pathID,
-                pmData->pathData[pathID].rto);
-    pmData->pathData[pathID].timerBackoff = TRUE;
-  }
-  else
-  {
-    /* stale acknowledgement, silently discard */
-    error_logi(ERROR_MINOR,
-               "pm_rto_backoff: timer backoff for an inactive path %d", pathID);
-  }
+		event_logii(INTERNAL_EVENT_0,
+			"pm_rto_backoff called for path %u: new RTO =%d", pathID,
+			pmData->pathData[pathID].rto);
+		pmData->pathData[pathID].timerBackoff = TRUE;
+	}
+	else
+	{
+		/* stale acknowledgement, silently discard */
+		error_logi(ERROR_MINOR,
+			"pm_rto_backoff: timer backoff for an inactive path %d", pathID);
+	}
 } /* end pm_rto_backoff */
 
 /*------------------- Functions called by the ULP ------------------------------------------------*/
@@ -828,115 +828,115 @@ pm_rto_backoff (short pathID)
  @return error code, 0 for success, 1 for error (i.e. address index too large)
  */
 int
-pm_enableHB (short pathID, unsigned int hearbeatIntervall)
+pm_enableHB(short pathID, unsigned int hearbeatIntervall)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_enableHB: mdi_readPathMan failed");
-    return SCTP_MODULE_NOT_FOUND;
-  }
-  if (pmData->pathData == NULL)
-  {
-    error_logii(
-        ERROR_MAJOR,
-        "pm_enableHB(%d,%u): Path Data Structures not initialized yet, returning !",
-        pathID, hearbeatIntervall);
-    return SCTP_MODULE_NOT_FOUND;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_enableHB: mdi_readPathMan failed");
+		return SCTP_MODULE_NOT_FOUND;
+	}
+	if (pmData->pathData == NULL)
+	{
+		error_logii(
+			ERROR_MAJOR,
+			"pm_enableHB(%d,%u): Path Data Structures not initialized yet, returning !",
+			pathID, hearbeatIntervall);
+		return SCTP_MODULE_NOT_FOUND;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_enableHB: invalid path ID %d", pathID);
-    return SCTP_PARAMETER_PROBLEM;
-  }
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_enableHB: invalid path ID %d", pathID);
+		return SCTP_PARAMETER_PROBLEM;
+	}
 
-  pmData->pathData[pathID].heartbeatIntervall = hearbeatIntervall;
+	pmData->pathData[pathID].heartbeatIntervall = hearbeatIntervall;
 
-  event_logii(VERBOSE, "pm_enableHB(%d): chose interval %u msecs", pathID,
-              hearbeatIntervall);
+	event_logii(VERBOSE, "pm_enableHB(%d): chose interval %u msecs", pathID,
+		hearbeatIntervall);
 
-  if (!pmData->pathData[pathID].heartbeatEnabled)
-  {
-    pmData->pathData[pathID].heartbeatEnabled = TRUE;
+	if (!pmData->pathData[pathID].heartbeatEnabled)
+	{
+		pmData->pathData[pathID].heartbeatEnabled = TRUE;
 
-    pmData->pathData[pathID].firstRTO = TRUE;
-    pmData->pathData[pathID].pathRetranscount = 0;
-    pmData->total_retrans_count = 0;
+		pmData->pathData[pathID].firstRTO = TRUE;
+		pmData->pathData[pathID].pathRetranscount = 0;
+		pmData->total_retrans_count = 0;
 
-    pmData->pathData[pathID].heartbeatSent = FALSE;
-    pmData->pathData[pathID].heartbeatAcked = FALSE;
-    pmData->pathData[pathID].timerBackoff = FALSE;
-    pmData->pathData[pathID].data_chunk_acked = FALSE;
-    pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
+		pmData->pathData[pathID].heartbeatSent = FALSE;
+		pmData->pathData[pathID].heartbeatAcked = FALSE;
+		pmData->pathData[pathID].timerBackoff = FALSE;
+		pmData->pathData[pathID].data_chunk_acked = FALSE;
+		pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
 
-    pmData->pathData[pathID].rto = pmData->rto_initial;
-    pmData->pathData[pathID].srtt = pmData->rto_initial;
-    pmData->pathData[pathID].rttvar = 0;
-    pmData->pathData[pathID].hearbeatTimer = adl_startTimer (
-        (pmData->pathData[pathID].heartbeatIntervall
-            + pmData->pathData[pathID].rto),
-        &mpath_heartbeat_timer_expired,
-        TIMER_TYPE_HEARTBEAT,
-        (void *) &pmData->associationID,
-        (void *) &pmData->pathData[pathID].pathID);
-    event_logi(
-        VERBOSE,
-        "pm_enableHB: started timer - going off in %u msecs",
-        pmData->pathData[pathID].heartbeatIntervall
-            + pmData->pathData[pathID].rto);
-  }
-  else
-  {
-    pmData->pathData[pathID].hearbeatTimer = adl_restartTimer (
-        pmData->pathData[pathID].hearbeatTimer,
-        (pmData->pathData[pathID].heartbeatIntervall
-            + pmData->pathData[pathID].rto));
-    pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
-    event_logi(
-        VERBOSE,
-        "pm_enableHB: restarted timer - going off in %u msecs",
-        pmData->pathData[pathID].heartbeatIntervall
-            + pmData->pathData[pathID].rto);
+		pmData->pathData[pathID].rto = pmData->rto_initial;
+		pmData->pathData[pathID].srtt = pmData->rto_initial;
+		pmData->pathData[pathID].rttvar = 0;
+		pmData->pathData[pathID].hearbeatTimer = adl_startTimer(
+			(pmData->pathData[pathID].heartbeatIntervall
+				+ pmData->pathData[pathID].rto),
+			&mpath_heartbeat_timer_expired,
+			TIMER_TYPE_HEARTBEAT,
+			(void *)&pmData->associationID,
+			(void *)&pmData->pathData[pathID].pathID);
+		event_logi(
+			VERBOSE,
+			"pm_enableHB: started timer - going off in %u msecs",
+			pmData->pathData[pathID].heartbeatIntervall
+			+ pmData->pathData[pathID].rto);
+	}
+	else
+	{
+		pmData->pathData[pathID].hearbeatTimer = adl_restartTimer(
+			pmData->pathData[pathID].hearbeatTimer,
+			(pmData->pathData[pathID].heartbeatIntervall
+				+ pmData->pathData[pathID].rto));
+		pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
+		event_logi(
+			VERBOSE,
+			"pm_enableHB: restarted timer - going off in %u msecs",
+			pmData->pathData[pathID].heartbeatIntervall
+			+ pmData->pathData[pathID].rto);
 
-  }
-  return SCTP_SUCCESS;
+	}
+	return SCTP_SUCCESS;
 } /* end: pm_enableHB */
 
 /** done
  pm_disableAllHB is usually called on shutdown to disable all heartbeats.
  */
 void
-pm_disableAllHB (void)
+pm_disableAllHB(void)
 {
-  short pathID;
+	short pathID;
 
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_disableAllHB: mdi_readPathMan failed");
-    return;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_disableAllHB: mdi_readPathMan failed");
+		return;
+	}
 
-  if (pmData->pathData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_disableAllHB: no paths set");
-    return;
-  }
+	if (pmData->pathData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_disableAllHB: no paths set");
+		return;
+	}
 
-  for (pathID = 0; pathID < pmData->numberOfPaths; pathID++)
-  {
-    if (pmData->pathData[pathID].heartbeatEnabled)
-    {
-      sctp_stopTimer (pmData->pathData[pathID].hearbeatTimer);
-      pmData->pathData[pathID].hearbeatTimer = 0;
-      pmData->pathData[pathID].heartbeatEnabled = FALSE;
-      event_logi(INTERNAL_EVENT_0, "pm_disableAllHB: path %d disabled",
-                 (unsigned int )pathID);
-    }
-  }
+	for (pathID = 0; pathID < pmData->numberOfPaths; pathID++)
+	{
+		if (pmData->pathData[pathID].heartbeatEnabled)
+		{
+			sctp_stopTimer(pmData->pathData[pathID].hearbeatTimer);
+			pmData->pathData[pathID].hearbeatTimer = 0;
+			pmData->pathData[pathID].heartbeatEnabled = FALSE;
+			event_logi(INTERNAL_EVENT_0, "pm_disableAllHB: path %d disabled",
+				(unsigned int)pathID);
+		}
+	}
 } /* end: pm_disableAllHB */
 
 /** done
@@ -945,37 +945,37 @@ pm_disableAllHB (void)
  @return error code: 0 for success, 1 for error (i.e. pathID too large)
  */
 int
-pm_disableHB (short pathID)
+pm_disableHB(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_disableHB: mdi_readPathMan failed");
-    return SCTP_MODULE_NOT_FOUND;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_disableHB: mdi_readPathMan failed");
+		return SCTP_MODULE_NOT_FOUND;
+	}
 
-  if (pmData->pathData == NULL)
-  {
-    error_logi(ERROR_MAJOR, "pm_disableHB(%d): no paths set", pathID);
-    return SCTP_MODULE_NOT_FOUND;
-  }
+	if (pmData->pathData == NULL)
+	{
+		error_logi(ERROR_MAJOR, "pm_disableHB(%d): no paths set", pathID);
+		return SCTP_MODULE_NOT_FOUND;
+	}
 
-  if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
-  {
-    error_logi(ERROR_MAJOR, "pm_disableHB: invalid path ID %d", pathID);
-    return SCTP_PARAMETER_PROBLEM;
-  }
+	if (!(pathID >= 0 && pathID < pmData->numberOfPaths))
+	{
+		error_logi(ERROR_MAJOR, "pm_disableHB: invalid path ID %d", pathID);
+		return SCTP_PARAMETER_PROBLEM;
+	}
 
-  if (pmData->pathData[pathID].heartbeatEnabled)
-  {
-    sctp_stopTimer (pmData->pathData[pathID].hearbeatTimer);
-    pmData->pathData[pathID].hearbeatTimer = 0;
-    pmData->pathData[pathID].heartbeatEnabled = FALSE;
-    event_logi(INTERNAL_EVENT_0, "pm_disableHB: path %d disabled",
-               (unsigned int )pathID);
-  }
-  return SCTP_SUCCESS;
+	if (pmData->pathData[pathID].heartbeatEnabled)
+	{
+		sctp_stopTimer(pmData->pathData[pathID].hearbeatTimer);
+		pmData->pathData[pathID].hearbeatTimer = 0;
+		pmData->pathData[pathID].heartbeatEnabled = FALSE;
+		event_logi(INTERNAL_EVENT_0, "pm_disableHB: path %d disabled",
+			(unsigned int)pathID);
+	}
+	return SCTP_SUCCESS;
 } /* end: pm_disableHB */
 
 /** done
@@ -984,43 +984,43 @@ pm_disableHB (short pathID)
  @return 0 if okay, else 1 if there was some error
  */
 short
-pm_setPrimaryPath (short pathID)
+pm_setPrimaryPath(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_setPrimaryPath: mdi_readPathMan failed");
-    return SCTP_MODULE_NOT_FOUND;
-  }
-  if (pmData->pathData == NULL)
-  {
-    error_logi(ERROR_MAJOR, "pm_setPrimaryPath(%d): no paths set", pathID);
-    return SCTP_UNSPECIFIED_ERROR;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_setPrimaryPath: mdi_readPathMan failed");
+		return SCTP_MODULE_NOT_FOUND;
+	}
+	if (pmData->pathData == NULL)
+	{
+		error_logi(ERROR_MAJOR, "pm_setPrimaryPath(%d): no paths set", pathID);
+		return SCTP_UNSPECIFIED_ERROR;
+	}
 
-  if (pathID >= 0 && pathID < pmData->numberOfPaths)
-  {
-    if (pmData->pathData[pathID].state == PM_ACTIVE)
-    {
-      pmData->primaryPath = pathID;
-      pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
-      event_logi(INTERNAL_EVENT_0, "pm_setPrimaryPath: path %d is primary",
-                 pathID);
-      return SCTP_SUCCESS;
-    }
-    else
-    {
-      event_logi(INTERNAL_EVENT_0, "pm_setPrimaryPath: path %d not ACTIVE",
-                 pathID);
-      return SCTP_SPECIFIC_FUNCTION_ERROR;
-    }
-  }
-  else
-  {
-    error_logi(ERROR_MAJOR, "pm_setPrimaryPath: invalid path ID %d", pathID);
-    return SCTP_PARAMETER_PROBLEM;
-  }
+	if (pathID >= 0 && pathID < pmData->numberOfPaths)
+	{
+		if (pmData->pathData[pathID].state == PM_ACTIVE)
+		{
+			pmData->primaryPath = pathID;
+			pmData->pathData[pathID].data_chunks_sent_in_last_rto = FALSE;
+			event_logi(INTERNAL_EVENT_0, "pm_setPrimaryPath: path %d is primary",
+				pathID);
+			return SCTP_SUCCESS;
+		}
+		else
+		{
+			event_logi(INTERNAL_EVENT_0, "pm_setPrimaryPath: path %d not ACTIVE",
+				pathID);
+			return SCTP_SPECIFIC_FUNCTION_ERROR;
+		}
+	}
+	else
+	{
+		error_logi(ERROR_MAJOR, "pm_setPrimaryPath: invalid path ID %d", pathID);
+		return SCTP_PARAMETER_PROBLEM;
+	}
 } /* end: pm_setPrimaryPath */
 
 /*------------------- Functions called by ULP to read pathmanagement state info ------------------*/
@@ -1031,28 +1031,28 @@ pm_setPrimaryPath (short pathID)
  * @return  path's current RTO
  */
 unsigned int
-pm_readRTO (short pathID)
+pm_readRTO(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_logi(ERROR_MAJOR, "pm_readRTO(%d): mdi_readPathMan failed", pathID);
-    return 0;
-  }
+	if (pmData == NULL)
+	{
+		error_logi(ERROR_MAJOR, "pm_readRTO(%d): mdi_readPathMan failed", pathID);
+		return 0;
+	}
 
-  if (pathID >= 0 && pathID < pmData->numberOfPaths)
-  {
-    if (pmData->pathData == NULL)
-      return pmData->rto_initial;
-    else
-      return pmData->pathData[pathID].rto;
-  }
-  else
-  {
-    error_logi(ERROR_MAJOR, "pm_readRTO(%d): invalid path ID", pathID);
-    return 0;
-  }
+	if (pathID >= 0 && pathID < pmData->numberOfPaths)
+	{
+		if (pmData->pathData == NULL)
+			return pmData->rto_initial;
+		else
+			return pmData->pathData[pathID].rto;
+	}
+	else
+	{
+		error_logi(ERROR_MAJOR, "pm_readRTO(%d): invalid path ID", pathID);
+		return 0;
+	}
 } /* end: pm_readRTO */
 
 /**
@@ -1062,32 +1062,32 @@ pm_readRTO (short pathID)
  @return  path's current RTTvar in msecs, 0 if it's not set, 0xffffffff on error
  */
 unsigned int
-pm_readRttVar (short pathID)
+pm_readRttVar(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_logi(ERROR_MAJOR, "pm_readRttVar(%d): mdi_readPathMan failed",
-               pathID);
-    return 0xffffffff;
-  }
-  if (!pmData->pathData)
-  {
-    error_logi(
-        ERROR_MAJOR,
-        "pm_readRttVAr(%d): Path Data Structures not initialized yet, returning !",
-        pathID);
-    return 0;
-  }
+	if (pmData == NULL)
+	{
+		error_logi(ERROR_MAJOR, "pm_readRttVar(%d): mdi_readPathMan failed",
+			pathID);
+		return 0xffffffff;
+	}
+	if (!pmData->pathData)
+	{
+		error_logi(
+			ERROR_MAJOR,
+			"pm_readRttVAr(%d): Path Data Structures not initialized yet, returning !",
+			pathID);
+		return 0;
+	}
 
-  if (pathID >= 0 && pathID < pmData->numberOfPaths)
-    return pmData->pathData[pathID].rttvar;
-  else
-  {
-    error_logi(ERROR_MAJOR, "pm_readRttVar(%d): invalid path ID", pathID);
-    return 0xffffffff;
-  }
+	if (pathID >= 0 && pathID < pmData->numberOfPaths)
+		return pmData->pathData[pathID].rttvar;
+	else
+	{
+		error_logi(ERROR_MAJOR, "pm_readRttVar(%d): invalid path ID", pathID);
+		return 0xffffffff;
+	}
 } /* end: pm_readRttVar */
 
 /**
@@ -1096,32 +1096,32 @@ pm_readRttVar (short pathID)
  @return  path's current smoothed round trip time, or 0xffffffff on error
  */
 unsigned int
-pm_readSRTT (short pathID)
+pm_readSRTT(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_readSRTT: mdi_readPathMan failed");
-    return 0xffffffff;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_readSRTT: mdi_readPathMan failed");
+		return 0xffffffff;
+	}
 
-  if (!pmData->pathData)
-  {
-    event_logi(
-        VERBOSE,
-        "pm_readSRTT(%d): Path Data Structures not initialized, return RTO_INITIAL !",
-        pathID);
-    return pmData->rto_initial;
-  }
+	if (!pmData->pathData)
+	{
+		event_logi(
+			VERBOSE,
+			"pm_readSRTT(%d): Path Data Structures not initialized, return RTO_INITIAL !",
+			pathID);
+		return pmData->rto_initial;
+	}
 
-  if (pathID >= 0 && pathID < pmData->numberOfPaths)
-    return pmData->pathData[pathID].srtt;
-  else
-  {
-    error_logi(ERROR_MAJOR, "pm_readSRTT: invalid path ID %d", pathID);
-    return 0xffffffff;
-  }
+	if (pathID >= 0 && pathID < pmData->numberOfPaths)
+		return pmData->pathData[pathID].srtt;
+	else
+	{
+		error_logi(ERROR_MAJOR, "pm_readSRTT: invalid path ID %d", pathID);
+		return 0xffffffff;
+	}
 } /* end: pm_readSRTT */
 
 /**
@@ -1130,33 +1130,33 @@ pm_readSRTT (short pathID)
  @return state of path (active/inactive)
  */
 short
-pm_readState (short pathID)
+pm_readState(short pathID)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_readState: mdi_readPathMan failed");
-    return -1;
-  }
-  if (pmData->pathData == NULL)
-  {
-    error_log(ERROR_MAJOR, "pm_readState: pathData==NULL failed");
-    return -1;
-  }
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_readState: mdi_readPathMan failed");
+		return -1;
+	}
+	if (pmData->pathData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_readState: pathData==NULL failed");
+		return -1;
+	}
 
-  if (pathID >= 0 && pathID < pmData->numberOfPaths)
-  {
-    if (pmData->pathData == NULL)
-      return PM_INACTIVE;
-    else
-      return pmData->pathData[pathID].state;
-  }
-  else
-  {
-    error_logi(ERROR_MAJOR, "pm_readState: invalid path ID %d", pathID);
-    return -1;
-  }
+	if (pathID >= 0 && pathID < pmData->numberOfPaths)
+	{
+		if (pmData->pathData == NULL)
+			return PM_INACTIVE;
+		else
+			return pmData->pathData[pathID].state;
+	}
+	else
+	{
+		error_logi(ERROR_MAJOR, "pm_readState: invalid path ID %d", pathID);
+		return -1;
+	}
 } /* end: pm_readState */
 
 /**
@@ -1164,20 +1164,20 @@ pm_readState (short pathID)
  @return index to the primary path
  */
 unsigned short
-pm_readPrimaryPath (void)
+pm_readPrimaryPath(void)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_readPrimaryPath: pathmanagement-instance does not exist");
-    return 0xFFFF;
-  }
-  else
-  {
-    return pmData->primaryPath;
-  }
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_readPrimaryPath: pathmanagement-instance does not exist");
+		return 0xFFFF;
+	}
+	else
+	{
+		return pmData->primaryPath;
+	}
 } /* end: pm_readPrimaryPath */
 
 /**
@@ -1186,21 +1186,21 @@ pm_readPrimaryPath (void)
  @return   max_retrans_per_path of the current instance
  */
 int
-pm_getMaxPathRetransmisions (void)
+pm_getMaxPathRetransmisions(void)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(
-        ERROR_MAJOR,
-        "pm_getMaxPathRetransmisions(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  else
-  {
-    return pmData->max_retrans_per_path;
-  }
+	if (pmData == NULL)
+	{
+		event_log(
+			ERROR_MAJOR,
+			"pm_getMaxPathRetransmisions(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	else
+	{
+		return pmData->max_retrans_per_path;
+	}
 } /* end: pm_getMaxPathRetransmisions(void) */
 
 /**
@@ -1210,22 +1210,22 @@ pm_getMaxPathRetransmisions (void)
  @return   0 for success, -1 for error
  */
 int
-pm_setMaxPathRetransmisions (int new_max)
+pm_setMaxPathRetransmisions(int new_max)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(
-        ERROR_MAJOR,
-        "pm_setMaxPathRetransmisions(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  else
-  {
-    pmData->max_retrans_per_path = new_max;
-  }
-  return 0;
+	if (pmData == NULL)
+	{
+		event_log(
+			ERROR_MAJOR,
+			"pm_setMaxPathRetransmisions(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	else
+	{
+		pmData->max_retrans_per_path = new_max;
+	}
+	return 0;
 } /* end: pm_setMaxPathRetransmisions(void) */
 
 /**
@@ -1233,17 +1233,17 @@ pm_setMaxPathRetransmisions (int new_max)
  @return   rto_initial on success, -1 for error
  */
 int
-pm_getRtoInitial (void)
+pm_getRtoInitial(void)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_getRtoInitial(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  return pmData->rto_initial;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_getRtoInitial(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	return pmData->rto_initial;
 } /* end: pm_getRtoInitial() */
 
 /**
@@ -1251,139 +1251,139 @@ pm_getRtoInitial (void)
  @return   0 on success, -1 for error
  */
 int
-pm_setRtoInitial (int new_rto_initial)
+pm_setRtoInitial(int new_rto_initial)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_setRtoInitial(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  pmData->rto_initial = new_rto_initial;
-  return 0;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_setRtoInitial(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	pmData->rto_initial = new_rto_initial;
+	return 0;
 } /* end: pm_setRtoInitial() */
 
 int
-pm_setRtoMin (int new_rto_min)
+pm_setRtoMin(int new_rto_min)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_setRtoMin(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  pmData->rto_min = new_rto_min;
-  return 0;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_setRtoMin(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	pmData->rto_min = new_rto_min;
+	return 0;
 } /* end: pm_setRtoMin() */
 
 int
-pm_getRtoMin (void)
+pm_getRtoMin(void)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_getRtoMin(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  return pmData->rto_min;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_getRtoMin(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	return pmData->rto_min;
 } /* end: pm_getRtoMin() */
 
 int
-pm_setRtoMax (int new_rto_max)
+pm_setRtoMax(int new_rto_max)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_setRtoMax(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  pmData->rto_max = new_rto_max;
-  return 0;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_setRtoMax(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	pmData->rto_max = new_rto_max;
+	return 0;
 } /* end: pm_setRtoMax() */
 
 int
-pm_getRtoMax (void)
+pm_getRtoMax(void)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_getRtoMax(): pathmanagement-instance does not exist");
-    return 60000;
-  }
-  return pmData->rto_max;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_getRtoMax(): pathmanagement-instance does not exist");
+		return 60000;
+	}
+	return pmData->rto_max;
 } /* end: pm_getRtoMax() */
 
 int
-pm_setHBInterval (unsigned int new_interval)
+pm_setHBInterval(unsigned int new_interval)
 {
-  int count;
+	int count;
 
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_setHBInterval(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  if (pmData->pathData == NULL)
-  {
-    event_log(ERROR_MAJOR, "pm_setHBInterval(): path structures do not exist");
-    return -1;
-  }
-  for (count = 0; count < pmData->numberOfPaths; count++)
-  {
-    pmData->pathData[count].heartbeatIntervall = new_interval;
-  }
-  return 0;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_setHBInterval(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	if (pmData->pathData == NULL)
+	{
+		event_log(ERROR_MAJOR, "pm_setHBInterval(): path structures do not exist");
+		return -1;
+	}
+	for (count = 0; count < pmData->numberOfPaths; count++)
+	{
+		pmData->pathData[count].heartbeatIntervall = new_interval;
+	}
+	return 0;
 }
 
 int
-pm_getHBInterval (short pathID, unsigned int* current_interval)
+pm_getHBInterval(short pathID, unsigned int* current_interval)
 {
-  pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-  if (pmData == NULL)
-  {
-    event_log(ERROR_MAJOR,
-              "pm_getHBInterval(): pathmanagement-instance does not exist");
-    return -1;
-  }
-  if (pmData->pathData == NULL)
-  {
-    event_log(ERROR_MAJOR, "pm_getHBInterval(): path structures do not exist");
-    return -1;
-  }
-  if (pathID >= 0 && pathID < pmData->numberOfPaths)
-  {
-    *current_interval = pmData->pathData[pathID].heartbeatIntervall;
-  }
-  else
-  {
-    error_logi(ERROR_MAJOR, "pm_getHBInterval: invalid path ID %d", pathID);
-    *current_interval = 0;
-    return -1;
-  }
-  return 0;
+	if (pmData == NULL)
+	{
+		event_log(ERROR_MAJOR,
+			"pm_getHBInterval(): pathmanagement-instance does not exist");
+		return -1;
+	}
+	if (pmData->pathData == NULL)
+	{
+		event_log(ERROR_MAJOR, "pm_getHBInterval(): path structures do not exist");
+		return -1;
+	}
+	if (pathID >= 0 && pathID < pmData->numberOfPaths)
+	{
+		*current_interval = pmData->pathData[pathID].heartbeatIntervall;
+	}
+	else
+	{
+		error_logi(ERROR_MAJOR, "pm_getHBInterval: invalid path ID %d", pathID);
+		*current_interval = 0;
+		return -1;
+	}
+	return 0;
 }
 
 /*------------------- Functions called to create, init and delete pathman-instances --------------*/
 
 uint
-mdi_read_default_max_burst ()
+mdi_read_default_max_burst()
 {
-  throw std
-::logic_error("The method or operation is not implemented.");
+	throw std
+		::logic_error("The method or operation is not implemented.");
 }
 
 /**
@@ -1396,101 +1396,101 @@ mdi_read_default_max_burst ()
  @param  primaryPathID   index to the address that is to be used as primary address
  */
 short
-pm_setPaths (short noOfPaths, short primaryPathID)
+pm_setPaths(short noOfPaths, short primaryPathID)
 {
-mpath_t *pmData;
-int b, i, j = 0;
+	mpath_t *pmData;
+	int b, i, j = 0;
 
-pmData = (mpath_t *) mdi_readPathMan ();
+	pmData = (mpath_t *)mdi_readPathMan();
 
-if (pmData == NULL)
-{
-  error_log(ERROR_MAJOR, "pm_setPrimaryPath: mdi_readPathMan failed");
-  return 1;
-}
+	if (pmData == NULL)
+	{
+		error_log(ERROR_MAJOR, "pm_setPrimaryPath: mdi_readPathMan failed");
+		return 1;
+	}
 
-pmData->pathData = (path_params_t *) malloc (noOfPaths * sizeof(path_params_t));
+	pmData->pathData = (path_params_t *)malloc(noOfPaths * sizeof(path_params_t));
 
-if (!pmData->pathData)
-  error_log(ERROR_FATAL, "pm_setPaths: out of memory");
+	if (!pmData->pathData)
+		error_log(ERROR_FATAL, "pm_setPaths: out of memory");
 
-if (primaryPathID >= 0 && primaryPathID < noOfPaths)
-{
-  pmData->primaryPath = primaryPathID;
-  pmData->numberOfPaths = noOfPaths;
-  pmData->total_retrans_count = 0;
+	if (primaryPathID >= 0 && primaryPathID < noOfPaths)
+	{
+		pmData->primaryPath = primaryPathID;
+		pmData->numberOfPaths = noOfPaths;
+		pmData->total_retrans_count = 0;
 
-  for (i = 0; i < noOfPaths; i++)
-  {
-    pmData->pathData[i].state = PM_PATH_UNCONFIRMED;
-    if (i == primaryPathID)
-    {
-      pmData->pathData[i].state = PM_ACTIVE;
-    }
-    pmData->pathData[i].heartbeatEnabled = TRUE;
-    pmData->pathData[i].firstRTO = TRUE;
-    pmData->pathData[i].pathRetranscount = 0;
-    pmData->pathData[i].rto = pmData->rto_initial;
-    pmData->pathData[i].srtt = pmData->rto_initial;
-    pmData->pathData[i].rttvar = 0;
+		for (i = 0; i < noOfPaths; i++)
+		{
+			pmData->pathData[i].state = PM_PATH_UNCONFIRMED;
+			if (i == primaryPathID)
+			{
+				pmData->pathData[i].state = PM_ACTIVE;
+			}
+			pmData->pathData[i].heartbeatEnabled = TRUE;
+			pmData->pathData[i].firstRTO = TRUE;
+			pmData->pathData[i].pathRetranscount = 0;
+			pmData->pathData[i].rto = pmData->rto_initial;
+			pmData->pathData[i].srtt = pmData->rto_initial;
+			pmData->pathData[i].rttvar = 0;
 
-    pmData->pathData[i].heartbeatSent = FALSE;
-    pmData->pathData[i].heartbeatAcked = FALSE;
-    pmData->pathData[i].timerBackoff = FALSE;
-    pmData->pathData[i].data_chunk_acked = FALSE;
-    pmData->pathData[i].data_chunks_sent_in_last_rto = FALSE;
+			pmData->pathData[i].heartbeatSent = FALSE;
+			pmData->pathData[i].heartbeatAcked = FALSE;
+			pmData->pathData[i].timerBackoff = FALSE;
+			pmData->pathData[i].data_chunk_acked = FALSE;
+			pmData->pathData[i].data_chunks_sent_in_last_rto = FALSE;
 
-    pmData->pathData[i].heartbeatIntervall = PM_INITIAL_HB_INTERVAL;
-    pmData->pathData[i].hearbeatTimer = 0;
-    pmData->pathData[i].pathID = i;
+			pmData->pathData[i].heartbeatIntervall = PM_INITIAL_HB_INTERVAL;
+			pmData->pathData[i].hearbeatTimer = 0;
+			pmData->pathData[i].pathID = i;
 
-    b = mdi_getDefaultMaxBurst ();
+			b = mdi_getDefaultMaxBurst();
 
-    if (i != primaryPathID)
-    {
-      j++;
-      if (j < b)
-      {
-        pmData->pathData[i].hearbeatTimer = adl_startTimer (
-            j, /* send HB quickly on first usually four unconfirmed paths */
-            &mpath_heartbeat_timer_expired,
-            TIMER_TYPE_HEARTBEAT,
-            (void *) &pmData->associationID,
-            (void *) &pmData->pathData[i].pathID);
-      }
-      else
-      {
-        pmData->pathData[i].hearbeatTimer = adl_startTimer (
-            pmData->pathData[i].rto * (j - b), /* send HB more slowly on other paths */
-            &mpath_heartbeat_timer_expired,
-            TIMER_TYPE_HEARTBEAT,
-            (void *) &pmData->associationID,
-            (void *) &pmData->pathData[i].pathID);
-      }
-    }
-    else
-    {
-      pmData->pathData[i].hearbeatTimer = adl_startTimer (
-          pmData->pathData[i].heartbeatIntervall + pmData->pathData[i].rto,
-          &mpath_heartbeat_timer_expired,
-          TIMER_TYPE_HEARTBEAT,
-          (void *) &pmData->associationID,
-          (void *) &pmData->pathData[i].pathID);
-    }
-    /* after RTO we can do next RTO update */
-    adl_gettime (&(pmData->pathData[i].rto_update));
+			if (i != primaryPathID)
+			{
+				j++;
+				if (j < b)
+				{
+					pmData->pathData[i].hearbeatTimer = adl_startTimer(
+						j, /* send HB quickly on first usually four unconfirmed paths */
+						&mpath_heartbeat_timer_expired,
+						TIMER_TYPE_HEARTBEAT,
+						(void *)&pmData->associationID,
+						(void *)&pmData->pathData[i].pathID);
+				}
+				else
+				{
+					pmData->pathData[i].hearbeatTimer = adl_startTimer(
+						pmData->pathData[i].rto * (j - b), /* send HB more slowly on other paths */
+						&mpath_heartbeat_timer_expired,
+						TIMER_TYPE_HEARTBEAT,
+						(void *)&pmData->associationID,
+						(void *)&pmData->pathData[i].pathID);
+				}
+			}
+			else
+			{
+				pmData->pathData[i].hearbeatTimer = adl_startTimer(
+					pmData->pathData[i].heartbeatIntervall + pmData->pathData[i].rto,
+					&mpath_heartbeat_timer_expired,
+					TIMER_TYPE_HEARTBEAT,
+					(void *)&pmData->associationID,
+					(void *)&pmData->pathData[i].pathID);
+			}
+			/* after RTO we can do next RTO update */
+			adl_gettime(&(pmData->pathData[i].rto_update));
 
-  }
+		}
 
-  event_log(INTERNAL_EVENT_0, "pm_setPaths called ");
+		event_log(INTERNAL_EVENT_0, "pm_setPaths called ");
 
-  return 0;
-}
-else
-{
-  error_log(ERROR_MAJOR, "pm_setPaths: invalid path ID");
-  return 1;
-}
+		return 0;
+	}
+	else
+	{
+		error_log(ERROR_MAJOR, "pm_setPaths: invalid path ID");
+		return 1;
+	}
 } /* end: pm_setPaths */
 
 /**
@@ -1503,23 +1503,23 @@ else
  * @return pointer to the newly created path management instance !
  */
 void *
-mpath_new (short numberOfPaths, short primaryPath, void* sctpInstance)
+mpath_new(short numberOfPaths, short primaryPath, void* sctpInstance)
 {
-mpath_t *pmData;
+	mpath_t *pmData;
 
-pmData = (mpath_t *) malloc (sizeof(mpath_t));
-if (!pmData)
-  error_log(ERROR_FATAL, "pm_setPaths: out of memory");
-pmData->pathData = NULL;
+	pmData = (mpath_t *)malloc(sizeof(mpath_t));
+	if (!pmData)
+		error_log(ERROR_FATAL, "pm_setPaths: out of memory");
+	pmData->pathData = NULL;
 
-pmData->primaryPath = primaryPath;
-pmData->numberOfPaths = numberOfPaths;
-pmData->associationID = mdi_read_curr_channel_id ();
-pmData->max_retrans_per_path = mdi_getDefaultPathMaxRetransmits (sctpInstance);
-pmData->rto_initial = mdi_getDefaultRtoInitial (sctpInstance);
-pmData->rto_min = mdi_getDefaultRtoMin (sctpInstance);
-pmData->rto_max = mdi_getDefaultRtoMax (sctpInstance);
-return pmData;
+	pmData->primaryPath = primaryPath;
+	pmData->numberOfPaths = numberOfPaths;
+	pmData->associationID = mdi_read_curr_channel_id();
+	pmData->max_retrans_per_path = mdi_getDefaultPathMaxRetransmits(sctpInstance);
+	pmData->rto_initial = mdi_getDefaultRtoInitial(sctpInstance);
+	pmData->rto_min = mdi_getDefaultRtoMin(sctpInstance);
+	pmData->rto_max = mdi_getDefaultRtoMax(sctpInstance);
+	return pmData;
 } /* end: mpath_new */
 
 /**
@@ -1527,29 +1527,29 @@ return pmData;
  * @param   pathmanPtr pointer to the instance that is to be deleted
  */
 void
-pm_deletePathman (void *pathmanPtr)
+pm_deletePathman(void *pathmanPtr)
 {
-int i;
-mpath_t *pmData;
+	int i;
+	mpath_t *pmData;
 
-event_log(INTERNAL_EVENT_0, "deleting pathmanagement");
+	event_log(INTERNAL_EVENT_0, "deleting pathmanagement");
 
-pmData = (mpath_t *) pathmanPtr;
+	pmData = (mpath_t *)pathmanPtr;
 
-if (pmData != NULL && pmData->pathData != NULL)
-{
-  for (i = 0; i < pmData->numberOfPaths; i++)
-  {
-    if (pmData->pathData[i].hearbeatTimer != 0)
-    {
-      adl_stopTimer (pmData->pathData[i].hearbeatTimer);
-      pmData->pathData[i].hearbeatTimer = 0;
-    }
-  }
-}
+	if (pmData != NULL && pmData->pathData != NULL)
+	{
+		for (i = 0; i < pmData->numberOfPaths; i++)
+		{
+			if (pmData->pathData[i].hearbeatTimer != 0)
+			{
+				adl_stopTimer(pmData->pathData[i].hearbeatTimer);
+				pmData->pathData[i].hearbeatTimer = 0;
+			}
+		}
+	}
 
-event_log(VVERBOSE, "stopped timers");
+	event_log(VVERBOSE, "stopped timers");
 
-free (pmData->pathData);
-free (pmData);
+	free(pmData->pathData);
+	free(pmData);
 } /* end: pm_deletePathman */

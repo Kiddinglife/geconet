@@ -184,7 +184,7 @@ struct path_params_t
 	//set to true when data chunks are acked
 	bool data_chunk_acked;
 	// true if chunks have been senr over this path within last RTO
-	bool data_chunk_sent;
+	bool data_chunk_sent_in_last_rto;
 	//set to true when a hb is sent
 	bool hb_sent;
 	/*set to true when a hearbeat is acknowledged and to false when a
@@ -207,7 +207,7 @@ struct path_params_t
 	// id of hb timer
 	timeout* hb_timer_id;
 	//used to detect multiple tx of dchunk in last rto span
-	uint64 rtt_update_time;
+	uint64 rto_update;
 	//search_low          eff_pmtu         search_high
 	//|                   |                  |
 	//-------------------> non-probe size range
@@ -358,12 +358,12 @@ struct flow_controller_t
 /// this stores all the data need to be delivered to the user
 struct delivery_data_t
 {
-	uchar chunk_flags;
-	uint data_length;
-	uint tsn;
 	ushort stream_id;
 	ushort stream_sn;
+	uint data_length;
+	uint tsn;
 	uint from_addr_index;
+	uchar chunk_flags;
 	uchar data[MAX_NETWORK_PACKET_VALUE_SIZE]; // usr data this is assigned from data chunk value
 	//bool can_free_at_once; //this is aseembled chunk we can delete for efficiency
    // void* packet_params_t; // where this chunk is located
