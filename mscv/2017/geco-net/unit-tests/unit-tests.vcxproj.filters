@@ -9,13 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="docs">
-      <UniqueIdentifier>{9dd1fc61-4325-4de4-b470-e357cb101ca5}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\unittets\test-main.cc">
@@ -48,109 +41,6 @@
     <ClCompile Include="..\..\..\..\unittets\test-mdlm.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\..\..\unittets\readme.md">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="..\..\..\..\docx\rfc-960-with-section-jumps.html">
-      <Filter>docs</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\A New Data Chunk for SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\conn_procedures.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Cumulative ASCONF chunk.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\draft-hohendorf-secure-sctp-22.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Dynamic Address Reconfiguration.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Load Sharing in Stream Control Transmission Protocol.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Mobile SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Quick Failover Algorithm in SCTP.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc1191- ICMP Path MTU Discovery.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc2246 - TLS.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc2522-session-key-mgr-ptl.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc3257 - (SCTP) - Applicability Statement.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc3286-An Introduction to sctp.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc3309- (SCTP) Checksum Change.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc3436-(SCTP) Transport Layer Security over sctp.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc3554-(SCTP) On the Use of sctp with IPsec.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc3758-(SCTP)  Partial Reliability Extension.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc4301 - IPSec.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc4820-(SCTP) padding-chunk.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc4821 - Packetization Layer Path MTU Discovery.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc4960.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\SCTP NAT Traversal Considerations.txt">
-      <Filter>docs</Filter>
-    </Text>
-    <Text Include="..\..\..\..\docx\Security Attacks Found Against.txt">
-      <Filter>docs</Filter>
-    </Text>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\unittets\catch.hpp">
