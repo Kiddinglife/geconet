@@ -1,4 +1,0 @@
-/home/jackiez/Downloads/clion-2016.3.3/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/jackiez/20160219/geconet/clion/geconetlib
--- Configuring done
--- Generating done
--- Build files have been written to: /home/jackiez/20160219/geconet/clion/geconetlib/cmake-build-debug
