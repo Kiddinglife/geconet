@@ -362,9 +362,10 @@ bool mpath_chunks_rtx(short pathID);
 int mpath_heartbeat_timer_expired(timeout* timerID);
 /// pm_heartbeatAck is called when a heartbeat acknowledgement was received from the peer.
 /// checks RTTs, normally resets error counters, may set path back to ACTIVE state
+/// do pmtu++ probe right here
 /// @param heartbeatChunk pointer to the received heartbeat ack chunk
 void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk);
-/// helper function, that simply sets the data_chunk_sent flag of this path management instance to true
+/// helper function, that simply sets the data_chunk_sent_in_last_rto flag of this path management instance to true
 /// @param pathID  index of the address, where flag is set
 void mpath_data_chunk_sent(short pathID);
 /// pm_setPrimaryPath sets the primary path.
@@ -653,9 +654,9 @@ int mpath_enable_hb(short pathID, unsigned int hearbeatIntervall)
 				if (hearbeatIntervall > 0)
 					pmData->path_params[pathID].hb_interval = hearbeatIntervall;
 				EVENTLOG2(VERBOSE, "mpath_enable_hb: chose interval %u msecs for path %d", hearbeatIntervall, pathID);
-				pmData->path_params[pathID].data_chunk_sent = false;
+				pmData->path_params[pathID].data_chunk_sent_in_last_rto = false;
 				pmData->path_params[pathID].data_chunk_acked = false;
-				pmData->path_params[pathID].rtt_update_time = gettimestamp();
+				pmData->path_params[pathID].rto_update = gettimestamp();
 				assert(pmData->path_params[pathID].hb_timer_id != NULL);
 				mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id, pmData->path_params[pathID].rto);
 				EVENTLOG1(VERBOSE, "mpath_enable_hb()::restarted timer - going off in %u msecs",
@@ -738,7 +739,7 @@ short mpath_set_primary_path(short pathID)
 				if (pmData->path_params[pathID].state == PM_ACTIVE)
 				{
 					pmData->primary_path = pathID;
-					pmData->path_params[pathID].data_chunk_sent = false;
+					pmData->path_params[pathID].data_chunk_sent_in_last_rto = false;
 					pmData->path_params[pathID].data_chunk_acked = false;
 					EVENTLOG1(VERBOSE, "pm_setPrimaryPath: path %d is primary", pathID);
 					return MULP_SUCCESS;
@@ -762,7 +763,7 @@ inline void mpath_data_chunk_sent(short pathID)
 	assert(pmData->path_params != NULL);
 	assert(pathID >= 0 && pathID < pmData->path_num);
 	EVENTLOG1(VERBOSE, "mpath_data_chunk_sent(%d)", pathID);
-	pmData->path_params[pathID].data_chunk_sent = true;
+	pmData->path_params[pathID].data_chunk_sent_in_last_rto = true;
 }
 int mpath_read_path_status(short pathID)
 {
@@ -875,27 +876,22 @@ int mpath_do_hb(int pathID, ushort mtu)
 	EVENTLOG(MINOR_ERROR, "mpath_do_hb: pmData == NULL");
 	return MULP_SPECIFIC_FUNCTION_ERROR;
 }
-/*library functions*/
+
 void mpath_set_paths(uint noOfPaths, ushort primaryPathID) // mpath_set_paths
 {
 	// it is possible that a misbehaving peer may supply addresses that it does not own
 	// starts at established state and end when all confirmed
 	path_controller_t* pmData = mdi_read_mpath();
-	assert(pmData != NULL);
+	if (pmData == NULL)
+		ERRLOG(FALTAL_ERROR_EXIT, "mpath_set_paths(): path_controller is NULL");
 
-	if (noOfPaths * pmData->max_retrans_per_path < curr_channel_->state_machine_control->max_assoc_retrans_count)
-		curr_channel_->state_machine_control->max_assoc_retrans_count = noOfPaths * pmData->max_retrans_per_path;
-
-	pmData->path_params = (path_params_t *)geco_malloc_ext(noOfPaths * sizeof(path_params_t), __FILE__, __LINE__);
+	pmData->path_params = GECO_MALLOC_EXT(path_params_t, noOfPaths);
 	if (pmData->path_params == NULL)
-		ERRLOG(FALTAL_ERROR_EXIT, "mpath_start_hb_probe: out of memory");
-
-	uint i;
-	uint timeout_ms, j = 0;
-	uint maxburst = mdi_read_default_max_burst();
+		ERRLOG(FALTAL_ERROR_EXIT, "mpath_set_paths(): out of memory");
 
 	if (primaryPathID >= 0 && primaryPathID < noOfPaths)
 	{
+		uint i, maxburst = mdi_read_default_max_burst();
 		pmData->primary_path = primaryPathID;
 		pmData->path_num = noOfPaths;
 		pmData->total_retrans_count = 0;
@@ -904,43 +900,42 @@ void mpath_set_paths(uint noOfPaths, ushort primaryPathID) // mpath_set_paths
 		{
 			pmData->path_params[i].hb_enabled = true;
 			pmData->path_params[i].firstRTO = true;
+
 			pmData->path_params[i].retrans_count = 0;
 			pmData->path_params[i].rto = pmData->rto_initial;
 			pmData->path_params[i].srtt = pmData->rto_initial;
 			pmData->path_params[i].rttvar = 0;
+
 			pmData->path_params[i].hb_sent = false;
 			pmData->path_params[i].hb_acked = false;
 			pmData->path_params[i].timer_backoff = false;
 			pmData->path_params[i].data_chunk_acked = false;
-			pmData->path_params[i].data_chunk_sent = false;
+			pmData->path_params[i].data_chunk_sent_in_last_rto = false;
+
 			pmData->path_params[i].hb_interval = PM_INITIAL_HB_INTERVAL;
 			pmData->path_params[i].hb_timer_id = NULL;
 			pmData->path_params[i].path_id = i;
 			pmData->path_params[i].eff_pmtu = PMTU_LOWEST;
 			pmData->path_params[i].probing_pmtu = PMTU_HIGHEST;
-			pmData->path_params[i].state = PM_PATH_UNCONFIRMED;
-			pmData->path_params[i].rtt_update_time = gettimestamp();
+			pmData->path_params[i].state = (i == primaryPathID ? PM_ACTIVE : PM_PATH_UNCONFIRMED);
+			pmData->path_params[i].rto_update = gettimestamp(); 			// after RTO we can do next RTO update 
 
-			if (i == primaryPathID)
-			{
-				pmData->path_params[i].state = PM_ACTIVE;
-				// this is for pure path verifi but now we need to do pmtu probe with hb so use timeout_ms 0
-				timeout_ms = 0; // send pmtu hb at once on primary path as we want reach max throughoit asap
-			}
-			else
-			{
-				j++;
-				j < maxburst ? timeout_ms = j * SACK_DELAY :/* send a pmtu hb every SACK_DELAY quickly on first 8 unconfirmed paths*/
-					timeout_ms = (j - maxburst) * RTO_MIN; /* send a pmtu hb every RTO_MIN on other unconfirmed paths */
-			}
+			// this is for pure path verifi but now we need to do pmtu probe with hb so use timeout_ms  0 to
+			// send pmtu hb at once on primary path as we want reach max network throughouts asap
+			timeout tout;
+			tout.callback.action = &mpath_heartbeat_timer_expired;
+			tout.callback.type = TIMER_TYPE_HEARTBEAT;
+			tout.callback.arg1 = &pmData->path_params[i].path_id;
+			tout.callback.arg2 = &pmData->path_params[i].probing_pmtu;
 
-			EVENTLOG1(0, "timeout = %d", timeout_ms);
-			assert(pmData->path_params[i].hb_timer_id == NULL);
-			/* after RTO we can do next RTO update */
-			pmData->path_params[i].hb_timer_id = mtra_timeouts_add(
-				TIMER_TYPE_HEARTBEAT, timeout_ms, &mpath_heartbeat_timer_expired, &pmData->channel_id,
-				&pmData->path_params[i].path_id, &pmData->path_params[i].probing_pmtu);
+			EVENTLOG(0, "send pmtu hb at once");
+			mpath_heartbeat_timer_expired(&tout);
 		}
+	}
+	else
+	{
+		// treat this as minor error as lib will setup default pri path
+		ERRLOG1(MINOR_ERROR, "mpath_set_paths(): invalid primaryPathID %d", primaryPathID);
 	}
 }
 void mpath_update_rtt(short pathID, int newRTT)
@@ -1000,7 +995,7 @@ void mpath_data_chunk_acked(short pathID, int newRTT)
 
 	if (pmData->path_params[pathID].state == PM_ACTIVE)
 	{
-		// Why we need compare rtt_update_time?
+		// Why we need compare rto_update?
 		//
 		// update rtt only if is the first SACK received in this rto interval.
 		// rtt is mesured by a pair of send and ack in same rto interval  eg. dchunk&sack in rtx rto and hb&hback in rto or hbto
@@ -1026,10 +1021,10 @@ void mpath_data_chunk_acked(short pathID, int newRTT)
 		if (newRTT != 0)
 		{
 			now = gettimestamp();
-			if (now < pmData->path_params[pathID].rtt_update_time)
+			if (now < pmData->path_params[pathID].rto_update)
 			{
 				EVENTLOG2(NOTICE, "pm_chunksAcked: now %llu stamp - no update before %lu stamp", now,
-					pmData->path_params[pathID].rtt_update_time);
+					pmData->path_params[pathID].rto_update);
 				newRTT = 0;
 			}
 		}
@@ -1040,9 +1035,9 @@ void mpath_data_chunk_acked(short pathID, int newRTT)
 		pmData->path_params[pathID].data_chunk_acked = true;
 		if (newRTT != 0)
 		{
-			pmData->path_params[pathID].rtt_update_time = now;
+			pmData->path_params[pathID].rto_update = now;
 			// use updated srtt from mpath_update_rtt() is more accurate
-			pmData->path_params[pathID].rtt_update_time += pmData->path_params[pathID].srtt * stamps_per_ms();
+			pmData->path_params[pathID].rto_update += pmData->path_params[pathID].srtt * stamps_per_ms();
 		}
 	}
 	else
@@ -1120,12 +1115,12 @@ bool mpath_handle_chunks_rtx(short pathID)
 		if (pathID == pmData->primary_path)
 		{
 			//reset alternative path data acked and sent to false and they will be chaged to true very quickly when send data chunks on it.
-			pmData->path_params[pID].data_chunk_sent = false;
+			pmData->path_params[pID].data_chunk_sent_in_last_rto = false;
 			pmData->path_params[pID].data_chunk_acked = false;
 			pmData->primary_path = pID;
 
 			//reset primary path data acked and sent to false so that we can do hb for it again by seting hb timer in hb_timer_expired()
-			pmData->path_params[pathID].data_chunk_sent = false;
+			pmData->path_params[pathID].data_chunk_sent_in_last_rto = false;
 			pmData->path_params[pathID].data_chunk_acked = false;
 			EVENTLOG2(INFO, "mpath_handle_chunks_rtx():: primary path %d becomes inactive, change path %d to primary",
 				pathID, pID);
@@ -1148,6 +1143,8 @@ bool mpath_chunks_rtx(short pathID)
 	}
 	return mpath_handle_chunks_rtx(pathID);
 }
+
+// @TODO increase from 500 rate 100 ->10-> 1 when it is rate of 1, we get best pmtu and can chae it for use
 int mpath_heartbeat_timer_expired(timeout* timerID)
 {
 	uint associationID = *(uint*)timerID->callback.arg1;
@@ -1170,8 +1167,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	chunk_id_t heartbeatCID = 0;
 	bool removed_association = false;
 	int ret = 0;
-	//uint newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
-	uint newtimeout = pmData->path_params[pathID].rto;
+	uint newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
 
 	/*
 	 In each RTO, a probe may be sent on an active UNCONFIRMED path in an
@@ -1191,7 +1187,8 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	 * heartBeatEnabled  is also set to false
 	 */
 	if (pmData->path_params[pathID].hb_sent == true && pmData->path_params[pathID].hb_acked == false)
-	{/* Heartbeat has been sent and not acknowledged: handle as retransmission */
+	{
+		/* Heartbeat has been sent and not acknowledged: handle as retransmission */
 		removed_association = mpath_handle_chunks_rtx((short)pathID);
 		if (pmData->path_params[pathID].timer_backoff == true)
 		{
@@ -1200,11 +1197,11 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		}
 		if (mtu != 0)
 		{
-			if ((pmData->path_params[pathID].data_chunk_sent == true
+			if ((pmData->path_params[pathID].data_chunk_sent_in_last_rto == true
 				&& pmData->path_params[pathID].data_chunk_acked == true)
 				||
 				/*not acked but no congestion occures, must be pmtu is too big*/
-				(pmData->path_params[pathID].data_chunk_sent == false
+				(pmData->path_params[pathID].data_chunk_sent_in_last_rto == false
 					&& pmData->path_params[pathID].data_chunk_acked == false
 					&& pmData->path_params[pathID].retrans_count > 1)
 				/*not acked on idle path,  possibly pmtu too big or congestion control,
@@ -1251,28 +1248,19 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 	{
 		if (mtu == 0)
 		{
-			bool dohb = true;
-			mtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
+			uint newmtu = pmData->path_params[pathID].eff_pmtu + PMTU_CHANGE_RATE;
 			uint now = get_safe_time_ms();
-			if (mtu <= PMTU_HIGHEST)
+			if (newmtu < PMTU_HIGHEST)
 			{
 				if (pmData->path_params[pathID].hb_sent &&
 					/*only when pmtu&hb probe suceeds, test if cached pmtu expired*/
 					now - pmData->path_params[pathID].cached_eff_pmtu_start_time >= CACHED_EFF_PMTU_LIFE_TIME)
 					/*eff pmtu will be cached at most 5 minutes*/
 				{
-					pmData->path_params[pathID].probing_pmtu = mtu;
+					pmData->path_params[pathID].probing_pmtu = mtu = newmtu;
 					timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
-					dohb = false;
 					assert(newtimeout == pmData->path_params[pathID].rto);
 				}
-			}
-			if (dohb)
-			{
-				// reset to zero
-				mtu = 0;
-				timerID->callback.arg3 = NULL;
-				newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
 			}
 			// mtu with 0 value means this is a hb probe wiyhout pmtu
 			heartbeatCID = mch_make_hb_chunk(now, (uint)pathID, mtu);
@@ -1280,16 +1268,16 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 		else
 		{
 			if (pmData->path_params[pathID].hb_acked == true)
-			{ // pmtu&hb probe suceeds, switch to normal hb probe
+			{
+				// stop pmtu probe on this path as we already get the best eff pmtu
+				// we can  switch to normal hb probe and use the cached this pmtu
 				timerID->callback.arg3 = NULL;
 				mtu = 0;
-				newtimeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
 				heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
 			}
 			else
 			{
-				// here we send probe hb chunk from mpath_verfy_paths()
-				// use rto as timeout for verifi pmtu&hb probe
+				// first time to do pmtu probe when connection up
 				pmData->path_params[pathID].probing_pmtu = mtu;
 				timerID->callback.arg3 = &pmData->path_params[pathID].probing_pmtu;
 				heartbeatCID = mch_make_hb_chunk(get_safe_time_ms(), (uint)pathID, mtu);
@@ -1314,7 +1302,7 @@ int mpath_heartbeat_timer_expired(timeout* timerID)
 			// just readd this timer back with different timeouts
 			mtra_timeouts_readd(timerID, newtimeout);
 			/* reset this flag, so we can check, whether the path was idle */
-			pmData->path_params[pathID].data_chunk_sent = false;
+			pmData->path_params[pathID].data_chunk_sent_in_last_rto = false;
 		}
 
 		//reset states
@@ -1386,14 +1374,14 @@ void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk)
 		assert(pmData->path_params[pathID].hb_timer_id->callback.arg2 == (void *)&pmData->path_params[pathID].path_id);
 		assert(pmData->path_params[pathID].hb_timer_id->callback.action == &mpath_heartbeat_timer_expired);
 		assert(pmData->path_params[pathID].hb_timer_id->callback.type == TIMER_TYPE_HEARTBEAT);
-		// this means pmtu&hb probe suceeds, switch to pure hb probe interval
-		mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id,
-			pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto);
 	}
 
-	// update this path's pmtu
+	uint timeout = pmData->path_params[pathID].hb_interval + pmData->path_params[pathID].rto;
+
+	// this is pmtu&hb packet and we need to update this path's pmtu
 	if (newpmtu > 0)
 	{
+		timeout = 0; // pmtu succeeds and we will do another imediately to get highest available pmtu asap
 		pmData->path_params[pathID].cached_eff_pmtu_start_time = get_safe_time_ms();
 		pmData->path_params[pathID].eff_pmtu = newpmtu;
 		bool smallest = true;
@@ -1414,10 +1402,10 @@ void mpath_hb_ack_received(heartbeat_chunk_t* heartbeatChunk)
 				curr_channel_->bundle_control->curr_max_pdu = newpmtu - IP_HDR_SIZE;
 			curr_channel_->flow_control->cparams->mtu = newpmtu - IP_HDR_SIZE - 12;
 		}
+
 	}
 
-	// stop pmtu probe on this path as we already get the best max eff pmtu
-	pmData->path_params[pathID].hb_timer_id->callback.arg3 = NULL;
+	mtra_timeouts_readd(pmData->path_params[pathID].hb_timer_id, timeout);
 	pmData->path_params[pathID].hb_acked = true;
 	pmData->path_params[pathID].timer_backoff = false;
 
@@ -3416,13 +3404,17 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 	 * which also confuses receiver's reliableing function.
 	 *
 	 * the tricky using uint is it is so big that receiver will never receive wrapped tsn.
-	 * also sender will stop sending chunks when congestion ocurres.
+	 * also sender will stop sending chunks when congestion ocurres or receiver's buffer is full with a_rwnd zero.
 	 *
 	 * key point: receiver is always catching up with sender's tsn, and most of time receiver is as fast as sender,
 	 * so there is no chance for sender to run fast enough to wrap around (tsn wrapping).
 	 */
+	if (mrecv->fragmented_data_chunks_list.empty())
+	{
+		mrecv->new_dchunk_received = true;
+		return;
+	}
 	gaplo = (uint)(mrecv->cumulative_tsn + 1);
-
 	auto end = mrecv->fragmented_data_chunks_list.end();
 	auto itr = mrecv->fragmented_data_chunks_list.begin();
 	for (; itr != end; ++itr)
@@ -3446,7 +3438,7 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 					 *                  update current frag's start_tsn4 with value of chunk_tsn3
 					 *                  not bubbleup cstna by one;
 					 *                  new dchunk received;
-					 * Then now sequence: 2 4-5 8-9
+					 * Then now sequence: 1 3-5 8-9
 					 */
 					itr->start_tsn = chunk_tsn;
 					mrecv->new_dchunk_received = true;
@@ -3600,8 +3592,8 @@ void mrecv_update_fragments(recv_controller_t* mrecv, uint chunk_tsn)
 /// lowest tsn is updated with value of ctsn in mrecv_can_send_sack()
 bool mrecv_chunk_is_duplicate(recv_controller_t* mrecv, uint chunk_tsn)
 {
-    // every time we received a reliable chunk, it first goes here to update highest tsn if possible
-    // so chunk with highest_duplicate_tsn must have already been received
+	// every time we received a reliable chunk, it first goes here to update highest tsn if possible
+	// so chunk with highest_duplicate_tsn must have already been received
 	if (mrecv->highest_duplicate_tsn == chunk_tsn)
 		return true;
 	// so chunk with tsn > highest_duplicate_tsn must be new chunk
@@ -3676,7 +3668,7 @@ bool mdlm_sort_ssn_delivery_data_cmp(delivery_data_t* one, delivery_data_t* two)
 /// called from mrecv to forward received reliable-ordered or reliable-sequenced chunks to mdlm.
 int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_o_s_t* dataChunk, ushort address_index)
 {
-	delivery_data_t* dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__);
+	delivery_data_t* dchunk = GECO_MALLOC_EXT(delivery_data_t, 1);
 	if (dchunk == NULL)
 	{
 		return MULP_OUT_OF_RESOURCES;
@@ -3730,7 +3722,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_o_s_t* dataChunk
 /// called from mrecv to forward received reliable-unorded-unsequenced chunks (no sid and ssn) to mdlm.
 int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_r_uo_us_t* dataChunk, ushort address_index)
 {
-	delivery_data_t* dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__);
+	delivery_data_t* dchunk = GECO_MALLOC_EXT(delivery_data_t, 1);
 	if (dchunk == NULL)
 	{
 		return MULP_OUT_OF_RESOURCES;
@@ -3805,7 +3797,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	// there is no way to avoid asigning it only one time
 	recv_stream->last_ssn_used = true;
 
-	delivery_data_t* dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__);
+	delivery_data_t* dchunk = GECO_MALLOC_EXT(delivery_data_t, 1);
 	if (dchunk == NULL)
 		return MULP_OUT_OF_RESOURCES;
 	dchunk->stream_id = sid;
@@ -3822,7 +3814,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 	if ((dchunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (dchunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
 	{
 		EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment");
-		delivery_pdu_t* d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__);
+		delivery_pdu_t* d_pdu = GECO_MALLOC_EXT(delivery_pdu_t, 1);
 		if (d_pdu == NULL)
 		{
 			geco_free_ext(dchunk, __FILE__, __LINE__);
@@ -3849,7 +3841,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_s_t* dataChunk,
 /// returns an error chunk to the peer, when the maximum stream id is exceeded !
 int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_us_t* dataChunk, ushort from_addr_index)
 {
-	delivery_data_t* dchunk = (delivery_data_t*)geco_malloc_ext(sizeof(delivery_data_t), __FILE__, __LINE__);
+	delivery_data_t* dchunk = GECO_MALLOC_EXT(delivery_data_t, 1);
 	if (dchunk == NULL)
 	{
 		// when memory out, we do not abort connection
@@ -3875,7 +3867,7 @@ int mdlm_receive_dchunk(deliverman_controller_t* mdlm, dchunk_ur_us_t* dataChunk
 	if ((dchunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG) && (dchunk->chunk_flags & DCHUNK_FLAG_LAST_FRG))
 	{
 		EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment");
-		delivery_pdu_t* d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t), __FILE__, __LINE__);
+		delivery_pdu_t* d_pdu = GECO_MALLOC_EXT(delivery_pdu_t, 1);
 		if (d_pdu == NULL)
 		{
 			// when memory out, we do not abort connection
@@ -4004,7 +3996,6 @@ static uint i;
 static uint itemPosition;
 static std::list<delivery_data_t*>::iterator firstItemItr;
 static recv_stream_t* recv_streams;
-// used by int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm) //serch_ready_pdu
 static uint chunk_tsn;
 static uint chunk_len;
 static uint assoc_state;
@@ -4040,7 +4031,7 @@ static uchar chunk_flag;
  * so total number of streams = sequenced_streams+order_streams+2
  * @note ur and urs chunk are processed in mdlm_receive_dchunk() by delivering to ulp directly
  */
-int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm)//serch_ready_pdu
+int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm) //serch_ready_pdu
 {
 	i = firstTSN = itemPosition = 0;
 	complete = false;
@@ -4158,8 +4149,7 @@ int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm)//serch_ready_pdu
 				// found an completed pdu
 				if (complete)
 				{
-					if ((d_pdu = (delivery_pdu_t*)geco_malloc_ext(sizeof(delivery_pdu_t),
-						__FILE__, __LINE__)) == NULL)
+					if ((d_pdu = GECO_MALLOC_EXT(delivery_pdu_t, 1)) == NULL)
 						return MULP_OUT_OF_RESOURCES;
 
 					d_pdu->number_of_chunks = nrOfChunks;
@@ -4168,9 +4158,7 @@ int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm)//serch_ready_pdu
 					d_pdu->chunk_position = 0;
 					d_pdu->total_length = 0;
 
-					if ((d_pdu->ddata = (delivery_data_t**)geco_malloc_ext(nrOfChunks * sizeof(delivery_data_t*),
-						__FILE__,
-						__LINE__)) == NULL)
+					if ((d_pdu->ddata = GECO_MALLOC_EXT(delivery_data_t*, nrOfChunks)) == NULL)
 					{
 						geco_free_ext(d_pdu, __FILE__, __LINE__);
 						return MULP_OUT_OF_RESOURCES;
@@ -4378,12 +4366,12 @@ int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm)//serch_ready_pdu
 	for (auto itr = mdlm->r.begin(); itr != mdlm->r.end();)
 	{
 		d_chunk = *itr;
-		EVENTLOG3(VERBOSE, "Handling r chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
+		EVENTLOG3(VERBOSE, "mdlm_reassemble_pdu_frags():: r chunk with tsn: %u, ssn: %u, sid: %u", currentTSN, currentSSN, currentSID);
 
 		// start assemble fragmented ulp msg
 		if (d_chunk->chunk_flags & DCHUNK_FLAG_FIRST_FRAG)
 		{
-			EVENTLOG(VVERBOSE, "mdlm_assemble_ulp_data()::found begin segment from mdlm->ro");
+			EVENTLOG(VVERBOSE, "mdlm_reassemble_pdu_frags()::found begin segment");
 
 			nrOfChunks = 1;
 			firstItemItr = itr;
@@ -4478,7 +4466,7 @@ int mdlm_reassemble_pdu_frags(deliverman_controller_t* mdlm)//serch_ready_pdu
 				complete = false;
 			}
 
-			// this chunk is not completed, wait more segements coming to us
+			// this chunk is not completed, proceee it when more segements coming to us in the furture
 		}
 		else
 		{
@@ -4511,7 +4499,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 {
 	mdlm_ = mdi_read_mdlm();
 	assert(mdlm_ != NULL);
-
 	//resettings
 	can_bubbleup_ctsna = false;
 	msm_ = mdi_read_msm();
@@ -4521,13 +4508,11 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 	assert(mrecv_ != NULL);
 	mrecv_->new_dchunk_received = false;
 	mrecv_->remote_addr_idx = remote_addr_idx;
-    // if any received data chunks have not been acked,
+	// if any received data chunks have not been acked,
 	// create a SACK and bundle it with the outbound data
-    mrecv_->sack_updated = false;
-
+	mrecv_->sack_updated = false;
 	bytes_queued = mdlm_read_queued_bytes();
 	current_rwnd = bytes_queued >= mrecv_->my_rwnd ? 0 : 1; //1 here is just means non-zero rwnd
-
 	chunk_flag = data_chunk->comm_chunk_hdr.chunk_flags;
 	if (chunk_flag & DCHUNK_FLAG_RELIABLE)
 	{
@@ -4550,7 +4535,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 			mrecv_->new_dchunk_received = false;
 			return 1;
 		}
-
 		if (mrecv_chunk_is_duplicate(mrecv_, chunk_tsn))
 		{
 			mrecv_update_duplicates(mrecv_, chunk_tsn);
@@ -4561,7 +4545,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 			mrecv_update_fragments(mrecv_, chunk_tsn);
 			assert(mrecv_->new_dchunk_received == true);
 			mrecv_->datagram_has_new_dchunk = true;
-
 			if ((chunk_flag & DCHUNK_FLAG_OS_MASK) == (DCHUNK_FLAG_UNORDER | DCHUNK_FLAG_UNSEQ))
 			{
 				if (mdlm_receive_dchunk(mdlm_, (dchunk_r_uo_us_t*)data_chunk, remote_addr_idx) == MULP_SUCCESS)
@@ -4577,9 +4560,7 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 	else
 	{
 		// there is no retx for unreliable chunk, so any chunks received are treated as "new chunk"
-		mrecv_->new_dchunk_received = true;
-		mrecv_->datagram_has_new_dchunk = true;
-
+		mrecv_->new_dchunk_received = mrecv_->datagram_has_new_dchunk = true;
 		// deliver to reordering function for further processing
 		if (current_rwnd == 0 || assoc_state == ChannelState::ShutdownReceived
 			|| assoc_state == ChannelState::ShutdownAckSent)
@@ -4590,14 +4571,13 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 			mrecv_->new_dchunk_received = false;
 			return 1;
 		}
-
 		// if unreliable mesg  is framented in sender, the fragmented chunks are sent as reliable
 		// and (ordered or unordered same to original msg).
 		// so right here, we can safely bypass assembling and reliabling function
 		//	btw. there is no ordered unreliable chunk but only sequenced unreliable chunk
 		if (mrecv_->new_dchunk_received)
 		{
-			if (chunk_flag & DCHUNK_FLAG_UNSEQ)
+			if ((chunk_flag & DCHUNK_FLAG_SEQ_MASK) == DCHUNK_FLAG_UNSEQ)
 			{
 				// unreliable unsequenced chunk same to udp datagram
 				if (mdlm_receive_dchunk(mdlm_, (dchunk_ur_us_t*)data_chunk, remote_addr_idx) == MULP_SUCCESS)
@@ -4611,7 +4591,6 @@ int mrecv_receive_dchunk(dchunk_r_o_s_t * data_chunk, uint remote_addr_idx)
 			}
 		}
 	}
-
 	return 1;
 }
 
@@ -8614,7 +8593,6 @@ void clear()
 	curr_ecc_code_ = 0;
 	chunkflag2use_ = -1;
 }
-#include <netinet/in.h>
 int mdi_recv_geco_packet(int socket_fd, char *dctp_packet, uint dctp_packet_len, sockaddrunion * source_addr,
 	sockaddrunion * dest_addr)
 {

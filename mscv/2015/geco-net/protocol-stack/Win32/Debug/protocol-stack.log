@@ -1,9 +1,0 @@
-﻿  geco-malloc.cc
-d:\vs-workspace\geconet\src\geco-ds-malloc.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-ds-config.h : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-ds-malloc.h(812): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-d:\vs-workspace\geconet\src\geco-ds-malloc.h(652): error C2065: 'result': undeclared identifier
-  d:\vs-workspace\geconet\src\geco-ds-malloc.h(638): note: while compiling class template member function 'void *geco::ds::default_alloc<false,0>::reallocate(void *,std::size_t,std::size_t)'
-  d:\vs-workspace\geconet\src\geco-malloc.cc(56): note: see reference to function template instantiation 'void *geco::ds::default_alloc<false,0>::reallocate(void *,std::size_t,std::size_t)' being compiled
-  d:\vs-workspace\geconet\src\geco-malloc.cc(45): note: see reference to class template instantiation 'geco::ds::default_alloc<false,0>' being compiled
-d:\vs-workspace\geconet\src\geco-ds-malloc.h(654): error C2065: 'result': undeclared identifier

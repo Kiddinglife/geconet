@@ -1,11 +1,23 @@
 ![gecostacklogo](https://media.licdn.com/media/AAEAAQAAAAAAAALQAAAAJDI3NjViNjAxLTA5NDItNGJkMi05ZThlLThmM2VlODkyMmQwZA.png)
 
-# Aimed for Online Games
 
-**geconet** is a complete transport protocol stack on OSI layer 4(like TCP or Reliable-UDP).  
-It is implemented in the user space with raw sockets and/or udp sockets(setup by users).  
-It is specifically designed for datagram-like meassage trasport in online games.   
+## Aimed for Online Games
+
+GecoNet™ is an Open Source/Free Software cross-platform complete transport protocol stack 
+similar to TCP and Reliable-UDP. It is implemented in the user space with raw sockets and/or udp sockets(setup by users).
 However, it is generic and may supersede TCP and Reliable-UDP in other applications as well.
+building upon RFC-4960 standards and currently supports Windows, Linux and Mac.  
+
+GecoNet is not a simple rebranding of **RFC4960-SCTP-PROTOCOL**, but rather incorporates already
+in its initial version several bug- and security fixes as well as new features to make it 
+more suitable for games developments:
+  - Packetization Layer Path MTU Discovery, 
+  - Reliable-Sequenced, Reliable-unordered, Unreliable-Sequenced and Unreliable-Unordered
+  - Load sharing between multi-connections from a single client host
+  - Non-renegable selective ack
+  - Build-in secured transmission
+  - Better congestion control windows for overgrowth during changeover 
+  - Quick Failover Algorithm
 
 ## Core Features
 - **Secured connection pharse and encryption of messages**   
@@ -91,3 +103,5 @@ attacker to lauch blind or proofing attacks.
 ## Architecture
 
 waiting...
+
+## 

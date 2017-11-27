@@ -23,7 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>unittests</RootNamespace>
     <ProjectName>unittests</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -77,6 +77,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <EnableManagedIncrementalBuild>false</EnableManagedIncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,6 +88,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -119,6 +121,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../../src;../../../../thirdparty/;../../../../thirdparty/cat/include/;../../../../thirdparty/spdlog/include/;../../../../thirdparty/openssl-1.0.0d/include;../../../../thirdparty/googletest/include/;../../../../thirdparty/googlemock/include/;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <CallingConvention>FastCall</CallingConvention>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -190,52 +193,16 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\docx\rfc-960-with-section-jumps.html" />
-    <None Include="..\..\..\..\unittets\readme.md" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\..\..\..\unittets\geco-test.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mdi.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-main.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mbu.cc" />
+    <ClCompile Include="..\..\..\..\unittets\test-mdlm.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mpath.cc" />
+    <ClCompile Include="..\..\..\..\unittets\test-mrecv.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mulp.cc" />
     <ClCompile Include="..\..\..\..\unittets\test-mtra.cpp" />
     <ClCompile Include="..\..\..\..\unittets\test-wheel-timer.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt" />
-    <Text Include="..\..\..\..\docx\A New Data Chunk for SCTP.txt" />
-    <Text Include="..\..\..\..\docx\conn_procedures.txt" />
-    <Text Include="..\..\..\..\docx\Cumulative ASCONF chunk.txt" />
-    <Text Include="..\..\..\..\docx\draft-hohendorf-secure-sctp-22.txt" />
-    <Text Include="..\..\..\..\docx\Dynamic Address Reconfiguration.txt" />
-    <Text Include="..\..\..\..\docx\Load Sharing in Stream Control Transmission Protocol.txt" />
-    <Text Include="..\..\..\..\docx\Mobile SCTP.txt" />
-    <Text Include="..\..\..\..\docx\Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt" />
-    <Text Include="..\..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt" />
-    <Text Include="..\..\..\..\docx\Quick Failover Algorithm in SCTP.txt" />
-    <Text Include="..\..\..\..\docx\rfc1191- ICMP Path MTU Discovery.txt" />
-    <Text Include="..\..\..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt" />
-    <Text Include="..\..\..\..\docx\rfc2246 - TLS.txt" />
-    <Text Include="..\..\..\..\docx\rfc2522-session-key-mgr-ptl.txt" />
-    <Text Include="..\..\..\..\docx\rfc3257 - (SCTP) - Applicability Statement.txt" />
-    <Text Include="..\..\..\..\docx\rfc3286-An Introduction to sctp.txt" />
-    <Text Include="..\..\..\..\docx\rfc3309- (SCTP) Checksum Change.txt" />
-    <Text Include="..\..\..\..\docx\rfc3436-(SCTP) Transport Layer Security over sctp.txt" />
-    <Text Include="..\..\..\..\docx\rfc3554-(SCTP) On the Use of sctp with IPsec.txt" />
-    <Text Include="..\..\..\..\docx\rfc3758-(SCTP)  Partial Reliability Extension.txt" />
-    <Text Include="..\..\..\..\docx\rfc4301 - IPSec.txt" />
-    <Text Include="..\..\..\..\docx\rfc4820-(SCTP) padding-chunk.txt" />
-    <Text Include="..\..\..\..\docx\rfc4821 - Packetization Layer Path MTU Discovery.txt" />
-    <Text Include="..\..\..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt" />
-    <Text Include="..\..\..\..\docx\rfc4960.txt" />
-    <Text Include="..\..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt" />
-    <Text Include="..\..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt" />
-    <Text Include="..\..\..\..\docx\SCTP NAT Transverse Considerations.txt" />
-    <Text Include="..\..\..\..\docx\SCTP NAT Traversal Considerations.txt" />
-    <Text Include="..\..\..\..\docx\Security Attacks Found Against.txt" />
-    <Text Include="..\..\..\..\unittets\main.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\unittets\catch.hpp" />

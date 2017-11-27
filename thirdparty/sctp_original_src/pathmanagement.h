@@ -45,11 +45,11 @@
 #define PATHMANAGEMENT_H
 
 #ifdef HAVE_CONFIG_H
-    #include <config.h>
+#include <config.h>
 #endif
 
 
-/* The states of pathmanagement, also used for network status change */
+ /* The states of pathmanagement, also used for network status change */
 #define  PM_ACTIVE              0
 #define  PM_INACTIVE            1
 #define  PM_ADDED               2
@@ -80,8 +80,8 @@ void mpath_hb_received(SCTP_heartbeat * heartbeatChunk, unsigned int source_addr
 
 /* mpath_heartbeat_timer_expired is called by the adaption-layer when the heartbeat timer expires.
    params: timerID:            ID of timer
-           associationIDvoid:  pointer to the association-ID
-           pathIDvoid:         pointer to the path-ID
+		   associationIDvoid:  pointer to the association-ID
+		   pathIDvoid:         pointer to the path-ID
 */
 void mpath_heartbeat_timer_expired(TimerID timerID, void *associationIDvoid, void *pathIDvoid);
 
@@ -94,10 +94,10 @@ void pm_heartbeatAck(SCTP_heartbeat * heartbeatChunk);
 
 /*------------------- Signals from SCTP internal modules -----------------------------------------*/
 
-/* pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged. 
+/* pm_chunksAcked is called by reliable transfer whenever chunks have been acknowledged.
    Params: pathID:      path-ID
-           newRTO:      the newly determined RTO in milliseconds
-                        newRTO = 0 ==> no RTO measurements done
+		   newRTO:      the newly determined RTO in milliseconds
+						newRTO = 0 ==> no RTO measurements done
 */
 void pm_chunksAcked(short pathID, unsigned int newRTO);
 
@@ -108,9 +108,9 @@ void pm_chunksAcked(short pathID, unsigned int newRTO);
 void mpath_data_chunk_sent(short pathID);
 
 
-/* pm_chunksRetransmitted is called by reliable transfer whenever chunks have been 
+/* pm_chunksRetransmitted is called by reliable transfer whenever chunks have been
    retransmitted.
-   Params: pathID:      path-ID 
+   Params: pathID:      path-ID
 */
 gboolean pm_chunksRetransmitted(short pathID);
 
@@ -118,7 +118,7 @@ gboolean pm_chunksRetransmitted(short pathID);
 
 /* pm_rto_backoff is called by reliable transfer when the T3 retransmission timer expires.
    Each call of this function doubles the RTO (timer back off).
-   Params: pathID:      path-ID 
+   Params: pathID:      path-ID
 */
 void pm_rto_backoff(short pathID);
 
@@ -181,8 +181,8 @@ unsigned int pm_readRTO(short pathID);
 
 /* pm_readSRTT is called by reliable transfer and sctp-control to adjust T3-timeout and
    init-timeout, respectively.
-   Params: pathID:      path-ID 
-           returns:     current smoothed round trip time or 0xffffffff on error
+   Params: pathID:      path-ID
+		   returns:     current smoothed round trip time or 0xffffffff on error
 */
 unsigned int pm_readSRTT(short pathID);
 
@@ -214,7 +214,7 @@ unsigned short pm_readPrimaryPath(void);
    This function also initializes the path structures and starts the heartbeat timer for each
    path. For this reason it is recommended to call this function when communication up is called.
    Params: primaryPathID:      path-ID
-           noOfPaths           number of paths
+		   noOfPaths           number of paths
 */
 short pm_setPaths(short noOfPaths, short primaryPathID);
 
@@ -223,7 +223,7 @@ short pm_setPaths(short noOfPaths, short primaryPathID);
 /* mpath_new creates a new instance of pathmanagement. There is one pathmanagement instance
    par association.
    params: numberOfPaths:    # of paths of the association.
-           primaryPath:      initial primary path.
+		   primaryPath:      initial primary path.
 */
 void *mpath_new(short numberOfPaths, short primaryPath, void* sctpInstance);
 

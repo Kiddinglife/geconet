@@ -49,7 +49,7 @@
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #else
-//#include <Netioapi.h>
+  //#include <Netioapi.h>
 #include <ws2tcpip.h> // has #include <ws2ipdef.h> and #include <winsock2.h>
 #include <ws2def.h>
 #include <mstcpip.h>
@@ -304,12 +304,12 @@ enum SENDING_DEST_ADDR_TYPE
 /* Defines the level up to which the events are prInt32ed.
  VVERBOSE (6) means all events are prInt32ed.
  This parameter could also come from a command line option */
-//#ifndef GLOBAL_CURR_EVENT_LOG_LEVEL
-//#define GLOBAL_CURR_EVENT_LOG_LEVEL VERBOSE
-//#endif
+ //#ifndef GLOBAL_CURR_EVENT_LOG_LEVEL
+ //#define GLOBAL_CURR_EVENT_LOG_LEVEL VERBOSE
+ //#endif
 
- /* Definition of levels for the logging of errors */
- /* warning, recovery not necessary. */
+  /* Definition of levels for the logging of errors */
+  /* warning, recovery not necessary. */
 #define WARNNING_ERROR 4
 /* recovery from error was possible without affecting the system. */
 #define MINOR_ERROR  3

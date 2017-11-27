@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lib", "protocol-stack\protocol-stack.vcxproj", "{5ED16937-E7C5-49B7-9667-60BD36047BC4}"
 EndProject
@@ -9,121 +9,99 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "unit-tests\uni
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "origin_src", "origin-sctp-src\origin-sctp-src.vcxproj", "{E2616A5D-DC71-4A51-8E3C-67D897999573}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "..\..\..\..\gecoengine\mscv\2017\geco-engine\geco-engine-common\geco-engine-common.vcxproj", "{9DB6451B-55F3-4A06-9C23-22C43B515E3D}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "network", "..\..\..\..\gecoengine\mscv\2017\geco-engine\geco-engine-network\geco-engine-network.vcxproj", "{7547CE30-E374-4263-A0EE-97596D8A768E}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit-tests", "..\..\..\..\gecoengine\mscv\2017\geco-engine\unit-tests\unit-tests.vcxproj", "{14809528-32E1-49FD-B251-0CC94F62A495}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol", "..\..\..\..\gecoengine\mscv\2017\geco-engine\protocol\protocol.vcxproj", "{A1B4B6A8-5038-4A8E-80D4-55731987760F}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "math", "..\..\..\..\gecoengine\mscv\2017\geco-engine\geco-engine-mah\geco-engine-mah.vcxproj", "{210353A6-A8E8-48E7-92F6-7EF2522274BA}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docx", "docx", "{D4723109-935A-4AEC-80B4-34E192AF24C7}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt = ..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt
+		..\..\..\docx\A New Data Chunk for SCTP.txt = ..\..\..\docx\A New Data Chunk for SCTP.txt
+		..\..\..\docx\conn_procedures.txt = ..\..\..\docx\conn_procedures.txt
+		..\..\..\docx\Cumulative ASCONF chunk.txt = ..\..\..\docx\Cumulative ASCONF chunk.txt
+		..\..\..\docx\draft-hohendorf-secure-sctp-22.txt = ..\..\..\docx\draft-hohendorf-secure-sctp-22.txt
+		..\..\..\docx\Dynamic Address Reconfiguration.txt = ..\..\..\docx\Dynamic Address Reconfiguration.txt
+		..\..\..\docx\Load Sharing in Stream Control Transmission Protocol.txt = ..\..\..\docx\Load Sharing in Stream Control Transmission Protocol.txt
+		..\..\..\docx\Mobile SCTP.txt = ..\..\..\docx\Mobile SCTP.txt
+		..\..\..\docx\Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt = ..\..\..\docx\Non-Renegable Selective Acknowledgements (NR-SACKs) for SCTP.txt
+		..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt = ..\..\..\docx\Preventing SCTP Congestion Window Overgrowth During Changeover.txt
+		..\..\..\docx\Quick Failover Algorithm in SCTP.txt = ..\..\..\docx\Quick Failover Algorithm in SCTP.txt
+		..\..\..\docx\rfc-960-with-section-jumps.html = ..\..\..\docx\rfc-960-with-section-jumps.html
+		..\..\..\docx\rfc1191- ICMP Path MTU Discovery.txt = ..\..\..\docx\rfc1191- ICMP Path MTU Discovery.txt
+		..\..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt = ..\..\..\docx\rfc1321-The MD5 Message-Digest Algorithm.txt
+		..\..\..\docx\rfc2246 - TLS.txt = ..\..\..\docx\rfc2246 - TLS.txt
+		..\..\..\docx\rfc2522-session-key-mgr-ptl.txt = ..\..\..\docx\rfc2522-session-key-mgr-ptl.txt
+		..\..\..\docx\rfc3257 - (SCTP) - Applicability Statement.txt = ..\..\..\docx\rfc3257 - (SCTP) - Applicability Statement.txt
+		..\..\..\docx\rfc3286-An Introduction to sctp.txt = ..\..\..\docx\rfc3286-An Introduction to sctp.txt
+		..\..\..\docx\rfc3309- (SCTP) Checksum Change.txt = ..\..\..\docx\rfc3309- (SCTP) Checksum Change.txt
+		..\..\..\docx\rfc3436-(SCTP) Transport Layer Security over sctp.txt = ..\..\..\docx\rfc3436-(SCTP) Transport Layer Security over sctp.txt
+		..\..\..\docx\rfc3554-(SCTP) On the Use of sctp with IPsec.txt = ..\..\..\docx\rfc3554-(SCTP) On the Use of sctp with IPsec.txt
+		..\..\..\docx\rfc3758-(SCTP)  Partial Reliability Extension.txt = ..\..\..\docx\rfc3758-(SCTP)  Partial Reliability Extension.txt
+		..\..\..\docx\rfc4301 - IPSec.txt = ..\..\..\docx\rfc4301 - IPSec.txt
+		..\..\..\docx\rfc4820-(SCTP) padding-chunk.txt = ..\..\..\docx\rfc4820-(SCTP) padding-chunk.txt
+		..\..\..\docx\rfc4821 - Packetization Layer Path MTU Discovery.txt = ..\..\..\docx\rfc4821 - Packetization Layer Path MTU Discovery.txt
+		..\..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt = ..\..\..\docx\rfc4895-(SCTP) Authenticated Chunks.txt
+		..\..\..\docx\rfc4960.txt = ..\..\..\docx\rfc4960.txt
+		..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt = ..\..\..\docx\rfc6525-(SCTP) Stream Reconfiguration.txt
+		..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt = ..\..\..\docx\rfc7053 - (SCTP) SACK-IMMEDIATELY Extension.txt
+		..\..\..\docx\SCTP NAT Transverse Considerations.txt = ..\..\..\docx\SCTP NAT Transverse Considerations.txt
+		..\..\..\docx\SCTP NAT Traversal Considerations.txt = ..\..\..\docx\SCTP NAT Traversal Considerations.txt
+		..\..\..\docx\Security Attacks Found Against.txt = ..\..\..\docx\Security Attacks Found Against.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
 		Debug|Mixed Platforms = Debug|Mixed Platforms
 		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
+		Release|ARM = Release|ARM
 		Release|Mixed Platforms = Release|Mixed Platforms
 		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|ARM.ActiveCfg = Debug|Win32
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|Win32.ActiveCfg = Debug|x64
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|Win32.Build.0 = Debug|x64
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|x64.ActiveCfg = Debug|x64
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Debug|x64.Build.0 = Debug|x64
+		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|ARM.ActiveCfg = Release|Win32
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|Win32.ActiveCfg = Release|x64
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|Win32.Build.0 = Release|x64
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|x64.ActiveCfg = Release|x64
 		{5ED16937-E7C5-49B7-9667-60BD36047BC4}.Release|x64.Build.0 = Release|x64
+		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|ARM.ActiveCfg = Debug|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|Win32.ActiveCfg = Debug|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|Win32.Build.0 = Debug|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|x64.ActiveCfg = Debug|x64
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Debug|x64.Build.0 = Debug|x64
+		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|ARM.ActiveCfg = Release|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|Win32.ActiveCfg = Release|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|Win32.Build.0 = Release|Win32
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|x64.ActiveCfg = Release|x64
 		{1CDE268D-100B-4CE5-8373-F44F055CA9E8}.Release|x64.Build.0 = Release|x64
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|ARM.ActiveCfg = Debug|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Win32.ActiveCfg = Debug|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|Win32.Build.0 = Debug|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Debug|x64.ActiveCfg = Debug|Win32
+		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|ARM.ActiveCfg = Release|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Win32.ActiveCfg = Release|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|Win32.Build.0 = Release|Win32
 		{E2616A5D-DC71-4A51-8E3C-67D897999573}.Release|x64.ActiveCfg = Release|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Debug|Win32.ActiveCfg = Debug|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Debug|Win32.Build.0 = Debug|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Debug|x64.ActiveCfg = Debug|x64
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Debug|x64.Build.0 = Debug|x64
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Release|Win32.ActiveCfg = Release|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Release|Win32.Build.0 = Release|Win32
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Release|x64.ActiveCfg = Release|x64
-		{9DB6451B-55F3-4A06-9C23-22C43B515E3D}.Release|x64.Build.0 = Release|x64
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Debug|Win32.ActiveCfg = Debug|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Debug|Win32.Build.0 = Debug|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Debug|x64.ActiveCfg = Debug|x64
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Debug|x64.Build.0 = Debug|x64
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Release|Win32.ActiveCfg = Release|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Release|Win32.Build.0 = Release|Win32
-		{7547CE30-E374-4263-A0EE-97596D8A768E}.Release|x64.ActiveCfg = Release|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Debug|Win32.ActiveCfg = Debug|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Debug|Win32.Build.0 = Debug|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Debug|x64.ActiveCfg = Debug|x64
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Debug|x64.Build.0 = Debug|x64
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Release|Win32.ActiveCfg = Release|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Release|Win32.Build.0 = Release|Win32
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Release|x64.ActiveCfg = Release|x64
-		{14809528-32E1-49FD-B251-0CC94F62A495}.Release|x64.Build.0 = Release|x64
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Debug|Win32.Build.0 = Debug|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Debug|x64.ActiveCfg = Debug|x64
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Debug|x64.Build.0 = Debug|x64
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Release|Win32.ActiveCfg = Release|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Release|Win32.Build.0 = Release|Win32
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Release|x64.ActiveCfg = Release|x64
-		{A1B4B6A8-5038-4A8E-80D4-55731987760F}.Release|x64.Build.0 = Release|x64
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Debug|Win32.ActiveCfg = Debug|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Debug|Win32.Build.0 = Debug|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Debug|x64.ActiveCfg = Debug|x64
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Debug|x64.Build.0 = Debug|x64
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Release|Win32.ActiveCfg = Release|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Release|Win32.Build.0 = Release|Win32
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Release|x64.ActiveCfg = Release|x64
-		{210353A6-A8E8-48E7-92F6-7EF2522274BA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2735330B-BE28-4B2C-A84C-EED81BD51167}
 	EndGlobalSection
 EndGlobal
