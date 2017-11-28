@@ -245,14 +245,53 @@ unwilling or incapable of using any of the address types indicated by
 its peer.
 45)
 
+
+
+"""
 The general strategy is for the Packetization Layer to find an
 appropriate Path MTU by probing the path with progressively larger
 packets.  If a probe packet is successfully delivered, then the
 effective Path MTU is raised to the probe size.
+"""
+probing_path_with_progressively_larger_packets()
+If probe_acked:
+	effective_path_mtu = probe_size
 
+
+
+"""
 The isolated loss of a probe packet (with or without an ICMP Packet
 Too Big message) is treated as an indication of an MTU limit, and not
 as a congestion indicator.  In this case alone, the Packetization
 Protocol is permitted to retransmit any missing data without
 adjusting the congestion window.
+"""
+If probe_not_acked and isolated:
+	# MTU limit but not congestion.
+	# NOT adjusting the congestion window.
+	Retransmit_any_missing_data() 
+
+
+
+"""
+If there is a timeout or additional packets are lost during the
+probing process, the probe is considered to be inconclusive (e.g.,
+the lost probe does not necessarily indicate that the probe exceeded
+the Path MTU).  Furthermore, the losses are treated like any other
+congestion indication: window or rate adjustments are mandatory per
+the relevant congestion control standards [RFC2914].  Probing can
+resume after a delay that is determined by the nature of the detected
+failure.
+"""
+If hb_timeout or data_chunk_lost:
+	# probe inconclusive
+	ajust_congestio_window_and_rate_on_that_destaddr()
+	increase_hb_timeout_by_rto()
+
+
+
+
+
+
+
 
