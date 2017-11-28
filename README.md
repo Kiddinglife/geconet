@@ -3,10 +3,7 @@
 
 ## Aimed for Online Games
 
-GecoNet™ is an Open Source/Free Software cross-platform complete transport protocol stack 
-similar to TCP and Reliable-UDP. It is implemented in the user space with raw sockets and/or udp sockets(setup by users).
-However, it is generic and may supersede TCP and Reliable-UDP in other applications as well.
-building upon RFC-4960 standards and currently supports Windows, Linux and Mac.  
+GecoNet™ is a complete transport protocol stack similar to TCP and Reliable-UDP. It is implemented in the user space with raw sockets and/or udp sockets(setup by users). However, it is generic and may supersede TCP and Reliable-UDP in other applications as well.
 
 GecoNet is not a simple rebranding of **RFC4960-SCTP-PROTOCOL**, but rather incorporates already
 in its initial version several bug- and security fixes as well as new features to make it 
