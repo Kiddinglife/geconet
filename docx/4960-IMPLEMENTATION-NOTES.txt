@@ -245,4 +245,14 @@ unwilling or incapable of using any of the address types indicated by
 its peer.
 45)
 
+The general strategy is for the Packetization Layer to find an
+appropriate Path MTU by probing the path with progressively larger
+packets.  If a probe packet is successfully delivered, then the
+effective Path MTU is raised to the probe size.
+
+The isolated loss of a probe packet (with or without an ICMP Packet
+Too Big message) is treated as an indication of an MTU limit, and not
+as a congestion indicator.  In this case alone, the Packetization
+Protocol is permitted to retransmit any missing data without
+adjusting the congestion window.
 

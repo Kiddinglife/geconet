@@ -8,13 +8,14 @@ Very fast, header only, C++ logging library. [![Build Status](https://travis-ci.
 
 * Copy the source [folder](https://github.com/gabime/spdlog/tree/master/include/spdlog) to your build tree and use a C++11 compiler.
 
-#### Or use your favourite package manager:
+#### Or use your favorite package manager:
 
 * Ubuntu: `apt-get install libspdlog-dev`
 * Homebrew: `brew install spdlog`
 * FreeBSD:  `cd /usr/ports/devel/spdlog/ && make install clean`
 * Fedora: `yum install spdlog`
-* Arch Linux: `pacman -S spdlog-git`
+* Gentoo: `emerge dev-libs/spdlog`
+* Arch Linux: `yaourt -S spdlog-git`
 * vcpkg: `vcpkg install spdlog`
  
 
@@ -24,12 +25,14 @@ Very fast, header only, C++ logging library. [![Build Status](https://travis-ci.
  * Mac OSX (clang 3.5+)
  * Android
 
-##Features
+## Features
 * Very fast - performance is the primary goal (see [benchmarks](#benchmarks) below).
 * Headers only, just copy and use.
 * Feature rich [call style](#usage-example) using the excellent [fmt](https://github.com/fmtlib/fmt) library.
+* Optional printf syntax support.
 * Extremely fast asynchronous mode (optional) - using lockfree queues and other tricks to reach millions of calls/sec.
 * [Custom](https://github.com/gabime/spdlog/wiki/3.-Custom-formatting) formatting.
+* Conditional Logging
 * Multi/Single threaded loggers.
 * Various log targets:
     * Rotating log files.
@@ -91,6 +94,10 @@ int main(int, char*[])
         console->info("Welcome to spdlog!");
         console->error("Some error message with arg{}..", 1);
 
+	// Conditional logging example
+        auto i = 2;
+        console->warn_if(i != 0, "an important message");
+
         // Formatting examples
         console->warn("Easy padding in numbers like {:08d}", 12);
         console->critical("Support for int: {0:d};  hex: {0:x};  oct: {0:o}; bin: {0:b}", 42);
@@ -121,11 +128,11 @@ int main(int, char*[])
         rotating_logger->info("This is another message with custom format");
 
 
-		// Runtime log levels
-		spd::set_level(spd::level::info); //Set global log level to info
-		console->debug("This message shold not be displayed!");
-		console->set_level(spd::level::debug); // Set specific logger's log level
-		console->debug("This message shold be displayed..");
+        // Runtime log levels
+	spd::set_level(spd::level::info); //Set global log level to info
+	console->debug("This message should not be displayed!");
+	console->set_level(spd::level::debug); // Set specific logger's log level
+	console->debug("This message should be displayed..");
 
         // Compile time log levels
         // define SPDLOG_DEBUG_ON or SPDLOG_TRACE_ON
@@ -149,13 +156,13 @@ int main(int, char*[])
         err_handler_example();
 
         // Apply a function on all registered loggers
-        spd::apply_all([&](std::shared_ptr<spdlog::logger> l)
+        spd::apply_all([&](std::shared_ptr<spd::logger> l)
         {
             l->info("End of example.");
         });
 
         // Release and close all loggers
-        spdlog::drop_all();
+        spd::drop_all();
     }
     // Exceptions will only be thrown upon failed logger or sink construction (not during logging)
     catch (const spd::spdlog_ex& ex)
@@ -168,7 +175,7 @@ int main(int, char*[])
 void async_example()
 {
     size_t q_size = 4096; //queue size must be power of 2
-    spdlog::set_async_mode(q_size);
+    spd::set_async_mode(q_size);
     auto async_file = spd::daily_logger_st("async_file_logger", "logs/async_log.txt");
     for (int i = 0; i < 100; ++i)
         async_file->info("Async message #{}", i);
@@ -206,7 +213,7 @@ void user_defined_example()
 //
 void err_handler_example()
 {	
-	spdlog::set_error_handler([](const std::string& msg) {
+	spd::set_error_handler([](const std::string& msg) {
 		std::cerr << "my err handler: " << msg << std::endl;
 	}); 
 	// (or logger->set_error_handler(..) to set for specific logger)

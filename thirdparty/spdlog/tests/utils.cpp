@@ -1,14 +1,17 @@
 #include "includes.h"
 
+
 void prepare_logdir()
 {
     spdlog::drop_all();
 #ifdef _WIN32
-    auto rv = system("del /F /Q logs\\*");
+    system("if not exist logs mkdir logs");
+    system("del /F /Q logs\\*");
 #else
-    auto rv = system("rm -f logs/*");
-#endif
+    auto rv = system("mkdir -p logs");
+    rv = system("rm -f logs/*");
     (void)rv;
+#endif
 }
 
 
@@ -42,4 +45,12 @@ std::size_t get_filesize(const std::string& filename)
         throw std::runtime_error("Failed open file ");
 
     return static_cast<std::size_t>(ifs.tellg());
+}
+
+
+// source: https://stackoverflow.com/a/2072890/192001
+bool ends_with(std::string const & value, std::string const & ending)
+{
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
