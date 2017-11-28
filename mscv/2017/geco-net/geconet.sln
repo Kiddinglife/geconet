@@ -11,7 +11,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "origin_src", "origin-sctp-s
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docx", "docx", "{D4723109-935A-4AEC-80B4-34E192AF24C7}"
 	ProjectSection(SolutionItems) = preProject
-		..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt = ..\..\..\docx\4960-IMPLEMENTATION-NOTES.txt
+		..\..\..\docx\4960-IMPLEMENTATION-NOTES.py = ..\..\..\docx\4960-IMPLEMENTATION-NOTES.py
 		..\..\..\docx\A New Data Chunk for SCTP.txt = ..\..\..\docx\A New Data Chunk for SCTP.txt
 		..\..\..\docx\conn_procedures.txt = ..\..\..\docx\conn_procedures.txt
 		..\..\..\docx\Cumulative ASCONF chunk.txt = ..\..\..\docx\Cumulative ASCONF chunk.txt
