@@ -260,79 +260,122 @@ if probe_acked:
 
 ##################### HB ############################################
 """
-The isolated loss of a probe packet (with or without an ICMP Packet
-Too Big message) is treated as an indication of an MTU limit, and not
-as a congestion indicator.  In this case alone, the Packetization
-Protocol is permitted to retransmit any missing data without
-adjusting the congestion window.
+    6.1.  Mechanism to Detect Loss
+
+        It is important that the Packetization Layer has a timely and robust
+        mechanism for detecting and reporting losses.  PLPMTUD makes MTU
+        adjustments on the basis of detected losses.  Any delays or
+        inaccuracy in loss notification is likely to result in incorrect MTU
+        decisions or slow convergence. 
+ 
+        It is important that the mechanism can robustly distinguish between 
+        the isolated loss of just a probe and 
+        other losses in the probe's leading and trailing windows.
+        t0:leadwin --- t1:probsent --- t2:trailwin --- t3:probeacked 
+        [ Leading window:  Any unacknowledged data in a flow at the time a probe is sent.
+        Trailing window:  Any data in a flow sent after a probe, but before the probe is acknowledged. ]
+
+        It is best if Packetization Protocols use an explicit loss detection
+        mechanism such as a Selective Acknowledgment (SACK) scoreboard
+        [RFC3517] or ACK Vector [RFC4340] to distinguish real losses from
+        reordered data, although implicit mechanisms such as TCP Reno style
+        duplicate acknowledgments counting are sufficient.
+
+   7.1.  Packet Size Ranges
+
+        describes the probing method using three state variables:
+            search_low:          
+                @note: search_low is fixed 
+                The smallest useful probe size, minus one.  The network
+                is expected to be able to deliver packets of size search_low.
+            eff_pmtu:  
+                The effective PMTU for this flow.  This is the largest 
+                non-probe packet permitted by PLPMTUD for the path.
+            search_high: 
+                @note: search_high is un-fixed
+                The greatest useful probe size.  Packets of size search_high are 
+                expected to be too large for the network to deliver.
+
+        When transmitting non-probes, the Packetization Layer SHOULD create 
+        packets of a size less than or equal to eff_pmtu.
+
+        When transmitting probes, the Packetization Layer MUST select a probe
+        size that is larger than search_low and smaller than or equal to
+        search_high.
+
+        When probing upward, eff_pmtu always equals search_low.  Normally,
+        eff_pmtu will be greater than or equal to search_low and less than
+        search_high.  It is generally expected but not required that probe
+        size will be greater than eff_pmtu.
+
+        For initial conditions when there is no information about the path,
+        eff_pmtu may be greater than search_low.  The initial value of
+        search_low SHOULD be conservatively low, but performance may be
+        better if eff_pmtu starts at a higher, less conservative, value.  See
+        Section 7.2.
 """
-data_chunk_rtx = mreltx_data_retransmitted()
-if probe_not_acked and not data_chunk_rtx: 
-    # it is isolated loss of a probe packet 
-	# MTU limit not congestion
-	# NOT adjusting the congestion window.
-    pass
+
+"""
+    7.2.  Selecting Initial Values
+
+        The initial value for search_high SHOULD be the largest possible
+        packet that might be supported by the flow.  the initial value for
+        search_high MAY be limited by a configuration option to prevent
+        probing above some maximum size.  
+"""
+search_high = 1500
+search_high = search_high
+search_high_ulp = 65535
+search_high = search_high_ulp
+
+"""
+        It is RECOMMENDED that search_low be initially set to an MTU size
+        that is likely to work over a very wide range of environments.  Given
+        today's technologies, a value of 1024 bytes is probably safe enough.
+        The initial value for search_low SHOULD be configurable.
+"""
+search_low_default = 1024
+search_low = search_low_default 
+search_low_ulp = 1400
+search_low = search_low_ulp 
+
+"""
+       Note that the initial eff_pmtu can be any value in the range
+       search_low to search_high.  An initial eff_pmtu of 1400 bytes might
+       be a good compromise because it would be safe for nearly all tunnels
+       over all common networking gear, and yet close to the optimal MTU for
+       the majority of paths in the Internet today
+"""
+initial_eff_pmtu = 1400
+
+"""
+        Each Packetization Layer MUST determine when probing has converged,
+        that is, when the probe size range is small enough that further
+        probing is no longer worth its cost.  When probing has converged, a
+        timer SHOULD be set.  When the timer expires, search_high should be
+        reset to its initial value (described above) so that probing can
+        resume.  Thus, if the path changes, increasing the Path MTU, then the
+        flow will eventually take advantage of it.  The value for this timer
+        MUST NOT be less than 5 minutes and is recommended to be 10 minutes,
+        per RFC 1981.
+        @note: search_low is fixed and change search high and effpmtu
+"""
 
 
 """
-If there is a timeout or additional packets are lost during the
-probing process, the probe is considered to be inconclusive (e.g.,
-the lost probe does not necessarily indicate that the probe exceeded
-the Path MTU).  Furthermore, the losses are treated like any other
-congestion indication: window or rate adjustments are mandatory per
-the relevant congestion control standards [RFC2914].  Probing can
-resume after a delay that is determined by the nature of the detected
-failure.
-t0:sdata---t1:sdata---t2:shb---t3:sdata---t4:hbexpired----
+Whenever the MTU is raised, the congestion state variables MUST be
+rescaled so as not to raise the window size in bytes (or data rate in
+bytes per seconds).
 """
-if hb_timeout or data_chunk_lost:
-	# probe inconclusive
-	ajust_congestion_window_or_rate()
-	resume_hb_after_rto()
-
 
 """
-PLPMTUD uses a searching technique to find the Path MTU.  Each
-conclusive probe narrows the MTU search range, either by raising the
-lower limit on a successful probe or lowering the upper limit on a
-failed probe, converging toward the true Path MTU.  For most
-transport layers, the search should be stopped once the range is
-narrow enough that the benefit of a larger effective Path MTU is
-smaller than the search overhead of finding it.
+For many implementations, a flown would naturally correspond to an
+instance of each protocol (i.e., each connection or session). 
 """
-if conclusive_probe:
-	if hb_timeout:
-		update_upper_limit()
-	if succeed:
-		update_lower_limit()
-
 
 """
-The most likely (and least serious) probe failure is due to the link
-experiencing congestion-related losses while probing.  In this case,
-it is appropriate to retry a probe of the same size as soon as the
-Packetization Layer has fully adapted to the congestion and recovered
-from the losses.  In other cases, additional losses or timeouts
-indicate problems with the link or Packetization Layer.  In these
-situations, it is desirable to use longer delays depending on the
-severity of the error.
-@rfc4960 
-    Section 7 congestion control 
-    SCTP congestion control is always applied to the entire association,
-    and not to individual streams.
-@note: 
-    1. othercases = [peer_recvbuf_full, network_hardware_issue(can be ignored)]
+server shoulld cache effpmtu for a peer. If connect again shortly, it should still use that effpmtu. 
+If the MTU matches the outgoing interface, 
+there is no need for the system to cache that entry taking up more resources on the server. 
 """
-congested = mrel_is_congested();
-if congested:
-    
-    
-
-
-
-
-
-
-
-
 
