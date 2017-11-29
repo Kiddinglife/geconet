@@ -258,6 +258,7 @@ if probe_acked:
 	effective_path_mtu = probe_size
 
 
+##################### HB ############################################
 """
 The isolated loss of a probe packet (with or without an ICMP Packet
 Too Big message) is treated as an indication of an MTU limit, and not
@@ -265,10 +266,12 @@ as a congestion indicator.  In this case alone, the Packetization
 Protocol is permitted to retransmit any missing data without
 adjusting the congestion window.
 """
-if probe_not_acked and isolated:
-	# MTU limit but not congestion.
+data_chunk_rtx = mreltx_data_retransmitted()
+if probe_not_acked and not data_chunk_rtx: 
+    # it is isolated loss of a probe packet 
+	# MTU limit not congestion
 	# NOT adjusting the congestion window.
-	Retransmit_any_missing_data() 
+    pass
 
 
 """
@@ -280,11 +283,12 @@ congestion indication: window or rate adjustments are mandatory per
 the relevant congestion control standards [RFC2914].  Probing can
 resume after a delay that is determined by the nature of the detected
 failure.
+t0:sdata---t1:sdata---t2:shb---t3:sdata---t4:hbexpired----
 """
 if hb_timeout or data_chunk_lost:
 	# probe inconclusive
-	ajust_congestio_window_and_rate_on_that_destaddr()
-	increase_hb_timeout_by_rto()
+	ajust_congestion_window_or_rate()
+	resume_hb_after_rto()
 
 
 """
@@ -301,6 +305,29 @@ if conclusive_probe:
 		update_upper_limit()
 	if succeed:
 		update_lower_limit()
+
+
+"""
+The most likely (and least serious) probe failure is due to the link
+experiencing congestion-related losses while probing.  In this case,
+it is appropriate to retry a probe of the same size as soon as the
+Packetization Layer has fully adapted to the congestion and recovered
+from the losses.  In other cases, additional losses or timeouts
+indicate problems with the link or Packetization Layer.  In these
+situations, it is desirable to use longer delays depending on the
+severity of the error.
+@rfc4960 
+    Section 7 congestion control 
+    SCTP congestion control is always applied to the entire association,
+    and not to individual streams.
+@note: 
+    1. othercases = [peer_recvbuf_full, network_hardware_issue(can be ignored)]
+"""
+congested = mrel_is_congested();
+if congested:
+    
+    
+
 
 
 

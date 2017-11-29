@@ -920,8 +920,8 @@ void mpath_set_paths(uint noOfPaths, ushort primaryPathID) // mpath_set_paths
 			pmData->path_params[i].state = (i == primaryPathID ? PM_ACTIVE : PM_PATH_UNCONFIRMED);
 			pmData->path_params[i].rto_update = gettimestamp(); 			// after RTO we can do next RTO update 
 
-			// this is for pure path verifi but now we need to do pmtu probe with hb so use timeout_ms  0 to
-			// send pmtu hb at once on primary path as we want reach max network throughouts asap
+			// this is for pure path verify but now we need to do pmtu probe with hb so use timeout_ms  0 to
+			// send pmtu hb at once on primary path as we want reach max network throughout asap
 			timeout tout;
 			tout.callback.action = &mpath_heartbeat_timer_expired;
 			tout.callback.type = TIMER_TYPE_HEARTBEAT;
