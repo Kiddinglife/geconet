@@ -348,6 +348,23 @@ search_low = search_low_ulp
 """
 initial_eff_pmtu = 1400
 
+
+"""
+when on_communiction_up() called, 
+if peer ip is loopback ip or localhost ip or lan ip, 
+no need to probe and use 1500 as effpmtu
+All lan addr:
+> 192.168.0.0 - 192.168.255.255 (65,536 IP addresses)
+> 172.16.0.0 - 172.31.255.255 (1,048,576 IP addresses)
+> 169.254.0.0 - 169.254.255.255 (65,536 IP addresses)
+> 10.0.0.0 - 10.255.255.255 (16,777,216 IP addresses)
+@note: unaccepted as effpmtu is possible to be lower than 1500 in lan network
+"""
+
+"""
+--- s
+"""
+
 """
         Each Packetization Layer MUST determine when probing has converged,
         that is, when the probe size range is small enough that further
@@ -378,4 +395,10 @@ server shoulld cache effpmtu for a peer. If connect again shortly, it should sti
 If the MTU matches the outgoing interface, 
 there is no need for the system to cache that entry taking up more resources on the server. 
 """
+
+def msm_on_conn_up():
+    start_probe()
+    
+    pass
+
 
