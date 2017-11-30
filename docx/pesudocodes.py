@@ -323,12 +323,12 @@ if probe_acked:
         search_high MAY be limited by a configuration option to prevent
         probing above some maximum size.  
 """
-search_high = 1500
-search_high = search_high
+search_high_init = 1500
+search_high = search_high_init
 search_high_ulp = 65535
 search_high = search_high_ulp
 
-"""
+"""  
         It is RECOMMENDED that search_low be initially set to an MTU size
         that is likely to work over a very wide range of environments.  Given
         today's technologies, a value of 1024 bytes is probably safe enough.
@@ -350,19 +350,15 @@ initial_eff_pmtu = 1400
 
 
 """
-when on_communiction_up() called, 
-if peer ip is loopback ip or localhost ip or lan ip, 
-no need to probe and use 1500 as effpmtu
-All lan addr:
-> 192.168.0.0 - 192.168.255.255 (65,536 IP addresses)
-> 172.16.0.0 - 172.31.255.255 (1,048,576 IP addresses)
-> 169.254.0.0 - 169.254.255.255 (65,536 IP addresses)
-> 10.0.0.0 - 10.255.255.255 (16,777,216 IP addresses)
-@note: unaccepted as effpmtu is possible to be lower than 1500 in lan network
-"""
-
-"""
---- s
+        when on_communiction_up() called, 
+        if peer ip is loopback ip or localhost ip or lan ip, 
+        no need to probe and use 1500 as effpmtu
+        All lan addr:
+        > 192.168.0.0 - 192.168.255.255 (65,536 IP addresses)
+        > 172.16.0.0 - 172.31.255.255 (1,048,576 IP addresses)
+        > 169.254.0.0 - 169.254.255.255 (65,536 IP addresses)
+        > 10.0.0.0 - 10.255.255.255 (16,777,216 IP addresses)
+        @note: unaccepted as effpmtu is possible to be lower than 1500 in lan network
 """
 
 """
@@ -380,25 +376,71 @@ All lan addr:
 
 
 """
-Whenever the MTU is raised, the congestion state variables MUST be
-rescaled so as not to raise the window size in bytes (or data rate in
-bytes per seconds).
+        Whenever the MTU is raised, the congestion state variables MUST be
+        rescaled so as not to raise the window size in bytes (or data rate in
+        bytes per seconds).
+
+        For many implementations, a flown would naturally correspond to an
+        instance of each protocol (i.e., each connection or session). 
+
+        server shoulld cache effpmtu for a peer.  If connect again shortly, it should still use that effpmtu. 
+        If the MTU matches the outgoing interface,  there is no need for the system to cache that entry 
+        taking up more resources on the server. 
 """
 
 """
-For many implementations, a flown would naturally correspond to an
-instance of each protocol (i.e., each connection or session). 
-"""
+    7.4.  Probing Preconditions
 
-"""
-server shoulld cache effpmtu for a peer. If connect again shortly, it should still use that effpmtu. 
-If the MTU matches the outgoing interface, 
-there is no need for the system to cache that entry taking up more resources on the server. 
-"""
+       Before sending a probe, the flow MUST meet at least the following
+       conditions:
 
-def msm_on_conn_up():
-    start_probe()
-    
-    pass
+       o  It has no outstanding probes or losses.
+
+       o  If the last probe failed or was inconclusive, then the probe
+          timeout has expired (see Section 7.6.2).
+
+       o  The available window is greater than the probe size.
+
+       o  For a protocol using in-band data for probing, enough data is
+          available to send the probe.
+
+        The delayed sending
+        algorithm SHOULD use some self-scaling technique to appropriately
+        limit the time that the data is delayed.  
+        @note   jump_probe_sizes = [ search_high, v1,  v2 , v3, search_low:fixed:576 ] 
+        # probe from search_low, when succeed, headoff timeout
+        curr_timeout -= avg_headoff
+        mtran_reset_timeout(curr_timeout)
+       >>>>>>>>>|  send 8 packets with 8 different probe sizes
+       >>>>>>>>>>>>>>>>| estimated tick to recv hb2ack
+       >>>>>>>>>>>>>|  recv hb2ack  : update rtt and rto
+       --------------------------------------------| hb_timeout 
+"""
+jump_probe_sizes = [search_high, v1,  v2 , v3, v4, search_low] # search_low has a fixed value of 576
+def mrecv_on_conn_up():
+    for probe_size in jump_probe_sizes:
+        hbchunk = mchunk_make_hb(probe_size)
+        msm_send_packet(hbchunk)
+
+def on_hb_acked(effpmtu, path):
+    if mpth.is_quick_probe:
+        mpath_update_rtt_and_rto()
+        path.effpmtu = effpmtu
+        if effpmtu == search_high or effpmtu == v1:
+            # we are lucky we meet first 2 highest pmtu
+            mpth.is_quick_probe = False
+            ulp_conn_up()
+    else:
+        # @TODO: do normal things when hb acked ...
+        pass
+
+def mpath_quick_probe_expired():
+    pid = find_highest_pmtu_path_id()
+    mpath_set_primary_path(pid)
+    mpth.is_quick_probe = False
+    ulp_conn_up()
+
+
+
 
 
