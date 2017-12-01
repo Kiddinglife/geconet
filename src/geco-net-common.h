@@ -43,6 +43,7 @@
 #include <sys/ioctl.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
+#include <ifaddrs.h>
 #ifdef USE_UDP
 #include <netinet/udp.h>
 #endif
@@ -51,7 +52,7 @@
 #else
   //#include <Netioapi.h>
 #include <ws2tcpip.h> // has #include <ws2ipdef.h> and #include <winsock2.h>
-#include <ws2def.h>
+#include <ws2ipdef.h>
 #include <mstcpip.h>
 #include <mswsock.h>
 #include <iphlpapi.h>
