@@ -116,6 +116,7 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
 	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin"; // passed on 25/11/2017
+	::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_getifaddrs";
 
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_geco_instance"; // passed on 28/02/2017
