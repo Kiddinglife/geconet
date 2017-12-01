@@ -545,7 +545,7 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
                                  POLLIN | POLLPRI, cbunion, 0);
 
   //you have to put stdin as last because we test it
-  mtra_add_stdin_cb (stdin_cb);
+  mtra_add_stdin_cb (&stdin_cb);
   //mtra_set_tick_task_cb (task_cb, (void*) "this is user datta");
 
   timeout* tout = (timeout*) geco_malloc_ext (sizeof(timeout), __FILE__,
@@ -553,7 +553,9 @@ TEST(TRANSPORT_MODULE, test_process_stdin)
   tout->callback.action = &wheel_timer_cb;
   tout->callback.type = TIMER_TYPE_INIT;
   tout->flags = TIMEOUT_INT;
-  timeouts_add (mtra_read_timeouts (), tout, 1800 * stamps_per_sec ());
+  timeouts* tmouts = mtra_read_timeouts();
+  timeout_t tm = 1800 * stamps_per_sec ();
+  timeouts_add (tmouts, tout, tm);
 
   socket_read_start_cb_t mtra_socket_read_start = socket_read_start;
   socket_read_end_cb_t mtra_socket_read_end = socket_read_end;
@@ -607,13 +609,12 @@ TEST(TRANSPORT_MODULE, test_getifaddrs)
     /* Display interface name and family (including symbolic
      form of the latter for the common families) */
 
-    printf (
-        "%-8s %s (%d) MTU(%d) ",
-        ifa->ifa_name,
-        (family == AF_PACKET) ? "AF_PACKET" : (family == AF_INET) ? "AF_INET" :
-        (family == AF_INET6) ? "AF_INET6" : "???",
-        family, ifr.ifr_mtu);
-
+//    printf (
+//        "%-8s %s (%d) MTU(%d) ",
+//        ifa->ifa_name,
+//        (family == AF_PACKET) ? "AF_PACKET" : (family == AF_INET) ? "AF_INET" :
+//        (family == AF_INET6) ? "AF_INET6" : "???",
+//        family, ifr.ifr_mtu);
     /* For an AF_INET* interface address, display the address */
     char host[NI_MAXHOST];
     char sbuf[NI_MAXSERV];
@@ -644,15 +645,15 @@ TEST(TRANSPORT_MODULE, test_getifaddrs)
       printf ("host: %s, srv:%s\n", host, sbuf);
 
     }
-    else if (family == AF_PACKET && ifa->ifa_data != NULL)
-    {
-      struct rtnl_link_stats *stats = (struct rtnl_link_stats*) ifa->ifa_data;
-
-      printf ("tx_packets = %u; rx_packets = %u"
-              "tx_bytes   = %u; rx_bytes   = %u\n",
-              stats->tx_packets, stats->rx_packets, stats->tx_bytes,
-              stats->rx_bytes);
-    }
+//    else if (family == AF_PACKET && ifa->ifa_data != NULL)
+//    {
+//      struct rtnl_link_stats *stats = (struct rtnl_link_stats*) ifa->ifa_data;
+//
+//      printf ("tx_packets = %u; rx_packets = %u"
+//              "tx_bytes   = %u; rx_bytes   = %u\n",
+//              stats->tx_packets, stats->rx_packets, stats->tx_bytes,
+//              stats->rx_bytes);
+//    }
   }
 
   freeifaddrs (ifaddr);

@@ -33,7 +33,8 @@ static int event_trace_levels[TRACE_MUDULE_SIZE];
 static const char* error_loglvls_str[4] =
 { "fatal_error_exit", "major_error_abort", "minor_error", "lwarnning_error" };
 static const char* event_loglvls_str[6] =
-{ "extevent_unexpected", "extevent", "intevent_important", "intevent", "VERBOSE", "lvverbos" };
+{ "extevent_unexpected", "extevent", "intevent_important", "intevent",
+		"VERBOSE", "lvverbos" };
 
 void read_trace_levels(void)
 {
@@ -50,39 +51,45 @@ void read_trace_levels(void)
 		globalTrace = true;
 		for (i = 0; i < TRACE_MUDULE_SIZE; i++)
 		{
-			ret = fscanf(fptr, "%s%d%d", traced_modules[i], &error_trace_levels[i],
-				&event_trace_levels[i]);
+			ret = fscanf(fptr, "%s%d%d", traced_modules[i],
+					&error_trace_levels[i], &event_trace_levels[i]);
 			if (ret >= 1)
 			{
 				if (strcmp(traced_modules[i], "LOGFILE") == 0)
 				{
-					printf("Logging all errors and events to file ./tmp%d.log\n", (int)getpid());
+					printf(
+							"Logging all errors and events to file ./tmp%d.log\n",
+							(int) getpid());
 					fileTrace = true;
-					sprintf(filename, "./tmp%d.log", (int)getpid());
+					sprintf(filename, "./tmp%d.log", (int) getpid());
 					logfile = fopen(filename, "w+");
 					return;
 				}
 			}
 
-			if (ferror(fptr)) abort();
+			if (ferror(fptr))
+				abort();
 
 			//if we have less than TRACE_MUDULE_SIZE mudlues to trace, this will break loop
-			if (feof(fptr)) break;
+			if (feof(fptr))
+				break;
 
 			globalTrace = false;
 		}
 		noOftracedModules = i;
-		if (i <= 1) globalTrace = true;
+		if (i <= 1)
+			globalTrace = true;
 		printf("  globalTrace = %s \n", globalTrace ? "TRUE" : "FALSE");
 	}
 	else
 	{
 		globalTrace = true;
 	}
-	printf("globalTrace '%s', modules size '%d'\n", globalTrace ? "TRUE" : "FALSE",
-		noOftracedModules);
+	printf("globalTrace '%s', modules size '%d'\n",
+			globalTrace ? "TRUE" : "FALSE", noOftracedModules);
 	for (i = 0; i < noOftracedModules; i++)
-		printf("%20s %2d %2d\n", traced_modules[i], error_trace_levels[i], event_trace_levels[i]);
+		printf("%20s %2d %2d\n", traced_modules[i], error_trace_levels[i],
+				event_trace_levels[i]);
 }
 
 // -1 not found, >0 = module index
@@ -115,7 +122,7 @@ int gettimenow(struct timeval *tv, struct tm *the_time)
 {
 	if (gettimenow(tv) > -1)
 	{
-		time_t tt = (time_t)tv->tv_sec;
+		time_t tt = (time_t) tv->tv_sec;
 		*the_time = *(localtime(&tt));
 		return 0;
 	}
@@ -129,7 +136,7 @@ int gettimenow_ms(time_t* ret)
 	struct timeval now;
 	if (gettimenow(&now) > -1)
 	{
-		*ret = ((time_t)now.tv_sec) * 1000 + ((time_t)now.tv_usec) / 1000;
+		*ret = ((time_t) now.tv_sec) * 1000 + ((time_t) now.tv_usec) / 1000;
 		return 0;
 	}
 	else
@@ -142,8 +149,9 @@ int gettimenow_us(time_t* ret)
 	struct timeval now;
 	if (gettimenow(&now) > -1)
 	{
-		EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec, now.tv_usec);
-		*ret = ((time_t)now.tv_sec) * 1000000 + (time_t)now.tv_usec;
+		EVENTLOG2(EXTERNAL_TRACE, "Time now: %ld sec, %ld usec \n", now.tv_sec,
+				now.tv_usec);
+		*ret = ((time_t) now.tv_sec) * 1000000 + (time_t) now.tv_usec;
 		return 0;
 	}
 	else
@@ -215,11 +223,13 @@ static int debug_vwrite(FILE* fd, const char* formate, va_list ap)
 	if (!gettimenow(&tv, &the_time))
 	{
 		// write fixed log header
-		if (fprintf(fd, "%02d:%02d:%02d.%03d - ", the_time.tm_hour, the_time.tm_min,
-			the_time.tm_sec, (int)(tv.tv_usec / 1000)) < 1)  // change to  ms
+		if (fprintf(fd, "%02d:%02d:%02d.%03d - ", the_time.tm_hour,
+				the_time.tm_min, the_time.tm_sec, (int) (tv.tv_usec / 1000))
+				< 1)  // change to  ms
 			return -1;
 		// then write log msg
-		if (vfprintf(fd, formate, ap) < 1) return -1;
+		if (vfprintf(fd, formate, ap) < 1)
+			return -1;
 		return 0;
 	}
 	else
@@ -236,7 +246,8 @@ void debug_print(FILE * fd, const char *f, ...)
 	fflush(fd);
 }
 
-void event_log1(short event_log_level, const char *module_name, int line, const char *log_info, ...)
+void event_log1(short event_log_level, const char *module_name, int line,
+		const char *log_info, ...)
 {
 	int mi;
 	struct timeval tv;
@@ -244,36 +255,41 @@ void event_log1(short event_log_level, const char *module_name, int line, const 
 
 	va_list va;
 	va_start(va, log_info);
-	bool f1 = globalTrace == true && event_log_level <= GLOBAL_CURR_EVENT_LOG_LEVEL;
+	bool f1 = globalTrace == true
+			&& event_log_level <= GLOBAL_CURR_EVENT_LOG_LEVEL;
 	int moduleindex = is_module_traced(module_name);
 	bool f2 = globalTrace == false && moduleindex > 0
-		&& event_log_level <= event_trace_levels[moduleindex];
+			&& event_log_level <= event_trace_levels[moduleindex];
 	if (f1 || f2)
 	{
 		if (event_log_level < NOTICE)
 		{
 			if (fileTrace == true)
 			{
-				debug_print(logfile, "Event in Module: %s............\n", module_name);
+				debug_print(logfile, "Event in Module: %s............\n",
+						module_name);
 			}
 			else
 			{
-				debug_print(stdout, "Event in Module: %s............\n", module_name);
+				debug_print(stdout, "Event in Module: %s............\n",
+						module_name);
 			}
 		}
 		gettimenow(&tv, &the_time);
 		if (fileTrace == true)
 		{
-			fprintf(logfile, "%02d:%02d:%02d.%03d:%d ", the_time.tm_hour, the_time.tm_min,
-				the_time.tm_sec, (int)(tv.tv_usec / 1000), line);
+			fprintf(logfile, "%02d:%02d:%02d.%03d:%d ", the_time.tm_hour,
+					the_time.tm_min, the_time.tm_sec, (int) (tv.tv_usec / 1000),
+					line);
 			vfprintf(logfile, log_info, va);
 			fprintf(logfile, "\n");
 			fflush(logfile);
 		}
 		else
 		{
-			fprintf(stdout, "%02d:%02d:%02d.%03d:%d ", the_time.tm_hour, the_time.tm_min,
-				the_time.tm_sec, (int)(tv.tv_usec / 1000), line);
+			fprintf(stdout, "%02d:%02d:%02d.%03d:%d ", the_time.tm_hour,
+					the_time.tm_min, the_time.tm_sec, (int) (tv.tv_usec / 1000),
+					line);
 			vfprintf(stdout, log_info, va);
 			fprintf(stdout, "\n");
 			fflush(stdout);
@@ -281,30 +297,34 @@ void event_log1(short event_log_level, const char *module_name, int line, const 
 	}
 	va_end(va);
 }
-void error_log1(short error_loglvl, const char *module_name, int line_no, const char *log_info, ...)
+void error_log1(short error_loglvl, const char *module_name, int line_no,
+		const char *log_info, ...)
 {
 	int mi;
 	va_list va;
 
 	va_start(va, log_info);
-	bool f1 = globalTrace == true && error_loglvl <= GLOBAL_CURR_EVENT_LOG_LEVEL;
+	bool f1 = globalTrace == true
+			&& error_loglvl <= GLOBAL_CURR_EVENT_LOG_LEVEL;
 	int moduleindex = is_module_traced(module_name);
 	bool f2 = globalTrace == false && moduleindex > 0
-		&& error_loglvl <= event_trace_levels[moduleindex];
+			&& error_loglvl <= event_trace_levels[moduleindex];
 	if (f1 || f2)
 	{
 		if (fileTrace == true)
 		{
-			debug_print(logfile, "Error[%2d,%s] in %s at line %d\n", error_loglvl,
-				error_loglvls_str[error_loglvl - 1], module_name, line_no);
+			debug_print(logfile, "Error[%2d,%s] in %s at line %d\n",
+					error_loglvl, error_loglvls_str[error_loglvl - 1],
+					module_name, line_no);
 			/*   fprintf(logfile, "Error Info: ");*/
 			vfprintf(logfile, log_info, va);
 			fprintf(logfile, "\n");
 		}
 		else
 		{
-			debug_print(stderr, "Error[%2d,%s] in %s at line %d, ", error_loglvl,
-				error_loglvls_str[error_loglvl - 1], module_name, line_no);
+			debug_print(stderr, "Error[%2d,%s] in %s at line %d, ",
+					error_loglvl, error_loglvls_str[error_loglvl - 1],
+					module_name, line_no);
 			/*   fprintf(logfile, "Error Info: ");*/
 			vfprintf(stderr, log_info, va);
 			fprintf(stderr, "\n");
@@ -333,7 +353,8 @@ void error_log1(short error_loglvl, const char *module_name, int line_no, const 
 		perr_abort(str);
 	}
 }
-void error_log_sys1(short error_log_level, const char *module_name, int line_no, short errnumber)
+void error_log_sys1(short error_log_level, const char *module_name, int line_no,
+		short errnumber)
 {
 	error_log1(error_log_level, module_name, line_no, strerror(errnumber));
 }
@@ -367,13 +388,17 @@ char* Bitify(size_t mWritePosBits, char* mBuffer)
 
 	for (outter = 0; outter < len; outter++)
 	{
-		if (outter == len - 1) stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
-		else stopPos = 0;
+		if (outter == len - 1)
+			stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
+		else
+			stopPos = 0;
 
 		for (inner = 7; inner >= stopPos; inner--)
 		{
-			if ((mBuffer[outter] >> inner) & 1) out[strIndex++] = '1';
-			else out[strIndex++] = '0';
+			if ((mBuffer[outter] >> inner) & 1)
+				out[strIndex++] = '1';
+			else
+				out[strIndex++] = '0';
 		}
 		//out[strIndex++] = '\n';
 		out[strIndex++] = ' ';
@@ -399,13 +424,17 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 
 	for (outter = 0; outter < len; outter++)
 	{
-		if (outter == len - 1) stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
-		else stopPos = 0;
+		if (outter == len - 1)
+			stopPos = 8 - (((mWritePosBits - 1) & 7) + 1);
+		else
+			stopPos = 0;
 
 		for (inner = 7; inner >= stopPos; inner--)
 		{
-			if ((mBuffer[outter] >> inner) & 1) out[strIndex++] = '1';
-			else out[strIndex++] = '0';
+			if ((mBuffer[outter] >> inner) & 1)
+				out[strIndex++] = '1';
+			else
+				out[strIndex++] = '0';
 		}
 		//out[strIndex++] = '\n';
 		out[strIndex++] = ' ';
@@ -418,59 +447,71 @@ void Bitify(char* out, size_t mWritePosBits, char* mBuffer)
 unsigned int sockaddr2hashcode(const sockaddrunion* sa)
 {
 	ushort local_saaf = saddr_family(sa);
-	unsigned int lastHash = SuperFastHashIncremental((const char*)&sa->sin.sin_port,
-		sizeof(sa->sin.sin_port), local_saaf);
+	unsigned int lastHash = SuperFastHashIncremental(
+			(const char*) &sa->sin.sin_port, sizeof(sa->sin.sin_port),
+			local_saaf);
 	if (local_saaf == AF_INET)
 	{
-		lastHash = SuperFastHashIncremental((const char*)&sa->sin.sin_addr.s_addr, sizeof(in_addr),
-			lastHash);
+		lastHash = SuperFastHashIncremental(
+				(const char*) &sa->sin.sin_addr.s_addr, sizeof(in_addr),
+				lastHash);
 	}
 	else if (local_saaf == AF_INET6)
 	{
-		lastHash = SuperFastHashIncremental((const char*)&sa->sin6.sin6_addr.s6_addr,
-			sizeof(in6_addr), lastHash);
+		lastHash = SuperFastHashIncremental(
+				(const char*) &sa->sin6.sin6_addr.s6_addr, sizeof(in6_addr),
+				lastHash);
 	}
 	else
 	{
-		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", local_saaf);
+		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)",
+				local_saaf);
 	}
 	return lastHash;
 }
-unsigned int transportaddr2hashcode(const sockaddrunion* local_sa, const sockaddrunion* peer_sa)
+unsigned int transportaddr2hashcode(const sockaddrunion* local_sa,
+		const sockaddrunion* peer_sa)
 {
 	ushort local_saaf = saddr_family(local_sa);
-	unsigned int lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_port,
-		sizeof(local_sa->sin.sin_port), local_saaf);
+	unsigned int lastHash = SuperFastHashIncremental(
+			(const char*) &local_sa->sin.sin_port,
+			sizeof(local_sa->sin.sin_port), local_saaf);
 	if (local_saaf == AF_INET)
 	{
-		lastHash = SuperFastHashIncremental((const char*)&local_sa->sin.sin_addr.s_addr,
-			sizeof(in_addr), lastHash);
+		lastHash = SuperFastHashIncremental(
+				(const char*) &local_sa->sin.sin_addr.s_addr, sizeof(in_addr),
+				lastHash);
 	}
 	else if (local_saaf == AF_INET6)
 	{
-		lastHash = SuperFastHashIncremental((const char*)&local_sa->sin6.sin6_addr.s6_addr,
-			sizeof(in6_addr), lastHash);
+		lastHash = SuperFastHashIncremental(
+				(const char*) &local_sa->sin6.sin6_addr.s6_addr,
+				sizeof(in6_addr), lastHash);
 	}
 	else
 	{
-		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", local_saaf);
+		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)",
+				local_saaf);
 	}
 	ushort peer_saaf = saddr_family(peer_sa);
-	lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin.sin_port,
-		sizeof(peer_sa->sin.sin_port), lastHash);
+	lastHash = SuperFastHashIncremental((const char*) &peer_sa->sin.sin_port,
+			sizeof(peer_sa->sin.sin_port), lastHash);
 	if (peer_saaf == AF_INET)
 	{
-		lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin.sin_addr.s_addr,
-			sizeof(in_addr), lastHash);
+		lastHash = SuperFastHashIncremental(
+				(const char*) &peer_sa->sin.sin_addr.s_addr, sizeof(in_addr),
+				lastHash);
 	}
 	else if (peer_saaf == AF_INET6)
 	{
-		lastHash = SuperFastHashIncremental((const char*)&peer_sa->sin6.sin6_addr.s6_addr,
-			sizeof(in6_addr), lastHash);
+		lastHash = SuperFastHashIncremental(
+				(const char*) &peer_sa->sin6.sin6_addr.s6_addr,
+				sizeof(in6_addr), lastHash);
 	}
 	else
 	{
-		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)", peer_saaf);
+		ERRLOG1(FALTAL_ERROR_EXIT, "sockaddr2hashcode()::no such af (%u)",
+				peer_saaf);
 	}
 	return lastHash;
 }
@@ -493,25 +534,29 @@ unsigned long SuperFastHash(const char * data, int length)
 	int offset = 0;
 	while (bytesRemaining >= INCREMENTAL_READ_BLOCK)
 	{
-		lastHash = SuperFastHashIncremental(data + offset, INCREMENTAL_READ_BLOCK, lastHash);
+		lastHash = SuperFastHashIncremental(data + offset,
+				INCREMENTAL_READ_BLOCK, lastHash);
 		bytesRemaining -= INCREMENTAL_READ_BLOCK;
 		offset += INCREMENTAL_READ_BLOCK;
 	}
 	if (bytesRemaining > 0)
 	{
-		lastHash = SuperFastHashIncremental(data + offset, bytesRemaining, lastHash);
+		lastHash = SuperFastHashIncremental(data + offset, bytesRemaining,
+				lastHash);
 	}
 	return lastHash;
 
 	//	return SuperFastHashIncremental(data,len,len);
 }
-unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int lastHash)
+unsigned long SuperFastHashIncremental(const char * data, int len,
+		unsigned int lastHash)
 {
-	unsigned int hash = (unsigned int)lastHash;
+	unsigned int hash = (unsigned int) lastHash;
 	unsigned int tmp;
 	int rem;
 
-	if (len <= 0 || data == NULL) return 0;
+	if (len <= 0 || data == NULL)
+		return 0;
 
 	rem = len & 3;
 	len >>= 2;
@@ -554,13 +599,14 @@ unsigned long SuperFastHashIncremental(const char * data, int len, unsigned int 
 	hash ^= hash << 25;
 	hash += hash >> 6;
 
-	return (unsigned int)hash;
+	return (unsigned int) hash;
 
 }
 unsigned long SuperFastHashFile(const char * filename)
 {
 	FILE *fp = fopen(filename, "rb");
-	if (fp == 0) return 0;
+	if (fp == 0)
+		return 0;
 	unsigned int hash = SuperFastHashFilePtr(fp);
 	fclose(fp);
 	return hash;
@@ -576,13 +622,15 @@ unsigned long SuperFastHashFilePtr(FILE *fp)
 	while (bytesRemaining >= (int) sizeof(readBlock))
 	{
 		fread(readBlock, sizeof(readBlock), 1, fp);
-		lastHash = SuperFastHashIncremental(readBlock, (int) sizeof(readBlock), lastHash);
+		lastHash = SuperFastHashIncremental(readBlock, (int) sizeof(readBlock),
+				lastHash);
 		bytesRemaining -= (int) sizeof(readBlock);
 	}
 	if (bytesRemaining > 0)
 	{
 		fread(readBlock, bytesRemaining, 1, fp);
-		lastHash = SuperFastHashIncremental(readBlock, bytesRemaining, lastHash);
+		lastHash = SuperFastHashIncremental(readBlock, bytesRemaining,
+				lastHash);
 	}
 	return lastHash;
 }
@@ -615,7 +663,8 @@ char* Itoa(int value, char* result, int base)
 	} while (quotient);
 
 	// Only apply negative sign for base 10
-	if (value < 0 && base == 10) *out++ = '-';
+	if (value < 0 && base == 10)
+		*out++ = '-';
 
 	// KevinJ - get rid of this dependency
 	// std::reverse( result, out );
@@ -637,6 +686,8 @@ char* Itoa(int value, char* result, int base)
 	return result;
 }
 
+#include <sys/types.h>
+#include <ifaddrs.h>
 static bool b1, b2, b3, b4, b5, b6, b7, b8, typeofaddr_ret;
 bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 {
@@ -650,61 +701,71 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 	switch (saddr_family(newAddress))
 	{
 	case AF_INET:
-		b1 = (IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & MulticastAddrType));
-		b2 = (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & ReservedAddrType));
-		b3 = (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & ReservedAddrType));
-		b4 = ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & BroadcastAddrType));
-		b5 = ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & LoopBackAddrType));
-		b6 = ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr)) && (flags & AllExceptLoopbackAddrTypes));
+		b1 = (IN_MULTICAST(ntohl(newAddress->sin.sin_addr.s_addr))
+				&& (flags & MulticastAddrType));
+		b2 = (IN_EXPERIMENTAL(ntohl(newAddress->sin.sin_addr.s_addr))
+				&& (flags & ReservedAddrType));
+		b3 = (IN_BADCLASS(ntohl(newAddress->sin.sin_addr.s_addr))
+				&& (flags & ReservedAddrType));
+		b4 = ((INADDR_BROADCAST == ntohl(newAddress->sin.sin_addr.s_addr))
+				&& (flags & BroadcastAddrType));
+		b5 = ((INADDR_LOOPBACK == ntohl(newAddress->sin.sin_addr.s_addr))
+				&& (flags & LoopBackAddrType));
+		b6 = ((INADDR_LOOPBACK != ntohl(newAddress->sin.sin_addr.s_addr))
+				&& (flags & AllExceptLoopbackAddrTypes));
 		b7 = (ntohl(newAddress->sin.sin_addr.s_addr) == INADDR_ANY);
 		if (b1 || b2 || b3 || b4 || b5 || b6 || b7)
 		{
 #ifdef _DEBUG
-			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
+			EVENTLOG2(DEBUG,
+					"typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD",
+					1, addrstr);
 #endif
 			typeofaddr_ret = true;
 			goto leave;
 		}
 #ifdef _DEBUG
 		else
-			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
+		EVENTLOG2(DEBUG,
+				"typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD",
+				0, addrstr);
 #endif
 		break;
 
 	case AF_INET6:
 #if defined (__linux__)
 		if ((!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr))
-			&& (flags & AllExceptLoopbackAddrTypes))
-			|| (IN6_IS_ADDR_LOOPBACK(
-				&(newAddress->sin6.sin6_addr.s6_addr))
-				&& (flags & LoopBackAddrType))
-			|| (IN6_IS_ADDR_LINKLOCAL(
-				&(newAddress->sin6.sin6_addr.s6_addr))
-				&& (flags & LinkLocalAddrType))
-			|| (!IN6_IS_ADDR_LINKLOCAL(
-				&(newAddress->sin6.sin6_addr.s6_addr))
-				&& (flags & AllExceptLinkLocalAddrTypes))
-			|| (!IN6_IS_ADDR_SITELOCAL(
-				&(newAddress->sin6.sin6_addr.s6_addr))
-				&& (flags & ExceptSiteLocalAddrTypes))
-			|| (IN6_IS_ADDR_SITELOCAL(
-				&(newAddress->sin6.sin6_addr.s6_addr))
-				&& (flags & SiteLocalAddrType))
-			|| (IN6_IS_ADDR_MULTICAST(
-				&(newAddress->sin6.sin6_addr.s6_addr))
-				&& (flags & MulticastAddrType))
-			|| IN6_IS_ADDR_UNSPECIFIED(
-				&(newAddress->sin6.sin6_addr.s6_addr)))
+				&& (flags & AllExceptLoopbackAddrTypes))
+				|| (IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr.s6_addr))
+						&& (flags & LoopBackAddrType))
+				|| (IN6_IS_ADDR_LINKLOCAL(&(newAddress->sin6.sin6_addr.s6_addr))
+						&& (flags & LinkLocalAddrType))
+				|| (!IN6_IS_ADDR_LINKLOCAL(
+						&(newAddress->sin6.sin6_addr.s6_addr))
+						&& (flags & AllExceptLinkLocalAddrTypes))
+				|| (!IN6_IS_ADDR_SITELOCAL(
+						&(newAddress->sin6.sin6_addr.s6_addr))
+						&& (flags & ExceptSiteLocalAddrTypes))
+				|| (IN6_IS_ADDR_SITELOCAL(&(newAddress->sin6.sin6_addr.s6_addr))
+						&& (flags & SiteLocalAddrType))
+				|| (IN6_IS_ADDR_MULTICAST(&(newAddress->sin6.sin6_addr.s6_addr))
+						&& (flags & MulticastAddrType))
+				|| IN6_IS_ADDR_UNSPECIFIED(
+						&(newAddress->sin6.sin6_addr.s6_addr)))
 		{
 #ifdef _DEBUG
-			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
+			EVENTLOG2(DEBUG,
+					"typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD",
+					1, addrstr);
 #endif
 			typeofaddr_ret = true;
 			goto leave;
 		}
 #ifdef _DEBUG
 		else
-			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
+		EVENTLOG2(DEBUG,
+				"typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD",
+				0, addrstr);
 #endif
 #else
 		b1 = (!IN6_IS_ADDR_LOOPBACK(&(newAddress->sin6.sin6_addr)) && (flags & AllExceptLoopbackAddrTypes));
@@ -725,25 +786,25 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 		}
 #ifdef _DEBUG
 		else
-			EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
+		EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS-NOT type of filtered addr GOOD", 0, addrstr);
 #endif
 #endif
 
 		break;
 	default:
 #ifdef _DEBUG
-		EVENTLOG2(DEBUG, "typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD", 1, addrstr);
+		EVENTLOG2(DEBUG,
+				"typeofaddr(typeofaddr_ret=%d) %s  IS type of filtered addr BAD",
+				1, addrstr);
 #endif
 		typeofaddr_ret = true;
 		goto leave;
 		break;
 	}
-leave:
-	return typeofaddr_ret;
+	leave: return typeofaddr_ret;
 }
-bool get_local_addresses(union sockaddrunion **addresses,
-	uint *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu,
-	const IPAddrType flags)
+bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets,
+		int sctp_fd, bool with_ipv6, int *max_mtu, const IPAddrType flags)
 {
 #ifdef WIN32
 	union sockaddrunion *localAddresses = NULL;
@@ -754,19 +815,19 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	WSAEVENT hEvent[MAXIMUM_WAIT_OBJECTS];
 	WSAOVERLAPPED ol[MAXIMUM_WAIT_OBJECTS];
 	struct addrinfo *local = NULL, hints,
-		*ptr = NULL;
+	*ptr = NULL;
 	SOCKET_ADDRESS_LIST *slist = NULL;
 	DWORD bytes;
 	char addrbuf[ADDRESS_LIST_BUFFER_SIZE], host[NI_MAXHOST], serv[NI_MAXSERV];
 	int socketcount = 0,
-		addrbuflen = ADDRESS_LIST_BUFFER_SIZE,
-		rc, i, j, hostlen = NI_MAXHOST, servlen = NI_MAXSERV;
+	addrbuflen = ADDRESS_LIST_BUFFER_SIZE,
+	rc, i, j, hostlen = NI_MAXHOST, servlen = NI_MAXSERV;
 	struct sockaddr_in Addr;
 	struct sockaddr_in6 Addr6;
 
 	/* Enumerate the local bind addresses - to wait for changes we only need
-	one socket but to enumerate the addresses for a particular address
-	family, we need a socket of that type  */
+	 one socket but to enumerate the addresses for a particular address
+	 family, we need a socket of that type  */
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
@@ -815,7 +876,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		memset(&ol[i], 0, sizeof(WSAOVERLAPPED));
 		ol[i].hEvent = hEvent[i];
 		if ((rc = WSAIoctl(s[i], SIO_ADDRESS_LIST_QUERY, NULL, 0, addrbuf, addrbuflen,
-			&bytes, NULL, NULL)) == SOCKET_ERROR)
+								&bytes, NULL, NULL)) == SOCKET_ERROR)
 		{
 			fprintf(stderr, "WSAIoctl: SIO_ADDRESS_LIST_QUERY failed: %d\n", WSAGetLastError());
 			return -1;
@@ -827,8 +888,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		for (j = 0; j < slist->iAddressCount; j++)
 		{
 			if ((rc = getnameinfo(slist->Address[j].lpSockaddr, slist->Address[j].iSockaddrLength,
-				host, hostlen, serv, servlen, NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
-				fprintf(stderr, "%s: getnameinfo failed: %d\n", __FILE__, rc);
+									host, hostlen, serv, servlen, NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
+			fprintf(stderr, "%s: getnameinfo failed: %d\n", __FILE__, rc);
 			Addr6.sin6_family = slist->Address[j].lpSockaddr->sa_family;
 			inet_pton(AF_INET6, (const char *)host, &Addr6.sin6_addr);
 			memcpy(&((localAddresses6)[j].sin6), &Addr6, sizeof(Addr6));
@@ -847,7 +908,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 
 	freeaddrinfo(local);
 	for (i = 0; i < socketcount; i++)
-		closesocket(s[i]);
+	closesocket(s[i]);
 
 	local = NULL;
 	ptr = NULL;
@@ -904,7 +965,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		memset(&ol[i], 0, sizeof(WSAOVERLAPPED));
 		ol[i].hEvent = hEvent[i];
 		if ((rc = WSAIoctl(s[i], SIO_ADDRESS_LIST_QUERY, NULL, 0, addrbuf, addrbuflen,
-			&bytes, NULL, NULL)) == SOCKET_ERROR)
+								&bytes, NULL, NULL)) == SOCKET_ERROR)
 		{
 			fprintf(stderr, "WSAIoctl: SIO_ADDRESS_LIST_QUERY failed: %d\n", WSAGetLastError());
 			return -1;
@@ -916,8 +977,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		for (j = 0; j < slist->iAddressCount; j++)
 		{
 			if ((rc = getnameinfo(slist->Address[j].lpSockaddr, slist->Address[j].iSockaddrLength,
-				host, hostlen, serv, servlen, NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
-				fprintf(stderr, "%s: getnameinfo failed: %d\n", __FILE__, rc);
+									host, hostlen, serv, servlen, NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
+			fprintf(stderr, "%s: getnameinfo failed: %d\n", __FILE__, rc);
 			Addr.sin_family = slist->Address[j].lpSockaddr->sa_family;
 			Addr.sin_addr.s_addr = inet_addr(host);
 			memcpy(&((localAddresses4)[j].sin), &Addr, sizeof(Addr));
@@ -936,8 +997,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 
 	freeaddrinfo(local);
 	for (i = 0; i < socketcount; i++)
-		closesocket(s[i]);
-
+	closesocket(s[i]);
 
 	*numberOfNets = ip4addrsize + ip6addrsize;
 	*max_mtu = 1500;
@@ -962,12 +1022,12 @@ bool get_local_addresses(union sockaddrunion **addresses,
 #endif
 
 	char addrBuffer2[64];
-	/* unsigned short intf_flags; */
 	struct ifconf cf;
 	int pos = 0, copSiz = 0, numAlocAddr = 0, ii;
 	char buffer[8192];
 	struct sockaddr *toUse;
 	int saveMTU = 1500; /* default maximum MTU for now */
+
 #ifdef HAS_SIOCGLIFADDR
 	struct if_laddrreq lifaddr;
 #endif
@@ -982,7 +1042,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	*numberOfNets = 0;
 
 	/* Now gather the master address information */
-	if (ioctl(sctp_fd, SIOCGIFCONF, (char *)&cf) == -1)
+	if (ioctl(sctp_fd, SIOCGIFCONF, (char *) &cf) == -1)
 	{
 		return (false);
 	}
@@ -1009,8 +1069,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		if (ifrequest->ifr_addr.sa_len == 0)
 		{
 			/* if the interface has no address then you must
-			* skip at a minium a sockaddr structure
-			*/
+			 * skip at a minium a sockaddr structure
+			 */
 			pos += sizeof(struct sockaddr);
 		}
 #endif // NEUTRINO_RTOS
@@ -1035,47 +1095,48 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		fclose(v6list);
 	}
 	numAlocAddr += addedNets;
-	EVENTLOG2(VERBOSE, "Found additional %d v6 addresses, total now %d\n",
-		addedNets, numAlocAddr);
+	EVENTLOG2(VERBOSE,
+			"get_local_addresses()::Found additional %d v6 addresses, total now %d\n",
+			addedNets, numAlocAddr);
 #endif
 	/* now allocate the appropriate memory */
 	localAddresses = (union sockaddrunion*) calloc(numAlocAddr,
-		sizeof(union sockaddrunion));
+			sizeof(union sockaddrunion));
 
 	if (localAddresses == NULL)
 	{
 		ERRLOG(FALTAL_ERROR_EXIT,
-			"Out of Memory in adl_gatherLocalAddresses() !");
+				"get_local_addresses()::Out of Memory in adl_gatherLocalAddresses() !");
 		return (false);
 	}
 
 	pos = 0;
 	/* Now we go through and pull each one */
-
 #if defined (__linux__)
 	v6list = fopen(LINUX_PROC_IPV6_FILE, "r");
 	if (v6list != NULL)
 	{
-		memset((char *)&sin6, 0, sizeof(sin6));
+		memset((char *) &sin6, 0, sizeof(sin6));
 		sin6.sin6_family = AF_INET6;
 
 		while (fgets(addrBuffer, sizeof(addrBuffer), v6list) != NULL)
 		{
 			if (strncmp(addrBuffer, "00000000000000000000000000000001", 32)
-				== 0)
+					== 0)
 			{
-				EVENTLOG(VERBOSE, "At least I found the local IPV6 address !");
-				if (inet_pton(AF_INET6, "::1", (void *)&sin6.sin6_addr) > 0)
+				EVENTLOG(VERBOSE,
+						"get_local_addresses()::At least I found the local IPV6 address !");
+				if (inet_pton(AF_INET6, "::1", (void *) &sin6.sin6_addr) > 0)
 				{
 					sin6.sin6_family = AF_INET6;
 					memcpy(&((localAddresses)[*numberOfNets]), &sin6,
-						sizeof(sin6));
+							sizeof(sin6));
 					EVENTLOG5(VERBOSE,
-						"copied the local IPV6 address %x:%x:%x:%x, family %x",
-						sin6.sin6_addr.s6_addr32[3],
-						sin6.sin6_addr.s6_addr32[2],
-						sin6.sin6_addr.s6_addr32[1],
-						sin6.sin6_addr.s6_addr32[0], sin6.sin6_family);
+							"copied the local IPV6 address %x:%x:%x:%x, family %x",
+							sin6.sin6_addr.s6_addr32[3],
+							sin6.sin6_addr.s6_addr32[2],
+							sin6.sin6_addr.s6_addr32[1],
+							sin6.sin6_addr.s6_addr32[0], sin6.sin6_family);
 					(*numberOfNets)++;
 				}
 				continue;
@@ -1097,20 +1158,21 @@ bool get_local_addresses(union sockaddrunion **addresses,
 			addrBuffer2[34] = ':';
 			strncpy(&addrBuffer2[35], &addrBuffer[28], 4);
 
-			if (inet_pton(AF_INET6, addrBuffer2, (void *)&sin6.sin6_addr) > 0)
+			if (inet_pton(AF_INET6, addrBuffer2, (void *) &sin6.sin6_addr) > 0)
 			{
 				if (IN6_IS_ADDR_LINKLOCAL(&sin6.sin6_addr))
 				{
-					sscanf((const char*)&addrBuffer[34], "%x",
-						&sin6.sin6_scope_id);
+					sscanf((const char*) &addrBuffer[34], "%x",
+							&sin6.sin6_scope_id);
 				}
 				memcpy(&((localAddresses)[*numberOfNets]), &sin6, sizeof(sin6));
 
 			}
 			else
 			{
-				ERRLOG1(FALTAL_ERROR_EXIT, "Could not translate string %s",
-					addrBuffer2);
+				ERRLOG1(FALTAL_ERROR_EXIT,
+						"get_local_addresses()::Could not translate string %s",
+						addrBuffer2);
 			}
 		}
 		fclose(v6list);
@@ -1124,8 +1186,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	for (ii = 0; ii < numAlocIPv4Addr; ii++, ifrequest = nextif)
 	{
 #else
-	for (ii = 0; ii < numAlocAddr; ii++, ifrequest = nextif)
-	{
+		for (ii = 0; ii < numAlocAddr; ii++, ifrequest = nextif)
+		{
 #endif
 #ifdef USES_BSD_4_4_SOCKET
 		/* use the sa_len to calculate where the next one will be */
@@ -1147,8 +1209,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 		if (ifrequest->ifr_addr.sa_len == 0)
 		{
 			/* if the interface has no address then you must
-			* skip at a minium a sockaddr structure
-			*/
+			 * skip at a minium a sockaddr structure
+			 */
 			pos += sizeof(struct sockaddr);
 		}
 #endif // NEUTRINO_RTOS
@@ -1163,34 +1225,37 @@ bool get_local_addresses(union sockaddrunion **addresses,
 #else
 		memset(&local, 0, sizeof(local));
 		memcpy(local.ifr_name, ifrequest->ifr_name, IFNAMSIZ);
-		EVENTLOG3(VERBOSE, "Interface %d, NAME %s, Hex: %x", ii, local.ifr_name,
-			local.ifr_name);
+		EVENTLOG3(VERBOSE,
+				"get_local_addresses()::Interface %d, NAME %s, Hex: %x", ii,
+				local.ifr_name, local.ifr_name);
 
-		if (ioctl(sctp_fd, SIOCGIFMTU, (char *)&local) == -1)
+		if (ioctl(sctp_fd, SIOCGIFMTU, (char *) &local) == -1)
 		{
 			/* cant get the flags? */
 			continue;
 		}
 		saveMTU = local.ifr_mtu;
-		EVENTLOG2(VERBOSE, "Interface %d, MTU %d", ii, saveMTU);
+		EVENTLOG2(VERBOSE,
+				"get_local_addresses()::Interface %d, saveMTU MTU %d", ii,
+				saveMTU);
 #endif
 		toUse = &ifrequest->ifr_addr;
 
 		saddr2str((union sockaddrunion*) toUse, addrBuffer2, MAX_IPADDR_STR_LEN,
-			NULL);
-		EVENTLOG1(VERBOSE, "we are talking about the address %s", addrBuffer2);
+		NULL);
+		EVENTLOG1(VERBOSE,
+				"get_local_addresses()::we are talking about the address %s",
+				addrBuffer2);
 
 		memset(&local, 0, sizeof(local));
 		memcpy(local.ifr_name, ifrequest->ifr_name, IFNAMSIZ);
 
-		if (ioctl(sctp_fd, SIOCGIFFLAGS, (char *)&local) == -1)
+		if (ioctl(sctp_fd, SIOCGIFFLAGS, (char *) &local) == -1)
 		{
 			/* can't get the flags, skip this guy */
 			continue;
 		}
 		/* Ok get the address and save the flags */
-		/*        intf_flags = local.ifr_flags; */
-
 		if (!(local.ifr_flags & IFF_UP))
 		{
 			/* Interface is down */
@@ -1199,18 +1264,21 @@ bool get_local_addresses(union sockaddrunion **addresses,
 
 		if (flags & LoopBackAddrType)
 		{
-			if (typeofaddr((union sockaddrunion*) toUse,
-				LoopBackAddrType))
+			if (typeofaddr((union sockaddrunion*) toUse, LoopBackAddrType))
 			{
 				/* skip the loopback */
-				EVENTLOG1(VERBOSE, "Interface %d, skipping loopback", ii);
+				EVENTLOG1(VERBOSE,
+						"==================get_local_addresses()::Interface %d, skipping loopback",
+						ii);
 				continue;
 			}
 		}
 		if (typeofaddr((union sockaddrunion*) toUse, ReservedAddrType))
 		{
 			/* skip reserved */
-			EVENTLOG1(VERBOSE, "Interface %d, skipping reserved", ii);
+			EVENTLOG1(VERBOSE,
+					"get_local_addresses()::Interface %d, skipping reserved",
+					ii);
 			continue;
 		}
 
@@ -1226,11 +1294,11 @@ bool get_local_addresses(union sockaddrunion **addresses,
 			*max_mtu = saveMTU;
 
 		/* Now, we may have already gathered this address, if so skip
-		* it
-		*/
+		 * it
+		 */
 		EVENTLOG2(VERBOSE,
-			"Starting checking for duplicates ! MTU = %d, nets: %d",
-			saveMTU, *numberOfNets);
+				"get_local_addresses()::Starting checking for duplicates ! MTU = %d, nets: %d",
+				saveMTU, *numberOfNets);
 
 		if (*numberOfNets)
 		{
@@ -1241,20 +1309,24 @@ bool get_local_addresses(union sockaddrunion **addresses,
 			{
 				EVENTLOG1(VERBOSE, "duplicates loop xxx=%d", xxx);
 				if (saddr_equals(&localAddresses[xxx],
-					(union sockaddrunion*) toUse))
+						(union sockaddrunion*) toUse))
 				{
-					if ((localAddresses[xxx].sa.sa_family == AF_INET6) &&
-						(toUse->sa_family == AF_INET) &&
-						(IN6_IS_ADDR_V4MAPPED(&localAddresses[xxx].sin6.sin6_addr) ||
-							IN6_IS_ADDR_V4COMPAT(&localAddresses[xxx].sin6.sin6_addr)))
+					if ((localAddresses[xxx].sa.sa_family == AF_INET6)
+							&& (toUse->sa_family == AF_INET)
+							&& (IN6_IS_ADDR_V4MAPPED(
+									&localAddresses[xxx].sin6.sin6_addr)
+									|| IN6_IS_ADDR_V4COMPAT(
+											&localAddresses[xxx].sin6.sin6_addr)))
 					{
 						/* There are multiple interfaces, one has ::ffff:a.b.c.d or
-						::a.b.c.d address. Use address which is IPv4 native instead. */
-						memcpy(&localAddresses[xxx], toUse, sizeof(localAddresses[xxx]));
+						 ::a.b.c.d address. Use address which is IPv4 native instead. */
+						memcpy(&localAddresses[xxx], toUse,
+								sizeof(localAddresses[xxx]));
 					}
 					else
 					{
-						EVENTLOG(VERBOSE, "Interface %d, found duplicate");
+						EVENTLOG(VERBOSE,
+								"get_local_addresses()::Interface %d, found duplicate");
 						dup = 1;
 					}
 				}
@@ -1268,7 +1340,7 @@ bool get_local_addresses(union sockaddrunion **addresses,
 
 		/* copy address */
 		EVENTLOG1(VERBOSE, "Copying %d bytes", copSiz);
-		memcpy(&localAddresses[*numberOfNets], (char *)toUse, copSiz);
+		memcpy(&localAddresses[*numberOfNets], (char *) toUse, copSiz);
 		EVENTLOG(VERBOSE, "Setting Family");
 		/* set family */
 		(&(localAddresses[*numberOfNets]))->sa.sa_family = toUse->sa_family;
@@ -1280,17 +1352,18 @@ bool get_local_addresses(union sockaddrunion **addresses,
 #endif
 #endif
 		(*numberOfNets)++;
-		EVENTLOG2(VERBOSE, "Interface %d, Number of Nets: %d", ii,
-			*numberOfNets);
+		EVENTLOG2(VERBOSE,
+				"get_local_addresses()::Interface %d, Number of Nets: %d", ii,
+				*numberOfNets);
 	}
 
-	EVENTLOG1(VERBOSE, "adl_gatherLocalAddresses: Found %d addresses",
-		*numberOfNets);
+	EVENTLOG1(VERBOSE, "get_local_addresses()::Found %d addresses",
+			*numberOfNets);
 	for (ii = 0; ii < (*numberOfNets); ii++)
 	{
 		saddr2str(&(localAddresses[ii]), addrBuffer2, MAX_IPADDR_STR_LEN, NULL);
-		EVENTLOG2(VERBOSE, "adl_gatherAddresses : Address %d: %s", ii,
-			addrBuffer2);
+		EVENTLOG2(VERBOSE, "get_local_addresses()::Address %d: %s", ii,
+				addrBuffer2);
 
 	}
 	*addresses = localAddresses;
@@ -1316,22 +1389,23 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	}
 
 	// reorder addres to put ip4 addr together and ip6 addres together
-	sockaddrunion* buf = (sockaddrunion*)calloc(*numberOfNets, sizeof(sockaddrunion));
+	sockaddrunion* buf = (sockaddrunion*) calloc(*numberOfNets,
+			sizeof(sockaddrunion));
 
 	//copy loopback first if not present
 	i = 0;
-	if (!hasip4loopback)
-	{
-		EVENTLOG(DEBUG, "no hasip4loopback, copy it");
-		str2saddr(&buf[i], "127.0.0.1");
-		i++;
-	}
-	if (!hasip6loopback)
-	{
-		EVENTLOG(DEBUG, "no hasip6loopback, copy it");
-		str2saddr(&buf[i], "::1");
-		i++;
-	}
+//	if (!hasip4loopback)
+//	{
+//		EVENTLOG(DEBUG, "get_local_addresses()::no hasip4loopback, copy it");
+//		str2saddr(&buf[i], "127.0.0.1");
+//		i++;
+//	}
+//	if (!hasip6loopback)
+//	{
+//		EVENTLOG(DEBUG, "get_local_addresses()::no hasip6loopback, copy it");
+//		str2saddr(&buf[i], "::1");
+//		i++;
+//	}
 
 	for (int j = i; j < *numberOfNets; j++)
 	{
@@ -1345,7 +1419,8 @@ bool get_local_addresses(union sockaddrunion **addresses,
 	for (i = 0; i < *numberOfNets; i++)
 	{
 		saddr2str(&(*addresses)[i], addrdebug, MAX_IPADDR_STR_LEN, 0);
-		EVENTLOG2(DEBUG, "default local addr %d = %s", i, addrdebug);
+		EVENTLOG2(DEBUG, "get_local_addresses()::default local addr %d = %s", i,
+				addrdebug);
 	}
 
 	return (true);

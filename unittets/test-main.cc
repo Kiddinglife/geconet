@@ -58,7 +58,7 @@ main(int argc, char** argv)
 	// no need for calling testing::InitGoogleTest() separately.
 	testing::InitGoogleMock(&argc, argv);
 
-	// ::testing::GTEST_FLAG(filter) = "GLOBAL_MODULE.*";  // passed on 25/11/2017
+	//::testing::GTEST_FLAG(filter) = "GLOBAL_MODULE.*";  // passed on 25/11/2017
 
 	//::testing::GTEST_FLAG(filter) = "TIMER_MODULE.*";
 	//::testing::GTEST_FLAG(filter) = "TIMER_MODULE.test_operations_on_time";
@@ -108,7 +108,7 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "MULP.test_mulp_set_lib_params";
 	//::testing::GTEST_FLAG(filter) = "MULP.test_mulp_mulp_new_and_delete_geco_instnce";
 	//::testing::GTEST_FLAG(filter) = "MULP.test_mdi_new_and_delete_channel";
-	//::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
+	::testing::GTEST_FLAG(filter) = "MULP.test_mulp_connect";
 	// current unit test summary locally connection all Ok: loopback 127.0.0.1 and ::1, localaddr 192.168.... cross-machina connection NOT ok
 	//::testing::GTEST_FLAG(filter) = "MULP.test_connection_pharse";
 
@@ -116,7 +116,7 @@ main(int argc, char** argv)
 	//::testing::GTEST_FLAG(filter) = "MBU.test_mbu_new";
 
 	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_process_stdin"; // passed on 25/11/2017
-	::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_getifaddrs";
+	//::testing::GTEST_FLAG(filter) = "TRANSPORT_MODULE.test_getifaddrs"; // passed on 01/12/2017
 
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.*";
 	//::testing::GTEST_FLAG(filter) = "DISPATCHER_MODULE.test_find_geco_instance"; // passed on 28/02/2017
