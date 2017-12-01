@@ -686,58 +686,6 @@ char* Itoa(int value, char* result, int base)
     return result;
 }
 
-//#include <iostream.h>
-//#include <winsock2.h>
-//#include <ws2tcpip.h>
-//
-//int doit()
-//{
-//    SOCKET sd = WSASocket(AF_INET, SOCK_DGRAM, 0, 0, 0, 0);
-//    if (sd == SOCKET_ERROR) {
-//        cerr << "Failed to get a socket. Error " << WSAGetLastError() <<
-//            endl; return 1;
-//    }
-//
-//    INTERFACE_INFO InterfaceList[20];
-//    unsigned long nBytesReturned;
-//    if (WSAIoctl(sd, SIO_GET_INTERFACE_LIST, 0, 0, &InterfaceList,
-//        sizeof(InterfaceList), &nBytesReturned, 0, 0) == SOCKET_ERROR) {
-//        cerr << "Failed calling WSAIoctl: error " << WSAGetLastError() <<
-//            endl;
-//        return 1;
-//    }
-//
-//    int nNumInterfaces = nBytesReturned / sizeof(INTERFACE_INFO);
-//    cout << "There are " << nNumInterfaces << " interfaces:" << endl;
-//    for (int i = 0; i < nNumInterfaces; ++i) {
-//        cout << endl;
-//
-//        sockaddr_in *pAddress;
-//        pAddress = (sockaddr_in *) & (InterfaceList[i].iiAddress);
-//        cout << " " << inet_ntoa(pAddress->sin_addr);
-//
-//        pAddress = (sockaddr_in *) & (InterfaceList[i].iiBroadcastAddress);
-//        cout << " has bcast " << inet_ntoa(pAddress->sin_addr);
-//
-//        pAddress = (sockaddr_in *) & (InterfaceList[i].iiNetmask);
-//        cout << " and netmask " << inet_ntoa(pAddress->sin_addr) << endl;
-//
-//        cout << " Iface is ";
-//        u_long nFlags = InterfaceList[i].iiFlags;
-//        if (nFlags & IFF_UP) cout << "up";
-//        else                 cout << "down";
-//        if (nFlags & IFF_POINTTOPOINT) cout << ", is point-to-point";
-//        if (nFlags & IFF_LOOPBACK)     cout << ", is a loopback iface";
-//        cout << ", and can do: ";
-//        if (nFlags & IFF_BROADCAST) cout << "bcast ";
-//        if (nFlags & IFF_MULTICAST) cout << "multicast ";
-//        cout << endl;
-//    }
-//
-//    return 0;
-//}
-
-#include <Iphlpapi.h>  
 static bool b1, b2, b3, b4, b5, b6, b7, b8, typeofaddr_ret;
 bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
 {
@@ -853,6 +801,8 @@ bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags)
     }
 leave: return typeofaddr_ret;
 }
+
+// @return: all found local address that must have a up network interface binded on.
 bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets,
     int sctp_fd, bool with_ipv6, int *max_mtu, const IPAddrType flags)
 {
@@ -874,7 +824,6 @@ bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets,
         rc, i, j, hostlen = NI_MAXHOST, servlen = NI_MAXSERV;
     struct sockaddr_in Addr;
     struct sockaddr_in6 Addr6;
-    int flag;
 
     /* Enumerate the local bind addresses - to wait for changes we only need
      one socket but to enumerate the addresses for a particular address
@@ -1477,89 +1426,3 @@ bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets,
     return (true);
 }
 
-#ifndef __linux__  
-#include <Iphlpapi.h>  
-#pragma comment(lib,"Iphlpapi.lib")  
-#else  
-#define IFRSIZE ((int)(size*sizeof(struct ifreq)))  
-#endif  
-/////////////////////////////////////////////////////////////////////////////////////////////////  
-uchar __local_netaddress__[8][6] = { 0 };//本机网卡号(包括虚拟网卡)  
-char __local_ipaddress__[8][16] = { 0 };//本机ip地址  
-#include <string.h>
-
-//获取本机网卡地址  
-DWORD  GetNetcard(uchar Address[8][6])//不要用NetBios函数,可以被用户屏蔽的  
-{
-    uchar null_card[6] = { 0 }, j = 0;
-#if(defined WIN32) || (defined WIN64)  
-    ULONG ulAdapterInfoSize(0);
-    GetAdaptersInfo(NULL, &ulAdapterInfoSize);
-    if (ulAdapterInfoSize)
-    {
-        IP_ADAPTER_INFO*pAdapterInfo = (IP_ADAPTER_INFO*)new char[ulAdapterInfoSize];
-        IP_ADAPTER_INFO*pAdapterInfoBkp = pAdapterInfo;
-        IP_ADDR_STRING* pIPAddr = NULL;
-        if (GetAdaptersInfo(pAdapterInfo, &ulAdapterInfoSize) == ERROR_SUCCESS)
-        {
-            do  //遍历所有适配器  
-            {
-                if (pAdapterInfo->Type == MIB_IF_TYPE_ETHERNET ||
-                    pAdapterInfo->Type == IF_TYPE_IEEE80211)//判断是否为以太网接口  
-                {
-                    if (pAdapterInfo->AddressLength == 6 &&
-                        memcmp(pAdapterInfo->Address, null_card, 6))
-                    {
-                        memcpy(Address[j], pAdapterInfo->Address, 6);
-                        pIPAddr = &(pAdapterInfo->IpAddressList);
-
-                        strcpy_s(__local_ipaddress__[j], pIPAddr->IpAddress.String);
-                        if (++j > 7) break;
-                    }
-                }
-                pAdapterInfo = pAdapterInfo->Next;
-            } while (pAdapterInfo);
-        }
-        delete pAdapterInfoBkp;
-    }
-#else  
-    int  sockfd, size = 1;
-    struct ifconf ifc;
-    struct sockaddr_in sa;
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0) return(0);
-    ifc.ifc_req = NULL;
-    do
-    {
-        ++size;
-        if (!(ifc.ifc_req = (ifreq*)realloc(ifc.ifc_req, IFRSIZE))) return(0);
-        ifc.ifc_len = IFRSIZE;
-        if (ioctl(sockfd, SIOCGIFCONF, &ifc)) return(0);
-    } while (IFRSIZE <= ifc.ifc_len);
-    struct ifreq *ifr = ifc.ifc_req;
-    for (; (char*)ifr < (char*)ifc.ifc_req + ifc.ifc_len; ++ifr)
-    {
-        if (ifr->ifr_addr.sa_data == (ifr + 1)->ifr_addr.sa_data) continue;
-        if (ioctl(sockfd, SIOCGIFFLAGS, ifr)) continue;
-        if (!ioctl(sockfd, SIOCGIFHWADDR, ifr))
-        {
-            switch (ifr->ifr_hwaddr.sa_family)
-            {
-            case ARPHRD_NETROM:
-            case ARPHRD_ETHER:
-            case ARPHRD_PPP:
-            case ARPHRD_EETHER:
-            case ARPHRD_IEEE802:
-                break;
-            default:
-                continue;
-            }
-            if (memcmp(&ifr->ifr_addr.sa_data, null_card, 6))
-            {
-                memcpy(Address[j++], &ifr->ifr_addr.sa_data, 6);
-            }
-        }
-    }
-    close(sockfd);
-#endif  
-    return(j);
-}

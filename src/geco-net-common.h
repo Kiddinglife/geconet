@@ -128,16 +128,16 @@
 #define IFNAMSIZ IF_NAMESIZE
 struct iphdr
 {
-	uchar version_length;
-	uchar typeofservice; /* type of service */
-	ushort length; /* total length */
-	ushort identification; /* identification */
-	ushort fragment_offset; /* fragment offset field */
-	uchar ttl; /* time to live */
-	uchar protocol; /* protocol */
-	ushort checksum; /* checksum */
-	struct in_addr src_addr; /* source and dest address */
-	struct in_addr dst_addr;
+    uchar version_length;
+    uchar typeofservice; /* type of service */
+    ushort length; /* total length */
+    ushort identification; /* identification */
+    ushort fragment_offset; /* fragment offset field */
+    uchar ttl; /* time to live */
+    uchar protocol; /* protocol */
+    ushort checksum; /* checksum */
+    struct in_addr src_addr; /* source and dest address */
+    struct in_addr dst_addr;
 };
 
 #define msghdr _WSAMSG
@@ -153,9 +153,9 @@ ap = (struct sockaddr *)((caddr_t) ap + (ap->sa_len ? \
 ROUNDUP(ap->sa_len, sizeof (u_long)) : sizeof(u_long)))
 inline bool IN6_ADDR_EQUAL(const in6_addr *x, const in6_addr *y)
 {
-	uint64_t* a = (uint64_t*)x;
-	uint64_t* b = (uint64_t*)y;
-	return (bool)((a[1] == b[1]) && (a[0] == b[0]));
+    uint64_t* a = (uint64_t*)x;
+    uint64_t* b = (uint64_t*)y;
+    return (bool)((a[1] == b[1]) && (a[0] == b[0]));
 }
 #else
 #define NEXT_SA(ap) ap = (struct sockaddr *) ((caddr_t) ap + sizeof(struct sockaddr))
@@ -214,44 +214,44 @@ inline bool IN6_ADDR_EQUAL(const in6_addr *x, const in6_addr *y)
 #include "geco-net-msg.h"
 
 enum geco_return_enum
-	:int
+    :int
 {
-	good,
-	discard,
-	reply_abort,
-	recv_geco_packet_but_integrity_check_failed,
-	recv_geco_packet_but_port_numbers_check_failed,
-	recv_geco_packet_but_addrs_formate_check_failed,
-	recv_geco_packet_but_found_channel_has_no_instance,
-	recv_geco_packet_but_dest_addr_check_failed,
-	recv_geco_packet_but_morethanone_init,
-	recv_geco_packet_but_morethanone_init_ack,
-	recv_geco_packet_but_morethanone_shutdown_complete,
-	recv_geco_packet_but_init_chunk_has_zero_verifi_tag,
-	recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag,
-	recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate,
-	recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal,
-	recv_geco_packet_but_nootb_sdack_otherthan_sds_state,
-	recv_geco_packet_but_nootb_initack_otherthan_cookiew_state,
-	recv_geco_packet_but_nootb_packet_verifitag_illegal,
-	recv_geco_packet_but_it_is_ootb_abort_discard,
-	recv_geco_packet_but_it_is_ootb_sdc_discard,
-	recv_geco_packet_but_it_is_ootb_sdack_send_sdc,
-	recv_geco_packet_but_it_is_ootb_cookie_ack_discard,
-	recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard,
-	recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag,
-	recv_geco_packet_but_local_instance_has_zero_portnum,
-	recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk,
-	recv_geco_packet_but_not_send_abort_for_ootb_packet
+    good,
+    discard,
+    reply_abort,
+    recv_geco_packet_but_integrity_check_failed,
+    recv_geco_packet_but_port_numbers_check_failed,
+    recv_geco_packet_but_addrs_formate_check_failed,
+    recv_geco_packet_but_found_channel_has_no_instance,
+    recv_geco_packet_but_dest_addr_check_failed,
+    recv_geco_packet_but_morethanone_init,
+    recv_geco_packet_but_morethanone_init_ack,
+    recv_geco_packet_but_morethanone_shutdown_complete,
+    recv_geco_packet_but_init_chunk_has_zero_verifi_tag,
+    recv_geco_packet_but_nootb_abort_chunk_has_ielegal_verifi_tag,
+    recv_geco_packet_but_nootb_sdc_recv_otherthan_sdc_ack_sentstate,
+    recv_geco_packet_but_nootb_sdc_recv_verifitag_illegal,
+    recv_geco_packet_but_nootb_sdack_otherthan_sds_state,
+    recv_geco_packet_but_nootb_initack_otherthan_cookiew_state,
+    recv_geco_packet_but_nootb_packet_verifitag_illegal,
+    recv_geco_packet_but_it_is_ootb_abort_discard,
+    recv_geco_packet_but_it_is_ootb_sdc_discard,
+    recv_geco_packet_but_it_is_ootb_sdack_send_sdc,
+    recv_geco_packet_but_it_is_ootb_cookie_ack_discard,
+    recv_geco_packet_but_it_is_ootb_stale_cookie_err_discard,
+    recv_geco_packet_but_ootb_init_chunk_has_non_zero_verifi_tag,
+    recv_geco_packet_but_local_instance_has_zero_portnum,
+    recv_geco_packet_but_ootb_cookie_echo_is_not_first_chunk,
+    recv_geco_packet_but_not_send_abort_for_ootb_packet
 };
 extern geco_return_enum global_ret_val;
 
 const uint OVERFLOW_SECS = (15 * 24 * 60 * 60);
 const uint OVERFLOW_MS = (15 * 24 * 60 * 60 * 1000);
 enum SENDING_DEST_ADDR_TYPE
-	: int
+    : int
 {
-	PRIMARY_ADDR = -1, LAST_SOURCE_ADDR = -2, RESET_VALUE = -3
+    PRIMARY_ADDR = -1, LAST_SOURCE_ADDR = -2, RESET_VALUE = -3
 };
 
 /* ms default interval to timeout when no data received in socket
@@ -411,7 +411,7 @@ if (x <= CURR_ERROR_LOG_LEVEL) {y}
  * in that file, which causes all output from event_logs() to go into a logfile in the local
  * directory.
  */
-	extern void read_trace_levels(void);
+    extern void read_trace_levels(void);
 // print fixed date and then the msg
 extern void debug_print(FILE * fd, const char *f, ...);
 
@@ -509,49 +509,49 @@ extern void print_timeval(timeval* tv);
 //<---------------------- helpers --------------------->
 enum ctrl_type
 {
-	bundle_ctrl, recv_ctrl, flow_ctrl, reliable_transfer_ctrl, path_ctrl, geco_ctrl, stream_ctrl, unkown
+    bundle_ctrl, recv_ctrl, flow_ctrl, reliable_transfer_ctrl, path_ctrl, geco_ctrl, stream_ctrl, unkown
 };
 
 struct internal_stream_data_t
 {
-	ushort stream_id;
-	ushort stream_sn;
+    ushort stream_id;
+    ushort stream_sn;
 };
 
 //chunk_data_struct
 struct internal_data_chunk_t
 {
-	uint chunk_len;
-	uint chunk_tsn; /* for efficiency */
-	uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
+    uint chunk_len;
+    uint chunk_tsn; /* for efficiency */
+    uchar data[MAX_NETWORK_PACKET_VALUE_SIZE];
 
-	uint gap_reports;
+    uint gap_reports;
 
-	uint64 transmission_time;
-	/* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
-	int ack_time;
-	uint num_of_transmissions;
+    uint64 transmission_time;
+    /* ack_time : in msecs after transmission time, initially 0, -1 if retransmitted */
+    int ack_time;
+    uint num_of_transmissions;
 
-	/* time after which chunk should not be retransmitted */
-	uint64 expiry_time;
-	bool dontBundle;
+    /* time after which chunk should not be retransmitted */
+    uint64 expiry_time;
+    bool dontBundle;
 
-	/* lst destination used to send chunk to */
-	uint last_destination;
-	int initial_destination;
+    /* lst destination used to send chunk to */
+    uint last_destination;
+    int initial_destination;
 
-	/* this is set to true, whenever chunk is sent/received on unreliable stream */
-	bool isUnreliable;
-	bool isUnordered;
+    /* this is set to true, whenever chunk is sent/received on unreliable stream */
+    bool isUnreliable;
+    bool isUnordered;
 
-	bool hasBeenAcked;
-	bool hasBeenDropped;
-	bool hasBeenFastRetransmitted;
-	bool hasBeenRequeued;
-	bool context;
+    bool hasBeenAcked;
+    bool hasBeenDropped;
+    bool hasBeenFastRetransmitted;
+    bool hasBeenRequeued;
+    bool context;
 
-	/*which ctrl this struct belongs to*/
-	ctrl_type ct;
+    /*which ctrl this struct belongs to*/
+    ctrl_type ct;
 };
 
 /**
@@ -603,31 +603,31 @@ extern ushort in_check(uchar *buf, int sz);
  */
 inline int sort_tsn(const internal_data_chunk_t& one, const internal_data_chunk_t& two)
 {
-	if (ubefore(one.chunk_tsn, two.chunk_tsn))
-		return -1;
-	else if (uafter(one.chunk_tsn, two.chunk_tsn))
-		return 1;
-	else
-		return 0; /* one==two */
+    if (ubefore(one.chunk_tsn, two.chunk_tsn))
+        return -1;
+    else if (uafter(one.chunk_tsn, two.chunk_tsn))
+        return 1;
+    else
+        return 0; /* one==two */
 }
 inline int sort_ssn(const internal_stream_data_t& one, const internal_stream_data_t& two)
 {
-	if (one.stream_id < two.stream_id)
-	{
-		return -1;
-	}
-	else if (one.stream_id > two.stream_id)
-	{
-		return 1;
-	}
-	else /* one.sid==two.sid */
-	{
-		if (sbefore(one.stream_sn, two.stream_sn))
-			return -1;
-		else if (safter(one.stream_sn, two.stream_sn))
-			return 1;
-	}
-	return 0;
+    if (one.stream_id < two.stream_id)
+    {
+        return -1;
+    }
+    else if (one.stream_id > two.stream_id)
+    {
+        return 1;
+    }
+    else /* one.sid==two.sid */
+    {
+        if (sbefore(one.stream_sn, two.stream_sn))
+            return -1;
+        else if (safter(one.stream_sn, two.stream_sn))
+            return 1;
+    }
+    return 0;
 }
 
 /*=========== help functions =================*/
@@ -676,35 +676,35 @@ extern void Bitify(char* out, size_t mWritePosBits, char* mBuffer);
 //} AddressScopingFlags;
 enum IPAddrType
 {
-	LoopBackAddrType = (1 << 0),
-	LinkLocalAddrType = (1 << 1),
-	SiteLocalAddrType = (1 << 2),
-	AnyCastAddrType = (1 << 3),
-	MulticastAddrType = (1 << 4),
-	BroadcastAddrType = (1 << 5),
-	ReservedAddrType = (1 << 6),
-	AllExceptLoopbackAddrTypes = (1 << 7),
-	AllExceptLinkLocalAddrTypes = (1 << 8),
-	ExceptSiteLocalAddrTypes = (1 << 9),
-	//flag_Default
-	AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
-	//flag_HideLocal
-	AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
+    LoopBackAddrType = (1 << 0),
+    LinkLocalAddrType = (1 << 1),
+    SiteLocalAddrType = (1 << 2),
+    AnyCastAddrType = (1 << 3),
+    MulticastAddrType = (1 << 4),
+    BroadcastAddrType = (1 << 5),
+    ReservedAddrType = (1 << 6),
+    AllExceptLoopbackAddrTypes = (1 << 7),
+    AllExceptLinkLocalAddrTypes = (1 << 8),
+    ExceptSiteLocalAddrTypes = (1 << 9),
+    //flag_Default
+    AllCastAddrTypes = BroadcastAddrType | MulticastAddrType | AnyCastAddrType,
+    //flag_HideLocal
+    AllLocalAddrTypes = LoopBackAddrType | LinkLocalAddrType | SiteLocalAddrType,
 };
 
 /* union for handling either type of addresses: ipv4 and ipv6 */
 union sockaddrunion
 {
-	struct sockaddr sa;
-	struct sockaddr_in sin;
-	struct sockaddr_in6 sin6;
+    struct sockaddr sa;
+    struct sockaddr_in sin;
+    struct sockaddr_in6 sin6;
 };
 
 // key of channel
 struct transport_addr_t
 {
-	sockaddrunion* local_saddr;
-	sockaddrunion* peer_saddr;
+    sockaddrunion* local_saddr;
+    sockaddrunion* peer_saddr;
 };
 
 /* converts address-string
@@ -717,44 +717,44 @@ extern int str2saddr(sockaddrunion *su, const char * str, ushort port = 0);
 extern int saddr2str(sockaddrunion *su, char * buf, size_t len, ushort* portnum = NULL);
 inline bool saddr_equals(const sockaddrunion *a, const sockaddrunion *b, bool ignore_port = false)
 {
-	if (saddr_family(a) == AF_INET)
-	{
-		if (saddr_family(b) == AF_INET)
-		{
-			if (a->sin.sin_addr.s_addr == b->sin.sin_addr.s_addr)
-			{
-				if (ignore_port)
-					return true;
-				else if (a->sin.sin_port == b->sin.sin_port)
-					return true;
-				else
-					return false;
-			}
-			return false;
-		}
-		return false;
-	}
-	else if (saddr_family(a) == AF_INET6)
-	{
-		if (saddr_family(b) == AF_INET6)
-		{
-			if (IN6_ADDR_EQUAL(&a->sin6.sin6_addr, &b->sin6.sin6_addr))
-			{
-				if (ignore_port)
-					return true;
-				else if (a->sin6.sin6_port == b->sin6.sin6_port)
-					return true;
-				else
-					return false;
-			}
-			return false;
-		}
-		return false;
-	}
-	else
-	{
-		ERRLOG(FALTAL_ERROR_EXIT, "saddr_equals()::no such af!!");
-	}
+    if (saddr_family(a) == AF_INET)
+    {
+        if (saddr_family(b) == AF_INET)
+        {
+            if (a->sin.sin_addr.s_addr == b->sin.sin_addr.s_addr)
+            {
+                if (ignore_port)
+                    return true;
+                else if (a->sin.sin_port == b->sin.sin_port)
+                    return true;
+                else
+                    return false;
+            }
+            return false;
+        }
+        return false;
+    }
+    else if (saddr_family(a) == AF_INET6)
+    {
+        if (saddr_family(b) == AF_INET6)
+        {
+            if (IN6_ADDR_EQUAL(&a->sin6.sin6_addr, &b->sin6.sin6_addr))
+            {
+                if (ignore_port)
+                    return true;
+                else if (a->sin6.sin6_port == b->sin6.sin6_port)
+                    return true;
+                else
+                    return false;
+            }
+            return false;
+        }
+        return false;
+    }
+    else
+    {
+        ERRLOG(FALTAL_ERROR_EXIT, "saddr_equals()::no such af!!");
+    }
 }
 
 //! From http://www.azillionmonkeys.com/qed/hash.html
@@ -793,13 +793,13 @@ typedef void(*task_cb_fun_t)(void* usrdata);
 
 union cbunion_t
 {
-	socket_cb_fun_t socket_cb_fun;
-	user_cb_fun_t user_cb_fun;
-	task_cb_fun_t task_cb_fun;
+    socket_cb_fun_t socket_cb_fun;
+    user_cb_fun_t user_cb_fun;
+    task_cb_fun_t task_cb_fun;
 };
 extern bool typeofaddr(union sockaddrunion* newAddress, IPAddrType flags);
-extern bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets, int sctp_fd, bool with_ipv6,
-	int *max_mtu, const IPAddrType flags);
+// @return: local address that have a up network interface binded on.
+extern bool get_local_addresses(union sockaddrunion **addresses, uint *numberOfNets, int sctp_fd, bool with_ipv6, int *max_mtu, const IPAddrType flags);
 extern void add_user_cb(int fd, user_cb_fun_t cbfun, void* userData, short int eventMask);
 
 /*=========  DISPATCH LAYER  LAYER DEFINES AND FUNTIONS ===========*/
