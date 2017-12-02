@@ -415,6 +415,8 @@ initial_eff_pmtu = 1400
 # init mpath.probe_timer_timoeout = 1 second
 # init each path.congested_during_fast_probe = True
 
+#@note: 
+# 1.
 # dumy_packet_length is the length of packet that does not carry any data and
 # it is only tens of bytes long and so must work in all nerworks.
 # its values is sctphdrlen + iphdrlen.  The use of it is to ensure that even
@@ -425,8 +427,11 @@ initial_eff_pmtu = 1400
 # congested and then we need update comgestion stat.
 # 3 dummy hb ensures that in the worst case where all other hb exceeds tu
 # limit, we can headoff timout for around INIT_RTO/2/2/2
+#
+# 2. 
+# when to probe all idle path after conn up,  use jump_probe_sizes = [probe_size, dumy_probe_length] 
 
-jump_probe_sizes = [search_high, v1,  v2 , v3, v4,dumy_packet_length, dumy_packet_length, dumy_packet_length] 
+jump_probe_sizes = [search_high, v1,  v2 , v3, v4,dumy_packet_length] 
 def mrecv_on_conn_up():
     for probe_size in jump_probe_sizes:
         hbchunk = mchunk_make_hb(probe_size)
