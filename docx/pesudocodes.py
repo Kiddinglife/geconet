@@ -407,16 +407,26 @@ initial_eff_pmtu = 1400
         The delayed sending
         algorithm SHOULD use some self-scaling technique to appropriately
         limit the time that the data is delayed.  
-        @note   jump_probe_sizes = [ search_high, v1,  v2 , v3, search_low:fixed:576 ] 
-        # probe from search_low, when succeed, headoff timeout
-        curr_timeout -= avg_headoff
-        mtran_reset_timeout(curr_timeout)
-       >>>>>>>>>|  send 8 packets with 8 different probe sizes
-       >>>>>>>>>>>>>>>>| estimated tick to recv hb2ack
-       >>>>>>>>>>>>>|  recv hb2ack  : update rtt and rto
-       --------------------------------------------| hb_timeout 
+        >>>>>> we send d1, d2, hb, d3,d4, 5 chunks to peer continuesouly where d12 are leading window and d34 are trailing windows
+        >>>>>>>>> we send some more dchuks
+        >>>>>>>>>>>>> we recv sack,
+        >>>>>>>>>>>>>>>>> hb timer timeouts,  if d1234 are all acked, hb must be the only loss
 """
-jump_probe_sizes = [search_high, v1,  v2 , v3, v4, search_low] # search_low has a fixed value of 576
+# init mpath.probe_timer_timoeout = 1 second
+# init each path.congested_during_fast_probe = True
+
+# dumy_packet_length is the length of packet that does not carry any data and
+# it is only tens of bytes long and so must work in all nerworks.
+# its values is sctphdrlen + iphdrlen.  The use of it is to ensure that even
+# though all pmtus exclusive search_low exceed max-link-mtu without cogestions,
+# mpath.fast_probe_timer can still quickly timeout and then notify ulp
+# connection up with smallest pmtu applied.
+# update rto rtt and headoff timeout when it is acked.  if not ackd，must be
+# congested and then we need update comgestion stat.
+# 3 dummy hb ensures that in the worst case where all other hb exceeds tu
+# limit, we can headoff timout for around INIT_RTO/2/2/2
+
+jump_probe_sizes = [search_high, v1,  v2 , v3, v4,dumy_packet_length, dumy_packet_length, dumy_packet_length] 
 def mrecv_on_conn_up():
     for probe_size in jump_probe_sizes:
         hbchunk = mchunk_make_hb(probe_size)
@@ -425,17 +435,28 @@ def mrecv_on_conn_up():
 def on_hb_acked(effpmtu, path):
     if mpth.is_quick_probe:
         mpath_update_rtt_and_rto()
-        path.effpmtu = effpmtu
-        if effpmtu == search_high or effpmtu == v1:
-            # we are lucky we meet first 2 highest pmtu
-            mpth.is_quick_probe = False
-            ulp_conn_up()
+        if effpmtu > 0: # ignore dummy packet
+            path.effpmtu = effpmtu
+            path.congested_during_fast_probe = False
+        mpath.quick_probe_counter+=1
+        if mpath.quick_probe_counter < sizeof(jump_probe_sizes):
+            # headoff timeout when there are hb acked
+            mtran_reset_timout(timer = path.quick_probe_timer, newtimeout=mpath_quick_probe_expired.get_rto(rtt / mpath.quick_probe_counter))
+        else:
+            # all hbs are acked we can delete timer now 
+             mtran_remove_timer(path.quick_probe_timer)
+             # all hbs are acked we can call timeout imediately 
+             mpath_quick_probe_expired()  
     else:
-        # @TODO: do normal things when hb acked ...
+        # @TODO: send probes
         pass
 
 def mpath_quick_probe_expired():
-    pid = find_highest_pmtu_path_id()
+    for path  in mpath.paths:
+        if path.congested_during_fast_probe:
+            mrel_update_congestion_stats()
+            mpath_backoff_rto()
+    pid = find_path_with_highest_pmtu()
     mpath_set_primary_path(pid)
     mpth.is_quick_probe = False
     ulp_conn_up()
