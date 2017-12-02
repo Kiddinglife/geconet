@@ -186,6 +186,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\src\geco-bit-stream.h" />
     <ClInclude Include="..\..\..\..\src\geco-common.h" />
     <ClInclude Include="..\..\..\..\src\geco-ds-config.h" />
     <ClInclude Include="..\..\..\..\src\geco-ds-malloc.h" />
@@ -200,12 +201,14 @@
     <ClInclude Include="..\..\..\..\src\geco-net-transport.h" />
     <ClInclude Include="..\..\..\..\src\geco-net.h" />
     <ClInclude Include="..\..\..\..\src\geco-thread.h" />
+    <ClInclude Include="..\..\..\..\src\spsc-queue.h" />
     <ClInclude Include="..\..\..\..\src\timestamp.h" />
     <ClInclude Include="..\..\..\..\src\wheel-timer-debug.h" />
     <ClInclude Include="..\..\..\..\src\wheel-timer-queue.h" />
     <ClInclude Include="..\..\..\..\src\wheel-timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\src\geco-bit-stream.cpp" />
     <ClCompile Include="..\..\..\..\src\geco-malloc.cc" />
     <ClCompile Include="..\..\..\..\src\geco-net-auth.cc" />
     <ClCompile Include="..\..\..\..\src\geco-net-chunk.cc" />

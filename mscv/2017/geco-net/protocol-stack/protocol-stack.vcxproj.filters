@@ -68,6 +68,12 @@
     <ClInclude Include="..\..\..\..\src\timestamp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\src\spsc-queue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\src\geco-bit-stream.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\geco-malloc.cc">
@@ -99,6 +105,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\timestamp.cc">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\geco-bit-stream.cpp">
+      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
